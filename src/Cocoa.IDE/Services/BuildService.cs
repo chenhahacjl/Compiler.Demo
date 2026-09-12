@@ -59,12 +59,11 @@ public sealed class BuildService
 
         return await Task.Run(() =>
         {
+            // F13：以独立控制台窗口运行（不重定向 stdin/out/err），程序自身的输入输出在 OS 控制台可用
             var psi = new ProcessStartInfo(exePath)
             {
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
+                UseShellExecute = true,
+                CreateNoWindow = false,
                 WorkingDirectory = workingDir,
             };
 
@@ -72,22 +71,14 @@ public sealed class BuildService
             try
             {
                 proc = new Process { StartInfo = psi, EnableRaisingEvents = true };
-                proc.OutputDataReceived += (_, e) =>
-                {
-                    if (e.Data != null) Dispatcher.UIThread.Post(() => OutputLine?.Invoke(e.Data));
-                };
-                proc.ErrorDataReceived += (_, e) =>
-                {
-                    if (e.Data != null) Dispatcher.UIThread.Post(() => OutputLine?.Invoke(e.Data));
-                };
-
                 proc.Start();
                 _runningProcess = proc;
-                proc.BeginOutputReadLine();
-                proc.BeginErrorReadLine();
-                proc.WaitForExit();
-                proc.WaitForExit(); // 确保异步输出读取全部完成
 
+                var pid = proc.Id;
+                Dispatcher.UIThread.Post(() =>
+                    OutputLine?.Invoke($"程序已在独立窗口启动（PID {pid}），退出后将在此显示退出代码。"));
+
+                proc.WaitForExit();
                 var exitCode = proc.ExitCode;
                 Dispatcher.UIThread.Post(() =>
                 {

@@ -24,6 +24,13 @@ public sealed class DebuggerService
     /// <summary>会话结束（UI 线程）。</summary>
     public event Action? Exited;
 
+    /// <summary>E2：调试期间解释器 Console 输出（UI 线程）。</summary>
+    public event Action<string>? OutputLine;
+
+    private TextWriter? _savedOut;
+    private TextWriter? _savedError;
+    private DebugOutputWriter? _consoleWriter;
+
     public DebugExecutionState State => _session?.State ?? DebugExecutionState.NotStarted;
     public bool IsActive => _session is { State: DebugExecutionState.Running or DebugExecutionState.Paused };
     public object? ReturnValue => _session?.ReturnValue;
@@ -76,9 +83,14 @@ public sealed class DebuggerService
             session.SetBreakpoint(file, line);
 
         session.Paused += _ => Dispatcher.UIThread.Post(() => Paused?.Invoke());
-        session.Exited += () => Dispatcher.UIThread.Post(() => Exited?.Invoke());
+        session.Exited += () =>
+        {
+            RestoreConsole();
+            Dispatcher.UIThread.Post(() => Exited?.Invoke());
+        };
 
         _session = session;
+        RedirectConsole();
         session.Start();
     }
 
@@ -110,5 +122,77 @@ public sealed class DebuggerService
     {
         _session?.Stop();
         _session = null;
+        RestoreConsole();
+    }
+
+    // ─── E2：解释器 Console → IDE 输出面板 ───
+
+    private void RedirectConsole()
+    {
+        try
+        {
+            _savedOut = Console.Out;
+            _savedError = Console.Error;
+            _consoleWriter = new DebugOutputWriter(line => Dispatcher.UIThread.Post(() => OutputLine?.Invoke(line)));
+            Console.SetOut(_consoleWriter);
+            Console.SetError(_consoleWriter);
+        }
+        catch
+        {
+            _consoleWriter = null;
+        }
+    }
+
+    private void RestoreConsole()
+    {
+        if (_consoleWriter == null) return;
+        try
+        {
+            if (_savedOut != null) Console.SetOut(_savedOut);
+            if (_savedError != null) Console.SetError(_savedError);
+        }
+        catch
+        {
+            // 忽略恢复失败
+        }
+        finally
+        {
+            _consoleWriter = null;
+        }
+    }
+}
+
+/// <summary>调试期间把解释器的 Console 输出按行转发到 IDE（GUI 无控制台）。</summary>
+internal sealed class DebugOutputWriter : TextWriter
+{
+    private readonly Action<string> _onLine;
+    private readonly System.Text.StringBuilder _line = new();
+    private readonly object _gate = new();
+
+    public DebugOutputWriter(Action<string> onLine) => _onLine = onLine;
+
+    public override System.Text.Encoding Encoding => System.Text.Encoding.UTF8;
+
+    public override void Write(char value)
+    {
+        lock (_gate)
+        {
+            if (value == '\n')
+            {
+                var text = _line.ToString();
+                _line.Clear();
+                if (text.Length > 0) _onLine(text);
+            }
+            else if (value != '\r')
+            {
+                _line.Append(value);
+            }
+        }
+    }
+
+    public override void Write(string? value)
+    {
+        if (string.IsNullOrEmpty(value)) return;
+        foreach (var ch in value) Write(ch);
     }
 }

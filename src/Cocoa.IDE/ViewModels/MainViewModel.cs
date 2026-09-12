@@ -60,6 +60,7 @@ public partial class MainViewModel : ObservableObject
 
         DebuggerService.Paused += OnDebugPaused;
         DebuggerService.Exited += OnDebugExited;
+        DebuggerService.OutputLine += line => Output.AppendLine(line);
 
         EditorTabs.Tabs.CollectionChanged += (_, e) =>
         {
