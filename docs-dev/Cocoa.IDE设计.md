@@ -485,6 +485,17 @@ ResolveAtPosition(tree, position):
 
 > 替代现有 520px 单页表单（`NewProjectDialog.cs`）。**步骤 1** 选模板，**步骤 2** 配置；对齐 Visual Studio 2022「创建新项目」。
 
+**模板集（`Templates/<key>/template.xml`，按 `Order` 排序）**
+
+| Order | Key | Label | 输出 | 源 |
+|:--:|-----|-------|------|----|
+| 1 | `library` | Library Cocoa | dll | `.co` |
+| 2 | `library-cs` | Library C# | dll | `.cs`（C# 方言） |
+| 3 | `console` | Console Cocoa | exe | `.co`（入口 `main.co`） |
+| 4 | `csharp` | Console C# | exe | `.cs`（C# 方言） |
+| 5 | `solution` | BlankSolution | 仅 `.cosln` | 无 |
+| 6 | `cocoa` | Cocoa Assembly | `.coa` | `.co` |
+
 **步骤 1 · 创建新项目**
 
 - 顶部搜索框（按模板名称/描述过滤）
