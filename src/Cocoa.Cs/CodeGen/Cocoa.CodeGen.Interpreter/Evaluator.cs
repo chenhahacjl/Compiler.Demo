@@ -2,6 +2,7 @@ using Cocoa.CodeAnalysis.Binding;
 using Binding = Cocoa.CodeAnalysis.Binding;
 using Symbols = Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Symbols;
+using Cocoa.CodeAnalysis.Text;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
@@ -36,6 +37,19 @@ namespace Cocoa.CodeGen.Interpreter
 
         // yield 迭代器收集器
         private List<object?>? _yieldedValues;
+
+        // M7 调试器：调用帧栈（顶在最前）+ 语句边界钩子（调试会话注入；生产路径为 null）
+        internal readonly Stack<DebugFrame> _frames = new Stack<DebugFrame>();
+        internal Action<BoundStatement, TextLocation?, bool>? StatementBoundaryHook;
+
+        /// <summary>调用帧（顶帧在前）。</summary>
+        internal IReadOnlyList<DebugFrame> Frames => _frames.ToArray();
+
+        /// <summary>最近一次表达式求值结果（调试器读取返回值用）。</summary>
+        internal object? LastValue => _lastValue;
+
+        /// <summary>全局变量槽（脚本顶层变量；调试器读取局部变量时合并）。</summary>
+        internal IReadOnlyDictionary<VariableSymbol, object> Globals => _globals;
 
         public Evaluator(BoundProgram program, Dictionary<VariableSymbol, object> variables)
         {
@@ -92,7 +106,15 @@ namespace Cocoa.CodeGen.Interpreter
             try
             {
                 var body = _functions[function];
-                return EvaluateStatement(body);
+                _frames.Push(new DebugFrame(function, _locals.Peek()));
+                try
+                {
+                    return EvaluateStatement(body);
+                }
+                finally
+                {
+                    _frames.Pop();
+                }
             }
             finally
             {

@@ -59,6 +59,7 @@ namespace Cocoa.CodeGen.Interpreter
             }
 
             _locals.Push(locals);
+            _frames.Push(new DebugFrame(node.Function, locals));
 
             // 6e-M22 C5：宿主函数直呼路径同样需要环境对象。
             ClosureEnvironment? pushedEnvironment = null;
@@ -103,6 +104,7 @@ namespace Cocoa.CodeGen.Interpreter
             {
                 // byref 写回须在弹出被调者帧之后执行，否则 Assign 落进将丢弃的帧（6e-M23 R5 隐性缺陷修复）
                 _locals.Pop();
+                _frames.Pop();
 
                 if (pushedEnvironment != null)
                 {

@@ -2,6 +2,7 @@ using Cocoa.CodeAnalysis.Binding;
 using Binding = Cocoa.CodeAnalysis.Binding;
 using Symbols = Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Symbols;
+using Cocoa.CodeAnalysis.Text;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
@@ -28,11 +29,20 @@ namespace Cocoa.CodeGen.Interpreter
 
             var statements = body.Statements.ToArray();
 
+            // M7：保留每个语句的源位置（序列点优先）与是否序列点，供调试器断点/单步使用
+            var locations = new TextLocation?[statements.Length];
+            var sequencePoints = new bool[statements.Length];
             for (var i = 0; i < statements.Length; i++)
             {
-                if (statements[i] is BoundSequencePointStatement statement)
+                if (statements[i] is BoundSequencePointStatement sequencePoint)
                 {
-                    statements[i] = statement.Statement;
+                    locations[i] = sequencePoint.Location;
+                    sequencePoints[i] = true;
+                    statements[i] = sequencePoint.Statement;
+                }
+                else
+                {
+                    locations[i] = statements[i].Syntax?.Location;
                 }
             }
 
@@ -41,6 +51,8 @@ namespace Cocoa.CodeGen.Interpreter
             while (index < statements.Length)
             {
                 var statement = statements[index];
+
+                StatementBoundaryHook?.Invoke(statement, locations[index], sequencePoints[index]);
 
                 switch (statement.Kind)
                 {
@@ -126,6 +138,8 @@ namespace Cocoa.CodeGen.Interpreter
 
         private void EvaluateSingleStatement(BoundStatement statement, Dictionary<BoundLabel, int> labelToIndex)
         {
+            StatementBoundaryHook?.Invoke(statement, statement.Syntax?.Location, statement is BoundSequencePointStatement);
+
             switch (statement.Kind)
             {
                 case BoundNodeKind.NopStatement:
