@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
@@ -12,6 +13,8 @@ public sealed class SemanticModelHost
     private Compilation? _compilation;
     private SyntaxTree? _tree;
     private SemanticModel? _model;
+    private ImmutableArray<SyntaxTree> _otherTrees = ImmutableArray<SyntaxTree>.Empty;
+    private string[] _references = Array.Empty<string>();
 
     /// <summary>用当前文本重建多文件编译（含工程源文件集与引用，跨文件 F12/Hover/补全解析）。</summary>
     public void Update(string text, string fileName, Language language, ProjectContext? context = null)
@@ -38,6 +41,40 @@ public sealed class SemanticModelHost
         _compilation = Compilation.Create(references.ToArray(), trees.ToArray());
         // 缓存语义模型：GetSemanticModel 每次都新建模型，跨调用比对符号引用会失效（本地变量 F12）
         _model = _compilation.GetSemanticModel(_tree);
+        _references = references.ToArray();
+        _otherTrees = trees.Skip(1).ToImmutableArray();
+    }
+
+    /// <summary>容错探针：在文本 offset 处插入占位符后重建单文件语义（复用其它语法树与引用），
+    /// 用于补全时未完成语法（如 `obj.`）导致整句绑定失败的场景。返回 null 表示不可用。</summary>
+    public SemanticModelHost? WithInsertion(int offset, string insert)
+    {
+        if (_tree == null || _compilation == null) return null;
+        if (offset < 0 || offset > _tree.Text.Length) return null;
+
+        try
+        {
+            var patchedText = _tree.Text.ToString().Insert(offset, insert);
+            var patchedTree = SyntaxTree.Parse(
+                Cocoa.CodeAnalysis.Text.SourceText.From(patchedText, _tree.Text.FileName), _tree.Language);
+
+            var all = new List<SyntaxTree> { patchedTree };
+            all.AddRange(_otherTrees);
+
+            var clone = new SemanticModelHost
+            {
+                _tree = patchedTree,
+                _compilation = Compilation.Create(_references, all.ToArray()),
+                _references = _references,
+                _otherTrees = _otherTrees,
+            };
+            clone._model = clone._compilation.GetSemanticModel(patchedTree);
+            return clone;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     public SyntaxTree? Tree => _tree;

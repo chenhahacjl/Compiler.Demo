@@ -125,8 +125,20 @@ public partial class EditorPane : UserControl
 
     private void OnEditorTextEntered(object? sender, TextInputEventArgs e)
     {
-        if (e.Text == ".") ShowCompletion();
+        if (string.IsNullOrEmpty(e.Text)) return;
+
+        if (e.Text == ".")
+        {
+            ShowCompletion();
+            return;
+        }
+
+        // M5c：输入标识符字符自动弹补全；窗口已打开时交给 CompletionWindow 过滤，避免重建
+        if (_completionWindow == null && IsIdentifierStart(e.Text[0]))
+            ShowCompletion(reuseStale: true);
     }
+
+    private static bool IsIdentifierStart(char c) => char.IsLetter(c) || c == '_';
 
     /// <summary>按需（文件或内容变化时）重建语义宿主；Hover 等高频调用复用缓存，避免重复解析全目录。</summary>
     private SemanticModelHost? EnsureSemanticHost()
@@ -145,35 +157,48 @@ public partial class EditorPane : UserControl
         return _semanticHost;
     }
 
-    private void ShowCompletion()
+    /// <summary>M5c：自动补全用宿主——同文件复用已缓存语义（树可略旧），避免逐键重解析/重绑整个工程。</summary>
+    private SemanticModelHost? EnsureSemanticHostReusable()
+    {
+        var tab = EditorTabs?.ActiveTab;
+        if (tab == null || tab.Dialect == null) return null;
+        return _hostFile == tab.FilePath ? _semanticHost : EnsureSemanticHost();
+    }
+
+    private void ShowCompletion(bool reuseStale = false)
     {
         var tab = EditorTabs?.ActiveTab;
         if (tab == null) return;
 
         _completionWindow?.Close();
-        _completionWindow = new CompletionWindow(EditorHost.Editor.TextArea)
+        var window = new CompletionWindow(EditorHost.Editor.TextArea)
         {
             CloseAutomatically = true,
         };
+        window.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_completionWindow, window)) _completionWindow = null;
+        };
+        _completionWindow = window;
 
-        var host = EnsureSemanticHost();
+        var host = reuseStale ? EnsureSemanticHostReusable() : EnsureSemanticHost();
         if (host != null)
         {
             var caretOffset = EditorHost.Editor.TextArea.Caret.Offset;
             var text = EditorHost.Editor.Text ?? "";
-            foreach (var item in CocoaCompletionProvider.GetCompletions(host, caretOffset, text))
-                _completionWindow.CompletionList.CompletionData.Add(item);
+            var dialect = tab.Dialect ?? "Cocoa";
+            foreach (var item in CocoaCompletionProvider.GetCompletions(host, caretOffset, text, dialect))
+                window.CompletionList.CompletionData.Add(item);
         }
 
         // 无候选不弹出空框
-        if (_completionWindow.CompletionList.CompletionData.Count == 0)
+        if (window.CompletionList.CompletionData.Count == 0)
         {
-            _completionWindow.Close();
-            _completionWindow = null;
+            window.Close();
             return;
         }
 
-        _completionWindow.Show();
+        window.Show();
     }
 
     private void GoToDefinition()
