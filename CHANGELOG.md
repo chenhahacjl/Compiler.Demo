@@ -6,7 +6,18 @@
 
 ---
 
-## 未发布（2026-09-11）
+## 未发布（2026-09-12）
+
+### 6e-M24：`///` 文档注释（XML 文档文件 + `.coa` 内嵌 + REPL `#docs`，2026-09-12）
+- **语言特性**：`///` 单行文档注释（双方言一致；`////` 及以上归普通注释），新 Trivia `SingleLineDocCommentTrivia`；标签集 `<summary>/<param>/<returns>/<remarks>`，未知标签宽容保留。
+- **提取与挂点**：`DocCommentExtractor`（多行合并、结构化标签、格式警告）+ `Symbol.DocumentationText`（Binder 在顶层函数/类/接口/枚举/delegate + 方法/构造/属性/字段/事件共 12 处回填）；格式异常经 `ReportMalformedDocComment` 报警告。
+- **XML 文档文件**：`DocIdBuilder`（.NET DocID：`T:/M:/F:/P:/E:`，关键字→`System.Int32` 等全名映射，无参省略括号）+ `DocumentationFileWriter`（保留 `<param name>`、XML 转义、按 DocID 排序去重、无文档跳过）。`build --doc` 与 coproj `<DocumentationFile>` 开启（默认关），exe/library/.coa 三产物均写出同名 `.xml`。
+- **`.coa` 内嵌**：manifest 后新增可选 `(docs …)` 段（DocID → 规范化原文）；读侧按 DocID 回填符号 `DocumentationText`（stdlib 等跨程序集符号文档随程序集分发）。
+- **REPL**：新增 `#docs`（列出带文档符号）与 `#docs <名>`（查看完整文档）。
+- **stdlib 覆盖**：`System.Core` 的 Console/Math/String/Int32 公开 API 补 `///`（Collections 既有注释一并进入 `.coa`）；`libs/System.Core.coa` 重建入库。
+- **修复的阻断缺陷**：多行文档只取首行（换行 trivia 误断块）；类成员文档不入库（枚举漏类成员）；`.coa` 读侧不回填；XML 丢失 `<param name>` 属性。
+- 测试 +33（词法/提取/DocID/写出/回填/`.coa` 往返/exe `--doc` e2e/跨程序集 stdlib 文档）；全量 **53471** 通过。
+- 设计稿归档 [`docs-dev/archive/文档注释设计.md`](docs-dev/archive/文档注释设计.md)（含实现偏离纪要）。
 
 ### 6l/0b：native extern 参数上限移除（7→无限制，2026-09-11）
 - 删除前端 `NativeImportValidator` 参数数检查与后端 `MirToLir` >7 抛出守卫——x64/x86 后端本就按 `argCount` 循环处理任意参数量，上限纯为遗留硬编码。

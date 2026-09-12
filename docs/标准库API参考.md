@@ -4,6 +4,8 @@
 > 定位：`System.Core` 与 `System.Collections` 现行公开成员清单（以源码为准，手工核对于 2026-09-06）。
 > 相关：[语法手册](语法手册.md)（语言）、[快速上手](快速上手.md)（入门）、[docs-dev/archive/标准库设计.md](../docs-dev/archive/标准库设计.md)（设计依据）
 
+> **文档注释**：stdlib 源码（如 `Console`/`Math`/`String`/`Int32` 与 `Collections`）已带 `///` 文档注释，编译进 `System.Core.coa` / `System.Collections.coa` 的 `(docs …)` 段。REPL 用 `#docs` 列出带文档符号、`#docs <名>` 查看完整文档（无需源码）；库消费方也可从 `.coa` 读回文档。
+
 ---
 
 ## 1. System.Core（`using System` 后直接可用，`.coa` 隐式注入）

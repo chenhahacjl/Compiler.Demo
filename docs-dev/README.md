@@ -22,7 +22,6 @@
 | [plan/语义债务清单.md](plan/语义债务清单.md) | 定夺类设计偏差 D1-D5（非 bug），修或维持需逐项拍板 |
 | [plan/重构执行计划.md](plan/重构执行计划.md) | 重构步骤与进度表（⬜/🔄/✅/⏭️ 标记） |
 | [plan/Cocoa.IDE设计.md](plan/Cocoa.IDE设计.md) | 类 Visual Studio 桌面 IDE：Avalonia 11 路线 + 功能矩阵 |
-| [plan/文档注释设计.md](plan/文档注释设计.md) | `///` 文档注释 → XML + `.coa` 内嵌（6e-M24 规划，未开工） |
 | [plan/UI库规划.md](plan/UI库规划.md) | UI 生态系统：Handle 句柄类型 + System.UI 立即模式库（6e-M25 规划，双后端 + 轮询架构，未开工） |
 
 ## 3. archive/ — 已实现 · 设计依据保留（🛑 归档）
@@ -42,6 +41,7 @@
 | [archive/类库设计.md](archive/类库设计.md) | class 库构建/消费（-r + using）— 已并入标准库设计 |
 | [archive/SDK标准库增强方案.md](archive/SDK标准库增强方案.md) | 泛型集合 BCL 对齐— 已并入标准库设计 |
 | [archive/输出格式.md](archive/输出格式.md) | exe/library/.coa 输出（2026-08-20 起逐一落地） |
+| [archive/文档注释设计.md](archive/文档注释设计.md) | `///` 文档注释 → XML + `.coa` 内嵌（6e-M24，2026-09-12） |
 | [archive/代码结构.md](archive/代码结构.md) | 后端分层与命名约定（结构治理 Phase 1/2 依据，现行见 CODING.md） |
 
 ## 4. ADR — 架构决策记录索引
