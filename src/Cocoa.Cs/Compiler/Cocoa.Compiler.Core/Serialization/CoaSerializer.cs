@@ -177,6 +177,20 @@ namespace Cocoa.CodeAnalysis.Serialization
             }
             w.End(); // manifest
 
+            // 6e-M24：文档注释段（DocID → 规范化原文）
+            if (program.Docs.Count > 0)
+            {
+                w.Open("docs");
+                foreach (var pair in program.Docs.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+                {
+                    w.Open("doc");
+                    w.Field(Str(pair.Key));
+                    w.Field(Str(pair.Value));
+                    w.End();
+                }
+                w.End();
+            }
+
             w.End(); // cod
             buffer.WriteLine();
 

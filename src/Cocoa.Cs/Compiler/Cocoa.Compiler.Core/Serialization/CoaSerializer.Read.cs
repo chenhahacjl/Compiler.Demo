@@ -1,4 +1,5 @@
 using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Documentation;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
@@ -86,6 +87,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             var codRefs = ImmutableArray.CreateBuilder<string>();
             var imports = ImmutableArray.CreateBuilder<string>();
             var namespaces = ImmutableArray.CreateBuilder<string>();
+            var docs = ImmutableDictionary.CreateBuilder<string, string>();
 
             while (reader.TryExpect(out var child))
             {
@@ -130,6 +132,23 @@ namespace Cocoa.CodeAnalysis.Serialization
 
                         reader.End();
                         break;
+                    case "docs":
+                        while (reader.TryExpect(out var docItem))
+                        {
+                            switch (docItem)
+                            {
+                                case "doc":
+                                    var docId = Unescape(reader.ExpectString());
+                                    var docText = Unescape(reader.ExpectString());
+                                    docs[docId] = docText;
+                                    break;
+                            }
+
+                            reader.End();
+                        }
+
+                        reader.End();
+                        break;
                 }
             }
 
@@ -153,12 +172,83 @@ namespace Cocoa.CodeAnalysis.Serialization
                 namespaces.ToImmutable(),
                 context.GenericDefinitions.ToImmutable(),
                 functionKeys: context.LocalFunctionKeys.ToImmutableDictionary(),
-                typesByName: context.LocalTypesByName.ToImmutableDictionary())
+                typesByName: context.LocalTypesByName.ToImmutableDictionary(),
+                docs: docs.ToImmutable())
             {
                 Name = programName,
             };
 
+            ApplyDocumentation(program);
+
             return program;
+        }
+
+        /// <summary>
+        /// 6e-M24：`.coa` 读侧文档回填——按 DocID 从 <see cref="CoaProgram.Docs"/> 查表挂到符号。
+        /// 跨程序集符号（stdlib）的 <c>Declaration = null</c>，文档只能经序列化通道恢复（设计 §6.3）。
+        /// </summary>
+        private static void ApplyDocumentation(CoaProgram program)
+        {
+            if (program.Docs.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var symbol in EnumerateProgramSymbols(program))
+            {
+                if (symbol.DocumentationText != null)
+                {
+                    continue;
+                }
+
+                var docId = DocIdBuilder.GetDocId(symbol);
+                if (docId != null && program.Docs.TryGetValue(docId, out var text))
+                {
+                    symbol.DocumentationText = text;
+                }
+            }
+        }
+
+        private static IEnumerable<Symbol> EnumerateProgramSymbols(CoaProgram program)
+        {
+            foreach (var fn in program.Functions)
+            {
+                yield return fn;
+            }
+
+            foreach (var type in program.Classes.Concat(program.GenericDefinitions))
+            {
+                yield return type;
+                foreach (var method in type.Methods)
+                {
+                    yield return method;
+                }
+
+                foreach (var field in type.Fields)
+                {
+                    yield return field;
+                }
+
+                foreach (var property in type.Properties)
+                {
+                    yield return property;
+                }
+
+                foreach (var evt in type.Events)
+                {
+                    yield return evt;
+                }
+            }
+
+            foreach (var global in program.Globals)
+            {
+                yield return global;
+            }
+
+            foreach (var en in program.Enums)
+            {
+                yield return en;
+            }
         }
 
         /// <summary>6e 跨库里程碑：从本库 fn 键集合恢复库名（首键前缀 `库名!`；无则空）。</summary>

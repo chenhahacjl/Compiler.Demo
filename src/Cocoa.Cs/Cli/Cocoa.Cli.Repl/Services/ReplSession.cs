@@ -158,6 +158,46 @@ internal sealed class ReplSession
             output.AppendLine($"Symbol '{name}' not found.");
     }
 
+    public void ListDocumentedSymbols(OutputHistory output)
+    {
+        var compilation = _previous ?? Compilation.CreateScript(null);
+        var found = false;
+        foreach (var symbol in EnumerateUserSymbols(compilation))
+        {
+            if (!string.IsNullOrEmpty(symbol.DocumentationText))
+            {
+                output.AppendLine($"  {symbol.Name}: {symbol.DocumentationText}");
+                found = true;
+            }
+        }
+        if (!found)
+            output.AppendLine("No documented symbols found.");
+    }
+
+    public void ShowSymbolDocumentation(string name, OutputHistory output)
+    {
+        var compilation = _previous ?? Compilation.CreateScript(null);
+        var found = false;
+        foreach (var symbol in EnumerateUserSymbols(compilation))
+        {
+            if (symbol.Name == name)
+            {
+                if (string.IsNullOrEmpty(symbol.DocumentationText))
+                {
+                    output.AppendLine($"  {symbol} — (no documentation)");
+                }
+                else
+                {
+                    output.AppendLine($"  {symbol}");
+                    output.AppendLine($"  Documentation: {symbol.DocumentationText}");
+                }
+                found = true;
+            }
+        }
+        if (!found)
+            output.AppendLine($"Symbol '{name}' not found.");
+    }
+
     private static string WriteToString(Action<TextWriter> write)
     {
         var writer = new StringWriter();

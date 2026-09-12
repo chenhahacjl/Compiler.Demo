@@ -713,6 +713,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 IsSealed = true,
             };
             enumType.SetEnumMembers(members);
+            DocumentationBackfill.BackfillDocumentation(enumType, syntax, _diagnostics);
 
             // facade enum：`facade` 修饰符 + FacadeTargets 命中 → 整型映射到 BCL 同名枚举（IL 直链签名用）
             if (syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.FacadeKeyword) &&

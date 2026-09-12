@@ -143,7 +143,10 @@ namespace Cocoa.Build
                 {
                     // `.coa` 语义层程序集：编译到 BoundProgram 即停（不走 IR/机器码/IL），后端无关。
                     // 托管 dll 不在此预生成——由消费方构建时按需生成（lazy，防派生产物被删后断链）
-                    diagnostics = compilation.EmitCocoa(project.Name, outputFile);
+                    var docPath = options.DocOutput != null
+                        ? outputFile + ".xml"
+                        : project.DocumentationFile;
+                    diagnostics = compilation.EmitCocoa(project.Name, outputFile, docPath);
                 }
                 else if (backend == CodeBackend.Native)
                 {
@@ -226,6 +229,18 @@ namespace Cocoa.Build
             if (hasErrors || warningsFailed)
             {
                 return new ProjectBuildResult(success: false, upToDate: false);
+            }
+
+            // 6e-M24：XML documentation 输出（exe/library；`.coa` 已在 EmitCocoa 内写出）
+            if (format != ProjectOutputFormat.Cod)
+            {
+                var docPath = options.DocOutput != null
+                    ? outputFile + ".xml"
+                    : project.DocumentationFile;
+                if (docPath != null)
+                {
+                    compilation.EmitDocumentation(project.Name, docPath);
+                }
             }
 
             // CopyLocal：把引用的 `.dll`/`.coa` 条件复制到输出目录（仿 VS 复制引用依赖；

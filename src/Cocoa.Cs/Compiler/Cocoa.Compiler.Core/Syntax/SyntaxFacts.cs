@@ -79,6 +79,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         public static bool IsComment(this SyntaxKind kind)
         {
             return kind == SyntaxKind.SingleLineCommentTrivia ||
+                   kind == SyntaxKind.SingleLineDocCommentTrivia ||
                    kind == SyntaxKind.MultiLineCommentTrivia;
         }
 
@@ -573,6 +574,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.LineBreakTrivia:
                 case SyntaxKind.WhitespaceTrivia:
                 case SyntaxKind.SingleLineCommentTrivia:
+                case SyntaxKind.SingleLineDocCommentTrivia:
                 case SyntaxKind.MultiLineCommentTrivia:
                     return true;
                 default:

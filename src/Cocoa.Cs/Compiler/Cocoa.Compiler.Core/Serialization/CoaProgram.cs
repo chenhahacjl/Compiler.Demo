@@ -24,7 +24,8 @@ namespace Cocoa.CodeAnalysis.Serialization
             ImmutableArray<NamedTypeSymbol> genericDefinitions = default,
             ImmutableDictionary<FunctionSymbol, BoundBlockStatement>? genericOpenBodies = null,
             ImmutableDictionary<string, FunctionSymbol>? functionKeys = null,
-            ImmutableDictionary<string, TypeSymbol>? typesByName = null)
+            ImmutableDictionary<string, TypeSymbol>? typesByName = null,
+            ImmutableDictionary<string, string>? docs = null)
         {
             Functions = functions;
             Globals = globals;
@@ -41,6 +42,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             GenericOpenBodies = genericOpenBodies ?? ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Empty;
             FunctionKeys = functionKeys ?? ImmutableDictionary<string, FunctionSymbol>.Empty;
             TypesByName = typesByName ?? ImmutableDictionary<string, TypeSymbol>.Empty;
+            Docs = docs ?? ImmutableDictionary<string, string>.Empty;
         }
 
         /// <summary>库的顶层函数（含 extern 声明，无入口点）。</summary>
@@ -103,5 +105,8 @@ namespace Cocoa.CodeAnalysis.Serialization
 
         /// <summary>库文件位置（动态链接 CopyLocal：定位同名 dll 随消费方产物部署）。</summary>
         public string SourcePath { get; internal set; } = "";
+
+        /// <summary>6e-M24：文档注释映射（DocID → 规范化原文）。空 = 无文档。</summary>
+        public ImmutableDictionary<string, string> Docs { get; }
     }
 }

@@ -238,5 +238,6 @@ namespace Cocoa.CodeAnalysis.Syntax
         YieldReturnStatement = 229,
         YieldBreakStatement = 230,
         Attribute = 232,
+        SingleLineDocCommentTrivia = 233,
     }
 }

@@ -105,7 +105,14 @@ namespace Cocoa.CodeAnalysis.Syntax
                     {
                         if (Lookahead == '/')
                         {
-                            ReadSingleLineComment();
+                            if (Peek(2) == '/' && Peek(3) != '/')
+                            {
+                                ReadSingleLineDocComment();
+                            }
+                            else
+                            {
+                                ReadSingleLineComment();
+                            }
                         }
                         else if (Lookahead == '*')
                         {
@@ -237,6 +244,34 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
 
             _kind = SyntaxKind.SingleLineCommentTrivia;
+        }
+
+        private void ReadSingleLineDocComment()
+        {
+            _position += 3;
+
+            var done = false;
+
+            while (!done)
+            {
+                switch (Current)
+                {
+                    case '\0':
+                    case '\r':
+                    case '\n':
+                    {
+                        done = true;
+                        break;
+                    }
+                    default:
+                    {
+                        _position++;
+                        break;
+                    }
+                }
+            }
+
+            _kind = SyntaxKind.SingleLineDocCommentTrivia;
         }
 
         private void ReadMultiLineComment()

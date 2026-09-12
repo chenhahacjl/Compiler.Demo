@@ -8,11 +8,11 @@ namespace Cocoa.CodeAnalysis.Syntax
         BadToken,
 
         // Trivia
-        SkippedTextTrivia,       // 被跳过的文本
-        LineBreakTrivia,         // 换行符
-        WhitespaceTrivia,        // 空字符
-        SingleLineCommentTrivia, // 单行注释
-        MultiLineCommentTrivia,  // 多行注释
+        SkippedTextTrivia,            // 被跳过的文本
+        LineBreakTrivia,              // 换行符
+        WhitespaceTrivia,             // 空字符
+        SingleLineCommentTrivia,      // 单行注释
+        MultiLineCommentTrivia,       // 多行注释
 
         // Tokens
         EndOfFileToken,          // <EOF>
@@ -250,5 +250,6 @@ ColonToken,               // :
         YieldBreakStatement = 230, // yield break 语句
         FieldKeyword = 231, // field（6e-M31 类字段显式关键字，对齐 property；显式值避免移动隐式段成员）
         Attribute = 232,    // attribute 声明（`[Name]` / `[Name("arg")]`，6e-M32 首例为 facade 属性；显式值避免偏移）
+        SingleLineDocCommentTrivia = 233, // 单行文档注释（6e-M24）——显式值避免插入 trivia 段导致隐式值漂移
     }
 }

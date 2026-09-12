@@ -5,13 +5,19 @@
 
 namespace System
 {
+    /// <summary>Represents a sequence of characters. Provides string manipulation methods.</summary>
     public facade class String
     {
+        /// <summary>Determines whether the specified string is null or empty.</summary>
+        /// <param name="s">The string to test.</param>
+        /// <returns>true if s is null or an empty string; otherwise, false.</returns>
         public static function IsNullOrEmpty(s: string): bool
         {
             return s == ""
         }
 
+        /// <summary>Returns a copy of this string converted to uppercase.</summary>
+        /// <returns>The uppercase equivalent of this string.</returns>
         public function ToUpper(): string
         {
             var result = ""
@@ -32,6 +38,8 @@ namespace System
             return result
         }
 
+        /// <summary>Returns a copy of this string converted to lowercase.</summary>
+        /// <returns>The lowercase equivalent of this string.</returns>
         public function ToLower(): string
         {
             var result = ""
@@ -52,6 +60,9 @@ namespace System
             return result
         }
 
+        /// <summary>Determines whether this string starts with the specified prefix.</summary>
+        /// <param name="prefix">The prefix to check.</param>
+        /// <returns>true if this string starts with prefix; otherwise, false.</returns>
         public function StartsWith(prefix: string): bool
         {
             if prefix.Length > this.Length
@@ -61,6 +72,9 @@ namespace System
             return this.substring(0, prefix.Length) == prefix
         }
 
+        /// <summary>Determines whether this string ends with the specified suffix.</summary>
+        /// <param name="suffix">The suffix to check.</param>
+        /// <returns>true if this string ends with suffix; otherwise, false.</returns>
         public function EndsWith(suffix: string): bool
         {
             if suffix.Length > this.Length
@@ -70,6 +84,9 @@ namespace System
             return this.substring(this.Length - suffix.Length, suffix.Length) == suffix
         }
 
+        /// <summary>Determines whether this string contains the specified substring.</summary>
+        /// <param name="sub">The substring to search for.</param>
+        /// <returns>true if this string contains sub; otherwise, false.</returns>
         public function Contains(sub: string): bool
         {
             if sub.Length == 0
@@ -88,6 +105,9 @@ namespace System
             return false
         }
 
+        /// <summary>Reports the zero-based index of the first occurrence of the specified substring.</summary>
+        /// <param name="sub">The substring to search for.</param>
+        /// <returns>The zero-based index of the first occurrence, or -1 if not found.</returns>
         public function IndexOf(sub: string): i32
         {
             if sub.Length == 0
@@ -106,6 +126,8 @@ namespace System
             return -1
         }
 
+        /// <summary>Removes all leading and trailing occurrences of a specified character.</summary>
+        /// <returns>The trimmed string.</returns>
         public function Trim(): string
         {
             var start = 0
@@ -143,6 +165,10 @@ namespace System
             return this.substring(start, end - start)
         }
 
+        /// <summary>Returns a new string in which all occurrences of a specified string are replaced with another string.</summary>
+        /// <param name="old">The string to be replaced.</param>
+        /// <param name="replacement">The string to replace all occurrences of old.</param>
+        /// <returns>A new string with all occurrences of old replaced by replacement.</returns>
         public function Replace(old: string, replacement: string): string
         {
             if old.Length == 0
@@ -172,6 +198,10 @@ namespace System
             return result
         }
 
+        /// <summary>Left-pads this string to the specified total width with the specified character.</summary>
+        /// <param name="totalWidth">The minimum number of characters in the result.</param>
+        /// <param name="padChar">The padding character.</param>
+        /// <returns>The left-padded string.</returns>
         public function PadLeft(totalWidth: i32, padChar: char): string
         {
             var result = this
@@ -182,11 +212,18 @@ namespace System
             return result
         }
 
+        /// <summary>Left-pads this string to the specified total width with spaces.</summary>
+        /// <param name="totalWidth">The minimum number of characters in the result.</param>
+        /// <returns>The left-padded string.</returns>
         public function PadLeft(totalWidth: i32): string
         {
             return this.PadLeft(totalWidth, ' ')
         }
 
+        /// <summary>Right-pads this string to the specified total width with the specified character.</summary>
+        /// <param name="totalWidth">The minimum number of characters in the result.</param>
+        /// <param name="padChar">The padding character.</param>
+        /// <returns>The right-padded string.</returns>
         public function PadRight(totalWidth: i32, padChar: char): string
         {
             var result = this
@@ -197,11 +234,17 @@ namespace System
             return result
         }
 
+        /// <summary>Right-pads this string to the specified total width with spaces.</summary>
+        /// <param name="totalWidth">The minimum number of characters in the result.</param>
+        /// <returns>The right-padded string.</returns>
         public function PadRight(totalWidth: i32): string
         {
             return this.PadRight(totalWidth, ' ')
         }
 
+        /// <summary>Splits this string into substrings based on a specified delimiter character.</summary>
+        /// <param name="sep">The delimiter character.</param>
+        /// <returns>An array of substrings.</returns>
         public function Split(sep: char): string[]
         {
             var count = 1
@@ -236,6 +279,9 @@ namespace System
         // M0-4 第一批补齐（自举缺口 P0-6 高频成员）
         // ------------------------------------------------------------------
 
+        /// <summary>Reports the zero-based index of the first occurrence of the specified character.</summary>
+        /// <param name="c">The character to search for.</param>
+        /// <returns>The zero-based index of the first occurrence, or -1 if not found.</returns>
         public function IndexOf(c: char): i32
         {
             var i = 0
@@ -250,6 +296,9 @@ namespace System
             return -1
         }
 
+        /// <summary>Reports the zero-based index of the last occurrence of the specified substring.</summary>
+        /// <param name="sub">The substring to search for.</param>
+        /// <returns>The zero-based index of the last occurrence, or -1 if not found.</returns>
         public function LastIndexOf(sub: string): i32
         {
             if sub.Length == 0
@@ -268,6 +317,9 @@ namespace System
             return -1
         }
 
+        /// <summary>Reports the zero-based index of the last occurrence of the specified character.</summary>
+        /// <param name="c">The character to search for.</param>
+        /// <returns>The zero-based index of the last occurrence, or -1 if not found.</returns>
         public function LastIndexOf(c: char): i32
         {
             var i = this.Length - 1
@@ -282,6 +334,9 @@ namespace System
             return -1
         }
 
+        /// <summary>Removes all leading occurrences of the specified character.</summary>
+        /// <param name="c">The character to remove.</param>
+        /// <returns>The trimmed string.</returns>
         public function TrimStart(c: char): string
         {
             var start = 0
@@ -296,6 +351,9 @@ namespace System
             return this.substring(start, this.Length - start)
         }
 
+        /// <summary>Removes all trailing occurrences of the specified character.</summary>
+        /// <param name="c">The character to remove.</param>
+        /// <returns>The trimmed string.</returns>
         public function TrimEnd(c: char): string
         {
             var end = this.Length
@@ -306,6 +364,8 @@ namespace System
             return this.substring(0, end)
         }
 
+        /// <summary>Copies the characters in this string to a character array.</summary>
+        /// <returns>A character array containing the characters of this string.</returns>
         public function ToCharArray(): char[]
         {
             var result = new char[this.Length]
@@ -318,16 +378,28 @@ namespace System
             return result
         }
 
+        /// <summary>Deletes a specified number of characters from this string beginning at a specified position.</summary>
+        /// <param name="start">The zero-based position to begin deleting.</param>
+        /// <param name="count">The number of characters to delete.</param>
+        /// <returns>The string with the specified characters removed.</returns>
         public function Remove(start: i32, count: i32): string
         {
             return this.substring(0, start) + this.substring(start + count, this.Length - start - count)
         }
 
+        /// <summary>Inserts a specified string at a specified index position.</summary>
+        /// <param name="index">The zero-based position to insert at.</param>
+        /// <param name="text">The string to insert.</param>
+        /// <returns>The string with text inserted at the specified position.</returns>
         public function Insert(index: i32, text: string): string
         {
             return this.substring(0, index) + text + this.substring(index, this.Length - index)
         }
 
+        /// <summary>Concatenates all elements of a string array using the specified separator.</summary>
+        /// <param name="sep">The separator to use between elements.</param>
+        /// <param name="parts">The array of strings to join.</param>
+        /// <returns>A string containing all elements separated by the separator.</returns>
         public static function Join(sep: string, parts: string[]): string
         {
             var result = ""

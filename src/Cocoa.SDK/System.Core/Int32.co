@@ -7,13 +7,19 @@ using System.Syscall
 
 namespace System
 {
+    /// <summary>Represents a 32-bit signed integer and provides conversion and comparison methods.</summary>
     public facade class Int32
     {
+        /// <summary>Converts this integer to its string representation.</summary>
+        /// <returns>The string representation of this integer.</returns>
         public function ToString(): string
         {
             return Runtime.Int32ToString(this)
         }
 
+        /// <summary>Compares this integer to another integer.</summary>
+        /// <param name="value">The integer to compare to.</param>
+        /// <returns>A value indicating the relative order (-1, 0, or 1).</returns>
         public function CompareTo(value: i32): i32
         {
             if this < value
@@ -27,6 +33,9 @@ namespace System
             return 0
         }
 
+        /// <summary>Converts the string representation of a number to its 32-bit signed integer equivalent.</summary>
+        /// <param name="s">A string containing a number to convert.</param>
+        /// <returns>The 32-bit signed integer equivalent of the number in s.</returns>
         public static function Parse(s: string): i32
         {
             let v = Runtime.ParseInt64(s)
@@ -38,6 +47,10 @@ namespace System
             return i32(v)
         }
 
+        /// <summary>Converts the string representation of a number to a 32-bit signed integer, and returns a value indicating whether the conversion succeeded.</summary>
+        /// <param name="s">A string containing a number to convert.</param>
+        /// <param name="result">When this method returns, contains the 32-bit signed integer value equivalent of the number in s, or zero if the conversion failed.</param>
+        /// <returns>true if s was converted successfully; otherwise, false.</returns>
         public static function TryParse(s: string, out result: i32): bool
         {
             result = 0
@@ -103,16 +116,24 @@ namespace System
             result = i32(acc)
             return true
         }
+        /// <summary>Determines whether this integer equals the specified integer.</summary>
+        /// <param name="value">The integer to compare to.</param>
+        /// <returns>true if value equals this integer; otherwise, false.</returns>
         public function Equals(value: i32): bool
         {
             return this == value
         }
 
+        /// <summary>Returns the hash code for this integer.</summary>
+        /// <returns>A 32-bit signed integer hash code.</returns>
         public function GetHashCode(): i32
         {
             return 0
         }
 
+        /// <summary>Converts this integer to its string representation using the specified format.</summary>
+        /// <param name="format">A format string (currently unused; same as parameterless ToString).</param>
+        /// <returns>The string representation of this integer.</returns>
         public function ToString(format: string): string
         {
             return this.ToString()

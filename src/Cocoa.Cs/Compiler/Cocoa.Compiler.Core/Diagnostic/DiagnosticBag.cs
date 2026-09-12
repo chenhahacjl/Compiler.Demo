@@ -605,5 +605,12 @@ namespace Cocoa.CodeAnalysis
             var message = $"out 参数 '{name}' 未赋值，不能作为 'ref' 实参传递。";
             ReportError(location, message);
         }
+
+        /// <summary>6e-M24：文档注释标签格式异常（未知标签/属性格式错误），警告级。</summary>
+        public void ReportMalformedDocComment(TextLocation location, string detail)
+        {
+            var message = $"文档注释格式异常：{detail}";
+            ReportWarning(location, message);
+        }
     }
 }

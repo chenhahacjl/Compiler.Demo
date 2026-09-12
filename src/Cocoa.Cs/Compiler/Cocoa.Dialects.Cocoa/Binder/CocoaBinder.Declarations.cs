@@ -79,6 +79,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 {
                     TypeParameters = _declaringMethodTypeParameters,
                 };
+                DocumentationBackfill.BackfillDocumentation(function, syntax, _diagnostics);
                 BindWhereClauses(syntax.WhereClauses, function.TypeParameters);
 
                 if (syntax.Identifier.Text != null && !_scope.TryDeclareFunction(function))
@@ -391,6 +392,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             classType.TypeKind = isStruct ? TypeKind.Struct : TypeKind.Class;
             classType.IsAbstract = parts.Any(p => p.Syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.AbstractKeyword));
             classType.IsSealed = isStruct || parts.Any(p => p.Syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.SealedKeyword));
+            DocumentationBackfill.BackfillDocumentation(classType, primary.Syntax, _diagnostics);
 
             // struct 约束（MVP）：常规 struct 不可有基类/接口、不可 abstract、不可 facade；
             // 但 `facade struct : <BCL值类型>` 是允许的特殊形态（6e-M26 Phase3：映射 CO struct 到 BCL）。
@@ -758,7 +760,9 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
 
                     if (classType.GetDeclaredField(fieldDeclaration.Identifier.Text) == null)
                     {
-                        classType.AddField(new FieldSymbol(fieldDeclaration.Identifier.Text, fieldType!, fieldVisibility, classType, isReadonly: fieldIsReadonly, isStatic: fieldIsStatic));
+                        var fieldSym = new FieldSymbol(fieldDeclaration.Identifier.Text, fieldType!, fieldVisibility, classType, isReadonly: fieldIsReadonly, isStatic: fieldIsStatic);
+                        DocumentationBackfill.BackfillDocumentation(fieldSym, fieldDeclaration, _diagnostics);
+                        classType.AddField(fieldSym);
                         if (fieldVisibility == Visibility.Public)
                         {
                             ValidateFacadeMemberAgainstBcl(classType, fieldDeclaration.Identifier.Text, FacadeMemberKind.Field, 0, fieldDeclaration.Identifier.Location);
@@ -812,6 +816,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                         var parameters = BindParameters(constructorDeclaration.Parameters);
                         var ctorVisibility = GetVisibility(constructorDeclaration.Modifiers, Visibility.Private);
                         var ctor = new FunctionSymbol(classType.Name, parameters, TypeSymbol.Void, null, syntax: constructorDeclaration, containingClass: classType, visibility: ctorVisibility) { IsConstructor = true };
+                        DocumentationBackfill.BackfillDocumentation(ctor, constructorDeclaration, _diagnostics);
 
                         if (!classType.HasDeclaredMethodSignature(classType.Name, ctor))
                         {
@@ -914,6 +919,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
 
             var visibility = GetVisibility(syntax.Modifiers, Visibility.Public);
             var eventSymbol = new EventSymbol(eventName, resolvedHandler, visibility, classType);
+            DocumentationBackfill.BackfillDocumentation(eventSymbol, syntax, _diagnostics);
             classType.AddEvent(eventSymbol);
 
             // 多播存储（6e-M22 委托真实类型化 M4）：
@@ -1440,6 +1446,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 IsSealed = true,
                 TypeKind = TypeKind.Delegate,
             };
+            DocumentationBackfill.BackfillDocumentation(delegateClass, syntax, _diagnostics);
             delegateClass.TypeParameters = BindDelegateTypeParameters(syntax.TypeParameters, delegateClass);
 
             // 6e-M22 delegate 真实类型化：签名绑定期间 delegate 类为类型参数查找语境（外层宿主不遮蔽）
@@ -1493,6 +1500,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 IsSealed = true,
                 TypeKind = TypeKind.Delegate,
             };
+            DocumentationBackfill.BackfillDocumentation(delegateClass, syntax, _diagnostics);
             delegateClass.TypeParameters = BindDelegateTypeParameters(syntax.TypeParameters, delegateClass);
 
             // 6e-M22 delegate 真实类型化：签名绑定期间 delegate 类为类型参数查找语境
@@ -1781,6 +1789,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 TypeKind = TypeKind.Interface,
                 IsAbstract = true,
             };
+            DocumentationBackfill.BackfillDocumentation(classType, syntax, _diagnostics);
 
             // 泛型类型参数声明（6e-M20）：`interface IEnumerable<T>`（where 子句在阶段 3 绑定）
             classType.TypeParameters = BindClassTypeParameters(syntax.TypeParameters, classType, name);
@@ -1848,6 +1857,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                                     IsVirtual = true,
                                     TypeParameters = _declaringMethodTypeParameters,
                                 };
+                                DocumentationBackfill.BackfillDocumentation(method, methodDeclaration, _diagnostics);
                                 BindWhereClauses(methodDeclaration.WhereClauses, method.TypeParameters);
 
                                 interfaceType.AddMethod(method);
@@ -1936,7 +1946,9 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 classFunctions.Add(setter);
             }
 
-            interfaceType.AddProperty(new PropertySymbol(propertyName, propertyType!, interfaceType, getter, setter, visibility, isStatic: false, isIndexer: isIndexer));
+            var interfaceProperty = new PropertySymbol(propertyName, propertyType!, interfaceType, getter, setter, visibility, isStatic: false, isIndexer: isIndexer);
+            interfaceType.AddProperty(interfaceProperty);
+            DocumentationBackfill.BackfillDocumentation(interfaceProperty, syntax, _diagnostics);
         }
 
         /// <summary>接口实现完整性：类（含继承链）须实现其全部接口的每个成员（方法签名/属性访问器）。</summary>
@@ -2250,6 +2262,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 if (getter != null) getter.ContainingProperty = property;
                 if (setter != null) setter.ContainingProperty = property;
                 classType.AddProperty(property);
+                DocumentationBackfill.BackfillDocumentation(property, syntax, _diagnostics);
                 if (visibility == Visibility.Public)
                 {
                     ValidateFacadeMemberAgainstBcl(classType, propertyName, FacadeMemberKind.Property, 0, syntax.Identifier.Location);
@@ -2588,6 +2601,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 IsAbstract = isAbstract,
                 IsSealed = isSealed,
             };
+            DocumentationBackfill.BackfillDocumentation(method, syntax, _diagnostics);
 
             // 泛型方法类型参数（6e-M20）：`function Map<U>(…)` 类内声明 + where 子句落符号
             method.TypeParameters = _declaringMethodTypeParameters;

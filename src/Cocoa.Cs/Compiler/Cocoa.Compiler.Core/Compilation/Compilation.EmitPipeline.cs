@@ -1,4 +1,5 @@
 using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Documentation;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.Targeting;
 using Cocoa.CodeAnalysis.Evaluation;
@@ -128,7 +129,7 @@ namespace Cocoa.CodeAnalysis
         /// <summary>
         /// 把库编译为 `.coa` 语义层程序集（编译到 BoundProgram 即停，不走 IR/机器码/IL）。
         /// </summary>
-        public ImmutableArray<Diagnostic> EmitCocoa(string moduleName, string outputPath)
+        public ImmutableArray<Diagnostic> EmitCocoa(string moduleName, string outputPath, string? docPath = null)
         {
             var parseDiagnostics = SyntaxTrees.SelectMany(st => st.Diagnostics);
 
@@ -210,6 +211,36 @@ var globals = GlobalScope.Variables.OfType<GlobalVariableSymbol>().ToImmutableAr
 
             var containerClasses = program.Classes.Where(IsCodSerializableClass).ToImmutableArray();
 
+            // 6e-M24：文档化符号全集 = 顶层函数/类型/全局 + 类（含泛型定义）成员 + 枚举。
+            // 类成员文档（方法含构造/属性/字段/事件）是 stdlib 文档主体，必须纳入。
+            var documentableSymbols = new List<Symbol>();
+            documentableSymbols.AddRange(functions);
+            documentableSymbols.AddRange(containerClasses);
+            foreach (var type in containerClasses.Concat(program.GenericDefinitions))
+            {
+                documentableSymbols.AddRange(type.Methods);
+                documentableSymbols.AddRange(type.Fields);
+                documentableSymbols.AddRange(type.Properties);
+                documentableSymbols.AddRange(type.Events);
+            }
+
+            documentableSymbols.AddRange(globals);
+            documentableSymbols.AddRange(enums);
+
+            // 6e-M24：构建文档注释映射（DocID → 规范化原文）
+            var docsBuilder = ImmutableDictionary.CreateBuilder<string, string>();
+            foreach (var sym in documentableSymbols)
+            {
+                if (!string.IsNullOrEmpty(sym.DocumentationText))
+                {
+                    var docId = DocIdBuilder.GetDocId(sym);
+                    if (docId != null)
+                    {
+                        docsBuilder[docId] = sym.DocumentationText!;
+                    }
+                }
+            }
+
             var codProgram = new CoaProgram(
                 functions,
                 globals,
@@ -225,7 +256,8 @@ var globals = GlobalScope.Variables.OfType<GlobalVariableSymbol>().ToImmutableAr
                 ImmutableArray<string>.Empty,
                 namespaces,
                 program.GenericDefinitions,
-                program.GenericOpenBodies)
+                program.GenericOpenBodies,
+                docs: docsBuilder.ToImmutable())
             {
                 // 程序集名 = 模块名：动态链接时消费方据此合成 AssemblyRef 指向同名 dll（阶段 A2）
                 Name = moduleName,
@@ -237,7 +269,34 @@ var globals = GlobalScope.Variables.OfType<GlobalVariableSymbol>().ToImmutableAr
                 CoaSerializer.Write(writer, codProgram);
             }
 
+            // 6e-M24：XML documentation 文件生成
+            if (docPath != null)
+            {
+                DocumentationFileWriter.Write(docPath, moduleName, documentableSymbols);
+            }
+
             return ImmutableArray<Diagnostic>.Empty;
+        }
+
+        /// <summary>
+        /// 6e-M24：为 exe/library 产物生成 XML documentation 文件（`.coa` 由 <see cref="EmitCocoa"/> 内写出）。
+        /// 遍历全局作用域符号 + 类成员，输出带 <c>DocumentationText</c> 的成员。
+        /// </summary>
+        public int EmitDocumentation(string moduleName, string docPath)
+        {
+            var symbols = new List<Symbol>();
+            symbols.AddRange(GlobalScope.Functions);
+            symbols.AddRange(GlobalScope.Classes);
+            symbols.AddRange(GlobalScope.Enums);
+            foreach (var type in GlobalScope.Classes)
+            {
+                symbols.AddRange(type.Methods);
+                symbols.AddRange(type.Fields);
+                symbols.AddRange(type.Properties);
+                symbols.AddRange(type.Events);
+            }
+
+            return DocumentationFileWriter.Write(docPath, moduleName, symbols);
         }
 
         private TextLocation ZeroLocation

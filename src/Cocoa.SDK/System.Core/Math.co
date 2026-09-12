@@ -4,44 +4,72 @@ using System.Syscall
 
 namespace System
 {
+    /// <summary>Provides basic mathematical functions and constants.</summary>
     facade class Math
     {
+        /// <summary>Returns the larger of two integers.</summary>
+        /// <param name="a">The first integer.</param>
+        /// <param name="b">The second integer.</param>
+        /// <returns>The larger of a and b.</returns>
         static function Max(a: i32, b: i32): i32
         {
             if (a > b) return a
             return b
         }
 
+        /// <summary>Returns the larger of two doubles.</summary>
+        /// <param name="a">The first double.</param>
+        /// <param name="b">The second double.</param>
+        /// <returns>The larger of a and b.</returns>
         static function Max(a: f64, b: f64): f64
         {
             if (a > b) return a
             return b
         }
 
+        /// <summary>Returns the smaller of two integers.</summary>
+        /// <param name="a">The first integer.</param>
+        /// <param name="b">The second integer.</param>
+        /// <returns>The smaller of a and b.</returns>
         static function Min(a: i32, b: i32): i32
         {
             if (a < b) return a
             return b
         }
 
+        /// <summary>Returns the smaller of two doubles.</summary>
+        /// <param name="a">The first double.</param>
+        /// <param name="b">The second double.</param>
+        /// <returns>The smaller of a and b.</returns>
         static function Min(a: f64, b: f64): f64
         {
             if (a < b) return a
             return b
         }
 
+        /// <summary>Returns the absolute value of an integer.</summary>
+        /// <param name="x">The integer.</param>
+        /// <returns>The absolute value of x.</returns>
         static function Abs(x: i32): i32
         {
             if (x < 0) return -x
             return x
         }
 
+        /// <summary>Returns the absolute value of a double.</summary>
+        /// <param name="x">The double.</param>
+        /// <returns>The absolute value of x.</returns>
         static function Abs(x: f64): f64
         {
             if (x < 0) return -x
             return x
         }
 
+        /// <summary>Clamps an integer to a specified range.</summary>
+        /// <param name="v">The value to clamp.</param>
+        /// <param name="lo">The minimum bound.</param>
+        /// <param name="hi">The maximum bound.</param>
+        /// <returns>v clamped between lo and hi.</returns>
         static function Clamp(v: i32, lo: i32, hi: i32): i32
         {
             if (v < lo) return lo
@@ -49,6 +77,11 @@ namespace System
             return v
         }
 
+        /// <summary>Clamps a double to a specified range.</summary>
+        /// <param name="v">The value to clamp.</param>
+        /// <param name="lo">The minimum bound.</param>
+        /// <param name="hi">The maximum bound.</param>
+        /// <returns>v clamped between lo and hi.</returns>
         static function Clamp(v: f64, lo: f64, hi: f64): f64
         {
             if (v < lo) return lo
@@ -56,6 +89,9 @@ namespace System
             return v
         }
 
+        /// <summary>Returns the sign of an integer (-1, 0, or 1).</summary>
+        /// <param name="x">The integer.</param>
+        /// <returns>-1 if x is negative, 0 if zero, 1 if positive.</returns>
         static function Sign(x: i32): i32
         {
             if (x < 0) return -1
@@ -63,6 +99,9 @@ namespace System
             return 0
         }
 
+        /// <summary>Returns the sign of a double (-1, 0, or 1).</summary>
+        /// <param name="x">The double.</param>
+        /// <returns>-1 if x is negative, 0 if zero, 1 if positive.</returns>
         static function Sign(x: f64): i32
         {
             if (x < 0) return -1
@@ -70,16 +109,26 @@ namespace System
             return 0
         }
 
+        /// <summary>Determines whether an integer is even.</summary>
+        /// <param name="n">The integer.</param>
+        /// <returns>true if n is even; otherwise, false.</returns>
         static function IsEven(n: i32): bool
         {
             return n % 2 == 0
         }
 
+        /// <summary>Determines whether an integer is odd.</summary>
+        /// <param name="n">The integer.</param>
+        /// <returns>true if n is odd; otherwise, false.</returns>
         static function IsOdd(n: i32): bool
         {
             return n % 2 == 1
         }
 
+/// <summary>Raises an integer to the power of an exponent.</summary>
+        /// <param name="x">The base integer.</param>
+        /// <param name="exp">The exponent.</param>
+        /// <returns>x raised to the power of exp.</returns>
 static function Pow(x: i32, exp: i32): i32
         {
             var result = 1
@@ -92,6 +141,9 @@ static function Pow(x: i32, exp: i32): i32
             return result
         }
 
+        /// <summary>Computes the factorial of a non-negative integer.</summary>
+        /// <param name="n">A non-negative integer.</param>
+        /// <returns>The factorial of n (n!).</returns>
         static function Factorial(n: i32): i32
         {
             var result = 1
@@ -104,6 +156,10 @@ static function Pow(x: i32, exp: i32): i32
             return result
         }
 
+        /// <summary>Computes the greatest common divisor of two integers.</summary>
+        /// <param name="a">The first integer.</param>
+        /// <param name="b">The second integer.</param>
+        /// <returns>The greatest common divisor of a and b.</returns>
         static function Gcd(a: i32, b: i32): i32
         {
             var x = Abs(a)
@@ -117,6 +173,10 @@ static function Pow(x: i32, exp: i32): i32
             return x
         }
 
+        /// <summary>Computes the least common multiple of two integers.</summary>
+        /// <param name="a">The first integer.</param>
+        /// <param name="b">The second integer.</param>
+        /// <returns>The least common multiple of a and b.</returns>
         static function Lcm(a: i32, b: i32): i32
         {
             if a == 0 || b == 0
@@ -126,26 +186,41 @@ static function Pow(x: i32, exp: i32): i32
             return Abs(a * b) / Gcd(a, b)
         }
 
+        /// <summary>Returns the square root of a double.</summary>
+        /// <param name="x">A non-negative double.</param>
+        /// <returns>The square root of x.</returns>
         static function Sqrt(x: f64): f64
         {
             return MathSyscall.Sqrt(x)
         }
 
+        /// <summary>Returns the largest integer less than or equal to a double.</summary>
+        /// <param name="x">The double.</param>
+        /// <returns>The floor of x.</returns>
         static function Floor(x: f64): f64
         {
             return Runtime.Floor(x)
         }
 
+        /// <summary>Returns the smallest integer greater than or equal to a double.</summary>
+        /// <param name="x">The double.</param>
+        /// <returns>The ceiling of x.</returns>
         static function Ceiling(x: f64): f64
         {
             return Runtime.Ceiling(x)
         }
 
+        /// <summary>Truncates the fractional part of a double.</summary>
+        /// <param name="x">The double.</param>
+        /// <returns>The truncated value of x.</returns>
         static function Truncate(x: f64): f64
         {
             return Runtime.Truncate(x)
         }
 
+        /// <summary>Rounds a double to the nearest integer.</summary>
+        /// <param name="x">The double.</param>
+        /// <returns>The rounded value of x.</returns>
         static function Round(x: f64): f64
         {
             return Runtime.Round(x)

@@ -4,113 +4,159 @@ using System.Syscall
 
 namespace System
 {
+    /// <summary>Provides standard input, output, and error stream access.</summary>
     facade class Console
     {
+        /// <summary>Writes an empty line to the standard output.</summary>
         static function WriteLine(): void
         {
             ConsoleSyscall.WriteLine("")
         }
 
+        /// <summary>Writes a string followed by a newline to the standard output.</summary>
+        /// <param name="text">The string to write.</param>
         static function WriteLine(text: string): void
         {
             ConsoleSyscall.WriteLine(text)
         }
 
+        /// <summary>Writes an integer followed by a newline to the standard output.</summary>
+        /// <param name="text">The integer to write.</param>
         static function WriteLine(text: i32): void
         {
             ConsoleSyscall.WriteLine(text)
         }
 
+        /// <summary>Writes a double followed by a newline to the standard output.</summary>
+        /// <param name="text">The double to write.</param>
         static function WriteLine(text: f64): void
         {
             ConsoleSyscall.WriteLine(text)
         }
 
+        /// <summary>Writes a boolean followed by a newline to the standard output.</summary>
+        /// <param name="text">The boolean to write.</param>
         static function WriteLine(text: bool): void
         {
             ConsoleSyscall.WriteLine(text)
         }
 
+        /// <summary>Writes a character followed by a newline to the standard output.</summary>
+        /// <param name="text">The character to write.</param>
         static function WriteLine(text: char): void
         {
             ConsoleSyscall.WriteLine(text)
         }
 
+        /// <summary>Writes a 64-bit integer followed by a newline to the standard output.</summary>
+        /// <param name="text">The 64-bit integer to write.</param>
         static function WriteLine(text: i64): void
         {
             ConsoleSyscall.WriteLine(text)
         }
 
+        /// <summary>Writes an unsigned 32-bit integer followed by a newline to the standard output.</summary>
+        /// <param name="text">The unsigned integer to write.</param>
         static function WriteLine(text: u32): void
         {
             ConsoleSyscall.WriteLine(text)
         }
 
+        /// <summary>Writes an unsigned 64-bit integer followed by a newline to the standard output.</summary>
+        /// <param name="text">The unsigned 64-bit integer to write.</param>
         static function WriteLine(text: u64): void
         {
             ConsoleSyscall.WriteLine(text)
         }
 
+        /// <summary>Writes a single-precision float followed by a newline to the standard output.</summary>
+        /// <param name="text">The float to write.</param>
         static function WriteLine(text: f32): void
         {
             ConsoleSyscall.WriteLine(text)
         }
 
+        /// <summary>Writes a string to the standard output without a newline.</summary>
+        /// <param name="text">The string to write.</param>
         static function Write(text: string): void
         {
             ConsoleSyscall.Write(text)
         }
 
+        /// <summary>Writes an integer to the standard output without a newline.</summary>
+        /// <param name="text">The integer to write.</param>
         static function Write(text: i32): void
         {
             ConsoleSyscall.Write(text)
         }
 
+        /// <summary>Writes a double to the standard output without a newline.</summary>
+        /// <param name="text">The double to write.</param>
         static function Write(text: f64): void
         {
             ConsoleSyscall.Write(text)
         }
 
+        /// <summary>Writes a boolean to the standard output without a newline.</summary>
+        /// <param name="text">The boolean to write.</param>
         static function Write(text: bool): void
         {
             ConsoleSyscall.Write(text)
         }
 
+        /// <summary>Writes a character to the standard output without a newline.</summary>
+        /// <param name="text">The character to write.</param>
         static function Write(text: char): void
         {
             ConsoleSyscall.Write(text)
         }
 
+        /// <summary>Writes a 64-bit integer to the standard output without a newline.</summary>
+        /// <param name="text">The 64-bit integer to write.</param>
         static function Write(text: i64): void
         {
             ConsoleSyscall.Write(text)
         }
 
+        /// <summary>Writes an unsigned 32-bit integer to the standard output without a newline.</summary>
+        /// <param name="text">The unsigned integer to write.</param>
         static function Write(text: u32): void
         {
             ConsoleSyscall.Write(text)
         }
 
+        /// <summary>Writes an unsigned 64-bit integer to the standard output without a newline.</summary>
+        /// <param name="text">The unsigned 64-bit integer to write.</param>
         static function Write(text: u64): void
         {
             ConsoleSyscall.Write(text)
         }
 
+        /// <summary>Writes a single-precision float to the standard output without a newline.</summary>
+        /// <param name="text">The float to write.</param>
         static function Write(text: f32): void
         {
             ConsoleSyscall.Write(text)
         }
 
+        /// <summary>Reads a line of characters from the standard input.</summary>
+        /// <returns>The next line from the input, or an empty string if no more lines.</returns>
         static function ReadLine(): string
         {
             return ConsoleSyscall.ReadLine()
         }
 
+        /// <summary>Reads a single key from the standard input.</summary>
+        /// <param name="intercept">If true, the key is intercepted and not displayed.</param>
+        /// <returns>The character of the key pressed.</returns>
         static function ReadKey(intercept: bool): char
         {
             return ConsoleSyscall.ReadKey(intercept)
         }
 
+        /// <summary>Plays a sound of a specified frequency and duration.</summary>
+        /// <param name="frequency">The frequency in hertz.</param>
+        /// <param name="duration">The duration in milliseconds.</param>
         static function Beep(frequency: i32, duration: i32): void
         {
             ConsoleSyscall.Beep(frequency, duration)

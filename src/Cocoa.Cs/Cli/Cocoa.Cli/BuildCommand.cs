@@ -21,6 +21,7 @@ namespace Cocoa.Cli
             var releaseRequested = false;
             var backendText = (string?)null;
             var dotnetRuntimeText = (string?)null;
+            var docRequested = false;
             var helpRequested = false;
 
             for (var i = 0; i < args.Length; i++)
@@ -91,6 +92,9 @@ namespace Cocoa.Cli
                             return 1;
                         }
 
+                        break;
+                    case "--doc":
+                        docRequested = true;
                         break;
                     case "--no-incremental":
                         noIncremental = true;
@@ -204,6 +208,7 @@ namespace Cocoa.Cli
                 ReferenceOverrides = referencePaths.ToImmutableArray(),
                 Backend = backend.Value,
                 DotnetRuntimeOverride = dotnetRuntimeText,
+                DocOutput = docRequested ? "generate" : null,
             };
 
             try

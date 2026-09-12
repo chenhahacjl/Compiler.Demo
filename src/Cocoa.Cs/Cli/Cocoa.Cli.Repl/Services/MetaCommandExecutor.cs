@@ -9,7 +9,7 @@ internal sealed class MetaCommandExecutor
 {
     public static readonly string[] Names =
     {
-        "cls", "dump", "exit", "help", "import", "keys", "load", "ls", "program", "reset", "tree",
+        "cls", "docs", "dump", "exit", "help", "import", "keys", "load", "ls", "program", "reset", "tree",
     };
 
     private readonly ReplSession _session;
@@ -29,8 +29,9 @@ internal sealed class MetaCommandExecutor
     public static bool IsKnown(string trimmed) =>
         trimmed == "#exit" || trimmed == "#cls" || trimmed == "#keys" || trimmed == "#help" ||
         trimmed == "#tree" || trimmed == "#program" || trimmed == "#reset" || trimmed == "#ls" ||
+        trimmed == "#docs" ||
         trimmed.StartsWith("#load ") || trimmed.StartsWith("#dump ") ||
-        trimmed.StartsWith("#import ");
+        trimmed.StartsWith("#import ") || trimmed.StartsWith("#docs ");
 
     /// <summary>按前缀模糊匹配命令名（"ex" → "exit"）。</summary>
     public static string? Match(string query) =>
@@ -60,6 +61,9 @@ internal sealed class MetaCommandExecutor
             case "#ls":
                 _session.ListSymbols(_output);
                 return true;
+            case "#docs":
+                _session.ListDocumentedSymbols(_output);
+                return true;
             case "#load":
                 _output.AppendLine("Usage: #load <path>");
                 return true;
@@ -86,6 +90,12 @@ internal sealed class MetaCommandExecutor
         if (trimmed.StartsWith("#dump "))
         {
             _session.DumpSymbol(trimmed.Substring(6).Trim(), _output);
+            return true;
+        }
+
+        if (trimmed.StartsWith("#docs "))
+        {
+            _session.ShowSymbolDocumentation(trimmed.Substring(6).Trim(), _output);
             return true;
         }
 
@@ -138,6 +148,8 @@ internal sealed class MetaCommandExecutor
         _output.AppendLine("  #import <p>  Import a .coa library");
         _output.AppendLine("  #ls        List all symbols");
         _output.AppendLine("  #dump <n>  Show symbol details");
+        _output.AppendLine("  #docs      List documented symbols");
+        _output.AppendLine("  #docs <n>  Show documentation for a symbol");
         _output.AppendLine("");
     }
 }
