@@ -348,8 +348,8 @@ public partial class EditorPane : UserControl
     private void UpdateEmptyState()
     {
         // 编辑器控件常驻可见，避免 AvaloniaEdit 子控件在 IsVisible=false→true 后不再参与布局。
-        // 只切换空态提示文字的显隐。
-        EmptyStateText.IsVisible = EditorTabs?.ActiveTab == null;
+        // 无标签时用不透明空态面板覆盖编辑器。
+        EmptyStatePanel.IsVisible = EditorTabs?.ActiveTab == null;
     }
 
     // ─────────── 标签拖拽 → 独立窗口 ───────────

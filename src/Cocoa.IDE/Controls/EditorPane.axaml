@@ -86,11 +86,13 @@
         <!-- 编辑器区 -->
         <Grid>
             <controls:EditorView x:Name="EditorHost" />
-            <TextBlock Text="打开文件或解决方案开始编辑"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center"
-                       Foreground="#666" FontSize="16"
-                       x:Name="EmptyStateText" />
+            <!-- 空态：用不透明面板覆盖编辑器（编辑器常驻可见以规避 AvaloniaEdit 布局问题） -->
+            <Border x:Name="EmptyStatePanel" Background="#1E1E1E">
+                <TextBlock Text="打开文件或解决方案开始编辑"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Foreground="#666" FontSize="16" />
+            </Border>
         </Grid>
     </DockPanel>
 </UserControl>
