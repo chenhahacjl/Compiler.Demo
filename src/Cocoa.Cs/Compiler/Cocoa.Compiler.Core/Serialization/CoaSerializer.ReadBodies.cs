@@ -283,6 +283,8 @@ namespace Cocoa.CodeAnalysis.Serialization
                             BoundThisExpression thisExpression => ((NamedTypeSymbol)thisExpression.Type).Fields.FirstOrDefault(f => f.Name == fieldName),
                             BoundMemberAccessExpression access => access.Field,
                             BoundStaticTypeExpression staticType => ((NamedTypeSymbol)staticType.Type).Fields.FirstOrDefault(f => f.Name == fieldName),
+                            // 6e-M25：局部/参数（如 `win.Field = v`）——字段在变量的静态类上
+                            BoundVariableExpression variable when variable.Type is NamedTypeSymbol variableType => variableType.Fields.FirstOrDefault(f => f.Name == fieldName),
                             _ => null,
                         };
 

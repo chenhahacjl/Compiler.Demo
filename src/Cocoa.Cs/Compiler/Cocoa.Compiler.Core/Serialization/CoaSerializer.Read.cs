@@ -98,6 +98,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                         ApplyPendingProperties(context);
                         ApplyPendingClosures(context);
                         ApplyPendingBaseTypes(context);
+                        ApplyPendingFields(context);
                         break;
                     case "bodies":
                         ReadBodies(reader, context, bodies);
@@ -332,14 +333,18 @@ namespace Cocoa.CodeAnalysis.Serialization
             /// <summary>6e-G7 S1：泛型定义类（gcls 读入）。</summary>
             public ImmutableArray<NamedTypeSymbol>.Builder GenericDefinitions { get; } = ImmutableArray.CreateBuilder<NamedTypeSymbol>();
 
-            /// <summary>6b：facade 类属性待挂接声明（访问器 fns 读毕后重建 PropertySymbol）。</summary>
-            public List<(NamedTypeSymbol ClassType, string Name, TypeSymbol Type, bool HasGet, bool HasSet, Visibility Visibility, bool IsStatic)> PendingProperties { get; } = new();
+            /// <summary>6b：facade 类属性待挂接声明（访问器 fns 读毕后重建 PropertySymbol）。
+            /// 6e-M25：类型以原始 ref 字符串暂存，待全类注册后再解析（属性类型可能指向后声明的类）。</summary>
+            public List<(NamedTypeSymbol ClassType, string Name, string TypeRef, bool HasGet, bool HasSet, Visibility Visibility, bool IsStatic)> PendingProperties { get; } = new();
 
             /// <summary>6f-4：捕获闭包元数据待回填（捕获变量 loc 晚于 fn 记录——全符号读毕后再解析）。</summary>
             public List<(FunctionSymbol Function, bool IsLambdaWithEnvironment, NamedTypeSymbol? EnvironmentClass, List<string> CapturedKeys)> PendingClosures { get; } = new();
 
             /// <summary>6e-M33：待回填基类（base 类声明可能晚于子类——全类注册后 pass2 解析，仿 PendingClosures）。</summary>
             public List<(NamedTypeSymbol ClassType, string BaseRef)> PendingBaseTypes { get; } = new();
+
+            /// <summary>6e-M25：待回填类字段（字段类型可能指向文件中后声明的类——全类注册后解析）。</summary>
+            public List<(NamedTypeSymbol ClassType, string Name, string TypeRef, Visibility Visibility, bool IsReadonly, bool IsStatic)> PendingFields { get; } = new();
 
             public void AddNamedType(string fullName, TypeSymbol type)
             {
@@ -386,16 +391,30 @@ namespace Cocoa.CodeAnalysis.Serialization
         /// <summary>6b：facade 类属性回填——访问器 fns（`get_X`/`set_X`，静态 + this 参）已读入类方法，据名挂接重建 PropertySymbol。</summary>
         private static void ApplyPendingProperties(ReadContext context)
         {
-            foreach (var (classType, name, type, hasGet, hasSet, visibility, isStatic) in context.PendingProperties)
+            foreach (var (classType, name, typeRef, hasGet, hasSet, visibility, isStatic) in context.PendingProperties)
             {
                 FunctionSymbol? getter = hasGet ? classType.GetDeclaredMethod("get_" + name) : null;
                 FunctionSymbol? setter = hasSet ? classType.GetDeclaredMethod("set_" + name) : null;
+                // 6e-M25：类型延后解析（可能指向文件中后声明的类）
+                var type = ResolveTypeRef(typeRef, context);
                 // 6e 跨库里程碑：索引器属性（绑定侧统一命名 `Item`）重建时须带 isIndexer 位，
                 // 否则实例化类型 GetIndexer() 命不中 → 元素访问回落数组判定报错。
                 classType.AddProperty(new PropertySymbol(name, type, classType, getter, setter, visibility, isStatic, isIndexer: name == "Item"));
             }
 
             context.PendingProperties.Clear();
+        }
+
+        /// <summary>6e-M25：类字段回填——字段类型可能指向文件中后声明的类，全类注册后统一 ResolveTypeRef。</summary>
+        private static void ApplyPendingFields(ReadContext context)
+        {
+            foreach (var (classType, name, typeRef, visibility, isReadonly, isStatic) in context.PendingFields)
+            {
+                var fieldType = ResolveTypeRef(typeRef, context);
+                classType.AddField(new FieldSymbol(name, fieldType, visibility, classType, isReadonly, isStatic));
+            }
+
+            context.PendingFields.Clear();
         }
 
         /// <summary>6f-4：捕获闭包元数据回填——全符号读毕后按变量键解析捕获清单（host 播种 / lambda env 依赖）。</summary>
@@ -603,7 +622,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                 {
                     reader.Expect("fld");
                     var fieldName = Unescape(reader.ExpectString());
-                    var fieldType = ResolveTypeRef(reader.ExpectString(), context);
+                    var fieldTypeRef = reader.ExpectString();
                     var fieldVisibilityText = reader.ExpectString();
                     if (!Enum.TryParse<Visibility>(fieldVisibilityText, ignoreCase: true, out var fieldVisibility))
                     {
@@ -612,7 +631,7 @@ namespace Cocoa.CodeAnalysis.Serialization
 
                     var isStatic = ParseBoolWord(reader.ExpectString());
                     var isReadonly = ParseBoolWord(reader.ExpectString());
-                    classType.AddField(new FieldSymbol(fieldName, fieldType, fieldVisibility, classType, isReadonly, isStatic));
+                    context.PendingFields.Add((classType, fieldName, fieldTypeRef, fieldVisibility, isReadonly, isStatic));
                     reader.End();
                 }
             }
@@ -645,7 +664,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                 {
                     reader.Expect("prop");
                     var propertyName = Unescape(reader.ExpectString());
-                    var propertyType = ResolveTypeRef(reader.ExpectString(), context);
+                    var propertyTypeRef = reader.ExpectString();
                     var hasGet = ParseBoolWord(reader.ExpectString());
                     var hasSet = ParseBoolWord(reader.ExpectString());
                     if (!Enum.TryParse<Visibility>(reader.ExpectString(), ignoreCase: true, out var propertyVisibility))
@@ -654,7 +673,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                     }
 
                     var isStatic = ParseBoolWord(reader.ExpectString());
-                    context.PendingProperties.Add((classType, propertyName, propertyType, hasGet, hasSet, propertyVisibility, isStatic));
+                    context.PendingProperties.Add((classType, propertyName, propertyTypeRef, hasGet, hasSet, propertyVisibility, isStatic));
                     reader.End();
                 }
             }
@@ -776,7 +795,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             {
                 reader.Expect("fld");
                 var fieldName = Unescape(reader.ExpectString());
-                var fieldType = ResolveTypeRef(reader.ExpectString(), context);
+                var fieldTypeRef = reader.ExpectString();
                 var fieldVisibilityText = reader.ExpectString();
                 if (!Enum.TryParse<Visibility>(fieldVisibilityText, ignoreCase: true, out var fieldVisibility))
                 {
@@ -785,7 +804,7 @@ namespace Cocoa.CodeAnalysis.Serialization
 
                 var isStatic = ParseBoolWord(reader.ExpectString());
                 var isReadonly = ParseBoolWord(reader.ExpectString());
-                classType.AddField(new FieldSymbol(fieldName, fieldType, fieldVisibility, classType, isReadonly, isStatic));
+                context.PendingFields.Add((classType, fieldName, fieldTypeRef, fieldVisibility, isReadonly, isStatic));
                 reader.End();
             }
 
@@ -862,7 +881,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                 {
                     reader.Expect("prop");
                     var propertyName = Unescape(reader.ExpectString());
-                    var propertyType = ResolveTypeRef(reader.ExpectString(), context);
+                    var propertyTypeRef = reader.ExpectString();
                     var hasGet = ParseBoolWord(reader.ExpectString());
                     var hasSet = ParseBoolWord(reader.ExpectString());
                     if (!Enum.TryParse<Visibility>(reader.ExpectString(), ignoreCase: true, out var propertyVisibility))
@@ -871,7 +890,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                     }
 
                     var isStatic = ParseBoolWord(reader.ExpectString());
-                    context.PendingProperties.Add((classType, propertyName, propertyType, hasGet, hasSet, propertyVisibility, isStatic));
+                    context.PendingProperties.Add((classType, propertyName, propertyTypeRef, hasGet, hasSet, propertyVisibility, isStatic));
                     reader.End();
                 }
             }

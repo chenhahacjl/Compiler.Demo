@@ -730,6 +730,7 @@ namespace Cocoa.CodeGen.Managed.Writer
                 _ when elementType == TypeSymbol.UInt64 => "System.UInt64",
                 _ when elementType == TypeSymbol.Char => "System.Char",
                 _ when elementType == TypeSymbol.UInt8 => "System.Byte",
+                _ when elementType == TypeSymbol.Float => "System.Single", // 6e-M25：f32[] 支持
                 _ when elementType == TypeSymbol.Double => "System.Double",
                 _ when elementType == TypeSymbol.Boolean => "System.Boolean",
                 _ when elementType is NamedTypeSymbol { TypeKind: TypeKind.Enum } => "System.Int32",
@@ -780,6 +781,10 @@ namespace Cocoa.CodeGen.Managed.Writer
             else if (node.Type == TypeSymbol.Double)
             {
                 il.Emit(IlOpCodeTable.Get("Ldelem_R8"));
+            }
+            else if (node.Type == TypeSymbol.Float)
+            {
+                il.Emit(IlOpCodeTable.Get("Ldelem_R4")); // 6e-M25：f32[]
             }
             else if (node.Type == TypeSymbol.Int64)
             {
@@ -855,6 +860,10 @@ namespace Cocoa.CodeGen.Managed.Writer
             else if (elementType == TypeSymbol.Double)
             {
                 il.Emit(IlOpCodeTable.Get("Stelem_R8"));
+            }
+            else if (elementType == TypeSymbol.Float)
+            {
+                il.Emit(IlOpCodeTable.Get("Stelem_R4")); // 6e-M25：f32[]
             }
             else if (elementType == TypeSymbol.Int64)
             {
