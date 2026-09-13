@@ -1,0 +1,97 @@
+// Cocoa UI 库 · System.UI（namespace System.UI）
+// ImGuiIO —— 每帧输入状态（鼠标/键盘/显示尺寸/时间/字符流）。
+// 轮询后端每帧写入；立即模式 UI 读取。
+
+namespace System.UI
+{
+    public class ImGuiIO
+    {
+        public field MouseX: f32
+        public field MouseY: f32
+        public field MouseDown: i32
+        public field MouseWheel: f32
+        public field DeltaTime: f32
+        public field DisplayWidth: f32
+        public field DisplayHeight: f32
+        public field FrameCount: i32
+        public field QuitRequested: bool
+
+        private field _keys: i32[]
+
+        public constructor()
+        {
+            MouseX = f32(0.0)
+            MouseY = f32(0.0)
+            MouseDown = 0
+            MouseWheel = f32(0.0)
+            DeltaTime = f32(0.0)
+            DisplayWidth = f32(800.0)
+            DisplayHeight = f32(600.0)
+            FrameCount = 0
+            QuitRequested = false
+            _keys = new i32[256]
+        }
+
+        public function NewFrame(dt: f32): void
+        {
+            DeltaTime = dt
+            MouseWheel = f32(0.0)
+            FrameCount = FrameCount + 1
+        }
+
+        public function SetMouseButton(button: i32, down: bool): void
+        {
+            var bit: i32 = 1 << button
+            if down
+            {
+                MouseDown = MouseDown | bit
+            }
+            else
+            {
+                MouseDown = MouseDown - (MouseDown & bit)
+            }
+        }
+
+        public function IsMouseDown(button: i32): bool
+        {
+            var bit: i32 = 1 << button
+            return (MouseDown & bit) != 0
+        }
+
+        public function SetKeyDown(vk: i32, down: bool): void
+        {
+            if vk < 0
+            {
+                return
+            }
+
+            if vk >= 256
+            {
+                return
+            }
+
+            var stored: i32 = 0
+            if down
+            {
+                stored = 1
+            }
+
+            _keys[vk] = stored
+        }
+
+        public function IsKeyDown(vk: i32): bool
+        {
+            if vk < 0
+            {
+                return false
+            }
+
+            if vk >= 256
+            {
+                return false
+            }
+
+            return _keys[vk] == 1
+        }
+    }
+}

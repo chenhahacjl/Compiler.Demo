@@ -1,0 +1,73 @@
+// Cocoa UI 库 · System.UI（namespace System.UI）
+// ImGuiWindow —— 单个窗口的状态（位置/尺寸/布局游标/滚动）。
+// 立即模式：每帧由 Begin/End 重建；持久状态（滚动等）经 ImGuiStorage 承载。
+
+namespace System.UI
+{
+    public class ImGuiWindow
+    {
+        public field Title: string
+        public field X: f32
+        public field Y: f32
+        public field Width: f32
+        public field Height: f32
+
+        /// <summary>内容区左上（相对窗口）布局游标。</summary>
+        public field CursorX: f32
+        public field CursorY: f32
+        public field LineHeight: f32
+
+        /// <summary>true 时下一个控件与上一个同行。</summary>
+        public field SameLinePending: bool
+        public field ScrollY: f32
+
+        public constructor(title: string, x: f32, y: f32, w: f32, h: f32)
+        {
+            Title = title
+            X = x
+            Y = y
+            Width = w
+            Height = h
+            CursorX = f32(0.0)
+            CursorY = f32(0.0)
+            LineHeight = f32(0.0)
+            SameLinePending = false
+            ScrollY = f32(0.0)
+        }
+
+        public function ResetCursor(): void
+        {
+            CursorX = f32(0.0)
+            CursorY = f32(0.0)
+            LineHeight = f32(0.0)
+            SameLinePending = false
+        }
+    }
+
+    /// <summary>布局推进：cursor 前进 / ItemSize / SameLine。</summary>
+    public class ImGuiLayout
+    {
+        /// <summary>登记一个 item 的尺寸并推进游标（SameLine 时同行追加，否则换行）。</summary>
+        public static function ItemSize(win: ImGuiWindow, w: f32, h: f32): void
+        {
+            if win.SameLinePending
+            {
+                win.SameLinePending = false
+            }
+            else
+            {
+                win.CursorY = win.CursorY + win.LineHeight
+                win.CursorX = f32(0.0)
+            }
+
+            win.LineHeight = h
+            win.CursorX = win.CursorX + w
+        }
+
+        /// <summary>下一个 item 与当前同行。</summary>
+        public static function SameLine(win: ImGuiWindow): void
+        {
+            win.SameLinePending = true
+        }
+    }
+}

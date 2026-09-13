@@ -34,6 +34,9 @@ namespace Cocoa.Tests.CodeAnalysis
                 Path.Combine(root, "ImGuiID.co"),
                 Path.Combine(root, "ImGuiStorage.co"),
                 Path.Combine(root, "ImGuiDrawList.co"),
+                Path.Combine(root, "ImGuiStyle.co"),
+                Path.Combine(root, "ImGuiIO.co"),
+                Path.Combine(root, "ImGuiWindow.co"),
             };
         }
 
@@ -60,10 +63,28 @@ function Main(): i32
     dl.AddRectFilled(f32(0.0), f32(0.0), f32(10.0), f32(20.0), 123)
     Console.WriteLine(dl.VertexCount)
     Console.WriteLine(dl.IndexCount)
+
+    var style = new ImGuiStyle()
+    style.MakeDark()
+    Console.WriteLine(style.GetColor(1) != 0)
+
+    var io = new ImGuiIO()
+    io.SetMouseButton(0, true)
+    Console.WriteLine(io.IsMouseDown(0))
+    Console.WriteLine(io.IsMouseDown(1))
+    io.SetKeyDown(65, true)
+    Console.WriteLine(io.IsKeyDown(65))
+    io.SetMouseButton(0, false)
+    Console.WriteLine(io.IsMouseDown(0))
+
+    var win = new ImGuiWindow(""W"", f32(0.0), f32(0.0), f32(100.0), f32(100.0))
+    ImGuiLayout.ItemSize(win, f32(50.0), f32(20.0))
+    ImGuiLayout.ItemSize(win, f32(50.0), f32(20.0))
+    Console.WriteLine(i32(win.CursorY))
     return 0
 }";
 
-        private const string Expected = "True\nTrue\n7\n42\n43\nTrue\n3\n4\n6\n";
+        private const string Expected = "True\nTrue\n7\n42\n43\nTrue\n3\n4\n6\nTrue\nTrue\nFalse\nTrue\nFalse\n20\n";
 
         [Fact]
         public void UiCore_Evaluator()

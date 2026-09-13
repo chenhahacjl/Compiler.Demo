@@ -1,0 +1,131 @@
+// Cocoa UI 库 · System.UI（namespace System.UI）
+// ImGuiStyle —— 主题样式（颜色打包 ABGR + 间距/圆角）。颜色经 ImGuiStyle.Abgr 打包为 i32。
+
+namespace System.UI
+{
+    public enum ImGuiCol
+    {
+        Text = 0,
+        WindowBg = 1,
+        Border = 2,
+        Button = 3,
+        ButtonHovered = 4,
+        ButtonActive = 5,
+        CheckMark = 6,
+        FrameBg = 7,
+        SliderGrab = 8,
+        SliderGrabActive = 9,
+        TitleBg = 10,
+        Separator = 11,
+    }
+
+    public class ImGuiStyle
+    {
+        private field _colors: i32[]
+        private field _framePaddingX: f32
+        private field _framePaddingY: f32
+        private field _itemSpacingX: f32
+        private field _itemSpacingY: f32
+        private field _frameRounding: f32
+
+        public constructor()
+        {
+            _colors = new i32[12]
+            _framePaddingX = f32(6.0)
+            _framePaddingY = f32(3.0)
+            _itemSpacingX = f32(8.0)
+            _itemSpacingY = f32(6.0)
+            _frameRounding = f32(2.0)
+        }
+
+        /// <summary>打包 8-bit RGBA → ABGR i32（DrawList/GDI 消费）。</summary>
+        public static function Abgr(r: i32, g: i32, b: i32, a: i32): i32
+        {
+            return (a << 24) | (b << 16) | (g << 8) | r
+        }
+
+        public function GetColor(idx: i32): i32
+        {
+            return _colors[idx]
+        }
+
+        public function SetColor(idx: i32, col: i32): void
+        {
+            _colors[idx] = col
+        }
+
+        public property FramePaddingX: f32
+        {
+            get
+            {
+                return _framePaddingX
+            }
+        }
+
+        public property FramePaddingY: f32
+        {
+            get
+            {
+                return _framePaddingY
+            }
+        }
+
+        public property ItemSpacingX: f32
+        {
+            get
+            {
+                return _itemSpacingX
+            }
+        }
+
+        public property ItemSpacingY: f32
+        {
+            get
+            {
+                return _itemSpacingY
+            }
+        }
+
+        public property FrameRounding: f32
+        {
+            get
+            {
+                return _frameRounding
+            }
+        }
+
+        /// <summary>VS Dark 风预设。</summary>
+        public function MakeDark(): void
+        {
+            _colors[0] = Abgr(220, 220, 220, 255)
+            _colors[1] = Abgr(30, 30, 30, 240)
+            _colors[2] = Abgr(70, 70, 70, 255)
+            _colors[3] = Abgr(60, 60, 60, 255)
+            _colors[4] = Abgr(80, 80, 80, 255)
+            _colors[5] = Abgr(0, 122, 204, 255)
+            _colors[6] = Abgr(78, 201, 176, 255)
+            _colors[7] = Abgr(45, 45, 45, 255)
+            _colors[8] = Abgr(120, 120, 120, 255)
+            _colors[9] = Abgr(0, 122, 204, 255)
+            _colors[10] = Abgr(45, 45, 48, 255)
+            _colors[11] = Abgr(63, 63, 70, 255)
+        }
+
+        /// <summary>VS Light 风预设。</summary>
+        public function MakeLight(): void
+        {
+            _colors[0] = Abgr(30, 30, 30, 255)
+            _colors[1] = Abgr(243, 243, 243, 240)
+            _colors[2] = Abgr(208, 208, 208, 255)
+            _colors[3] = Abgr(236, 236, 236, 255)
+            _colors[4] = Abgr(214, 232, 250, 255)
+            _colors[5] = Abgr(0, 122, 204, 255)
+            _colors[6] = Abgr(38, 127, 153, 255)
+            _colors[7] = Abgr(255, 255, 255, 255)
+            _colors[8] = Abgr(160, 160, 160, 255)
+            _colors[9] = Abgr(0, 122, 204, 255)
+            _colors[10] = Abgr(229, 229, 229, 255)
+            _colors[11] = Abgr(208, 208, 208, 255)
+        }
+    }
+}
