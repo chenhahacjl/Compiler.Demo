@@ -52,7 +52,10 @@ public partial class EditorPane : UserControl
         {
             var active = EditorTabs?.ActiveTab;
             if (active != null && active.FilePath == filePath)
+            {
                 UpdateSquiggles(active);
+                EditorHost.SetSyntaxTree(active.SyntaxTree);
+            }
         };
         EditorTabsRegistry.DiagnosticsApplied += _diagnosticsHandler;
 
@@ -369,6 +372,7 @@ public partial class EditorPane : UserControl
         {
             _syncingEditor = false;
             EditorHost.LoadText("", null, null);
+            EditorHost.SetSyntaxTree(null);
             UpdateEmptyState();
             return;
         }
@@ -377,8 +381,9 @@ public partial class EditorPane : UserControl
         EditorHost.LoadText(tab.Content, tab.FilePath, tab.Dialect);
         _syncingEditor = false;
 
-        // 恢复该文件的诊断波浪线
+        // 恢复该文件的诊断波浪线 + 语义着色
         EditorHost.SetDiagnostics(tab.Diagnostics);
+        EditorHost.SetSyntaxTree(tab.SyntaxTree);
         UpdateEmptyState();
     }
 

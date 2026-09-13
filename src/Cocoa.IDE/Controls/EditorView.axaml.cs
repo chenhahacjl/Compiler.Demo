@@ -12,6 +12,7 @@ using AvaloniaEdit.Rendering;
 using AvaloniaEdit.Search;
 using Avalonia.Media;
 using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.IDE.Services;
 using System.Xml;
 
@@ -29,6 +30,7 @@ public partial class EditorView : UserControl
     private readonly SquiggleRenderer _squiggles = new();
     private readonly DebugMarkerRenderer _debugMarkers;
     private readonly BreakpointMargin _breakpointMargin;
+    private readonly SemanticColorizer _colorizer = new();
     private readonly HashSet<int> _breakpoints = new();
     private int? _currentDebugLine;
     private bool _isLoading;
@@ -58,6 +60,17 @@ public partial class EditorView : UserControl
         TextEditor.TextArea.Caret.PositionChanged += (_, _) => CaretChanged?.Invoke(this, EventArgs.Empty);
 
         TextEditor.TextArea.TextView.BackgroundRenderers.Add(_squiggles);
+
+        // M6a3：语义着色（编译器 Classifier），随主题重建调色板
+        TextEditor.TextArea.TextView.LineTransformers.Add(_colorizer);
+        if (Application.Current is { } app)
+        {
+            app.ActualThemeVariantChanged += (_, _) =>
+            {
+                _colorizer.InvalidatePalette();
+                TextEditor.TextArea.TextView.Redraw();
+            };
+        }
 
         // M7：当前调试行高亮 + 断点边距
         _debugMarkers = new DebugMarkerRenderer(this);
@@ -133,6 +146,13 @@ public partial class EditorView : UserControl
         TextEditor.TextArea.TextView.Redraw();
     }
 
+    /// <summary>M6a3：设置当前文件语法树，用于语义着色（null 清除着色）。</summary>
+    public void SetSyntaxTree(SyntaxTree? tree)
+    {
+        _colorizer.SetTree(tree);
+        TextEditor.TextArea.TextView.Redraw();
+    }
+
     public void LoadFile(string filePath)
     {
         if (!File.Exists(filePath)) return;
@@ -150,8 +170,8 @@ public partial class EditorView : UserControl
             _currentFilePath = filePath;
             TextEditor.Text = text ?? "";
 
-            var name = highlightingName ?? GetHighlightingName(filePath);
-            TextEditor.SyntaxHighlighting = name != null ? GetHighlighting(name) : null;
+            // M6a3：改用编译器语义着色，停用 xshd 静态高亮
+            TextEditor.SyntaxHighlighting = null;
 
             TextEditor.IsReadOnly = GetIsReadOnly(filePath);
         }

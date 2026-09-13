@@ -15,8 +15,9 @@ public sealed class DiagnosticService
     private readonly object _sync = new();
     private readonly Dictionary<string, CancellationTokenSource> _debounce = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>(filePath, diagnostics) — 每次重解析后触发（UI 线程）。</summary>
-    public event Action<string, ImmutableArray<Diagnostic>>? DiagnosticsReady;
+    /// <summary>(filePath, tree, diagnostics) — 每次重解析后触发（UI 线程）。
+    /// tree 供编辑器语义着色复用，避免二次解析。</summary>
+    public event Action<string, SyntaxTree, ImmutableArray<Diagnostic>>? DiagnosticsReady;
 
     /// <summary>文件关闭时清理挂起的防抖任务。</summary>
     public void CloseFile(string filePath)
@@ -92,7 +93,7 @@ public sealed class DiagnosticService
                 Dispatcher.UIThread.Post(() =>
                 {
                     if (token.IsCancellationRequested) return;
-                    DiagnosticsReady?.Invoke(filePath, final);
+                    DiagnosticsReady?.Invoke(filePath, tree, final);
                 });
             }
             catch (OperationCanceledException)

@@ -80,12 +80,15 @@ public partial class MainViewModel : ObservableObject
         };
 
         // 实时诊断：派发到所有已注册的标签集合（主窗口 + 浮窗）
-        DiagnosticService.DiagnosticsReady += (filePath, diagnostics) =>
+        DiagnosticService.DiagnosticsReady += (filePath, tree, diagnostics) =>
         {
             foreach (var set in EditorTabsRegistry.All)
             {
                 foreach (var tab in set.Tabs.Where(t => t.FilePath == filePath))
+                {
+                    tab.SyntaxTree = tree;
                     tab.Diagnostics = diagnostics;
+                }
             }
 
             // 若该文件正显示在主窗口，同步进错误列表

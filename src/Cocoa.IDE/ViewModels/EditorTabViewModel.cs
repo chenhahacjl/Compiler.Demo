@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis.Syntax;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cocoa.IDE.ViewModels;
@@ -68,6 +69,9 @@ public partial class EditorTabViewModel : ObservableObject
     /// <summary>当前文件最新诊断（M3 实时诊断结果），供编辑器画波浪线。</summary>
     [ObservableProperty]
     private ImmutableArray<Diagnostic> _diagnostics = ImmutableArray<Diagnostic>.Empty;
+
+    /// <summary>M6a3：最近一次实时诊断所用的语法树，供编辑器语义着色。</summary>
+    public SyntaxTree? SyntaxTree { get; set; }
 
     public string? Dialect => _dialect;
 

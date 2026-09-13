@@ -24,6 +24,14 @@
                     <SolidColorBrush x:Key="StatusBarTextBrush" Color="#FFFFFF" />
                     <SolidColorBrush x:Key="IdentifierBrush" Color="#9CDCFE" />
                     <SolidColorBrush x:Key="TypeBrush" Color="#4EC9B0" />
+                    <SolidColorBrush x:Key="SyntaxKeywordBrush" Color="#569CD6" />
+                    <SolidColorBrush x:Key="SyntaxIdentifierBrush" Color="#DCDCDC" />
+                    <SolidColorBrush x:Key="SyntaxNumberBrush" Color="#B5CEA8" />
+                    <SolidColorBrush x:Key="SyntaxStringBrush" Color="#D69D85" />
+                    <SolidColorBrush x:Key="SyntaxCommentBrush" Color="#57A64A" />
+                    <SolidColorBrush x:Key="SyntaxPunctuationBrush" Color="#DCDCDC" />
+                    <SolidColorBrush x:Key="SyntaxOperatorBrush" Color="#D4D4D4" />
+                    <SolidColorBrush x:Key="SyntaxTextBrush" Color="#DCDCDC" />
                     <SolidColorBrush x:Key="AccentBrush" Color="#007ACC" />
                     <SolidColorBrush x:Key="ErrorBrush" Color="#E51400" />
                     <SolidColorBrush x:Key="IconDefaultBrush" Color="#CCCCCC" />
@@ -53,6 +61,14 @@
                     <SolidColorBrush x:Key="StatusBarTextBrush" Color="#FFFFFF" />
                     <SolidColorBrush x:Key="IdentifierBrush" Color="#001080" />
                     <SolidColorBrush x:Key="TypeBrush" Color="#267F99" />
+                    <SolidColorBrush x:Key="SyntaxKeywordBrush" Color="#0000FF" />
+                    <SolidColorBrush x:Key="SyntaxIdentifierBrush" Color="#001080" />
+                    <SolidColorBrush x:Key="SyntaxNumberBrush" Color="#098658" />
+                    <SolidColorBrush x:Key="SyntaxStringBrush" Color="#A31515" />
+                    <SolidColorBrush x:Key="SyntaxCommentBrush" Color="#008000" />
+                    <SolidColorBrush x:Key="SyntaxPunctuationBrush" Color="#1E1E1E" />
+                    <SolidColorBrush x:Key="SyntaxOperatorBrush" Color="#1E1E1E" />
+                    <SolidColorBrush x:Key="SyntaxTextBrush" Color="#1E1E1E" />
                     <SolidColorBrush x:Key="AccentBrush" Color="#007ACC" />
                     <SolidColorBrush x:Key="ErrorBrush" Color="#E51400" />
                     <SolidColorBrush x:Key="IconDefaultBrush" Color="#555555" />
