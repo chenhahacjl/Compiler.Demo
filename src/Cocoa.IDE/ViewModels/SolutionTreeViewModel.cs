@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using Avalonia.Media;
 using Cocoa.Build;
@@ -80,7 +81,16 @@ public partial class SolutionTreeViewModel : ObservableObject
     {
         if (!File.Exists(solutionPath)) return;
 
-        CurrentSolution = CocoaSolutionFile.Load(solutionPath);
+        // 空白解决方案（无 <Project>）会让 CocoaSolutionFile.Load 抛格式异常，这里容错为空集
+        try
+        {
+            CurrentSolution = CocoaSolutionFile.Load(solutionPath);
+        }
+        catch
+        {
+            CurrentSolution = new CocoaSolutionFile(
+                solutionPath, Path.GetFileNameWithoutExtension(solutionPath), ImmutableArray<string>.Empty);
+        }
 
         // 先建项目节点，再据实际加载数生成解决方案标题
         var projectNodes = new List<TreeNodeViewModel>();
@@ -286,7 +296,7 @@ public partial class SolutionTreeViewModel : ObservableObject
     }
 
     /// <summary>请求在指定节点所在目录新建源文件（由视图弹输入框）。</summary>
-    public event Action<string>? NewFileRequested;
+    public event Action<TreeNodeViewModel>? NewFileRequested;
 
     /// <summary>请求从项目移除某源文件（由视图确认并处理）。</summary>
     public event Action<TreeNodeViewModel>? RemoveRequested;
@@ -299,9 +309,8 @@ public partial class SolutionTreeViewModel : ObservableObject
 
     public void RequestNewFile(TreeNodeViewModel node)
     {
-        var dir = NodeDirectory(node);
-        if (dir != null)
-            NewFileRequested?.Invoke(dir);
+        if (NodeDirectory(node) != null)
+            NewFileRequested?.Invoke(node);
     }
 
     public void RequestRemove(TreeNodeViewModel node)
@@ -365,6 +374,41 @@ public partial class SolutionTreeViewModel : ObservableObject
             current = current.Parent;
         }
         return CurrentProject?.FilePath;
+    }
+
+    /// <summary>节点所属的已加载工程（沿父链找项目节点；无则回退当前项目）。</summary>
+    public CocoaProjectFile? ResolveProject(TreeNodeViewModel? node)
+    {
+        var current = node;
+        while (current != null)
+        {
+            if (current.Kind == NodeKind.Project && current.FullPath != null)
+                return Projects.FirstOrDefault(p =>
+                    string.Equals(p.FilePath, current.FullPath, StringComparison.OrdinalIgnoreCase));
+            current = current.Parent;
+        }
+        return CurrentProject;
+    }
+
+    /// <summary>节点所在目录（供“新建项”）。</summary>
+    public string? DirectoryFor(TreeNodeViewModel node) => NodeDirectory(node);
+
+    /// <summary>把现有 .coproj 加入当前解决方案的 .cosln，成功后刷新树。</summary>
+    public bool AddProjectToSolution(string projectPath)
+    {
+        if (CurrentSolution?.FilePath == null) return false;
+        if (!SolutionFileService.AddProject(CurrentSolution.FilePath, projectPath, out _)) return false;
+        Refresh();
+        return true;
+    }
+
+    /// <summary>从当前解决方案的 .cosln 移除该工程节点，成功后刷新树。</summary>
+    public bool RemoveProjectFromSolution(TreeNodeViewModel node)
+    {
+        if (CurrentSolution?.FilePath == null || node.FullPath == null) return false;
+        if (!SolutionFileService.RemoveProject(CurrentSolution.FilePath, node.FullPath, out _)) return false;
+        Refresh();
+        return true;
     }
 
     private static string? NodeDirectory(TreeNodeViewModel node)
@@ -467,6 +511,15 @@ public partial class TreeNodeViewModel : ObservableObject
     public bool IsFolder => Kind == NodeKind.Folder;
     public bool IsReferenceNode => Kind == NodeKind.Reference;
     public bool HasPath => FullPath != null;
+
+    /// <summary>可执行“生成/重新生成/清理”（解决方案或项目）。</summary>
+    public bool IsBuildable => Kind is NodeKind.Solution or NodeKind.Project;
+
+    /// <summary>可展开“添加”子菜单（解决方案/项目/文件夹/引用容器）。</summary>
+    public bool CanAdd => Kind is NodeKind.Solution or NodeKind.Project or NodeKind.Folder or NodeKind.Dependencies;
+
+    /// <summary>可添加引用（项目或“引用”容器节点）。</summary>
+    public bool IsProjectOrDependencies => Kind is NodeKind.Project or NodeKind.Dependencies;
 
     /// <summary>可在其下新建文件（项目/文件夹）。</summary>
     public bool CanCreateFile => Kind is NodeKind.Project or NodeKind.Folder;

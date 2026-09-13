@@ -102,7 +102,7 @@ public partial class MainWindow : Window
         };
 
         // 树右键：新建文件 / 移除
-        ViewModel.SolutionTree.NewFileRequested += dir => NewFileIn(dir);
+        ViewModel.SolutionTree.NewFileRequested += node => NewFileIn(node);
         ViewModel.SolutionTree.RemoveRequested += node => RemoveNode(node);
 
         // 输出自动滚动到底部
@@ -158,23 +158,8 @@ public partial class MainWindow : Window
 
     private async void OnProjectAddExistingFile(object? sender, RoutedEventArgs e)
     {
-        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            Title = "添加现有文件",
-            AllowMultiple = true,
-            FileTypeFilter = new[]
-            {
-                new FilePickerFileType("Cocoa 源文件") { Patterns = new[] { "*.co", "*.cs" } },
-                new FilePickerFileType("所有文件") { Patterns = new[] { "*.*" } },
-            },
-        });
-
         var node = SolutionTree.SelectedItem as TreeNodeViewModel;
-        foreach (var file in files)
-        {
-            if (file.TryGetLocalPath() is { } path)
-                ViewModel.SolutionTree.AddSourceToProject(node, path);
-        }
+        await AddExistingItemsToProjectAsync(node);
     }
 
     private void OnProjectRemoveFile(object? sender, RoutedEventArgs e)
@@ -267,9 +252,98 @@ public partial class MainWindow : Window
             ViewModel.SolutionTree.RequestRemove(node);
     }
 
-    /// <summary>在目录下新建源文件（简单对话框输入文件名）。</summary>
-    private async void NewFileIn(string dir)
+    // ─── 右键：生成/运行/添加 ───
+
+    private async void OnCtxBuild(object? sender, RoutedEventArgs e)
     {
+        if (CtxNode(sender) is { } node) await ViewModel.BuildNodeAsync(node);
+    }
+
+    private async void OnCtxRebuild(object? sender, RoutedEventArgs e)
+    {
+        if (CtxNode(sender) is { } node) await ViewModel.RebuildNodeAsync(node);
+    }
+
+    private void OnCtxClean(object? sender, RoutedEventArgs e)
+    {
+        if (CtxNode(sender) is { } node) ViewModel.CleanNode(node);
+    }
+
+    private void OnCtxSetStartup(object? sender, RoutedEventArgs e)
+    {
+        if (CtxNode(sender) is { } node) ViewModel.SetStartupProject(node);
+    }
+
+    private async void OnCtxRun(object? sender, RoutedEventArgs e)
+    {
+        if (CtxNode(sender) is { } node) await ViewModel.RunNodeAsync(node);
+    }
+
+    private void OnCtxDebug(object? sender, RoutedEventArgs e)
+    {
+        if (CtxNode(sender) is { } node) ViewModel.DebugNode(node);
+    }
+
+    private async void OnCtxAddExistingItem(object? sender, RoutedEventArgs e)
+    {
+        if (CtxNode(sender) is { } node)
+            await AddExistingItemsToProjectAsync(node);
+    }
+
+    /// <summary>文件选择器 → 多个现有源文件显式加入指定节点的所属项目。</summary>
+    private async Task AddExistingItemsToProjectAsync(TreeNodeViewModel? node)
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "添加现有项",
+            AllowMultiple = true,
+            FileTypeFilter = new[]
+            {
+                new FilePickerFileType("Cocoa 源文件") { Patterns = new[] { "*.co", "*.cs" } },
+                new FilePickerFileType("所有文件") { Patterns = new[] { "*.*" } },
+            },
+        });
+
+        foreach (var file in files)
+        {
+            if (file.TryGetLocalPath() is { } path)
+                ViewModel.SolutionTree.AddSourceToProject(node, path);
+        }
+    }
+
+    private async void OnCtxAddExistingProject(object? sender, RoutedEventArgs e)
+    {
+        if (CtxNode(sender) is not { IsSolution: true }) return;
+
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "添加现有项目",
+            AllowMultiple = true,
+            FileTypeFilter = new[]
+            {
+                new FilePickerFileType("Cocoa 项目") { Patterns = new[] { "*.coproj" } },
+            },
+        });
+
+        foreach (var file in files)
+        {
+            if (file.TryGetLocalPath() is { } path)
+                ViewModel.SolutionTree.AddProjectToSolution(path);
+        }
+    }
+
+    private void OnCtxRemoveProject(object? sender, RoutedEventArgs e)
+    {
+        if (CtxNode(sender) is { } node)
+            ViewModel.SolutionTree.RemoveProjectFromSolution(node);
+    }
+
+    /// <summary>在节点目录下新建源文件（简单对话框输入文件名），并显式加入所属项目。</summary>
+    private async void NewFileIn(TreeNodeViewModel node)
+    {
+        var dir = ViewModel.SolutionTree.DirectoryFor(node);
+        if (dir == null) return;
+
         var name = await ShowTextInputAsync("新建文件", "文件名（.co / .cs）");
         if (string.IsNullOrWhiteSpace(name)) return;
 
@@ -289,8 +363,8 @@ public partial class MainWindow : Window
         }
 
         File.WriteAllText(path, "");
+        ViewModel.SolutionTree.AddSourceToProject(node, path);
         ViewModel.OpenFile(path);
-        ViewModel.SolutionTree.Refresh();
     }
 
     /// <summary>从项目移除源文件（文本级改写 .coproj，不删除磁盘文件）。</summary>

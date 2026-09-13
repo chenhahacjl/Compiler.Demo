@@ -36,6 +36,9 @@ public partial class MainViewModel : ObservableObject
     /// <summary>调试暂停在 (文件, 行)，供视图打开并高亮。</summary>
     public event Action<string, int>? DebugPausedAt;
 
+    /// <summary>右键“设为启动项目”记住的启动项目路径（F5/Ctrl+F5 优先用它）。</summary>
+    public string? StartupProjectPath { get; private set; }
+
     private Window? MainWindow => App.Current?.ApplicationLifetime is
         IClassicDesktopStyleApplicationLifetime d ? d.MainWindow : null;
 
@@ -398,6 +401,98 @@ public partial class MainViewModel : ObservableObject
         StatusBar.StatusText = "清理完成";
     }
 
+    // ─── 解决方案资源管理器右键：按节点操作 ───
+
+    /// <summary>生成节点（项目 → 该项目；解决方案 → 整个解决方案）。</summary>
+    public async Task BuildNodeAsync(TreeNodeViewModel node)
+    {
+        var project = node.IsProject ? SolutionTree.ResolveProject(node) : null;
+        if (project != null)
+        {
+            Output.Clear();
+            ErrorList.Clear();
+            await BuildService.BuildProjectAsync(project);
+        }
+        else
+        {
+            await BuildAsync();
+        }
+    }
+
+    public async Task RebuildNodeAsync(TreeNodeViewModel node)
+    {
+        var project = node.IsProject ? SolutionTree.ResolveProject(node) : null;
+        if (project != null)
+        {
+            Output.Clear();
+            ErrorList.Clear();
+            await BuildService.BuildProjectAsync(project, noIncremental: true);
+        }
+        else
+        {
+            await RebuildAsync();
+        }
+    }
+
+    public void CleanNode(TreeNodeViewModel node)
+    {
+        var project = node.IsProject ? SolutionTree.ResolveProject(node) : null;
+        if (project == null)
+        {
+            Clean();
+            return;
+        }
+
+        Output.Clear();
+        try
+        {
+            var dir = project.GetOutputDirectory();
+            if (Directory.Exists(dir))
+            {
+                Directory.Delete(dir, true);
+                Output.AppendLine($"已清理：{dir}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Output.AppendLine($"error: 清理失败 '{project.Name}': {ex.Message}");
+        }
+    }
+
+    public async Task RunNodeAsync(TreeNodeViewModel node)
+    {
+        var project = SolutionTree.ResolveProject(node);
+        if (project == null || project.Output != ProjectOutputFormat.Exe)
+        {
+            Output.AppendLine("error: 该项目不是可执行项目");
+            return;
+        }
+
+        Output.Clear();
+        ErrorList.Clear();
+        await BuildService.RunAsync(project);
+    }
+
+    public void DebugNode(TreeNodeViewModel node)
+    {
+        var project = node.IsProject ? SolutionTree.ResolveProject(node) : null;
+        if (project == null)
+        {
+            DebugStart();
+            return;
+        }
+        StartDebugFor(project);
+    }
+
+    public void SetStartupProject(TreeNodeViewModel node)
+    {
+        var project = SolutionTree.ResolveProject(node);
+        if (project == null) return;
+        StartupProjectPath = project.FilePath;
+        Output.AppendLine($"启动项目已设为：{project.Name}");
+        StatusBar.StatusText = $"启动项目：{project.Name}";
+    }
+
     [RelayCommand]
     private void Stop()
     {
@@ -421,6 +516,16 @@ public partial class MainViewModel : ObservableObject
 
         var project = ResolveExecutableProject();
         if (project == null) return;
+        StartDebugFor(project);
+    }
+
+    private void StartDebugFor(CocoaProjectFile project)
+    {
+        if (project.Output != ProjectOutputFormat.Exe)
+        {
+            Output.AppendLine($"error: '{project.Name}' 不是可执行项目");
+            return;
+        }
 
         var compilation = BuildDebugCompilation(project);
         if (compilation == null) return;
@@ -522,6 +627,14 @@ public partial class MainViewModel : ObservableObject
 
     private CocoaProjectFile? ResolveExecutableProject()
     {
+        if (StartupProjectPath != null)
+        {
+            var startup = SolutionTree.Projects.FirstOrDefault(p =>
+                string.Equals(p.FilePath, StartupProjectPath, StringComparison.OrdinalIgnoreCase));
+            if (startup is { Output: ProjectOutputFormat.Exe })
+                return startup;
+        }
+
         if (SolutionTree.CurrentSolution != null)
         {
             var executables = SolutionTree.Projects
