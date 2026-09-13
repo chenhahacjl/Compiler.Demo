@@ -1,6 +1,6 @@
 using Cocoa.CodeAnalysis.Text;
 
-namespace Cocoa.Cli.Repl.Authoring
+namespace Cocoa.CodeAnalysis.Authoring
 {
     public sealed class ClassifiedSpan
     {

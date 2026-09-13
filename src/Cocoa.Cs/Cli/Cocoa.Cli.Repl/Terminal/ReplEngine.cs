@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using Cocoa.CodeAnalysis;
-using Cocoa.Cli.Repl.Authoring;
+using Cocoa.CodeAnalysis.Authoring;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
 
