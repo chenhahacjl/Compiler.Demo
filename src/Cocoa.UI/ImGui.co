@@ -29,6 +29,15 @@ namespace System.UI
         private field _childW: f32
         private field _childH: f32
 
+        private field _colorStackIdx: i32[]
+        private field _colorStackVal: i32[]
+        private field _colorStackCount: i32
+        private field _colorStackCapacity: i32
+        private field _varStackIdx: i32[]
+        private field _varStackVal: f32[]
+        private field _varStackCount: i32
+        private field _varStackCapacity: i32
+
         public constructor(capacity: i32, storageCapacity: i32)
         {
             _drawList = new ImGuiDrawList(capacity)
@@ -49,6 +58,15 @@ namespace System.UI
             _inChild = false
             _childW = f32(0.0)
             _childH = f32(0.0)
+
+            _colorStackCapacity = 32
+            _colorStackIdx = new i32[_colorStackCapacity]
+            _colorStackVal = new i32[_colorStackCapacity]
+            _colorStackCount = 0
+            _varStackCapacity = 32
+            _varStackIdx = new i32[_varStackCapacity]
+            _varStackVal = new f32[_varStackCapacity]
+            _varStackCount = 0
         }
 
         public property Style: ImGuiStyle
@@ -75,6 +93,48 @@ namespace System.UI
             }
         }
 
+        /// <summary>临时覆盖某颜色（须成对 PopStyleColor）。</summary>
+        public function PushStyleColor(idx: i32, color: i32): void
+        {
+            if _colorStackCount >= _colorStackCapacity
+            {
+                return
+            }
+
+            _colorStackIdx[_colorStackCount] = idx
+            _colorStackVal[_colorStackCount] = color
+            _colorStackCount = _colorStackCount + 1
+        }
+
+        public function PopStyleColor(): void
+        {
+            if _colorStackCount > 0
+            {
+                _colorStackCount = _colorStackCount - 1
+            }
+        }
+
+        /// <summary>临时覆盖某样式变量（须成对 PopStyleVar）。</summary>
+        public function PushStyleVar(idx: ImGuiStyleVar, value: f32): void
+        {
+            if _varStackCount >= _varStackCapacity
+            {
+                return
+            }
+
+            _varStackIdx[_varStackCount] = i32(idx)
+            _varStackVal[_varStackCount] = value
+            _varStackCount = _varStackCount + 1
+        }
+
+        public function PopStyleVar(): void
+        {
+            if _varStackCount > 0
+            {
+                _varStackCount = _varStackCount - 1
+            }
+        }
+
         public function NewFrame(io: ImGuiIO): void
         {
             _io = io
@@ -97,10 +157,10 @@ namespace System.UI
         {
             _window = new ImGuiWindow(title, x, y, w, h)
             _indent = 0
-            _drawList.AddRectFilled(x, y, x + w, y + h, _style.GetColor(1))
-            _drawList.AddRect(x, y, x + w, y + h, _style.GetColor(2))
-            _window.CursorX = _style.FramePaddingX
-            _window.CursorY = _style.FramePaddingY
+            _drawList.AddRectFilled(x, y, x + w, y + h, ColorOf(1))
+            _drawList.AddRect(x, y, x + w, y + h, ColorOf(2))
+            _window.CursorX = VarOf(ImGuiStyleVar.FramePaddingX, _style.FramePaddingX)
+            _window.CursorY = VarOf(ImGuiStyleVar.FramePaddingY, _style.FramePaddingY)
             return true
         }
 
@@ -131,9 +191,9 @@ namespace System.UI
             }
 
             _window = new ImGuiWindow("", x, y - scroll, w, h)
-            _window.CursorX = _style.FramePaddingX
-            _window.CursorY = _style.FramePaddingY
-            _drawList.AddRectFilled(x, y, x + w, y + h, _style.GetColor(7))
+            _window.CursorX = VarOf(ImGuiStyleVar.FramePaddingX, _style.FramePaddingX)
+            _window.CursorY = VarOf(ImGuiStyleVar.FramePaddingY, _style.FramePaddingY)
+            _drawList.AddRectFilled(x, y, x + w, y + h, ColorOf(7))
             _drawList.SetClipRect(x, y, x + w, y + h)
             return true
         }
@@ -143,7 +203,7 @@ namespace System.UI
             _drawList.ClearClip()
             _inChild = false
             _window = _parentWindow
-            ImGuiLayout.ItemSize(_window, _childW, _childH + _style.ItemSpacingY)
+            ImGuiLayout.ItemSize(_window, _childW, _childH + VarOf(ImGuiStyleVar.ItemSpacingY, _style.ItemSpacingY))
         }
 
         /// <summary>当前 item 是否被鼠标悬停（上一个控件）。</summary>
@@ -170,7 +230,7 @@ namespace System.UI
         {
             let x = ItemX()
             let y = ItemY()
-            _drawList.AddText(x, y, _style.GetColor(0), text)
+            _drawList.AddText(x, y, ColorOf(0), text)
             ImGuiLayout.ItemSize(_window, MeasureText(text), f32(18.0))
         }
 
@@ -186,14 +246,14 @@ namespace System.UI
         {
             let x = ItemX()
             let y = ItemY() + f32(4.0)
-            let x2 = _window.X + _window.Width - _style.FramePaddingX
-            _drawList.AddRectFilled(x, y, x2, y + f32(1.0), _style.GetColor(11))
-            ImGuiLayout.ItemSize(_window, _window.Width - _style.FramePaddingX * f32(2.0), f32(9.0))
+            let x2 = _window.X + _window.Width - VarOf(ImGuiStyleVar.FramePaddingX, _style.FramePaddingX)
+            _drawList.AddRectFilled(x, y, x2, y + f32(1.0), ColorOf(11))
+            ImGuiLayout.ItemSize(_window, _window.Width - VarOf(ImGuiStyleVar.FramePaddingX, _style.FramePaddingX) * f32(2.0), f32(9.0))
         }
 
         public function Spacing(): void
         {
-            ImGuiLayout.ItemSize(_window, f32(0.0), _style.ItemSpacingY)
+            ImGuiLayout.ItemSize(_window, f32(0.0), VarOf(ImGuiStyleVar.ItemSpacingY, _style.ItemSpacingY))
         }
 
         public function Dummy(w: f32, h: f32): void
@@ -251,17 +311,17 @@ namespace System.UI
             }
 
             _textLens[slot] = len
-            var border = _style.GetColor(2)
+            var border = ColorOf(2)
             if _focusId == id
             {
-                border = _style.GetColor(5)
+                border = ColorOf(5)
             }
 
-            _drawList.AddRectFilled(x, y, x + w, y + h, _style.GetColor(7))
+            _drawList.AddRectFilled(x, y, x + w, y + h, ColorOf(7))
             _drawList.AddRect(x, y, x + w, y + h, border)
-            _drawList.AddText(x + f32(4.0), y + f32(3.0), _style.GetColor(0), TextSlice(slot, len))
-            _drawList.AddText(x + w + f32(8.0), y + f32(3.0), _style.GetColor(0), label)
-            ImGuiLayout.ItemSize(_window, w + f32(8.0) + MeasureText(label), h + _style.ItemSpacingY)
+            _drawList.AddText(x + f32(4.0), y + f32(3.0), ColorOf(0), TextSlice(slot, len))
+            _drawList.AddText(x + w + f32(8.0), y + f32(3.0), ColorOf(0), label)
+            ImGuiLayout.ItemSize(_window, w + f32(8.0) + MeasureText(label), h + VarOf(ImGuiStyleVar.ItemSpacingY, _style.ItemSpacingY))
             return TextSlice(slot, len)
         }
 
@@ -274,21 +334,21 @@ namespace System.UI
         {
             let x = ItemX()
             let y = ItemY()
-            let w = MeasureText(label) + _style.FramePaddingX * f32(2.0)
+            let w = MeasureText(label) + VarOf(ImGuiStyleVar.FramePaddingX, _style.FramePaddingX) * f32(2.0)
             let h = f32(22.0)
             let hovered = HitTest(x, y, w, h)
             _lastHovered = hovered
 
-            var col = _style.GetColor(3)
+            var col = ColorOf(3)
             if hovered
             {
-                col = _style.GetColor(4)
+                col = ColorOf(4)
             }
 
             _drawList.AddRectFilled(x, y, x + w, y + h, col)
-            _drawList.AddRect(x, y, x + w, y + h, _style.GetColor(2))
-            _drawList.AddText(x + _style.FramePaddingX, y + _style.FramePaddingY, _style.GetColor(0), label)
-            ImGuiLayout.ItemSize(_window, w, h + _style.ItemSpacingY)
+            _drawList.AddRect(x, y, x + w, y + h, ColorOf(2))
+            _drawList.AddText(x + VarOf(ImGuiStyleVar.FramePaddingX, _style.FramePaddingX), y + VarOf(ImGuiStyleVar.FramePaddingY, _style.FramePaddingY), ColorOf(0), label)
+            ImGuiLayout.ItemSize(_window, w, h + VarOf(ImGuiStyleVar.ItemSpacingY, _style.ItemSpacingY))
             return Clicked(hovered)
         }
 
@@ -307,15 +367,15 @@ namespace System.UI
                 _storage.SetBool(id, value)
             }
 
-            _drawList.AddRectFilled(x, y, x + box, y + box, _style.GetColor(7))
-            _drawList.AddRect(x, y, x + box, y + box, _style.GetColor(2))
+            _drawList.AddRectFilled(x, y, x + box, y + box, ColorOf(7))
+            _drawList.AddRect(x, y, x + box, y + box, ColorOf(2))
             if value
             {
-                _drawList.AddRectFilled(x + f32(3.0), y + f32(3.0), x + box - f32(3.0), y + box - f32(3.0), _style.GetColor(6))
+                _drawList.AddRectFilled(x + f32(3.0), y + f32(3.0), x + box - f32(3.0), y + box - f32(3.0), ColorOf(6))
             }
 
-            _drawList.AddText(x + box + f32(6.0), y, _style.GetColor(0), label)
-            ImGuiLayout.ItemSize(_window, box + f32(6.0) + MeasureText(label), box + _style.ItemSpacingY)
+            _drawList.AddText(x + box + f32(6.0), y, ColorOf(0), label)
+            ImGuiLayout.ItemSize(_window, box + f32(6.0) + MeasureText(label), box + VarOf(ImGuiStyleVar.ItemSpacingY, _style.ItemSpacingY))
             return value
         }
 
@@ -347,8 +407,8 @@ namespace System.UI
             }
 
             DrawTrack(x, y, w, h, Fraction(value, min, max))
-            _drawList.AddText(x + w + f32(8.0), y, _style.GetColor(0), label)
-            ImGuiLayout.ItemSize(_window, w + f32(8.0) + MeasureText(label), h + _style.ItemSpacingY)
+            _drawList.AddText(x + w + f32(8.0), y, ColorOf(0), label)
+            ImGuiLayout.ItemSize(_window, w + f32(8.0) + MeasureText(label), h + VarOf(ImGuiStyleVar.ItemSpacingY, _style.ItemSpacingY))
             return value
         }
 
@@ -390,8 +450,8 @@ namespace System.UI
             }
 
             DrawTrack(x, y, w, h, Fraction(f32(value), f32(min), f32(max)))
-            _drawList.AddText(x + w + f32(8.0), y, _style.GetColor(0), label)
-            ImGuiLayout.ItemSize(_window, w + f32(8.0) + MeasureText(label), h + _style.ItemSpacingY)
+            _drawList.AddText(x + w + f32(8.0), y, ColorOf(0), label)
+            ImGuiLayout.ItemSize(_window, w + f32(8.0) + MeasureText(label), h + VarOf(ImGuiStyleVar.ItemSpacingY, _style.ItemSpacingY))
             return value
         }
 
@@ -413,7 +473,7 @@ namespace System.UI
             }
 
             DrawTrack(x, y, w, h, f)
-            ImGuiLayout.ItemSize(_window, w, h + _style.ItemSpacingY)
+            ImGuiLayout.ItemSize(_window, w, h + VarOf(ImGuiStyleVar.ItemSpacingY, _style.ItemSpacingY))
         }
 
         /// <summary>可折叠标题栏；返回 true 表示展开（状态经 storage 持久）。</summary>
@@ -422,7 +482,7 @@ namespace System.UI
             var open = _storage.GetBool(id, true)
             let x = ItemX()
             let y = ItemY()
-            let w = _window.Width - _style.FramePaddingX * f32(2.0) - f32(_indent)
+            let w = _window.Width - VarOf(ImGuiStyleVar.FramePaddingX, _style.FramePaddingX) * f32(2.0) - f32(_indent)
             let h = f32(20.0)
             let hovered = HitTest(x, y, w, h)
             _lastHovered = hovered
@@ -432,14 +492,14 @@ namespace System.UI
                 _storage.SetBool(id, open)
             }
 
-            _drawList.AddRectFilled(x, y, x + w, y + h, _style.GetColor(10))
+            _drawList.AddRectFilled(x, y, x + w, y + h, ColorOf(10))
             var arrow = "> "
             if open
             {
                 arrow = "v "
             }
 
-            _drawList.AddText(x + f32(4.0), y + f32(3.0), _style.GetColor(0), arrow + label)
+            _drawList.AddText(x + f32(4.0), y + f32(3.0), ColorOf(0), arrow + label)
             ImGuiLayout.ItemSize(_window, w, h + f32(2.0))
             return open
         }
@@ -450,7 +510,7 @@ namespace System.UI
             var open = _storage.GetBool(id, false)
             let x = ItemX()
             let y = ItemY()
-            let w = _window.Width - _style.FramePaddingX * f32(2.0) - f32(_indent)
+            let w = _window.Width - VarOf(ImGuiStyleVar.FramePaddingX, _style.FramePaddingX) * f32(2.0) - f32(_indent)
             let h = f32(18.0)
             let hovered = HitTest(x, y, w, h)
             _lastHovered = hovered
@@ -466,7 +526,7 @@ namespace System.UI
                 arrow = "v "
             }
 
-            _drawList.AddText(x, y, _style.GetColor(0), arrow + label)
+            _drawList.AddText(x, y, ColorOf(0), arrow + label)
             ImGuiLayout.ItemSize(_window, w, h)
             if open
             {
@@ -527,9 +587,41 @@ namespace System.UI
                 f = f32(1.0)
             }
 
-            _drawList.AddRectFilled(x, y, x + w, y + h, _style.GetColor(7))
-            _drawList.AddRectFilled(x, y, x + w * f, y + h, _style.GetColor(8))
-            _drawList.AddRect(x, y, x + w, y + h, _style.GetColor(2))
+            _drawList.AddRectFilled(x, y, x + w, y + h, ColorOf(7))
+            _drawList.AddRectFilled(x, y, x + w * f, y + h, ColorOf(8))
+            _drawList.AddRect(x, y, x + w, y + h, ColorOf(2))
+        }
+
+        private function ColorOf(idx: i32): i32
+        {
+            var i = _colorStackCount - 1
+            while i >= 0
+            {
+                if _colorStackIdx[i] == idx
+                {
+                    return _colorStackVal[i]
+                }
+
+                i = i - 1
+            }
+
+            return _style.GetColor(idx)
+        }
+
+        private function VarOf(idx: ImGuiStyleVar, fallback: f32): f32
+        {
+            var i = _varStackCount - 1
+            while i >= 0
+            {
+                if _varStackIdx[i] == i32(idx)
+                {
+                    return _varStackVal[i]
+                }
+
+                i = i - 1
+            }
+
+            return fallback
         }
 
         private function TextFind(id: i32): i32

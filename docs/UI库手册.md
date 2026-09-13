@@ -1,6 +1,6 @@
-# Cocoa System.UI 手册（立即模式 UI 库，阶段 2）
+# Cocoa System.UI 手册（立即模式 UI 库，阶段 3）
 
-> 状态：✅ 阶段 2（2026-09-13）——完整控件集 + 键盘/滚轮输入 + Child 滚动/裁剪；IL 后端可用，Native 后端属阶段 4。
+> 状态：✅ 阶段 3（2026-09-13）——完整控件集 + 键盘/滚轮输入 + Child 滚动/裁剪 + 主题系统（Dark/Light/Classic + 样式栈）；IL 后端可用，Native 后端属阶段 4。
 > 设计依据：[`docs-dev/plan/UI库规划.md`](../docs-dev/plan/UI库规划.md)；相关：[`docs/互操作手册.md`](互操作手册.md)。
 
 ## 1. 定位与分发
@@ -79,16 +79,24 @@ if gui.BeginChild(30, f32(300.0), f32(80.0))  // 可滚动子区（滚轮）
     gui.Text("line 2")
 }
 gui.EndChild()
+
+gui.PushStyleColor(0, ImGuiStyle.Abgr(230, 120, 60, 255))  // 临时文本色
+gui.Text("highlighted")
+gui.PopStyleColor()
+gui.PushStyleVar(ImGuiStyleVar.ItemSpacingY, f32(12.0))
+gui.Text("loose spacing")
+gui.PopStyleVar()
 ```
 
 ## 3. 组件
 
 | 组件 | 说明 |
 |------|------|
-| `ImGui` | 立即模式门面：`NewFrame`/`Begin`/`End`/`Render` + 控件（`Text`/`TextColored`/`Button`/`Checkbox`/`SliderFloat`/`SliderInt`/`ProgressBar`/`Separator`/`SameLine`/`Dummy`/`Spacing`/`Indent`/`Unindent`/`CollapsingHeader`/`TreeNode`/`TreePop`/`InputText`/`IsItemHovered`）+ 子区（`BeginChild`/`EndChild`） |
+| `ImGui` | 立即模式门面：`NewFrame`/`Begin`/`End`/`Render` + 控件（`Text`/`TextColored`/`Button`/`Checkbox`/`SliderFloat`/`SliderInt`/`ProgressBar`/`Separator`/`SameLine`/`Dummy`/`Spacing`/`Indent`/`Unindent`/`CollapsingHeader`/`TreeNode`/`TreePop`/`InputText`/`IsItemHovered`）+ 子区（`BeginChild`/`EndChild`）+ 样式栈（`PushStyleColor`/`PopStyleColor`/`PushStyleVar`/`PopStyleVar`） |
 | `ImGuiIO` | 每帧输入：`MouseX/Y`、`SetMouseButton`/`IsMouseDown`、`SetKeyDown`/`IsKeyDown`、`MouseWheel`、字符队列（`AddInputCharacter`/`CharAt`/`CharCount`/`ClearChars`）、`DisplayWidth/Height`、`DeltaTime` |
 | `ImGuiStorage` | id→i32/bool/f32 持久状态（`GetInt/SetInt` 等；控件第二参为 id） |
-| `ImGuiStyle` | 颜色（`ImGuiCol` + `Abgr` 打包）+ 间距/圆角；`MakeDark()`/`MakeLight()`（可运行期切换） |
+| `ImGuiStyle` | 颜色（`ImGuiCol` + `Abgr` 打包）+ 间距/圆角；预设 `MakeDark()`/`MakeLight()`/`MakeClassic()`（可运行期切换） |
+| `ImGuiStyleVar` | 可临时覆盖的样式变量枚举（`FramePaddingX/Y`、`ItemSpacingX/Y`、`FrameRounding`、`Alpha`） |
 | `ImGuiDrawList` | 顶点/索引 + 文本命令缓冲；`SetClipRect`/`ClearClip` 轴对齐裁剪 |
 | `ImTypes` | `ImVec2`/`ImVec4` 值类型 |
 | `ImGuiID` | FNV-1a 标签哈希（32 位，i32 承载） |
@@ -108,10 +116,11 @@ gui.EndChild()
 - 文本宽度按 **8px/字符** 近似；无字库度量、无自动换行。
 - 裁剪为**整图元轴对齐**（矩形精确；文本按行 y 越界剔除，非逐像素）。
 - 滚轮仅在 `BeginChild` 内生效（每帧一次，`Render` 清零）；无窗口缩放。
-- 无 `PushStyleColor/Var`、无 `PushID/PopID` 的 ID 栈；`Begin` 仅单根窗口，无多窗口浮动/停靠。
+- 样式栈为 LIFO 覆盖（`PushStyleColor`/`PushStyleVar` 不跨帧）；`ImGuiStyleVar.Alpha` 已登记但当前扁平渲染后端未应用全局透明度。
+- 无 `PushID/PopID` 的 ID 栈；`Begin` 仅单根窗口，无多窗口浮动/停靠。
 - 无消息 `DispatchMessage`：窗口关闭按钮无效，用 ESC 退出。
 - 值表达式约束：不使用 `^`/`~` 运算符与参数赋值（当前实现以等价写法规避）。
 
 ## 6. 综合示例（AdvancedUI）
 
-`samples/Samples/UI/AdvancedUI/` 综合演示：工具栏（计数/重置/主题切换）+ 左右双 `BeginChild` 面板（导航 `TreeNode`/`CollapsingHeader` + 内容区控件）+ 进度条/滑块/`InputText` + 12 行可滚动日志列表；运行期在深/浅主题间切换。构建见其 `build.cmd`。
+`samples/Samples/UI/AdvancedUI/` 综合演示：工具栏（计数/重置/主题三态切换 Dark→Light→Classic）+ 左右双 `BeginChild` 面板（导航 `TreeNode`/`CollapsingHeader` + 内容区控件）+ 进度条/滑块/`InputText` + 12 行可滚动日志列表；计数为正时以 `PushStyleColor` 高亮。构建见其 `build.cmd`。

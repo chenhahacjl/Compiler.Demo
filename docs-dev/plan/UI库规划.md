@@ -313,7 +313,7 @@ WNDPROC 需要原生函数指针回调；Cocoa 双后端均无可靠路径（IL 
 | **0b** | 编译器增强：native extern 参数上限 7→12+（x64 寄存器 4+栈；x86 栈压入，扩 PushSysCallArg 路径）+ 12 参 stdcall e2e（x86/x64） | — | 1-2 天 |
 | **1** | System.UI 基础框架 + GDI 轮询后端 + BasicUI 最小 demo（里程碑：窗口/双缓冲/Begin-End/Text/Button/点击动作）—— ✅ 已完成（§13） | 0a/0b | 1-2 周 |
 | **2** | 完整控件集（Checkbox/Slider/InputText/ProgressBar/Separator/SameLine/CollapsingHeader/TreeNode/Child 滚动）—— ✅ 已完成（§14） | 1 | 1-2 周 |
-| **3** | 主题系统（Dark/Light/Classic + PushStyleColor/Var）+ AdvancedUI demo—— 主题 Dark/Light 与 AdvancedUI 已随阶段 2 完成（§14）；PushStyleColor/Var/Classic 待补 | 2 | 1 周 |
+| **3** | 主题系统（Dark/Light/Classic + PushStyleColor/Var）+ AdvancedUI demo—— ✅ 已完成（§15） | 2 | 1 周 |
 | **4** | Native 后端适配（Win32NativeImports + SliderInt + 手动 UTF-16）+ NativeUI demo | 0b + 3 | 3-5 天 |
 | **5** | 声明式语法糖（UIView/VStack/HStack/Body() 约定/getter-setter lambda 双向绑定） | 3 | 1-2 周 |
 | **6** | Linux 跨平台（ELF 输出后：SDL2/OpenGL 后端） | 编译器 ELF | 远期 |
@@ -453,4 +453,24 @@ function Main(): i32
 - 裁剪为整图元轴对齐裁剪（矩形精确；文本按行 y 越界剔除，非逐像素）。
 - 滚轮仅在 Child 内生效一次/帧（`Render` 清零）；无窗口缩放、无 `PushStyleColor/Var`、无 `ID栈(PushID/PopID)`。
 - 无多窗口浮动/停靠；`Begin` 仅单根窗口。
+
+---
+
+## 15. 实施记录（阶段 3，2026-09-13）
+
+**目标**：主题系统（Dark/Light/Classic + PushStyleColor/PushStyleVar）+ AdvancedUI。
+
+**已完成（单次提交）**：
+
+- `ImGuiStyle`：新增 `MakeClassic()`（Dear ImGui Classic 风：黑底灰阶控件）+ `ImGuiStyleVar` 枚举（`Alpha`/`FramePaddingX/Y`/`ItemSpacingX/Y`/`FrameRounding`）。
+- `ImGui`：样式栈 `PushStyleColor/PopStyleColor`（颜色 LIFO 覆盖，`ColorOf` 自栈顶向下查找）、`PushStyleVar/PopStyleVar`（`VarOf` 同理，`ImGuiStyleVar` 参数）。全部 `ColorOf`/`VarOf` 替换了原先对 `_style` 的直接读取，控件即时响应覆盖。
+- `AdvancedUI`：主题按钮三态循环 Dark→Light→Classic；计数为正时 `PushStyleColor` 高亮计数文本。
+- 测试 +1：`ImGui_PushStyle_Evaluator`（推入红文本色/加宽 ItemSpacing，校验 DrawList 文本色取覆盖值、弹出后回落；Classic WindowBg=黑）；全量 **53484** 通过 / 1 跳过。
+- 文档：`docs/UI库手册.md`（组件表/示例/限制）、本 §15、CHANGELOG。
+
+**已知限制（阶段 3 后）**：
+- `Alpha` 变量已登记但后端未应用全局透明度（需在 GDI 输出叠加 alpha，后续）。
+- 颜色覆盖按 `ImGuiCol` 索引；`PushStyleColor` 无「按枚举重载」——传 i32 颜色槽位。
+- 无 `PushID/PopID` ID 栈；无多窗口。
+
 

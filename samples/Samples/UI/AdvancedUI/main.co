@@ -2,7 +2,7 @@ using System
 using System.UI
 using System.UI.Backends
 
-// 6e-M25 阶段 2 AdvancedUI：System.UI 综合示例（IL 后端）�?// 左侧导航（树/折叠�? 右侧内容（控�?+ 可滚动列表）；运行期切换�?浅主题；ESC 退出�?
+// 6e-M25 阶段 2 AdvancedUI：System.UI 综合示例（IL 后端）�?// 左侧导航（树/折叠�? 右侧内容（控�?+ 可滚动列表）；运行期切换�?浅主题；ESC 退出�?
 function Main(): i32
 {
     var gui = new ImGui(8192, 128)
@@ -17,7 +17,7 @@ function Main(): i32
 
     let memDC = Win32GDIBackend.CreateBuffer(hwnd, 900, 640)
     var running = true
-    var dark = true
+    var theme = 0
     var counter = 0
     var status = "Ready."
 
@@ -43,20 +43,28 @@ function Main(): i32
             }
 
             gui.SameLine()
-            if gui.Button("Toggle Theme")
+            if gui.Button("Theme")
             {
-                if dark
+                theme = theme + 1
+                if theme > 2
                 {
-                    dark = false
+                    theme = 0
+                }
+
+                if theme == 0
+                {
+                    gui.Style.MakeDark()
+                }
+                else if theme == 1
+                {
                     gui.Style.MakeLight()
                 }
                 else
                 {
-                    dark = true
-                    gui.Style.MakeDark()
+                    gui.Style.MakeClassic()
                 }
 
-                status = "Theme toggled."
+                status = "Theme switched."
             }
 
             gui.SameLine()
@@ -93,7 +101,17 @@ function Main(): i32
 
             if gui.BeginChild(101, f32(600.0), f32(430.0))
             {
-                gui.Text("Counter: " + counter.ToString())
+                if counter > 0
+                {
+                    gui.PushStyleColor(0, ImGuiStyle.Abgr(230, 120, 60, 255))
+                    gui.Text("Counter: " + counter.ToString())
+                    gui.PopStyleColor()
+                }
+                else
+                {
+                    gui.Text("Counter: " + counter.ToString())
+                }
+
                 gui.ProgressBar(f32(counter) / f32(20.0))
                 gui.Checkbox("Verbose", 300)
                 gui.SliderFloat("Volume", 301, f32(0.0), f32(1.0))

@@ -8,6 +8,13 @@
 
 ## 未发布（2026-09-13）
 
+### 6e-M25 阶段 3：主题系统（Dark/Light/Classic + 样式栈）（2026-09-13）
+- **预设**：`ImGuiStyle.MakeClassic()`（Dear ImGui Classic 风：黑底灰阶控件），与既有 `MakeDark`/`MakeLight` 三态可运行期切换。
+- **样式栈**：`ImGui.PushStyleColor/PopStyleColor`（颜色 LIFO 覆盖，`ColorOf` 栈顶优先）与 `PushStyleVar/PopStyleVar`（新 `ImGuiStyleVar` 枚举：`Alpha`/`FramePaddingX/Y`/`ItemSpacingX/Y`/`FrameRounding`，`VarOf` 生效）；控件全部改经 `ColorOf`/`VarOf` 读取，即时响应覆盖。
+- **示例**：`AdvancedUI` 主题按钮三态循环 Dark→Light→Classic；计数为正时 `PushStyleColor` 高亮。
+- 测试 +1（`ImGui_PushStyle_Evaluator`：覆盖/回落 + Classic 校验）；全量 **53484** 通过 / 1 跳过。
+- 文档：`docs/UI库手册.md` 升为阶段 3；规划 §8 状态行 + §15 实施记录。
+
 ### 6e-M25 阶段 2：System.UI 完整控件集 + 键盘/滚轮输入 + Child 滚动（2026-09-13）
 - **控件**：`ImGui` 增 `Indent/Unindent`、`Spacing`、`Dummy`、`TextColored`、`SliderInt`、`CollapsingHeader`、`TreeNode/TreePop`，抽出 `Clicked/Fraction/DrawTrack` 复用。
 - **文本输入**：`ImGuiIO` 字符队列（`AddInputCharacter/CharAt/CharCount/ClearChars`）+ `ImGui.InputText`（点击聚焦/退格/`maxLen`/聚焦高亮，内部扁平 `char[]` 经 `StringSyscall.StringFromChars`）；`Win32Window.Pump` 接 `WM_CHAR`（`TranslateMessage`，`MSG` 缓冲扩至 48 字节）。

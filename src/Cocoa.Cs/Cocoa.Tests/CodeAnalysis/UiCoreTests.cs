@@ -196,6 +196,42 @@ function Main(): i32
             AssertExpected(trees, ChildExpected);
         }
 
+        private const string StyleHarness = @"using System
+using System.UI
+
+function Main(): i32
+{
+    var gui = new ImGui(256, 16)
+    var io = new ImGuiIO()
+    gui.NewFrame(io)
+    gui.Begin(""W"", f32(0.0), f32(0.0), f32(300.0), f32(200.0))
+    gui.PushStyleColor(0, ImGuiStyle.Abgr(255, 0, 0, 255))
+    gui.Text(""red"")
+    gui.PopStyleColor()
+    gui.Text(""normal"")
+    gui.PushStyleVar(ImGuiStyleVar.ItemSpacingY, f32(20.0))
+    gui.Text(""spaced"")
+    gui.PopStyleVar()
+    gui.End()
+    Console.WriteLine(gui.DrawList.TextColor(0) == ImGuiStyle.Abgr(255, 0, 0, 255))
+    Console.WriteLine(gui.DrawList.TextColor(1) == gui.Style.GetColor(0))
+    Console.WriteLine(gui.DrawList.TextColor(2) == gui.Style.GetColor(0))
+    var st = new ImGuiStyle()
+    st.MakeClassic()
+    Console.WriteLine(st.GetColor(1) == ImGuiStyle.Abgr(0, 0, 0, 255))
+    return 0
+}";
+
+        private const string StyleExpected = "True\nTrue\nTrue\nTrue\n";
+
+        [Fact]
+        public void ImGui_PushStyle_Evaluator()
+        {
+            var trees = CoreSources().Select(p => SyntaxTree.Parse(File.ReadAllText(p))).ToList();
+            trees.Add(SyntaxTree.Parse(StyleHarness));
+            AssertExpected(trees, StyleExpected);
+        }
+
         private static void AssertExpected(List<SyntaxTree> trees, string expected)
         {
             var references = new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location };

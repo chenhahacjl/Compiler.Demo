@@ -19,6 +19,17 @@ namespace System.UI
         Separator = 11,
     }
 
+    /// <summary>可临时覆盖（PushStyleVar）的样式变量。</summary>
+    public enum ImGuiStyleVar
+    {
+        Alpha = 0,
+        FramePaddingX = 1,
+        FramePaddingY = 2,
+        ItemSpacingX = 3,
+        ItemSpacingY = 4,
+        FrameRounding = 5,
+    }
+
     public class ImGuiStyle
     {
         private field _colors: i32[]
@@ -126,6 +137,23 @@ namespace System.UI
             _colors[9] = Abgr(0, 122, 204, 255)
             _colors[10] = Abgr(229, 229, 229, 255)
             _colors[11] = Abgr(208, 208, 208, 255)
+        }
+
+        /// <summary>Dear ImGui Classic 风预设（深底 + 灰阶控件）。</summary>
+        public function MakeClassic(): void
+        {
+            _colors[0] = Abgr(255, 255, 255, 255)
+            _colors[1] = Abgr(0, 0, 0, 255)
+            _colors[2] = Abgr(128, 128, 128, 255)
+            _colors[3] = Abgr(110, 110, 110, 255)
+            _colors[4] = Abgr(120, 120, 120, 255)
+            _colors[5] = Abgr(107, 107, 107, 255)
+            _colors[6] = Abgr(255, 255, 255, 255)
+            _colors[7] = Abgr(51, 51, 51, 255)
+            _colors[8] = Abgr(178, 178, 178, 255)
+            _colors[9] = Abgr(230, 230, 230, 255)
+            _colors[10] = Abgr(0, 0, 0, 255)
+            _colors[11] = Abgr(128, 128, 128, 255)
         }
     }
 }
