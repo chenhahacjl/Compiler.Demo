@@ -5,6 +5,7 @@ using Avalonia.Platform.Storage;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.IDE.Controls;
 using Cocoa.IDE.ViewModels;
+using System.ComponentModel;
 
 namespace Cocoa.IDE;
 
@@ -214,10 +215,80 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>右键菜单：从 sender.DataContext 取节点（ContextMenu 继承节点 DataContext），回退到当前选中节点。</summary>
+    /// <summary>右键菜单：优先取菜单项 Tag，其次 DataContext，最后回退当前选中节点。</summary>
     private TreeNodeViewModel? CtxNode(object? sender) =>
-        (sender as Avalonia.Controls.MenuItem)?.DataContext as TreeNodeViewModel
+        (sender as Avalonia.Controls.MenuItem)?.Tag as TreeNodeViewModel
+        ?? (sender as Avalonia.Controls.MenuItem)?.DataContext as TreeNodeViewModel
+        ?? _ctxNode
         ?? SolutionTree.SelectedItem as TreeNodeViewModel;
+
+    private TreeNodeViewModel? _ctxNode;
+
+    /// <summary>打开右键菜单时按节点类型动态构建条目；分隔符只插入在可见分组之间。</summary>
+    private void OnNodeContextMenuOpening(object? sender, CancelEventArgs e)
+    {
+        if (sender is not ContextMenu menu) return;
+
+        _ctxNode = menu.DataContext as TreeNodeViewModel
+                   ?? (menu.Parent as Control)?.DataContext as TreeNodeViewModel
+                   ?? SolutionTree.SelectedItem as TreeNodeViewModel;
+        var node = _ctxNode;
+        if (node == null) return;
+
+        menu.Items.Clear();
+        var groups = new List<List<Control>>();
+
+        if (node.IsBuildable)
+            groups.Add(new() { Item("生成", OnCtxBuild), Item("重新生成", OnCtxRebuild), Item("清理", OnCtxClean) });
+
+        if (node.IsProject)
+            groups.Add(new() { Item("设为启动项目", OnCtxSetStartup), Item("运行", OnCtxRun), Item("调试", OnCtxDebug) });
+
+        if (node.CanAdd)
+        {
+            var add = new MenuItem { Header = "添加(_A)" };
+            if (node.CanCreateFile)
+            {
+                add.Items.Add(Item("新建项…", OnCtxNewFile));
+                add.Items.Add(Item("现有项…", OnCtxAddExistingItem));
+            }
+            if (node.IsProjectOrDependencies)
+            {
+                if (add.Items.Count > 0) add.Items.Add(new Separator());
+                add.Items.Add(Item("引用…", OnCtxAddReference));
+            }
+            if (node.IsSolution)
+            {
+                if (add.Items.Count > 0) add.Items.Add(new Separator());
+                add.Items.Add(Item("现有项目…", OnCtxAddExistingProject));
+            }
+            groups.Add(new() { add });
+        }
+
+        var fileGroup = new List<Control>();
+        if (node.IsSource) { fileGroup.Add(Item("打开", OnCtxOpen)); fileGroup.Add(Item("从项目中移除", OnCtxRemove)); }
+        if (node.IsProject) fileGroup.Add(Item("从解决方案中移除", OnCtxRemoveProject));
+        if (node.IsReferenceNode) fileGroup.Add(Item("移除引用", OnCtxRemoveReference));
+        if (fileGroup.Count > 0) groups.Add(fileGroup);
+
+        if (node.HasPath)
+            groups.Add(new() { Item("在资源管理器中显示", OnCtxShowInExplorer), Item("复制完整路径", OnCtxCopyPath) });
+
+        groups.Add(new() { Item("属性", OnCtxProperties) });
+
+        for (var i = 0; i < groups.Count; i++)
+        {
+            if (i > 0) menu.Items.Add(new Separator());
+            foreach (var item in groups[i]) menu.Items.Add(item);
+        }
+    }
+
+    private MenuItem Item(string header, EventHandler<RoutedEventArgs> handler)
+    {
+        var item = new MenuItem { Header = header, Tag = _ctxNode };
+        item.Click += handler;
+        return item;
+    }
 
     private void OnCtxOpen(object? sender, RoutedEventArgs e)
     {
