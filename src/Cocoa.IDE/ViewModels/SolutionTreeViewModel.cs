@@ -394,19 +394,29 @@ public partial class SolutionTreeViewModel : ObservableObject
     public string? DirectoryFor(TreeNodeViewModel node) => NodeDirectory(node);
 
     /// <summary>把现有 .coproj 加入当前解决方案的 .cosln，成功后刷新树。</summary>
-    public bool AddProjectToSolution(string projectPath)
+    public bool AddProjectToSolution(string projectPath, out string? error)
     {
-        if (CurrentSolution?.FilePath == null) return false;
-        if (!SolutionFileService.AddProject(CurrentSolution.FilePath, projectPath, out _)) return false;
+        error = null;
+        if (CurrentSolution?.FilePath == null)
+        {
+            error = "当前没有打开解决方案";
+            return false;
+        }
+        if (!SolutionFileService.AddProject(CurrentSolution.FilePath, projectPath, out error)) return false;
         Refresh();
         return true;
     }
 
     /// <summary>从当前解决方案的 .cosln 移除该工程节点，成功后刷新树。</summary>
-    public bool RemoveProjectFromSolution(TreeNodeViewModel node)
+    public bool RemoveProjectFromSolution(TreeNodeViewModel node, out string? error)
     {
-        if (CurrentSolution?.FilePath == null || node.FullPath == null) return false;
-        if (!SolutionFileService.RemoveProject(CurrentSolution.FilePath, node.FullPath, out _)) return false;
+        error = null;
+        if (CurrentSolution?.FilePath == null || node.FullPath == null)
+        {
+            error = "当前没有打开解决方案";
+            return false;
+        }
+        if (!SolutionFileService.RemoveProject(CurrentSolution.FilePath, node.FullPath, out error)) return false;
         Refresh();
         return true;
     }

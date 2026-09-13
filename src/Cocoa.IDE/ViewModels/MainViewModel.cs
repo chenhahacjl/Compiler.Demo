@@ -52,6 +52,11 @@ public partial class MainViewModel : ObservableObject
             if (e.PropertyName == nameof(EditorTabs.ActiveTab))
                 OnActiveTabChanged();
         };
+        EditorTabs.ProjectPropertiesSaved += () =>
+        {
+            SolutionTree.Refresh();
+            StatusBar.StatusText = "项目属性已保存";
+        };
         ErrorList.ItemActivated += item => NavigateToError(item);
         BuildService.OutputLine += line => Output.AppendLine(line);
         BuildService.ErrorReported += (file, line, col, msg) =>
@@ -144,6 +149,14 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
+        if (tab.IsVirtual)
+        {
+            StatusBar.Language = "项目属性";
+            StatusBar.CursorPosition = "";
+            Properties.Clear();
+            return;
+        }
+
         StatusBar.Language = tab.Dialect ?? "";
         StatusBar.CursorPosition = $"Ln {tab.CursorLine}, Col {tab.CursorColumn}";
         Properties.ShowDocument(tab);
@@ -157,6 +170,15 @@ public partial class MainViewModel : ObservableObject
     {
         if (node != null)
             Properties.ShowNode(node);
+    }
+
+    /// <summary>项目节点 → 打开项目属性页（VS 风格文档标签）。</summary>
+    public void OpenProjectProperties(TreeNodeViewModel node)
+    {
+        var project = SolutionTree.ResolveProject(node);
+        if (project == null) return;
+        EditorTabs.OpenProjectProperties(project);
+        StatusBar.StatusText = $"项目属性：{project.Name}";
     }
 
     private void NavigateToError(ErrorItemViewModel item)

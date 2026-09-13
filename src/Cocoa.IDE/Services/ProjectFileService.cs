@@ -157,6 +157,70 @@ public static class ProjectFileService
         }
     }
 
+    /// <summary>按属性名写入/移除 <c>.coproj</c> 属性（值 null/空表示移除）。
+    /// 已存在元素原位改写；缺失元素按类别补到带 Label 的 PropertyGroup。</summary>
+    public static bool UpdateProperties(string projectPath, IReadOnlyDictionary<string, string?> values, out string? error)
+    {
+        error = null;
+        try
+        {
+            var document = XDocument.Load(projectPath);
+            var root = document.Root
+                ?? throw new InvalidOperationException("empty document; expected <Project> root element");
+
+            foreach (var (key, value) in values)
+            {
+                var element = root.Descendants().FirstOrDefault(e => e.Name.LocalName == key);
+                if (string.IsNullOrEmpty(value))
+                {
+                    element?.Remove();
+                    continue;
+                }
+
+                if (element != null)
+                {
+                    element.Value = value;
+                    continue;
+                }
+
+                var group = FindPropertyGroup(root, key);
+                group.Add(new XElement(key, value));
+            }
+
+            Save(document, projectPath);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    private static XElement FindPropertyGroup(XElement root, string key)
+    {
+        var label = key switch
+        {
+            "Language" => "Language",
+            "AssemblyName" => "Assembly",
+            "Platform" or "TargetFramework" or "TargetOS" => "Target",
+            "OutputType" => "Output",
+            _ => "Build",
+        };
+
+        var group = root.Elements()
+            .FirstOrDefault(e => e.Name.LocalName == "PropertyGroup" &&
+                                 string.Equals(e.Attribute("Label")?.Value, label, StringComparison.OrdinalIgnoreCase));
+        if (group != null) return group;
+
+        group = root.Elements().FirstOrDefault(e => e.Name.LocalName == "PropertyGroup");
+        if (group != null) return group;
+
+        group = new XElement("PropertyGroup", new XAttribute("Label", label));
+        root.AddFirst(group);
+        return group;
+    }
+
     private static void Save(XDocument document, string projectPath)
     {
         var settings = new XmlWriterSettings

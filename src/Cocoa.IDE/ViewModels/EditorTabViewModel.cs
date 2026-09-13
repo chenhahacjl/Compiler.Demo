@@ -9,10 +9,16 @@ public partial class EditorTabViewModel : ObservableObject
     private bool _suppressDirty;
 
     public string FilePath { get; }
-    public string FileName => System.IO.Path.GetFileName(FilePath);
+    public string FileName => _displayName ?? System.IO.Path.GetFileName(FilePath);
     public string DirectoryPath => System.IO.Path.GetDirectoryName(FilePath) ?? "";
 
     private readonly string? _dialect;
+    private readonly string? _displayName;
+
+    /// <summary>非 null 时为“项目属性”虚拟标签（中央区显示属性页而非编辑器）。</summary>
+    public ProjectPropertiesViewModel? ProjectProperties { get; }
+
+    public bool IsVirtual => ProjectProperties != null;
 
     public EditorTabViewModel(string filePath)
     {
@@ -34,6 +40,17 @@ public partial class EditorTabViewModel : ObservableObject
         {
             Content = "";
         }
+    }
+
+    /// <summary>“项目属性”虚拟标签：不读文件、不参与诊断/保存。</summary>
+    public EditorTabViewModel(ProjectPropertiesViewModel properties)
+    {
+        ProjectProperties = properties;
+        FilePath = properties.ProjectFilePath + ".props";
+        _displayName = properties.DisplayName;
+        _suppressDirty = true;
+        Content = "";
+        IsModified = false;
     }
 
     [ObservableProperty]

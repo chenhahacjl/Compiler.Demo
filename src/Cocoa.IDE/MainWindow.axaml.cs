@@ -214,9 +214,10 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>右键菜单：从 sender.DataContext 取节点（ContextMenu 继承节点 DataContext）。</summary>
-    private static TreeNodeViewModel? CtxNode(object? sender) =>
-        (sender as Avalonia.Controls.MenuItem)?.DataContext as TreeNodeViewModel;
+    /// <summary>右键菜单：从 sender.DataContext 取节点（ContextMenu 继承节点 DataContext），回退到当前选中节点。</summary>
+    private TreeNodeViewModel? CtxNode(object? sender) =>
+        (sender as Avalonia.Controls.MenuItem)?.DataContext as TreeNodeViewModel
+        ?? SolutionTree.SelectedItem as TreeNodeViewModel;
 
     private void OnCtxOpen(object? sender, RoutedEventArgs e)
     {
@@ -237,6 +238,15 @@ public partial class MainWindow : Window
     private void OnCtxProperties(object? sender, RoutedEventArgs e)
     {
         if (CtxNode(sender) is { } node)
+            ShowProperties(node);
+    }
+
+    /// <summary>项目节点 → 打开项目属性页；其它节点 → 右侧属性面板。</summary>
+    private void ShowProperties(TreeNodeViewModel node)
+    {
+        if (node.IsProject)
+            ViewModel.OpenProjectProperties(node);
+        else
             ViewModel.ShowNodeProperties(node);
     }
 
@@ -322,20 +332,26 @@ public partial class MainWindow : Window
             FileTypeFilter = new[]
             {
                 new FilePickerFileType("Cocoa 项目") { Patterns = new[] { "*.coproj" } },
+                new FilePickerFileType("所有文件") { Patterns = new[] { "*.*" } },
             },
         });
 
         foreach (var file in files)
         {
-            if (file.TryGetLocalPath() is { } path)
-                ViewModel.SolutionTree.AddProjectToSolution(path);
+            if (file.TryGetLocalPath() is not { } path) continue;
+
+            if (ViewModel.SolutionTree.AddProjectToSolution(path, out var error))
+                ViewModel.Output.AppendLine($"已添加项目：{Path.GetFileName(path)}");
+            else
+                ViewModel.Output.AppendLine($"error: 添加项目失败：{error}");
         }
     }
 
     private void OnCtxRemoveProject(object? sender, RoutedEventArgs e)
     {
-        if (CtxNode(sender) is { } node)
-            ViewModel.SolutionTree.RemoveProjectFromSolution(node);
+        if (CtxNode(sender) is { } node &&
+            !ViewModel.SolutionTree.RemoveProjectFromSolution(node, out var error))
+            ViewModel.Output.AppendLine($"error: {error}");
     }
 
     /// <summary>在节点目录下新建源文件（简单对话框输入文件名），并显式加入所属项目。</summary>
@@ -441,7 +457,7 @@ public partial class MainWindow : Window
     private void OnTreeProperties(object? sender, RoutedEventArgs e)
     {
         if (SolutionTree.SelectedItem is TreeNodeViewModel node)
-            ViewModel.ShowNodeProperties(node);
+            ShowProperties(node);
     }
 
     // ─── 引用增删 ───

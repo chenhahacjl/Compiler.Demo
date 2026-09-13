@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Cocoa.Build;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -14,6 +15,30 @@ public partial class EditorTabsViewModel : ObservableObject
     public EditorTabsViewModel()
     {
         EditorTabsRegistry.Register(this);
+    }
+
+    /// <summary>项目属性页保存成功（供刷新解决方案树）。</summary>
+    public event Action? ProjectPropertiesSaved;
+
+    /// <summary>打开/激活「项目属性」文档标签（同工程复用同一标签）。</summary>
+    public EditorTabViewModel OpenProjectProperties(CocoaProjectFile project)
+    {
+        var existing = Tabs.FirstOrDefault(t => t.IsVirtual &&
+            string.Equals(t.ProjectProperties!.ProjectFilePath, project.FilePath, StringComparison.OrdinalIgnoreCase));
+        if (existing != null)
+        {
+            existing.ProjectProperties!.ReloadFrom(project);
+            ActiveTab = existing;
+            return existing;
+        }
+
+        var properties = new ProjectPropertiesViewModel(project);
+        properties.Saved += _ => ProjectPropertiesSaved?.Invoke();
+
+        var tab = new EditorTabViewModel(properties);
+        Tabs.Add(tab);
+        ActiveTab = tab;
+        return tab;
     }
 
     public void OpenFile(string filePath)

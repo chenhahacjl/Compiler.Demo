@@ -308,6 +308,20 @@ public partial class EditorPane : UserControl
     private void OnActiveTabChanged()
     {
         var tab = EditorTabs?.ActiveTab;
+
+        // 项目属性虚拟标签：显示属性页（覆盖编辑器）
+        if (tab is { IsVirtual: true })
+        {
+            _syncingEditor = true;
+            PropertiesDocPanel.DataContext = tab.ProjectProperties;
+            PropertiesDocPanel.IsVisible = true;
+            EmptyStatePanel.IsVisible = false;
+            _syncingEditor = false;
+            return;
+        }
+
+        PropertiesDocPanel.IsVisible = false;
+
         if (tab == null)
         {
             _syncingEditor = false;
