@@ -68,66 +68,66 @@ function Main(): i32
             }
 
             gui.SameLine()
-            gui.Text(status)
+            gui.Label(status)
             gui.Separator()
 
-            if gui.BeginChild(100, f32(240.0), f32(430.0))
+            if gui.BeginPanel(100, f32(240.0), f32(430.0))
             {
-                gui.Text("Navigation")
+                gui.Label("Navigation")
                 gui.Separator()
-                if gui.TreeNode("Inputs", 200)
+                if gui.TreeView("Inputs", 200)
                 {
-                    gui.Text("Buttons")
-                    gui.Text("Sliders")
-                    gui.TreePop()
+                    gui.Label("Buttons")
+                    gui.Label("Sliders")
+                    gui.EndTreeView()
                 }
 
-                if gui.TreeNode("Display", 201)
+                if gui.TreeView("Display", 201)
                 {
-                    gui.Text("Progress")
-                    gui.Text("Lists")
-                    gui.TreePop()
+                    gui.Label("Progress")
+                    gui.Label("Lists")
+                    gui.EndTreeView()
                 }
 
-                if gui.CollapsingHeader("Advanced", 202)
+                if gui.GroupBox("Advanced", 202)
                 {
-                    gui.Text("Theme")
-                    gui.Text("Diagnostics")
+                    gui.Label("Theme")
+                    gui.Label("Diagnostics")
                 }
             }
 
-            gui.EndChild()
+            gui.EndPanel()
             gui.SameLine()
 
-            if gui.BeginChild(101, f32(600.0), f32(430.0))
+            if gui.BeginPanel(101, f32(600.0), f32(430.0))
             {
                 if counter > 0
                 {
                     gui.PushStyleColor(0, ImGuiStyle.Abgr(230, 120, 60, 255))
-                    gui.Text("Counter: " + counter.ToString())
+                    gui.Label("Counter: " + counter.ToString())
                     gui.PopStyleColor()
                 }
                 else
                 {
-                    gui.Text("Counter: " + counter.ToString())
+                    gui.Label("Counter: " + counter.ToString())
                 }
 
                 gui.ProgressBar(f32(counter) / f32(20.0))
-                gui.Checkbox("Verbose", 300)
-                gui.SliderFloat("Volume", 301, f32(0.0), f32(1.0))
-                gui.SliderInt("Items", 302, 0, 100)
-                var note = gui.InputText("Note", 303, 48)
+                gui.CheckBox("Verbose", 300)
+                gui.TrackBarFloat("Volume", 301, f32(0.0), f32(1.0))
+                gui.TrackBar("Items", 302, 0, 100)
+                var note = gui.TextBox("Note", 303, 48)
                 gui.Separator()
-                gui.Text("Log:")
+                gui.Label("Log:")
                 var k = 0
                 while k < 12
                 {
-                    gui.Text("entry " + k.ToString() + "  |  note = " + note)
+                    gui.Label("entry " + k.ToString() + "  |  note = " + note)
                     k = k + 1
                 }
             }
 
-            gui.EndChild()
+            gui.EndPanel()
         }
 
         gui.End()

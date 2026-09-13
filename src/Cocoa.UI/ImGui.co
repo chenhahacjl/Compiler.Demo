@@ -169,7 +169,7 @@ namespace System.UI
         }
 
         /// <summary>子区域：独立裁剪 + 滚轮滚动（滚动量经 storage 持久）。</summary>
-        public function BeginChild(id: i32, w: f32, h: f32): bool
+        public function BeginPanel(id: i32, w: f32, h: f32): bool
         {
             let x = _window.X + _window.CursorX
             let y = _window.Y + _window.CursorY
@@ -198,7 +198,7 @@ namespace System.UI
             return true
         }
 
-        public function EndChild(): void
+        public function EndPanel(): void
         {
             _drawList.ClearClip()
             _inChild = false
@@ -226,7 +226,7 @@ namespace System.UI
             }
         }
 
-        public function Text(text: string): void
+        public function Label(text: string): void
         {
             let x = ItemX()
             let y = ItemY()
@@ -234,7 +234,7 @@ namespace System.UI
             ImGuiLayout.ItemSize(_window, MeasureText(text), f32(18.0))
         }
 
-        public function TextColored(text: string, color: i32): void
+        public function LabelColored(text: string, color: i32): void
         {
             let x = ItemX()
             let y = ItemY()
@@ -262,7 +262,7 @@ namespace System.UI
         }
 
         /// <summary>单行文本输入（点击聚焦；消费本帧 io 字符）。返回当前文本。</summary>
-        public function InputText(label: string, id: i32, maxLen: i32): string
+        public function TextBox(label: string, id: i32, maxLen: i32): string
         {
             var slot = TextFind(id)
             if slot < 0
@@ -352,7 +352,7 @@ namespace System.UI
             return Clicked(hovered)
         }
 
-        public function Checkbox(label: string, id: i32): bool
+        public function CheckBox(label: string, id: i32): bool
         {
             let x = ItemX()
             let y = ItemY()
@@ -379,7 +379,7 @@ namespace System.UI
             return value
         }
 
-        public function SliderFloat(label: string, id: i32, min: f32, max: f32): f32
+        public function TrackBarFloat(label: string, id: i32, min: f32, max: f32): f32
         {
             let x = ItemX()
             let y = ItemY()
@@ -412,7 +412,7 @@ namespace System.UI
             return value
         }
 
-        public function SliderInt(label: string, id: i32, min: i32, max: i32): i32
+        public function TrackBar(label: string, id: i32, min: i32, max: i32): i32
         {
             let x = ItemX()
             let y = ItemY()
@@ -477,7 +477,7 @@ namespace System.UI
         }
 
         /// <summary>可折叠标题栏；返回 true 表示展开（状态经 storage 持久）。</summary>
-        public function CollapsingHeader(label: string, id: i32): bool
+        public function GroupBox(label: string, id: i32): bool
         {
             var open = _storage.GetBool(id, true)
             let x = ItemX()
@@ -505,7 +505,7 @@ namespace System.UI
         }
 
         /// <summary>树节点（展开时自动缩进；须配对 TreePop）。</summary>
-        public function TreeNode(label: string, id: i32): bool
+        public function TreeView(label: string, id: i32): bool
         {
             var open = _storage.GetBool(id, false)
             let x = ItemX()
@@ -536,7 +536,7 @@ namespace System.UI
             return open
         }
 
-        public function TreePop(): void
+        public function EndTreeView(): void
         {
             Unindent()
         }

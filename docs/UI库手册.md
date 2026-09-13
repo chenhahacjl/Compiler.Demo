@@ -41,11 +41,11 @@ function Main(): i32
         gui.NewFrame(io)
         if gui.Begin("Demo", f32(10.0), f32(10.0), f32(620.0), f32(400.0))
         {
-            gui.Text("Hello")
+            gui.Label("Hello")
             if gui.Button("Click Me") { Console.WriteLine("clicked") }
             gui.SameLine()
-            gui.Checkbox("Enable", 1)          // 第二参 = 持久状态 id
-            gui.SliderFloat("Value", 2, f32(0.0), f32(100.0))
+            gui.CheckBox("Enable", 1)          // 第二参 = 持久状态 id
+            gui.TrackBarFloat("Value", 2, f32(0.0), f32(100.0))
             gui.ProgressBar(f32(0.35))
         }
         gui.End()
@@ -63,36 +63,52 @@ function Main(): i32
 
 退出：轮询架构无 `DispatchMessage`，窗口关闭按钮不触发；**按 ESC 退出**。
 
-控件/输入/子区域补充示例：
+控件/输入/子区域补充示例（**控件命名参照 WinForms**）：
 
 ```cocoa
-gui.SliderInt("Count", 3, 0, 20)
-gui.CollapsingHeader("Advanced", 10)
-if gui.TreeNode("Options", 11) { gui.Text("child item"); gui.TreePop() }
+gui.TrackBar("Count", 3, 0, 20)                 // WinForms TrackBar（整型滑动）
+gui.GroupBox("Advanced", 10)                    // WinForms GroupBox（可折叠，状态持久）
+if gui.TreeView("Options", 11) { gui.Label("child item"); gui.EndTreeView() }  // WinForms TreeView
 
-var name = gui.InputText("Name", 20, 32)      // 点击聚焦，输入字符，返回当前文本
-gui.Text("Hello, " + name)
+var name = gui.TextBox("Name", 20, 32)          // WinForms TextBox：点击聚焦、输入、返回文本
+gui.Label("Hello, " + name)
 
-if gui.BeginChild(30, f32(300.0), f32(80.0))  // 可滚动子区（滚轮）
+if gui.BeginPanel(30, f32(300.0), f32(80.0))    // WinForms Panel：可滚动子区（滚轮）
 {
-    gui.Text("line 1")
-    gui.Text("line 2")
+    gui.Label("line 1")
+    gui.Label("line 2")
 }
-gui.EndChild()
+gui.EndPanel()
 
 gui.PushStyleColor(0, ImGuiStyle.Abgr(230, 120, 60, 255))  // 临时文本色
-gui.Text("highlighted")
+gui.Label("highlighted")
 gui.PopStyleColor()
 gui.PushStyleVar(ImGuiStyleVar.ItemSpacingY, f32(12.0))
-gui.Text("loose spacing")
+gui.Label("loose spacing")
 gui.PopStyleVar()
 ```
+
+### 控件命名对照（WinForms）
+
+| System.UI（现行） | WinForms 对应 | 说明 |
+|-------------------|---------------|------|
+| `Button` | Button | 同 |
+| `Label` / `LabelColored` | Label（ForeColor） | 带色变体对应 ForeColor |
+| `TextBox` | TextBox | 单行输入 |
+| `CheckBox` | CheckBox | 同 |
+| `TrackBar` / `TrackBarFloat` | TrackBar | WinForms TrackBar 为整型；`TrackBarFloat` 为浮点扩展 |
+| `ProgressBar` | ProgressBar | 同 |
+| `GroupBox` | GroupBox | 可折叠分组 |
+| `TreeView` / `EndTreeView` | TreeView / TreeNode | 节点区域 |
+| `BeginPanel` / `EndPanel` | Panel | 子区域（裁剪 + 滚动） |
+| `Separator` | —（无对应控件） | 分隔线，保留 |
+| `SameLine` / `Indent` / `Spacing` / `Dummy` | FlowLayoutPanel 等布局能力 | 布局辅助，保留 |
 
 ## 3. 组件
 
 | 组件 | 说明 |
 |------|------|
-| `ImGui` | 立即模式门面：`NewFrame`/`Begin`/`End`/`Render` + 控件（`Text`/`TextColored`/`Button`/`Checkbox`/`SliderFloat`/`SliderInt`/`ProgressBar`/`Separator`/`SameLine`/`Dummy`/`Spacing`/`Indent`/`Unindent`/`CollapsingHeader`/`TreeNode`/`TreePop`/`InputText`/`IsItemHovered`）+ 子区（`BeginChild`/`EndChild`）+ 样式栈（`PushStyleColor`/`PopStyleColor`/`PushStyleVar`/`PopStyleVar`） |
+| `ImGui` | 立即模式门面：`NewFrame`/`Begin`/`End`/`Render` + 控件（`Label`/`LabelColored`/`Button`/`CheckBox`/`TrackBar`/`TrackBarFloat`/`ProgressBar`/`Separator`/`SameLine`/`Dummy`/`Spacing`/`Indent`/`Unindent`/`GroupBox`/`TreeView`/`EndTreeView`/`TextBox`/`IsItemHovered`）+ 子区（`BeginPanel`/`EndPanel`）+ 样式栈（`PushStyleColor`/`PopStyleColor`/`PushStyleVar`/`PopStyleVar`） |
 | `ImGuiIO` | 每帧输入：`MouseX/Y`、`SetMouseButton`/`IsMouseDown`、`SetKeyDown`/`IsKeyDown`、`MouseWheel`、字符队列（`AddInputCharacter`/`CharAt`/`CharCount`/`ClearChars`）、`DisplayWidth/Height`、`DeltaTime` |
 | `ImGuiStorage` | id→i32/bool/f32 持久状态（`GetInt/SetInt` 等；控件第二参为 id） |
 | `ImGuiStyle` | 颜色（`ImGuiCol` + `Abgr` 打包）+ 间距/圆角；预设 `MakeDark()`/`MakeLight()`/`MakeClassic()`（可运行期切换） |
@@ -123,4 +139,4 @@ gui.PopStyleVar()
 
 ## 6. 综合示例（AdvancedUI）
 
-`samples/Samples/UI/AdvancedUI/` 综合演示：工具栏（计数/重置/主题三态切换 Dark→Light→Classic）+ 左右双 `BeginChild` 面板（导航 `TreeNode`/`CollapsingHeader` + 内容区控件）+ 进度条/滑块/`InputText` + 12 行可滚动日志列表；计数为正时以 `PushStyleColor` 高亮。构建见其 `build.cmd`。
+`samples/Samples/UI/AdvancedUI/` 综合演示：工具栏（计数/重置/主题三态切换 Dark→Light→Classic）+ 左右双 `BeginPanel` 面板（导航 `TreeView`/`GroupBox` + 内容区控件）+ 进度条/滑块/`TextBox` + 12 行可滚动日志列表；计数为正时以 `PushStyleColor` 高亮。构建见其 `build.cmd`。

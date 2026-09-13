@@ -27,7 +27,7 @@ function Main(): i32
         gui.NewFrame(io)
         if gui.Begin("Cocoa.UI Demo", f32(10.0), f32(10.0), f32(620.0), f32(400.0))
         {
-            gui.Text("Welcome to Cocoa.UI!")
+            gui.Label("Welcome to Cocoa.UI!")
             gui.Separator()
             if gui.Button("Click Me")
             {
@@ -35,35 +35,35 @@ function Main(): i32
             }
 
             gui.SameLine()
-            gui.Checkbox("Enable", 1)
-            gui.SliderFloat("Value", 2, f32(0.0), f32(100.0))
-            gui.SliderInt("Count", 3, 0, 20)
+            gui.CheckBox("Enable", 1)
+            gui.TrackBarFloat("Value", 2, f32(0.0), f32(100.0))
+            gui.TrackBar("Count", 3, 0, 20)
             gui.ProgressBar(f32(0.35))
-            var name = gui.InputText("Name", 20, 32)
-            gui.Text("Hello, " + name)
+            var name = gui.TextBox("Name", 20, 32)
+            gui.Label("Hello, " + name)
 
-            if gui.CollapsingHeader("Advanced", 10)
+            if gui.GroupBox("Advanced", 10)
             {
-                if gui.TreeNode("Options", 11)
+                if gui.TreeView("Options", 11)
                 {
-                    gui.Checkbox("Option A", 12)
-                    gui.Checkbox("Option B", 13)
-                    gui.TreePop()
+                    gui.CheckBox("Option A", 12)
+                    gui.CheckBox("Option B", 13)
+                    gui.EndTreeView()
                 }
 
-                if gui.BeginChild(30, f32(300.0), f32(70.0))
+                if gui.BeginPanel(30, f32(300.0), f32(70.0))
                 {
-                    gui.Text("scroll line 1")
-                    gui.Text("scroll line 2")
-                    gui.Text("scroll line 3")
-                    gui.Text("scroll line 4")
-                    gui.Text("scroll line 5")
-                    gui.Text("scroll line 6")
-                    gui.Text("scroll line 7")
-                    gui.Text("scroll line 8")
+                    gui.Label("scroll line 1")
+                    gui.Label("scroll line 2")
+                    gui.Label("scroll line 3")
+                    gui.Label("scroll line 4")
+                    gui.Label("scroll line 5")
+                    gui.Label("scroll line 6")
+                    gui.Label("scroll line 7")
+                    gui.Label("scroll line 8")
                 }
 
-                gui.EndChild()
+                gui.EndPanel()
             }
         }
 
