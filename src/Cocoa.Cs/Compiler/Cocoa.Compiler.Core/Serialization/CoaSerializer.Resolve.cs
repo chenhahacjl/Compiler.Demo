@@ -45,7 +45,13 @@ namespace Cocoa.CodeAnalysis.Serialization
             while (true)
             {
                 var (part, next) = ReadUntilTopLevel(reference, position, ',', ';');
-                parameterTypes.Add(ResolveTypeRef(part, context));
+
+                // 零参数函数类型写侧为 `fnty{;返回}`：首段为空，跳过（6e-M25 阶段 5）。
+                if (part.Length > 0)
+                {
+                    parameterTypes.Add(ResolveTypeRef(part, context));
+                }
+
                 position = next;
 
                 if (position >= reference.Length || (reference[position] != ',' && reference[position] != ';'))

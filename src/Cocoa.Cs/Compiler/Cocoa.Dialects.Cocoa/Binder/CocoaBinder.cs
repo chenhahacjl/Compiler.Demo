@@ -561,7 +561,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                         if (node is BoundFunctionValueExpression { Body: not null } functionValue &&
                             !functionBodies.ContainsKey(functionValue.Function))
                         {
-                            functionBodies.Add(functionValue.Function, functionValue.Body);
+                            // 6e-M25 阶段 5：lambda 体与普通函数一致需 Lower（if/while → CFG），否则 IL/native 后端遇结构化节点抛错。
+                            functionBodies.Add(functionValue.Function, Lowerer.Lower(functionValue.Function, functionValue.Body));
                             pendingLambdaScopes.Enqueue(functionValue.Body);
                         }
 

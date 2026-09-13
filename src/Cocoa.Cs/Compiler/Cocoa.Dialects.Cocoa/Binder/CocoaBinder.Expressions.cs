@@ -191,7 +191,11 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 foreach (var captured in captures)
                 {
                     captured.IsCaptured = true;
-                    environmentClass.AddField(new FieldSymbol(captured.Name, captured.Type, Visibility.Public, environmentClass));
+                    // 6e-M25 阶段 5：同一宿主函数的多个 lambda 捕获同名变量 → 环境类字段去重（字段按名承载捕获）。
+                    if (!environmentClass.Fields.Any(f => f.Name == captured.Name))
+                    {
+                        environmentClass.AddField(new FieldSymbol(captured.Name, captured.Type, Visibility.Public, environmentClass));
+                    }
                 }
 
                 environmentOwner.CapturedVariables ??= new List<VariableSymbol>();
@@ -311,7 +315,10 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 foreach (var captured in captures)
                 {
                     captured.IsCaptured = true;
-                    environmentClass.AddField(new FieldSymbol(captured.Name, captured.Type, Visibility.Public, environmentClass));
+                    if (!environmentClass.Fields.Any(f => f.Name == captured.Name))
+                    {
+                        environmentClass.AddField(new FieldSymbol(captured.Name, captured.Type, Visibility.Public, environmentClass));
+                    }
                 }
 
                 environmentOwner.CapturedVariables ??= new List<VariableSymbol>();

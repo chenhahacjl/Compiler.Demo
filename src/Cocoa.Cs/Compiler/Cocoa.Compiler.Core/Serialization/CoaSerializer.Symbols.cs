@@ -401,6 +401,11 @@ if (properties.Length > 0)
                 w.Field("static:" + BoolWord(fn.IsStatic));
                 w.Field("ctor:" + BoolWord(fn.IsConstructor));
                 w.Field("acc:" + BoolWord(fn.IsPropertyAccessor));
+                // 6e-M25 阶段 5：虚/抽象/重写/密封位（跨库派生 override 解析所需；旧文件无此字段 → 读侧默认 false）
+                w.Field("virt:" + BoolWord(fn.IsVirtual));
+                w.Field("abs:" + BoolWord(fn.IsAbstract));
+                w.Field("ovr:" + BoolWord(fn.IsOverride));
+                w.Field("seal:" + BoolWord(fn.IsSealed));
             }
 
             // 6f-4：捕获闭包元数据（宿主函数 EnvClass/Captures + lambda IsLambdaWithEnvironment）——

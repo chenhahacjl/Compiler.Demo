@@ -944,11 +944,24 @@ namespace Cocoa.CodeAnalysis.Serialization
             bool? explicitIsStatic = null;
             var explicitIsConstructor = false;
             var explicitIsAccessor = false;
+            var explicitIsVirtual = false;
+            var explicitIsAbstract = false;
+            var explicitIsOverride = false;
+            var explicitIsSealed = false;
             if (reader.PeekRaw().StartsWith("static:", StringComparison.Ordinal))
             {
                 explicitIsStatic = ParseBoolWord(ReadLabeledField(reader, "static:"));
                 explicitIsConstructor = ParseBoolWord(ReadLabeledField(reader, "ctor:"));
                 explicitIsAccessor = ParseBoolWord(ReadLabeledField(reader, "acc:"));
+
+                // 6e-M25 阶段 5：虚/抽象/重写/密封位（旧文件无此字段 → 默认 false 兼容）
+                if (reader.PeekRaw().StartsWith("virt:", StringComparison.Ordinal))
+                {
+                    explicitIsVirtual = ParseBoolWord(ReadLabeledField(reader, "virt:"));
+                    explicitIsAbstract = ParseBoolWord(ReadLabeledField(reader, "abs:"));
+                    explicitIsOverride = ParseBoolWord(ReadLabeledField(reader, "ovr:"));
+                    explicitIsSealed = ParseBoolWord(ReadLabeledField(reader, "seal:"));
+                }
             }
 
             // 6f-4：捕获闭包元数据（旧文件无此字段 → 缺省非 lambda/无 env/无捕获）
@@ -1109,6 +1122,10 @@ namespace Cocoa.CodeAnalysis.Serialization
                 {
                     function.IsConstructor = explicitIsConstructor;
                     function.IsPropertyAccessor = explicitIsAccessor;
+                    function.IsVirtual = explicitIsVirtual;
+                    function.IsAbstract = explicitIsAbstract;
+                    function.IsOverride = explicitIsOverride;
+                    function.IsSealed = explicitIsSealed;
                 }
 
                 containingClass.AddMethod(function);
