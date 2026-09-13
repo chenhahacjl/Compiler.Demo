@@ -69,6 +69,12 @@ namespace MiniLexer
         {
             return _kind + " " + _text + " " + string(_line) + ":" + string(_col)
         }
+
+        /// <summary>差分协议：`KIND offset len line:col`（不含 text，规避 text 含换行的传输歧义）。</summary>
+        public function DescribeDetail(): string
+        {
+            return _kind + " " + string(_offset) + " " + string(_text.Length) + " " + string(_line) + ":" + string(_col)
+        }
     }
 
     class Lexer
@@ -653,6 +659,7 @@ namespace MiniLexer
                     if run >= delimiter
                     {
                         _pos = runStart + delimiter
+                        _col = _col - (run - delimiter)
                         done = true
                     }
                 }
