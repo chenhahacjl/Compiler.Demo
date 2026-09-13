@@ -335,8 +335,16 @@ public partial class MainViewModel : ObservableObject
         SettingsService.Current.Settings.ThemeVariant = value;
         SettingsService.Current.Save();
         App.ApplyTheme(value);
+        NotifyThemeApplied();
+    }
+
+    /// <summary>主题/外观变更后刷新树图标与状态栏（选项对话框保存后调用）。</summary>
+    public void NotifyThemeApplied()
+    {
         SolutionTree.Refresh();
-        StatusBar.StatusText = value == "Light" ? "已切换到浅色主题" : "已切换到深色主题";
+        StatusBar.StatusText = SettingsService.Current.Settings.ThemeVariant == "Light"
+            ? "已切换到浅色主题"
+            : "已切换到深色主题";
     }
 
     /// <summary>新建项目向导：弹对话框 → 生成工程 → 加载返回的解决方案。</summary>

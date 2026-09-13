@@ -51,6 +51,7 @@ public partial class EditorView : UserControl
 
         // M6：应用设置中的编辑器字体/字号
         ApplyEditorFont();
+        SettingsService.Current.EditorFontChanged += ApplyEditorFont;
 
         TextEditor.Document.TextChanged += (_, _) =>
         {

@@ -124,6 +124,12 @@ public partial class MainWindow : Window
 
     private void OnExitClick(object? sender, RoutedEventArgs e) => Close();
 
+    private async void OnOptionsClick(object? sender, RoutedEventArgs e)
+    {
+        var dialog = new OptionsDialog();
+        await dialog.ShowDialog<bool?>(this);
+    }
+
     private void OnToggleExplorer(object? sender, RoutedEventArgs e)
     {
         var visible = ViewExplorerItem.IsChecked == true;

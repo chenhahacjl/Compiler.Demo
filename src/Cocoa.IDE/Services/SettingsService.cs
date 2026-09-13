@@ -18,6 +18,11 @@ public sealed class SettingsService
 
     public IdeSettings Settings { get; private set; } = new();
 
+    /// <summary>编辑器字体/字号变更（选项页保存后触发），各编辑器重设外观。</summary>
+    public event Action? EditorFontChanged;
+
+    public void NotifyFontChanged() => EditorFontChanged?.Invoke();
+
     private SettingsService()
     {
         var dir = Path.Combine(

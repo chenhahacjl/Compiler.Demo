@@ -84,8 +84,8 @@
                 <MenuItem Header="逐语句" Command="{Binding DebugStepIntoCommand}" InputGesture="F11" />
                 <MenuItem Header="跳出" Command="{Binding DebugStepOutCommand}" InputGesture="Shift+F11" />
             </MenuItem>
-            <MenuItem Header="工具(_T)" IsEnabled="False">
-                <MenuItem Header="选项" />
+            <MenuItem Header="工具(_T)">
+                <MenuItem Header="选项…" Click="OnOptionsClick" />
             </MenuItem>
             <MenuItem Header="帮助(_H)">
                 <MenuItem Header="关于 Cocoa IDE" Click="OnAboutClick" />
