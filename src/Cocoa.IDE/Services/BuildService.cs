@@ -8,13 +8,13 @@ using Cocoa.IDE.ViewModels;
 namespace Cocoa.IDE.Services;
 
 /// <summary>F6 构建 + F5 运行。<see cref="ProjectBuilder"/>/<see cref="SolutionBuilder"/> 用
-/// <see cref="TextWriter"/> 输出消息。诊断行格式：<c>file(line,col,line2,col2): message</c>
-/// （位置均为 1-based；消息文本不含 error/warning 前缀，严重性仅靠颜色区分——非控制台捕获时
-/// 一律按错误处理，保证跳转可用）。构建级 <c>error:</c>/<c>warning:</c> 行另行计数。</summary>
+/// <see cref="TextWriter"/> 输出消息。诊断行格式：<c>file(line,col,line2,col2): [error:|warning:] message</c>
+/// （位置均为 1-based；C3 起带位置诊断由编译器补 <c>error:</c>/<c>warning:</c> 前缀，据此区分严重性，
+/// 缺前缀时按错误处理以保证旧格式跳转可用）。构建级 <c>error:</c>/<c>warning:</c> 行另行计数。</summary>
 public sealed class BuildService
 {
     private static readonly Regex DiagRegex =
-        new(@"^(?<file>.+?)\((?<sl>\d+),(?<sc>\d+),(?<el>\d+),(?<ec>\d+)\): (?<msg>.+)$",
+        new(@"^(?<file>.+?)\((?<sl>\d+),(?<sc>\d+),(?<el>\d+),(?<ec>\d+)\): (?:(?<sev>error|warning): )?(?<msg>.+)$",
             RegexOptions.Compiled);
 
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -29,8 +29,8 @@ public sealed class BuildService
     /// <summary>原始输出行 — UI 线程触发</summary>
     public event Action<string>? OutputLine;
 
-    /// <summary>(file, line, col, message) 定位诊断 — UI 线程触发</summary>
-    public event Action<string, int, int, string>? ErrorReported;
+    /// <summary>(file, line, col, message, isError) 定位诊断 — UI 线程触发</summary>
+    public event Action<string, int, int, string, bool>? ErrorReported;
 
     public async Task<bool> BuildProjectAsync(CocoaProjectFile project, bool noIncremental = false)
     {
@@ -128,11 +128,11 @@ public sealed class BuildService
             {
                 using var writer = new SinkTextWriter(line =>
                 {
-                    var (file, sl, sc, msg) = ParseDiagLine(line);
+                    var (file, sl, sc, msg, diagIsError) = ParseDiagLine(line);
                     bool? isError = null;
                     if (file != null)
                     {
-                        isError = true;
+                        isError = diagIsError;
                     }
                     else if (line.StartsWith("error:", StringComparison.Ordinal))
                     {
@@ -150,12 +150,13 @@ public sealed class BuildService
                     var capturedSl = sl;
                     var capturedSc = sc;
                     var capturedMsg = msg ?? "";
+                    var capturedIsError = diagIsError;
 
                     Dispatcher.UIThread.Post(() =>
                     {
                         OutputLine?.Invoke(line);
                         if (capturedFile != null)
-                            ErrorReported?.Invoke(capturedFile, capturedSl, capturedSc, capturedMsg);
+                            ErrorReported?.Invoke(capturedFile, capturedSl, capturedSc, capturedMsg, capturedIsError);
                     });
                 });
 
@@ -171,15 +172,16 @@ public sealed class BuildService
         }
     }
 
-    private static (string? file, int line, int col, string? msg) ParseDiagLine(string line)
+    private static (string? file, int line, int col, string? msg, bool isError) ParseDiagLine(string line)
     {
         var m = DiagRegex.Match(line);
-        if (!m.Success) return (null, 0, 0, null);
+        if (!m.Success) return (null, 0, 0, null, true);
         return (
             m.Groups["file"].Value,
             int.Parse(m.Groups["sl"].Value),
             int.Parse(m.Groups["sc"].Value),
-            m.Groups["msg"].Value
+            m.Groups["msg"].Value,
+            !string.Equals(m.Groups["sev"].Value, "warning", StringComparison.Ordinal)
         );
     }
 }

@@ -141,6 +141,8 @@ namespace Cocoa.IO
                 var messageColor = diagnostic.IsWarning ? ConsoleColor.DarkYellow : ConsoleColor.DarkRed;
                 writer.SetForeground(messageColor);
                 writer.Write($"{fileName}({startLine},{startCharacter},{endLine},{endCharacter}): ");
+                // C3：带位置的诊断补严重性前缀，便于构建输出/IDE 区分 error 与 warning
+                writer.Write(diagnostic.IsWarning ? "warning: " : "error: ");
                 writer.WriteLine(diagnostic);
                 writer.ResetColor();
 

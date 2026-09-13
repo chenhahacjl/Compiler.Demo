@@ -59,8 +59,8 @@ public partial class MainViewModel : ObservableObject
         };
         ErrorList.ItemActivated += item => NavigateToError(item);
         BuildService.OutputLine += line => Output.AppendLine(line);
-        BuildService.ErrorReported += (file, line, col, msg) =>
-            ErrorList.Add(file, line, col, msg, DiagnosticSeverity.Error);
+        BuildService.ErrorReported += (file, line, col, msg, isError) =>
+            ErrorList.Add(file, line, col, msg, isError ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning);
         BuildService.BuildFinished += (success, errors, warnings) =>
             StatusBar.SetBuildResult(success, errors, warnings);
         BuildService.RunFinished += code =>
