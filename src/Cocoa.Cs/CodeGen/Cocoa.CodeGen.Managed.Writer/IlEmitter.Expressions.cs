@@ -1504,6 +1504,13 @@ namespace Cocoa.CodeGen.Managed.Writer
                 return;
             }
 
+            // 6e-M25：跨库基类 .ctor 链（System.UI.WindowHandle extends System.Core.Handle → call Handle::.ctor）
+            if (_codAssemblies.TryGetValue(target, out var codAssembly))
+            {
+                il.Emit(IlOpCodeTable.Get("Call"), CodMethodRef(target, codAssembly));
+                return;
+            }
+
             il.Emit(IlOpCodeTable.Get("Call"), _methods[target]);
         }
     }

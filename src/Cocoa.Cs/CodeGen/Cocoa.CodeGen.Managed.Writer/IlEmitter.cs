@@ -198,8 +198,19 @@ namespace Cocoa.CodeGen.Managed.Writer
             foreach (var classType in classes)
             {
                 if (!_classTypeDefs.TryGetValue(classType, out var typeDef)) continue;
+
+                // 6e-M25：基类已实现的接口不再在派生类重列（否则派生类 InterfaceImpl 指向基类方法时，
+                // 跨程序集基类（如 System.UI.WindowHandle extends System.Core.Handle 实现 IDisposable）
+                // 会被 CLR 判为未实现 → TypeLoadException）。
+                var inheritedInterfaces = classType.BaseType?.GetAllInterfaces() ?? ImmutableArray<NamedTypeSymbol>.Empty;
+
                 foreach (var iface in classType.GetAllInterfaces())
                 {
+                    if (inheritedInterfaces.Contains(iface))
+                    {
+                        continue;
+                    }
+
                     if (iface.IsExternal)
                     {
                         typeDef.Interfaces.Add(new IlInterfaceImpl(null, ResolveExternalTypeRef(iface)));

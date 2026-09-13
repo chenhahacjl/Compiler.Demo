@@ -1,0 +1,40 @@
+using System
+
+namespace System.UI
+{
+    public class WindowHandle extends Handle
+    {
+        public constructor(value: nint) extends base(value)
+        {
+        }
+
+        public function IsValid(): bool
+        {
+            return IsNotNull()
+        }
+    }
+
+    public class DCHandle extends Handle
+    {
+        public constructor(value: nint) extends base(value)
+        {
+        }
+
+        public function IsValid(): bool
+        {
+            return IsNotNull()
+        }
+    }
+
+    public class GdiObjectHandle extends Handle
+    {
+        public constructor(value: nint) extends base(value)
+        {
+        }
+
+        public function IsValid(): bool
+        {
+            return IsNotNull()
+        }
+    }
+}

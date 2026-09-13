@@ -1,0 +1,23 @@
+<Project Version="1">
+  <PropertyGroup Label="Language">
+    <Language>Cocoa</Language>
+  </PropertyGroup>
+  <PropertyGroup Label="Assembly">
+    <AssemblyName>System.UI</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label="Target">
+    <Platform>x64</Platform>
+  </PropertyGroup>
+  <PropertyGroup Label="Output">
+    <OutputType>Cocoa</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Label="Build">
+    <OutputPath>out</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Source Include="*.co" />
+    <Source Include="Widgets/*.co" />
+    <Source Include="Backends/*.co" />
+    <Source Include="Syscall/*.co" />
+  </ItemGroup>
+</Project>

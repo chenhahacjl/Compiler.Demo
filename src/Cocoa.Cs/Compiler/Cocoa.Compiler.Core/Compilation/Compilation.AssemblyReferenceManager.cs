@@ -302,6 +302,13 @@ namespace Cocoa.CodeAnalysis
                 return true;
             }
 
+            // 6e-M25 前置：跨库基类——类型来自已加载 .coa（ContainingLibrary 非空，读入回填）
+            // 即已是可序列化的库类型（如 System.UI.WindowHandle extends System.Core.Handle），放行。
+            if (classType.ContainingLibrary != null)
+            {
+                return true;
+            }
+
             // 6e-Step D-b：普通实例类（如事件类：实例字段 + 实例方法体）入 .coa ——
             // base 限制 System.Object（无多继承依赖），6e-M33 放宽为「base 亦同库可序列化」（Handle 族 FileHandle extends Handle），
             // 仍需真实实例语义（否则落入纯容器判定，杜绝容器默认构造器泄漏）。
