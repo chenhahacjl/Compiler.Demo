@@ -26,8 +26,6 @@ namespace Cocoa.CodeAnalysis
         {
         }
 
-        public override SyntaxKind GetKeywordKind(string text) => CocoaSyntaxFacts.GetKeywordKind(text);
-
         protected override TypeSymbol? LookupSpecificBuiltinType(string name) => name switch
         {
             "i8" => TypeSymbol.Int8,
