@@ -23,6 +23,14 @@ public sealed class CocoaCompletionItem : ICompletionData
         InsertSuffix = insertSuffix;
         Kind = kind;
         Snippet = snippet;
+        Relevance = kind switch
+        {
+            CompletionKind.Snippet => 76,
+            CompletionKind.Symbol => 70,
+            CompletionKind.Namespace => 50,
+            CompletionKind.Builtin => 40,
+            _ => 20,
+        };
     }
 
     public CompletionKind Kind { get; }
@@ -32,14 +40,12 @@ public sealed class CocoaCompletionItem : ICompletionData
     public string Text { get; }
     public object Content => Text;
     public object? Description { get; set; }
-    public double Priority => Kind switch
-    {
-        CompletionKind.Snippet => 4,
-        CompletionKind.Symbol => 3,
-        CompletionKind.Namespace => 2,
-        CompletionKind.Builtin => 1,
-        _ => 0,
-    };
+
+    /// <summary>排序相关性：越大越靠前（局部变量/形参 &gt; 成员 &gt; 函数 &gt; 类型 &gt; 关键字）。</summary>
+    public double Relevance { get; set; }
+
+    /// <summary>ICompletionData.Priority：与相关性一致（AvaloniaEdit 也会据此排序）。</summary>
+    public double Priority => Relevance;
 
     public void Complete(TextArea textArea, ISegment completionSegment, EventArgs insertionRequestEventArgs)
     {
@@ -142,7 +148,10 @@ public static class CocoaCompletionProvider
             {
                 foreach (var sym in host.GetScopeSymbols())
                     if (sym is NamedTypeSymbol type && Matches(type.Name, prefix))
-                        items.Add(new CocoaCompletionItem(type.Name, type.ToString(), null, CompletionKind.Symbol));
+                        items.Add(new CocoaCompletionItem(type.Name, type.ToString(), null, CompletionKind.Symbol)
+                        {
+                            Relevance = 60 + NameBonus(type.Name, prefix),
+                        });
                 AddBuiltinTypes(items, prefix);
                 return Distinct(items);
             }
@@ -156,14 +165,20 @@ public static class CocoaCompletionProvider
                 if (!Matches(sym.Name, prefix)) continue;
                 var desc = sym.ToString();
                 var isMethod = sym is FunctionSymbol f && !f.IsPropertyAccessor && !f.IsConstructor;
-                items.Add(new CocoaCompletionItem(sym.Name, desc, isMethod ? "()" : null, CompletionKind.Symbol));
+                items.Add(new CocoaCompletionItem(sym.Name, desc, isMethod ? "()" : null, CompletionKind.Symbol)
+                {
+                    Relevance = ScoreSymbol(sym, prefix),
+                });
             }
 
             AddBuiltinTypes(items, prefix);
 
             foreach (var ns in compilation.GlobalNamespace.GetNamespaceMembers())
                 if (Matches(ns.Name, prefix))
-                    items.Add(new CocoaCompletionItem(ns.Name, "namespace", null, CompletionKind.Namespace));
+                    items.Add(new CocoaCompletionItem(ns.Name, "namespace", null, CompletionKind.Namespace)
+                    {
+                        Relevance = 50 + NameBonus(ns.Name, prefix),
+                    });
 
             AddKeywords(items, isStatement, prefix);
 
@@ -179,7 +194,10 @@ public static class CocoaCompletionProvider
     {
         foreach (var t in BuiltinTypeNames)
             if (Matches(t, prefix))
-                items.Add(new CocoaCompletionItem(t, $"type: {t}", null, CompletionKind.Builtin));
+                items.Add(new CocoaCompletionItem(t, $"type: {t}", null, CompletionKind.Builtin)
+                {
+                    Relevance = 40 + NameBonus(t, prefix),
+                });
     }
 
     private static void AddSnippets(List<CocoaCompletionItem> items, string prefix, string dialect)
@@ -187,7 +205,11 @@ public static class CocoaCompletionProvider
         var set = string.Equals(dialect, "CSharp", StringComparison.OrdinalIgnoreCase) ? CSharpSnippets : CocoaSnippets;
         foreach (var (text, body) in set)
             if (Matches(text, prefix))
-                items.Add(new CocoaCompletionItem(text, "snippet", null, CompletionKind.Snippet, body));
+                items.Add(new CocoaCompletionItem(text, "snippet", null, CompletionKind.Snippet, body)
+                {
+                    // 已输入前缀与片段匹配时前置，否则仅作普通候选
+                    Relevance = prefix.Length > 0 ? 76 + NameBonus(text, prefix) : 50,
+                });
     }
 
     private static void AddKeywords(List<CocoaCompletionItem> items, bool isStatementContext, string prefix)
@@ -195,16 +217,43 @@ public static class CocoaCompletionProvider
         var keywords = isStatementContext ? StatementKeywords : ExpressionKeywords;
         foreach (var kw in keywords)
             if (Matches(kw, prefix))
-                items.Add(new CocoaCompletionItem(kw, "keyword", null, CompletionKind.Keyword));
+                items.Add(new CocoaCompletionItem(kw, "keyword", null, CompletionKind.Keyword)
+                {
+                    Relevance = 20 + NameBonus(kw, prefix),
+                });
     }
 
     private static bool Matches(string candidate, string prefix) =>
         prefix.Length == 0 || candidate.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>匹配质量加成：大小写一致 + 更短的名字优先。</summary>
+    private static double NameBonus(string name, string prefix)
+    {
+        if (prefix.Length == 0) return 0;
+        var bonus = name.StartsWith(prefix, StringComparison.Ordinal) ? 4 : 0;
+        return bonus - Math.Min(name.Length, 40) * 0.05;
+    }
+
+    /// <summary>符号按当前状态的相关性：局部/形参 &gt; 成员 &gt; 函数 &gt; 全局变量 &gt; 类型 &gt; 命名空间。</summary>
+    private static double ScoreSymbol(Symbol symbol, string prefix)
+    {
+        var baseScore = symbol.Kind switch
+        {
+            SymbolKind.LocalVariable or SymbolKind.Parameter => 90,
+            SymbolKind.Field or SymbolKind.Property or SymbolKind.Event => 85,
+            SymbolKind.Function => 80,
+            SymbolKind.GlobalVariable => 75,
+            SymbolKind.NamedType or SymbolKind.Type or SymbolKind.ArrayType => 60,
+            SymbolKind.Namespace => 50,
+            _ => 70,
+        };
+        return baseScore + NameBonus(symbol.Name, prefix);
+    }
+
     private static List<CocoaCompletionItem> Distinct(List<CocoaCompletionItem> items) =>
         items.GroupBy(i => i.Text, StringComparer.Ordinal)
-             .Select(g => g.OrderByDescending(i => i.Priority).First())
-             .OrderByDescending(i => i.Priority)
+             .Select(g => g.OrderByDescending(i => i.Relevance).First())
+             .OrderByDescending(i => i.Relevance)
              .ThenBy(i => i.Text, StringComparer.OrdinalIgnoreCase)
              .ToList();
 
@@ -258,10 +307,16 @@ public static class CocoaCompletionProvider
                 {
                     foreach (var child in ns.GetNamespaceMembers())
                         if (Matches(child.Name, prefix))
-                            result.Add(new CocoaCompletionItem(child.Name, child.FullName, null, CompletionKind.Namespace));
+                            result.Add(new CocoaCompletionItem(child.Name, child.FullName, null, CompletionKind.Namespace)
+                            {
+                                Relevance = 50 + NameBonus(child.Name, prefix),
+                            });
                     foreach (var t in ns.GetTypeMembers())
                         if (Matches(t.Name, prefix))
-                            result.Add(new CocoaCompletionItem(t.Name, t.ToString(), null, CompletionKind.Symbol));
+                            result.Add(new CocoaCompletionItem(t.Name, t.ToString(), null, CompletionKind.Symbol)
+                            {
+                                Relevance = 60 + NameBonus(t.Name, prefix),
+                            });
                 }
                 return result;
             }
@@ -272,7 +327,10 @@ public static class CocoaCompletionProvider
         {
             if (!Matches(insertText, prefix)) continue;
             if (!seen.Add(insertText)) continue;
-            result.Add(new CocoaCompletionItem(insertText, member.ToString(), isMethod ? "()" : null, CompletionKind.Symbol));
+            result.Add(new CocoaCompletionItem(insertText, member.ToString(), isMethod ? "()" : null, CompletionKind.Symbol)
+            {
+                Relevance = (isMethod ? 80 : 85) + NameBonus(insertText, prefix),
+            });
         }
 
         return result;
