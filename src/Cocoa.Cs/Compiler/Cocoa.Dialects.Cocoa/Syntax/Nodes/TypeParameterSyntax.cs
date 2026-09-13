@@ -17,7 +17,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Identifier = identifier;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.TypeParameter;
+        public override SyntaxKind Kind => SyntaxKind.TypeParameter;
 
         /// <summary>型变注解关键字（<c>in</c> / <c>out</c>；空 = 不变）。</summary>
         public SyntaxToken? VarianceKeyword { get; }

@@ -14,7 +14,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             OperatorToken = operatorToken;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.PostfixIncrementExpression;
+        public override SyntaxKind Kind => SyntaxKind.PostfixIncrementExpression;
 
         public ExpressionSyntax Operand { get; }
         public SyntaxToken OperatorToken { get; }

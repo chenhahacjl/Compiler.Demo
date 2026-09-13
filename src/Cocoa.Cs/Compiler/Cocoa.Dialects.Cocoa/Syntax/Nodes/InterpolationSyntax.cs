@@ -15,7 +15,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             FormatToken = formatToken;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.Interpolation;
+        public override SyntaxKind Kind => SyntaxKind.Interpolation;
 
         public ExpressionSyntax Expression { get; }
 

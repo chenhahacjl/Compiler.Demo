@@ -13,7 +13,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Expression = expression;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.YieldReturnStatement;
+        public override SyntaxKind Kind => SyntaxKind.YieldReturnStatement;
 
         public SyntaxToken YieldKeyword { get; }
         public SyntaxToken ReturnKeyword { get; }

@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
@@ -11,7 +11,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Body = body;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.FinallyClause;
+        public override SyntaxKind Kind => SyntaxKind.FinallyClause;
 
         public SyntaxToken FinallyKeyword { get; }
         public BlockStatementSyntax Body { get; }

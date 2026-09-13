@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 using Cocoa.CodeAnalysis.Syntax;
 
@@ -16,7 +16,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             CloseBraceToken = closeBraceToken;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.EnumDeclaration;
+        public override SyntaxKind Kind => SyntaxKind.EnumDeclaration;
 
         public SyntaxToken EnumKeyword { get; }
         public SyntaxToken Identifier { get; }

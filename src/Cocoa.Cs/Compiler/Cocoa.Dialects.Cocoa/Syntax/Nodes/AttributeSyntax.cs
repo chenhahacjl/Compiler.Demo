@@ -23,7 +23,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             CloseBracketToken = closeBracketToken;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.Attribute;
+        public override SyntaxKind Kind => SyntaxKind.Attribute;
 
         public SyntaxToken OpenBracketToken { get; }
 

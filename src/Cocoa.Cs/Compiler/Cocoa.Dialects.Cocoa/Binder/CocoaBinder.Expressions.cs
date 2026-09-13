@@ -2467,7 +2467,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
         private BoundExpression BindConversion(ExpressionSyntax syntax, TypeSymbol type, bool allowExplicit = false)
         {
             // 期望类型下推（6e-M22 C4）：lambda 字面量在目标函数类型位置按目标签名提升
-            if (type is FunctionTypeSymbol expectedFunction && syntax.Kind == CoreSyntax.CocoaSyntaxKind.LambdaExpression)
+            if (type is FunctionTypeSymbol expectedFunction && syntax.Kind == CoreSyntax.SyntaxKind.LambdaExpression)
             {
                 var lambdaValue = BindLambdaExpression((LambdaExpressionSyntax)syntax, expectedFunction);
                 if (lambdaValue.Type != type && lambdaValue.Type != TypeSymbol.Error)
@@ -2489,7 +2489,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                     return new BoundErrorExpression(syntax);
                 }
 
-                if (syntax.Kind == CoreSyntax.CocoaSyntaxKind.LambdaExpression)
+                if (syntax.Kind == CoreSyntax.SyntaxKind.LambdaExpression)
                 {
                     var lambdaValue = BindLambdaExpression((LambdaExpressionSyntax)syntax, delegateSignature);
                     if (lambdaValue.Type != delegateSignature && lambdaValue.Type != TypeSymbol.Error)
@@ -2502,7 +2502,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 }
 
                 // 方法组/命名函数 → delegate 类型
-                if (syntax.Kind == CoreSyntax.CocoaSyntaxKind.NameExpression)
+                if (syntax.Kind == CoreSyntax.SyntaxKind.NameExpression)
                 {
                     var asValue = TryBindNameAsFunctionValue((NameExpressionSyntax)syntax);
                     if (asValue != null)
@@ -2520,7 +2520,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             }
 
             // 方法组到函数类型的转换（6e-M22 C4）：命名方法/实例方法引用 → 一等函数值
-            if (type is FunctionTypeSymbol functionTarget && syntax.Kind == CoreSyntax.CocoaSyntaxKind.NameExpression)
+            if (type is FunctionTypeSymbol functionTarget && syntax.Kind == CoreSyntax.SyntaxKind.NameExpression)
             {
                 var asValue = TryBindNameAsFunctionValue((NameExpressionSyntax)syntax);
                 if (asValue != null)

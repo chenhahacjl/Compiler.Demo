@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 using Cocoa.CodeAnalysis.Syntax;
 
@@ -12,7 +12,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Statement = statement;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.GlobalStatement;
+        public override SyntaxKind Kind => SyntaxKind.GlobalStatement;
 
         public StatementSyntax Statement { get; }
 

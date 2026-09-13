@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
@@ -18,7 +18,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Initializer = initializer;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.VariableDeclaration;
+        public override SyntaxKind Kind => SyntaxKind.VariableDeclaration;
 
         public SyntaxToken? UsingKeyword { get; }
         public SyntaxToken? Keyword { get; }

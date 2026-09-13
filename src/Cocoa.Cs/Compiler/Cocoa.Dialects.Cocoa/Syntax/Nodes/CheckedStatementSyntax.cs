@@ -11,9 +11,9 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Body = body;
         }
 
-        public override CocoaSyntaxKind Kind => Keyword.Kind == (SyntaxKind)CocoaSyntaxKind.CheckedKeyword
-            ? CocoaSyntaxKind.CheckedStatement
-            : CocoaSyntaxKind.UncheckedStatement;
+        public override SyntaxKind Kind => Keyword.Kind == (SyntaxKind)SyntaxKind.CheckedKeyword
+            ? SyntaxKind.CheckedStatement
+            : SyntaxKind.UncheckedStatement;
 
         public SyntaxToken Keyword { get; }
         public BlockStatementSyntax Body { get; }

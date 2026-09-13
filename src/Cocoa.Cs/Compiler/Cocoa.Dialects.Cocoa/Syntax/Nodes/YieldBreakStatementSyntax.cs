@@ -12,7 +12,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             BreakKeyword = breakKeyword;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.YieldBreakStatement;
+        public override SyntaxKind Kind => SyntaxKind.YieldBreakStatement;
 
         public SyntaxToken YieldKeyword { get; }
         public SyntaxToken BreakKeyword { get; }

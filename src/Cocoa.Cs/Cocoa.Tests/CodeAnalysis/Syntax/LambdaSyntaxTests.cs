@@ -68,7 +68,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             Assert.Equal(2, lambda.Parameters.Count);
             Assert.True(lambda.HasExplicitParameterTypes);
             Assert.NotNull(lambda.OpenParenthesisToken);
-            Assert.Equal(CocoaSyntaxKind.BinaryExpression, lambda.Body.Kind);
+            Assert.Equal(SyntaxKind.BinaryExpression, lambda.Body.Kind);
         }
 
         [Fact]
@@ -87,7 +87,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             var tree = SyntaxTree.Parse("let square = (x: int) => { return x * x }");
 
             var lambda = FindLambda<LambdaExpressionSyntax>(tree.Root)!;
-            Assert.Equal(CocoaSyntaxKind.BlockStatement, lambda.Body.Kind);
+            Assert.Equal(SyntaxKind.BlockStatement, lambda.Body.Kind);
         }
 
         [Fact]

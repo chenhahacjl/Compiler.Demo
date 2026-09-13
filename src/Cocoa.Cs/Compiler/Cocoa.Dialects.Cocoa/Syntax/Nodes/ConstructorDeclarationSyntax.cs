@@ -21,7 +21,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Body = body;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.ConstructorDeclaration;
+        public override SyntaxKind Kind => SyntaxKind.ConstructorDeclaration;
 
         public SyntaxToken? ConstructorKeyword { get; }
         public SyntaxToken OpenParenthesisToken { get; }

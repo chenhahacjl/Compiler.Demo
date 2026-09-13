@@ -26,7 +26,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             SemicolonToken = semicolonToken;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.DelegateDeclaration;
+        public override SyntaxKind Kind => SyntaxKind.DelegateDeclaration;
 
         public SyntaxToken DelegateKeyword { get; }
 

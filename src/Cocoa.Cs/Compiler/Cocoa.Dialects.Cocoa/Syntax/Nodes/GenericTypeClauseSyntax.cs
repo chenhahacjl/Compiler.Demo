@@ -18,7 +18,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             GreaterThanToken = greaterThanToken;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.GenericTypeClause;
+        public override SyntaxKind Kind => SyntaxKind.GenericTypeClause;
 
         public SyntaxToken LessThanToken { get; }
         public ImmutableArray<TypeClauseSyntax> TypeArguments { get; }

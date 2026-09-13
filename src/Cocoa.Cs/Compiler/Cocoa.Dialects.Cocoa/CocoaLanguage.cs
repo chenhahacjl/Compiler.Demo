@@ -128,39 +128,39 @@ namespace Cocoa.CodeAnalysis
             var kind = (node as global::Cocoa.CodeAnalysis.Cocoa.Syntax.CocoaSyntaxNode)?.Kind;
             switch (kind)
             {
-                case CocoaSyntaxKind.BlockStatement:
+                case SyntaxKind.BlockStatement:
                 {
                     var firstStatement = ((global::Cocoa.CodeAnalysis.Cocoa.Syntax.BlockStatementSyntax)node).Statements.FirstOrDefault();
                     return firstStatement == null ? null : GetUnreachableCodeLocation(firstStatement);
                 }
-                case CocoaSyntaxKind.VariableDeclaration:
+                case SyntaxKind.VariableDeclaration:
                 {
                     var variableDeclaration = (global::Cocoa.CodeAnalysis.Cocoa.Syntax.VariableDeclarationSyntax)node;
                     return variableDeclaration.Keyword?.Location ?? variableDeclaration.Location;
                 }
-                case CocoaSyntaxKind.IfStatement:
+                case SyntaxKind.IfStatement:
                     return ((global::Cocoa.CodeAnalysis.Cocoa.Syntax.IfStatementSyntax)node).Keyword.Location;
-                case CocoaSyntaxKind.WhileStatement:
+                case SyntaxKind.WhileStatement:
                     return ((global::Cocoa.CodeAnalysis.Cocoa.Syntax.WhileStatementSyntax)node).Keyword.Location;
-                case CocoaSyntaxKind.DoWhileStatement:
+                case SyntaxKind.DoWhileStatement:
                     return ((global::Cocoa.CodeAnalysis.Cocoa.Syntax.DoWhileStatementSyntax)node).DoKeyword.Location;
-                case CocoaSyntaxKind.ForStatement:
+                case SyntaxKind.ForStatement:
                     return ((global::Cocoa.CodeAnalysis.Cocoa.Syntax.ForStatementSyntax)node).Keyword.Location;
-                case CocoaSyntaxKind.ForeachStatement:
+                case SyntaxKind.ForeachStatement:
                     return ((global::Cocoa.CodeAnalysis.Cocoa.Syntax.ForeachStatementSyntax)node).Keyword.Location;
-                case CocoaSyntaxKind.SwitchStatement:
+                case SyntaxKind.SwitchStatement:
                     return ((global::Cocoa.CodeAnalysis.Cocoa.Syntax.SwitchStatementSyntax)node).Keyword.Location;
-                case CocoaSyntaxKind.BreakStatement:
+                case SyntaxKind.BreakStatement:
                     return ((global::Cocoa.CodeAnalysis.Cocoa.Syntax.BreakStatementSyntax)node).Keyword.Location;
-                case CocoaSyntaxKind.ContinueStatement:
+                case SyntaxKind.ContinueStatement:
                     return ((global::Cocoa.CodeAnalysis.Cocoa.Syntax.ContinueStatementSyntax)node).Keyword.Location;
-                case CocoaSyntaxKind.ReturnStatement:
+                case SyntaxKind.ReturnStatement:
                     return ((global::Cocoa.CodeAnalysis.Cocoa.Syntax.ReturnStatementSyntax)node).Keyword.Location;
-                case CocoaSyntaxKind.ExpressionStatement:
+                case SyntaxKind.ExpressionStatement:
                     return GetUnreachableCodeLocation(((global::Cocoa.CodeAnalysis.Cocoa.Syntax.ExpressionStatementSyntax)node).Expression);
-                case CocoaSyntaxKind.CallExpression:
+                case SyntaxKind.CallExpression:
                     return ((global::Cocoa.CodeAnalysis.Cocoa.Syntax.CallExpressionSyntax)node).Identifier.Location;
-                case CocoaSyntaxKind.MemberCallExpression:
+                case SyntaxKind.MemberCallExpression:
                     return ((global::Cocoa.CodeAnalysis.Cocoa.Syntax.MemberCallExpressionSyntax)node).IdentifierToken.Location;
                 default:
                     throw new Exception($"Unexpected syntax {node.Kind}");

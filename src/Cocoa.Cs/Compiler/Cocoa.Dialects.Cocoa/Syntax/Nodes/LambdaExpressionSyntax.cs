@@ -20,7 +20,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Body = body;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.LambdaExpression;
+        public override SyntaxKind Kind => SyntaxKind.LambdaExpression;
 
         /// <summary>参数列表开括号；null = 免括号单参形态（仅 .cs）。</summary>
         public SyntaxToken? OpenParenthesisToken { get; }
@@ -35,7 +35,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
         public SyntaxToken ArrowToken { get; }
 
         /// <summary>lambda 浣擄細琛ㄨ揪寮忔垨鍧楄鍙ャ€?/summary>
-        /// <summary>lambda 体：表达式或块语句（语言根类型，Kind 返回 <see cref="CocoaSyntaxKind"/>）。</summary>
+        /// <summary>lambda 体：表达式或块语句（语言根类型，Kind 返回 <see cref="SyntaxKind"/>）。</summary>
         public CocoaSyntaxNode Body { get; }
 
         public override IEnumerable<SyntaxNode> GetChildren()

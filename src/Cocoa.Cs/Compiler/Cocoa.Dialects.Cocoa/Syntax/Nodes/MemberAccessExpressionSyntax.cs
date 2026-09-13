@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
@@ -15,7 +15,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             IdentifierToken = identifierToken;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.MemberAccessExpression;
+        public override SyntaxKind Kind => SyntaxKind.MemberAccessExpression;
 
         public ExpressionSyntax Expression { get; }
         public SyntaxToken DotToken { get; }

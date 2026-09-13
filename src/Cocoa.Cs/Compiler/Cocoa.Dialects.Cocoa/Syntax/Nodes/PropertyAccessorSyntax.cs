@@ -18,14 +18,14 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             SemicolonToken = semicolonToken;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.PropertyAccessor;
+        public override SyntaxKind Kind => SyntaxKind.PropertyAccessor;
 
         public ImmutableArray<SyntaxToken> Modifiers { get; }
         public SyntaxToken Keyword { get; }
         public BlockStatementSyntax? Body { get; }
         public SyntaxToken? SemicolonToken { get; }
 
-        public bool IsGet => Keyword.Kind == (SyntaxKind)CocoaSyntaxKind.GetKeyword;
+        public bool IsGet => Keyword.Kind == (SyntaxKind)SyntaxKind.GetKeyword;
 
         public override IEnumerable<SyntaxNode> GetChildren()
         {

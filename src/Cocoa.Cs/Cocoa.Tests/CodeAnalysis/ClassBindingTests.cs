@@ -733,7 +733,7 @@ function Main()
 
             Assert.IsType<BinaryExpressionSyntax>(typed);
             var binary = (BinaryExpressionSyntax)typed;
-            Assert.Equal(CocoaSyntaxKind.BinaryExpression, binary.Kind);
+            Assert.Equal(SyntaxKind.BinaryExpression, binary.Kind);
             Assert.IsType<NameExpressionSyntax>(binary.Left);
             Assert.Equal(SyntaxKind.PlusToken, binary.OperatorToken.Kind);
             Assert.Equal("+", binary.OperatorToken.Text);

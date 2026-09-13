@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
@@ -29,7 +29,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             CloseBraceToken = closeBraceToken;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.ArrayCreationExpression;
+        public override SyntaxKind Kind => SyntaxKind.ArrayCreationExpression;
 
         public SyntaxToken NewKeyword { get; }
         public SyntaxToken Identifier { get; }

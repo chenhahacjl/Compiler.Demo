@@ -485,18 +485,16 @@ ResolveAtPosition(tree, position):
 
 ### 8.1 新建项目向导：类别 → 参数 多级（M2b/M2c）
 
-> `NewProjectDialog.cs`。**步骤 1** 选项目类别，**步骤 2** 配置语言/后端/名称/位置/解决方案/目标框架；对齐 Visual Studio 2022「创建新项目」。
+> `NewProjectDialog.cs`。**步骤 1** 选项目类别，**步骤 2** 配置后端/名称/位置/解决方案/目标框架；对齐 Visual Studio 2022「创建新项目」。
 
 **模板集（`Templates/<key>/template.xml`，按 `Order` 排序；含 `Category`/`Language`）**
 
 | Order | Key | Category | Language | Label | 输出 | 源 |
 |:--:|-----|----------|----------|-------|------|----|
 | 1 | `library` | Library | Cocoa | Library Cocoa | dll | `.co` |
-| 2 | `library-cs` | Library | CSharp | Library C# | dll | `.cs`（C# 方言） |
-| 3 | `console` | Console | Cocoa | Console Cocoa | exe | `.co`（入口 `main.co`） |
-| 4 | `csharp` | Console | CSharp | Console C# | exe | `.cs`（C# 方言） |
-| 5 | `solution` | Solution | Any | BlankSolution | 仅 `.cosln` | 无 |
-| 6 | `cocoa` | Cocoa Assembly | Cocoa | Cocoa Assembly | `.coa` | `.co` |
+| 2 | `console` | Console | Cocoa | Console Cocoa | exe | `.co`（入口 `main.co`） |
+| 3 | `solution` | Solution | Any | BlankSolution | 仅 `.cosln` | 无 |
+| 4 | `cocoa` | Cocoa Assembly | Cocoa | Cocoa Assembly | `.coa` | `.co` |
 
 > GUI 类别暂不提供（运行时暂无窗口/GUI 库）；后续加入 GUI 运行时后可新增 `gui` 模板。
 
@@ -506,9 +504,10 @@ ResolveAtPosition(tree, position):
 - 右侧选中类别详情
 - 底部 `下一步` / `取消`
 
+> 说明：仅保留 Cocoa 方言（去 C# 方言，2026-09-13）；无语言选择步骤。
+
 **步骤 2 · 配置新项目**
 
-- **语言**：该类别可用语言（Cocoa / C#）；单一语言时禁用
 - **后端**：托管 (Managed) / 原生 (Native) → 写入 `.coproj` 的 `<Backend>`（见 §12.2-21）
 - 项目名称、位置（`浏览…`）、解决方案名称
 - ☐ 将解决方案和项目放在同一目录中

@@ -20,7 +20,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             CloseParenthesisToken = closeParenthesisToken;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.ObjectCreationExpression;
+        public override SyntaxKind Kind => SyntaxKind.ObjectCreationExpression;
 
         public SyntaxToken NewKeyword { get; }
         public SyntaxToken Identifier { get; }

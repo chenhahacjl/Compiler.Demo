@@ -16,7 +16,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Expression = expression;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.NamedArgument;
+        public override SyntaxKind Kind => SyntaxKind.NamedArgument;
 
         public SyntaxToken Identifier { get; }
         public SyntaxToken ColonToken { get; }

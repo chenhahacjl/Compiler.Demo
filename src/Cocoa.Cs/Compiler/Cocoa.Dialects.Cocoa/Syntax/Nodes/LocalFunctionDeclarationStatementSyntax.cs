@@ -14,7 +14,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Declaration = declaration;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.LocalFunctionDeclaration;
+        public override SyntaxKind Kind => SyntaxKind.LocalFunctionDeclaration;
 
         public FunctionDeclarationSyntax Declaration { get; }
 

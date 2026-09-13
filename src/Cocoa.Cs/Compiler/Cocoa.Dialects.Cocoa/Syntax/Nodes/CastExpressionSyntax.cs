@@ -16,7 +16,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Expression = expression;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.CastExpression;
+        public override SyntaxKind Kind => SyntaxKind.CastExpression;
 
         public SyntaxToken OpenParenthesisToken { get; }
         public SyntaxToken TypeName { get; }

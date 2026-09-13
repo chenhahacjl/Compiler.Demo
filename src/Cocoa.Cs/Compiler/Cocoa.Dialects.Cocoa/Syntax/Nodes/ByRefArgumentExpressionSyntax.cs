@@ -14,10 +14,10 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Expression = expression;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.ByRefArgument;
+        public override SyntaxKind Kind => SyntaxKind.ByRefArgument;
 
         public SyntaxToken Keyword { get; }
-        public bool IsRef => Keyword.Kind == (SyntaxKind)CocoaSyntaxKind.RefKeyword;
+        public bool IsRef => Keyword.Kind == (SyntaxKind)SyntaxKind.RefKeyword;
 
         public ExpressionSyntax Expression { get; }
 

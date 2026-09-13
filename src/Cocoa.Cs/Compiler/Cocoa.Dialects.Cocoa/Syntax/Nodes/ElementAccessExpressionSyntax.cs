@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
@@ -16,7 +16,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             CloseBracketToken = closeBracketToken;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.ElementAccessExpression;
+        public override SyntaxKind Kind => SyntaxKind.ElementAccessExpression;
 
         public ExpressionSyntax Expression { get; }
         public SyntaxToken OpenBracketToken { get; }

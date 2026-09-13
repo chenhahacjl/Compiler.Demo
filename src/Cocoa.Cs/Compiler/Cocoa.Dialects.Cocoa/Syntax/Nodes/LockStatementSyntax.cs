@@ -15,7 +15,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Body = body;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.LockStatement;
+        public override SyntaxKind Kind => SyntaxKind.LockStatement;
 
         public SyntaxToken LockKeyword { get; }
         public SyntaxToken OpenParenToken { get; }

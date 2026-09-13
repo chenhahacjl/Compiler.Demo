@@ -26,7 +26,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Body = body;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.ForRangeStatement;
+        public override SyntaxKind Kind => SyntaxKind.ForRangeStatement;
 
         public SyntaxToken Keyword { get; }
         public SyntaxToken? OpenParenToken { get; }

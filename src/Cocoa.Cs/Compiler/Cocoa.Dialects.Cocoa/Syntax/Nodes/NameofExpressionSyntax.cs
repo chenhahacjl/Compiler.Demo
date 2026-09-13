@@ -16,7 +16,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             CloseParenthesis = closeParenthesis;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.NameofExpression;
+        public override SyntaxKind Kind => SyntaxKind.NameofExpression;
 
         public SyntaxToken NameofKeyword { get; }
         public SyntaxToken OpenParenthesis { get; }

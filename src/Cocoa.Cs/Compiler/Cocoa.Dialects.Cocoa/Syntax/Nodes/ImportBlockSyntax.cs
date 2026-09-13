@@ -25,7 +25,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             CloseBraceToken = closeBraceToken;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.ImportBlock;
+        public override SyntaxKind Kind => SyntaxKind.ImportBlock;
 
         public SyntaxToken ImportKeyword { get; }
 

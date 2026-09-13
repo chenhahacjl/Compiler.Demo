@@ -19,7 +19,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             CloseParenthesisToken = closeParenthesisToken;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.MemberCallExpression;
+        public override SyntaxKind Kind => SyntaxKind.MemberCallExpression;
 
         public ExpressionSyntax Expression { get; }
         public SyntaxToken DotToken { get; }

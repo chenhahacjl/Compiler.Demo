@@ -952,7 +952,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             NamedTypeSymbol? ownerClass = null;
             BoundExpression? receiver = null;
 
-            if (syntax.Target.Kind == CoreSyntax.CocoaSyntaxKind.MemberAccessExpression)
+            if (syntax.Target.Kind == CoreSyntax.SyntaxKind.MemberAccessExpression)
             {
                 var memberAccess = (MemberAccessExpressionSyntax)syntax.Target;
                 var boundReceiver = BindExpression(memberAccess.Expression);
@@ -965,7 +965,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                     ownerClass = candidate;
                 }
             }
-            else if (syntax.Target.Kind == CoreSyntax.CocoaSyntaxKind.NameExpression && _currentClass != null)
+            else if (syntax.Target.Kind == CoreSyntax.SyntaxKind.NameExpression && _currentClass != null)
             {
                 var nameIdentifier = ((NameExpressionSyntax)syntax.Target).IdentifierToken.Text;
 

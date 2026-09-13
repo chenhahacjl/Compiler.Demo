@@ -38,7 +38,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Body = body;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.ForStatement;
+        public override SyntaxKind Kind => SyntaxKind.ForStatement;
 
         public SyntaxToken Keyword { get; }
         public SyntaxToken? OpenParenToken { get; }

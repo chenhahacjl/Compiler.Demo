@@ -18,7 +18,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             CloseParenthesisToken = closeParenthesisToken;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.TupleExpression;
+        public override SyntaxKind Kind => SyntaxKind.TupleExpression;
 
         public SyntaxToken OpenParenthesisToken { get; }
         public SeparatedSyntaxList<ExpressionSyntax> Elements { get; }

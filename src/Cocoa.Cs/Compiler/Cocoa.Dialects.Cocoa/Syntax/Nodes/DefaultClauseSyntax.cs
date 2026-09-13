@@ -13,7 +13,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Body = body;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.DefaultClause;
+        public override SyntaxKind Kind => SyntaxKind.DefaultClause;
 
         public SyntaxToken DefaultKeyword { get; }
         public SyntaxToken ColonToken { get; }

@@ -18,7 +18,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Initializer = initializer;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.ClassFieldDeclaration;
+        public override SyntaxKind Kind => SyntaxKind.ClassFieldDeclaration;
 
         public SyntaxToken Identifier { get; }
         public TypeClauseSyntax Type { get; }

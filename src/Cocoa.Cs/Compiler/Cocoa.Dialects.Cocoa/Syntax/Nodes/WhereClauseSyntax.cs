@@ -18,7 +18,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             ConstraintTypes = constraintTypes;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.WhereClause;
+        public override SyntaxKind Kind => SyntaxKind.WhereClause;
 
         public SyntaxToken WhereKeyword { get; }
         public SyntaxToken Identifier { get; }

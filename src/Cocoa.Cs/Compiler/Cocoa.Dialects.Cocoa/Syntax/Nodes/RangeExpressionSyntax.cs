@@ -15,7 +15,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Right = right;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.RangeExpression;
+        public override SyntaxKind Kind => SyntaxKind.RangeExpression;
 
         public ExpressionSyntax? Left { get; }
         public SyntaxToken DotDotToken { get; }

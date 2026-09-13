@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
@@ -11,7 +11,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Identifier = identifier;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.TypeClause;
+        public override SyntaxKind Kind => SyntaxKind.TypeClause;
 
         public SyntaxToken? ColonToken { get; }
         public SyntaxToken Identifier { get; }

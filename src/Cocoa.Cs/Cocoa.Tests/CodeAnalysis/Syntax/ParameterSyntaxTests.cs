@@ -78,7 +78,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             var byRef = FindFirst<ByRefArgumentExpressionSyntax>(tree.Root)!;
             Assert.Equal(SyntaxKind.OutKeyword, byRef.Keyword.Kind);
             Assert.False(byRef.IsRef);
-            Assert.Equal(CocoaSyntaxKind.NameExpression, byRef.Expression.Kind);
+            Assert.Equal(SyntaxKind.NameExpression, byRef.Expression.Kind);
         }
 
         // ------------------------------------------------------------------

@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
@@ -13,7 +13,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             ElseClause = elseClause;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.IfStatement;
+        public override SyntaxKind Kind => SyntaxKind.IfStatement;
 
         public SyntaxToken Keyword { get; }
         public ExpressionSyntax Condition { get; }

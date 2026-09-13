@@ -15,7 +15,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             TypeName = typeName;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.AsExpression;
+        public override SyntaxKind Kind => SyntaxKind.AsExpression;
 
         public ExpressionSyntax Expression { get; }
         public SyntaxToken AsKeyword { get; }

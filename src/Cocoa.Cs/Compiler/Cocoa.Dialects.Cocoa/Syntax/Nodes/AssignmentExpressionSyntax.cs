@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
@@ -15,7 +15,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Expression = expression;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.AssignmentExpression;
+        public override SyntaxKind Kind => SyntaxKind.AssignmentExpression;
 
         public ExpressionSyntax Target { get; }
         public SyntaxToken AssignmentToken { get; }

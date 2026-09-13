@@ -15,7 +15,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             CloseBracketToken = closeBracketToken;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.ArrayTypeClause;
+        public override SyntaxKind Kind => SyntaxKind.ArrayTypeClause;
 
         public TypeClauseSyntax ElementType { get; }
         public SyntaxToken OpenBracketToken { get; }

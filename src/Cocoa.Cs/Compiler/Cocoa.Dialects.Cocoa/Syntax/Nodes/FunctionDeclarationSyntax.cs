@@ -21,7 +21,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             WhereClauses = whereClauses ?? ImmutableArray<WhereClauseSyntax>.Empty;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.FunctionDeclaration;
+        public override SyntaxKind Kind => SyntaxKind.FunctionDeclaration;
 
         public SyntaxToken? FunctionKeyword { get; }
         public SyntaxToken Identifier { get; }

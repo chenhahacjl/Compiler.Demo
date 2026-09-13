@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
@@ -12,7 +12,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Value = value;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.EnumMember;
+        public override SyntaxKind Kind => SyntaxKind.EnumMember;
 
         public SyntaxToken Identifier { get; }
         public SyntaxToken? EqualsToken { get; }

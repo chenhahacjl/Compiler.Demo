@@ -15,7 +15,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Identifier = identifier;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.DeclarationExpression;
+        public override SyntaxKind Kind => SyntaxKind.DeclarationExpression;
 
         public SyntaxToken Keyword { get; }      // var
         public SyntaxToken Identifier { get; }

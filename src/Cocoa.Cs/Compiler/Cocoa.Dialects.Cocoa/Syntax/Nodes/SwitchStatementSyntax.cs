@@ -19,7 +19,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             CloseBraceToken = closeBraceToken;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.SwitchStatement;
+        public override SyntaxKind Kind => SyntaxKind.SwitchStatement;
 
         public SyntaxToken Keyword { get; }
         public SyntaxToken? OpenParenToken { get; }

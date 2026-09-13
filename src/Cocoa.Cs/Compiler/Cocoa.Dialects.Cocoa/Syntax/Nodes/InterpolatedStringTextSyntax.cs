@@ -11,7 +11,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             TextToken = textToken;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.InterpolatedStringText;
+        public override SyntaxKind Kind => SyntaxKind.InterpolatedStringText;
 
         public SyntaxToken TextToken { get; }
 

@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 using Cocoa.CodeAnalysis.Syntax;
 
@@ -19,7 +19,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             CloseBraceToken = closeBraceToken;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.NamespaceDeclaration;
+        public override SyntaxKind Kind => SyntaxKind.NamespaceDeclaration;
 
         public SyntaxToken NamespaceKeyword { get; }
         public ImmutableArray<SyntaxToken> NameTokens { get; }

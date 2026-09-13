@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
@@ -12,7 +12,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Body = body;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.WhileStatement;
+        public override SyntaxKind Kind => SyntaxKind.WhileStatement;
 
         public SyntaxToken Keyword { get; }
         public ExpressionSyntax Condition { get; }

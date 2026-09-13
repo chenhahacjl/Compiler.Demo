@@ -19,7 +19,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Pattern = pattern;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.IsExpression;
+        public override SyntaxKind Kind => SyntaxKind.IsExpression;
 
         public ExpressionSyntax Expression { get; }
         public SyntaxToken IsKeyword { get; }

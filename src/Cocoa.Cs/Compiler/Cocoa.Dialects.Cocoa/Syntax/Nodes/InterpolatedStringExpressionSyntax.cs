@@ -14,7 +14,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Contents = contents;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.InterpolatedStringExpression;
+        public override SyntaxKind Kind => SyntaxKind.InterpolatedStringExpression;
 
         public SyntaxToken InterpolatedToken { get; }
         public ImmutableArray<InterpolatedStringContentSyntax> Contents { get; }

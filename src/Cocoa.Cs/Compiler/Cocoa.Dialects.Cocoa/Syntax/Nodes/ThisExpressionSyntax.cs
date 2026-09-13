@@ -13,7 +13,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             ThisKeyword = thisKeyword;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.ThisExpression;
+        public override SyntaxKind Kind => SyntaxKind.ThisExpression;
 
         public SyntaxToken ThisKeyword { get; }
 

@@ -13,7 +13,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             BaseKeyword = baseKeyword;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.BaseExpression;
+        public override SyntaxKind Kind => SyntaxKind.BaseExpression;
 
         public SyntaxToken BaseKeyword { get; }
 

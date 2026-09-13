@@ -13,7 +13,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             IdentifierToken = identifierToken;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.NameExpression;
+        public override SyntaxKind Kind => SyntaxKind.NameExpression;
 
         public SyntaxToken IdentifierToken { get; }
 

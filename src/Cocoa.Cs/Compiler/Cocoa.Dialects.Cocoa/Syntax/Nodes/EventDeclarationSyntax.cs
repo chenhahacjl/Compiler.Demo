@@ -19,7 +19,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             HandlerType = handlerType;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.EventDeclaration;
+        public override SyntaxKind Kind => SyntaxKind.EventDeclaration;
 
         public ImmutableArray<SyntaxToken> Modifiers { get; }
 

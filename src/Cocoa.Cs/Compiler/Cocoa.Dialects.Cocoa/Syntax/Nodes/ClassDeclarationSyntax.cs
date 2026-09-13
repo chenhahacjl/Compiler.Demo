@@ -23,7 +23,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             CloseBraceToken = closeBraceToken;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.ClassDeclaration;
+        public override SyntaxKind Kind => SyntaxKind.ClassDeclaration;
 
         /// <summary>类声明前的 attribute 列表（6e-M32，`[Facade("...")]` 等；Tier-1 编译器识别 Facade）。</summary>
         public ImmutableArray<AttributeSyntax> Attributes { get; }
@@ -32,7 +32,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
         public SyntaxToken Identifier { get; }
 
         /// <summary>是否 struct（值类型）：classKeyword 为 struct 关键字时成立（6e-M26）。</summary>
-        public bool IsStruct => ClassKeyword.Kind == (SyntaxKind)CocoaSyntaxKind.StructKeyword;
+        public bool IsStruct => ClassKeyword.Kind == (SyntaxKind)SyntaxKind.StructKeyword;
 
         /// <summary>泛型类型参数列表 `&lt;T, U&gt;`（6e-M20；非泛型类为 null）。</summary>
         public TypeParameterListSyntax? TypeParameters { get; }

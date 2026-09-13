@@ -22,7 +22,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             CloseBraceToken = closeBraceToken;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.InterfaceDeclaration;
+        public override SyntaxKind Kind => SyntaxKind.InterfaceDeclaration;
 
         public SyntaxToken InterfaceKeyword { get; }
         public SyntaxToken Identifier { get; }

@@ -17,7 +17,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             WhenFalse = whenFalse;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.ConditionalExpression;
+        public override SyntaxKind Kind => SyntaxKind.ConditionalExpression;
 
         public ExpressionSyntax Condition { get; }
         public SyntaxToken QuestionToken { get; }

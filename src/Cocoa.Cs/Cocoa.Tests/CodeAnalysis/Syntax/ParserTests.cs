@@ -421,9 +421,9 @@ for (var i = 0; i < 10; i++)
             Assert.Equal("(", statement!.OpenParenToken!.Text);
             Assert.IsType<VariableDeclarationSyntax>(statement.InitDeclaration);
             Assert.NotNull(statement.SemicolonToken1);
-            Assert.Equal(CocoaSyntaxKind.BinaryExpression, statement.Condition!.Kind);
+            Assert.Equal(SyntaxKind.BinaryExpression, statement.Condition!.Kind);
             Assert.NotNull(statement.SemicolonToken2);
-            Assert.Equal(CocoaSyntaxKind.PostfixIncrementExpression, Assert.Single(statement.Incrementors).Kind);
+            Assert.Equal(SyntaxKind.PostfixIncrementExpression, Assert.Single(statement.Incrementors).Kind);
             Assert.Equal(")", statement!.CloseParenToken!.Text);
             Assert.IsType<BlockStatementSyntax>(statement.Body);
 
@@ -595,8 +595,8 @@ for (var i = 0; i < 10; i++)
             Assert.Null(statement.VarKeyword);
             Assert.Null(statement.Identifier);
             Assert.Null(statement.EqualsToken);
-            Assert.Equal(CocoaSyntaxKind.LiteralExpression, statement.LowerBound.Kind);
-            Assert.Equal(CocoaSyntaxKind.LiteralExpression, statement.UpperBound.Kind);
+            Assert.Equal(SyntaxKind.LiteralExpression, statement.LowerBound.Kind);
+            Assert.Equal(SyntaxKind.LiteralExpression, statement.UpperBound.Kind);
         }
 
         [Fact]
@@ -648,7 +648,7 @@ for (var i = 0; i < 10; i++)
             Assert.Equal(SyntaxKind.VarKeyword, statement.VarKeyword!.Kind);
             Assert.Equal("x", statement.Identifier.Text);
             Assert.Equal(SyntaxKind.InKeyword, statement.InKeyword.Kind);
-            Assert.Equal(CocoaSyntaxKind.NameExpression, statement.Collection.Kind);
+            Assert.Equal(SyntaxKind.NameExpression, statement.Collection.Kind);
             Assert.Empty(syntaxTree.Diagnostics);
         }
 
@@ -663,7 +663,7 @@ for (var i = 0; i < 10; i++)
 
             Assert.Equal(SyntaxKind.VarKeyword, statement.VarKeyword!.Kind);
             Assert.Equal("x", statement.Identifier.Text);
-            Assert.Equal(CocoaSyntaxKind.NameExpression, statement.Collection.Kind);
+            Assert.Equal(SyntaxKind.NameExpression, statement.Collection.Kind);
             Assert.Empty(syntaxTree.Diagnostics);
         }
 

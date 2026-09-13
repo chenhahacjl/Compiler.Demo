@@ -15,7 +15,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Body = body;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.UsingStatement;
+        public override SyntaxKind Kind => SyntaxKind.UsingStatement;
 
         public SyntaxToken UsingKeyword { get; }
         public SyntaxToken OpenParenToken { get; }

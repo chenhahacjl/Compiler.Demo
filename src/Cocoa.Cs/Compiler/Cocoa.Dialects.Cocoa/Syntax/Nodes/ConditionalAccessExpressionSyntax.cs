@@ -15,7 +15,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             WhenNotNull = whenNotNull;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.ConditionalAccessExpression;
+        public override SyntaxKind Kind => SyntaxKind.ConditionalAccessExpression;
 
         public ExpressionSyntax Expression { get; }
         public SyntaxToken QuestionDotToken { get; }

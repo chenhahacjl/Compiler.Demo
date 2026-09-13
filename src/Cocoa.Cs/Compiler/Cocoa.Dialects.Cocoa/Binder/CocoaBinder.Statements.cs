@@ -56,28 +56,28 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
         {
             switch (syntax.Kind)
             {
-                case CoreSyntax.CocoaSyntaxKind.BlockStatement: return BindBlockStatement((BlockStatementSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.VariableDeclaration: return BindVariableDeclaration((VariableDeclarationSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.IfStatement: return BindIfStatement((IfStatementSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.WhileStatement: return BindWhileStatement((WhileStatementSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.DoWhileStatement: return BindDoWhileStatement((DoWhileStatementSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.ForStatement: return BindForStatement((ForStatementSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.ForRangeStatement: return BindForRangeStatement((ForRangeStatementSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.ForeachStatement: return BindForeachStatement((ForeachStatementSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.SwitchStatement: return BindSwitchStatement((SwitchStatementSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.BreakStatement: return BindBreakStatement((BreakStatementSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.ContinueStatement: return BindContinueStatement((ContinueStatementSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.ReturnStatement: return BindReturnStatement((ReturnStatementSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.ThrowStatement: return BindThrowStatement((ThrowStatementSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.TryStatement: return BindTryStatement((TryStatementSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.UsingStatement: return BindUsingStatement((UsingStatementSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.LockStatement: return BindLockStatement((LockStatementSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.CheckedStatement:
-                case CoreSyntax.CocoaSyntaxKind.UncheckedStatement: return BindCheckedStatement((CheckedStatementSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.YieldReturnStatement: return BindYieldReturnStatement((YieldReturnStatementSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.YieldBreakStatement: return BindYieldBreakStatement((YieldBreakStatementSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.ExpressionStatement: return BindExpressionStatement((ExpressionStatementSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.LocalFunctionDeclaration: return BindLocalFunctionDeclaration((LocalFunctionDeclarationStatementSyntax)syntax);
+                case CoreSyntax.SyntaxKind.BlockStatement: return BindBlockStatement((BlockStatementSyntax)syntax);
+                case CoreSyntax.SyntaxKind.VariableDeclaration: return BindVariableDeclaration((VariableDeclarationSyntax)syntax);
+                case CoreSyntax.SyntaxKind.IfStatement: return BindIfStatement((IfStatementSyntax)syntax);
+                case CoreSyntax.SyntaxKind.WhileStatement: return BindWhileStatement((WhileStatementSyntax)syntax);
+                case CoreSyntax.SyntaxKind.DoWhileStatement: return BindDoWhileStatement((DoWhileStatementSyntax)syntax);
+                case CoreSyntax.SyntaxKind.ForStatement: return BindForStatement((ForStatementSyntax)syntax);
+                case CoreSyntax.SyntaxKind.ForRangeStatement: return BindForRangeStatement((ForRangeStatementSyntax)syntax);
+                case CoreSyntax.SyntaxKind.ForeachStatement: return BindForeachStatement((ForeachStatementSyntax)syntax);
+                case CoreSyntax.SyntaxKind.SwitchStatement: return BindSwitchStatement((SwitchStatementSyntax)syntax);
+                case CoreSyntax.SyntaxKind.BreakStatement: return BindBreakStatement((BreakStatementSyntax)syntax);
+                case CoreSyntax.SyntaxKind.ContinueStatement: return BindContinueStatement((ContinueStatementSyntax)syntax);
+                case CoreSyntax.SyntaxKind.ReturnStatement: return BindReturnStatement((ReturnStatementSyntax)syntax);
+                case CoreSyntax.SyntaxKind.ThrowStatement: return BindThrowStatement((ThrowStatementSyntax)syntax);
+                case CoreSyntax.SyntaxKind.TryStatement: return BindTryStatement((TryStatementSyntax)syntax);
+                case CoreSyntax.SyntaxKind.UsingStatement: return BindUsingStatement((UsingStatementSyntax)syntax);
+                case CoreSyntax.SyntaxKind.LockStatement: return BindLockStatement((LockStatementSyntax)syntax);
+                case CoreSyntax.SyntaxKind.CheckedStatement:
+                case CoreSyntax.SyntaxKind.UncheckedStatement: return BindCheckedStatement((CheckedStatementSyntax)syntax);
+                case CoreSyntax.SyntaxKind.YieldReturnStatement: return BindYieldReturnStatement((YieldReturnStatementSyntax)syntax);
+                case CoreSyntax.SyntaxKind.YieldBreakStatement: return BindYieldBreakStatement((YieldBreakStatementSyntax)syntax);
+                case CoreSyntax.SyntaxKind.ExpressionStatement: return BindExpressionStatement((ExpressionStatementSyntax)syntax);
+                case CoreSyntax.SyntaxKind.LocalFunctionDeclaration: return BindLocalFunctionDeclaration((LocalFunctionDeclarationStatementSyntax)syntax);
                 default:
                     // 1b/B8：解析器 panic 恢复合成的意外节点报诊断 + Nop 降级，而非编译器崩溃
                     _diagnostics.ReportError(syntax.Location, $"意外的语句语法 {syntax.Kind}。");
@@ -2081,7 +2081,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 return;
             }
 
-            if (last.Kind is CoreSyntax.CocoaSyntaxKind.BreakStatement or CoreSyntax.CocoaSyntaxKind.ReturnStatement or CoreSyntax.CocoaSyntaxKind.ContinueStatement)
+            if (last.Kind is CoreSyntax.SyntaxKind.BreakStatement or CoreSyntax.SyntaxKind.ReturnStatement or CoreSyntax.SyntaxKind.ContinueStatement)
             {
                 return;
             }
@@ -2256,7 +2256,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
         {
             // 6e-M22 C5+ 多播事件：订阅（+=/-=）与类内触发（裸名调用）语句级拦截，
             // 脱糖为既有 Bound 节点块（foreach 先例），三后端 + Evaluator 零改动。
-            if (syntax.Expression.Kind == CoreSyntax.CocoaSyntaxKind.AssignmentExpression)
+            if (syntax.Expression.Kind == CoreSyntax.SyntaxKind.AssignmentExpression)
             {
                 var subscription = TryBindEventSubscription((AssignmentExpressionSyntax)syntax.Expression);
                 if (subscription != null)
@@ -2271,7 +2271,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 return BindTupleDeconstruction(deconstructAssign);
             }
 
-            if (syntax.Expression.Kind == CoreSyntax.CocoaSyntaxKind.CallExpression && _currentClass != null)
+            if (syntax.Expression.Kind == CoreSyntax.SyntaxKind.CallExpression && _currentClass != null)
             {
                 var raiseCall = (CallExpressionSyntax)syntax.Expression;
 
@@ -2351,32 +2351,32 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
         {
             switch (syntax.Kind)
             {
-                case CoreSyntax.CocoaSyntaxKind.ParenthesizedExpression: return BindParenthesizedExpression((ParenthesizedExpressionSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.LiteralExpression: return BindLiteralExpression((LiteralExpressionSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.NameExpression: return BindNameExpression((NameExpressionSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.AssignmentExpression: return BindAssignmentExpression((AssignmentExpressionSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.UnaryExpression: return BindUnaryExpression((UnaryExpressionSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.PostfixIncrementExpression: return BindPostfixIncrementExpression((PostfixIncrementExpressionSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.BinaryExpression: return BindBinaryExpression((BinaryExpressionSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.ConditionalExpression: return BindConditionalExpression((ConditionalExpressionSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.CallExpression: return BindCallExpression((CallExpressionSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.ArrayCreationExpression: return BindArrayCreationExpression((ArrayCreationExpressionSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.ObjectCreationExpression: return BindObjectCreationExpression((ObjectCreationExpressionSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.ElementAccessExpression: return BindElementAccessExpression((ElementAccessExpressionSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.MemberAccessExpression: return BindMemberAccessExpression((MemberAccessExpressionSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.MemberCallExpression: return BindMemberCallExpression((MemberCallExpressionSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.CastExpression: return BindCastExpression((CastExpressionSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.ThisExpression: return BindThisExpression((ThisExpressionSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.BaseExpression: return BindBaseExpression((BaseExpressionSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.InterpolatedStringExpression: return BindInterpolatedStringExpression((InterpolatedStringExpressionSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.IsExpression: return BindIsExpression((IsExpressionSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.AsExpression: return BindAsExpression((AsExpressionSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.NameofExpression: return BindNameofExpression((NameofExpressionSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.ConditionalAccessExpression: return BindConditionalAccessExpression((ConditionalAccessExpressionSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.LambdaExpression: return BindLambdaExpression((LambdaExpressionSyntax)syntax, expectedType: null);
-                case CoreSyntax.CocoaSyntaxKind.ByRefArgument: return BindByRefArgument((ByRefArgumentExpressionSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.NamedArgument: return BindNamedArgument((NamedArgumentExpressionSyntax)syntax);
-                case CoreSyntax.CocoaSyntaxKind.TupleExpression: return BindTupleExpression((TupleExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.ParenthesizedExpression: return BindParenthesizedExpression((ParenthesizedExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.LiteralExpression: return BindLiteralExpression((LiteralExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.NameExpression: return BindNameExpression((NameExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.AssignmentExpression: return BindAssignmentExpression((AssignmentExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.UnaryExpression: return BindUnaryExpression((UnaryExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.PostfixIncrementExpression: return BindPostfixIncrementExpression((PostfixIncrementExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.BinaryExpression: return BindBinaryExpression((BinaryExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.ConditionalExpression: return BindConditionalExpression((ConditionalExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.CallExpression: return BindCallExpression((CallExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.ArrayCreationExpression: return BindArrayCreationExpression((ArrayCreationExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.ObjectCreationExpression: return BindObjectCreationExpression((ObjectCreationExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.ElementAccessExpression: return BindElementAccessExpression((ElementAccessExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.MemberAccessExpression: return BindMemberAccessExpression((MemberAccessExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.MemberCallExpression: return BindMemberCallExpression((MemberCallExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.CastExpression: return BindCastExpression((CastExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.ThisExpression: return BindThisExpression((ThisExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.BaseExpression: return BindBaseExpression((BaseExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.InterpolatedStringExpression: return BindInterpolatedStringExpression((InterpolatedStringExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.IsExpression: return BindIsExpression((IsExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.AsExpression: return BindAsExpression((AsExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.NameofExpression: return BindNameofExpression((NameofExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.ConditionalAccessExpression: return BindConditionalAccessExpression((ConditionalAccessExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.LambdaExpression: return BindLambdaExpression((LambdaExpressionSyntax)syntax, expectedType: null);
+                case CoreSyntax.SyntaxKind.ByRefArgument: return BindByRefArgument((ByRefArgumentExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.NamedArgument: return BindNamedArgument((NamedArgumentExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.TupleExpression: return BindTupleExpression((TupleExpressionSyntax)syntax);
 
                 default:
                     // 1b/B8：意外的表达式语法报诊断 + ErrorExpression 降级，而非编译器崩溃

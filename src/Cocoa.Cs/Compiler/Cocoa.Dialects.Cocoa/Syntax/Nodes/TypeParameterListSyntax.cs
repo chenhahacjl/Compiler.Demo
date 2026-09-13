@@ -17,7 +17,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             GreaterThanToken = greaterThanToken;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.TypeParameterList;
+        public override SyntaxKind Kind => SyntaxKind.TypeParameterList;
 
         public SyntaxToken LessThanToken { get; }
         public ImmutableArray<TypeParameterSyntax> Parameters { get; }

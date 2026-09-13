@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 using Cocoa.CodeAnalysis.Syntax;
 
@@ -16,7 +16,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             NameTokens = nameTokens;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.ImportClause;
+        public override SyntaxKind Kind => SyntaxKind.ImportClause;
 
         public SyntaxToken ImportKeyword { get; }
 

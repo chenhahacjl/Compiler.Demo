@@ -19,7 +19,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             NameTokens = nameTokens;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.UsingDirective;
+        public override SyntaxKind Kind => SyntaxKind.UsingDirective;
 
         public SyntaxToken UsingKeyword { get; }
         public SyntaxToken? StaticKeyword { get; }

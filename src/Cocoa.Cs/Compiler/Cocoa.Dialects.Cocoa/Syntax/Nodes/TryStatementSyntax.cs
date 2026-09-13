@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 using Cocoa.CodeAnalysis.Syntax;
 
@@ -16,7 +16,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Finally = finallyClause;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.TryStatement;
+        public override SyntaxKind Kind => SyntaxKind.TryStatement;
 
         public SyntaxToken Keyword { get; }
         public BlockStatementSyntax TryBlock { get; }

@@ -16,7 +16,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Body = body;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.CaseClause;
+        public override SyntaxKind Kind => SyntaxKind.CaseClause;
 
         public SyntaxToken CaseKeyword { get; }
         public SeparatedSyntaxList<ExpressionSyntax> Values { get; }

@@ -20,7 +20,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Body = body;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.ForeachStatement;
+        public override SyntaxKind Kind => SyntaxKind.ForeachStatement;
 
         public SyntaxToken Keyword { get; }
         public SyntaxToken? OpenParenToken { get; }

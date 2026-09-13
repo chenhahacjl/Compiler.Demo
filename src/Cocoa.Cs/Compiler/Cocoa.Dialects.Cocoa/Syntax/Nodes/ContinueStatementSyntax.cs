@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
@@ -10,7 +10,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Keyword = keyword;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.ContinueStatement;
+        public override SyntaxKind Kind => SyntaxKind.ContinueStatement;
 
         public SyntaxToken Keyword { get; }
 

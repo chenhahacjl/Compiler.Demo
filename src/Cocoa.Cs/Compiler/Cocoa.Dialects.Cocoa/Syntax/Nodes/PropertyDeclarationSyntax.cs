@@ -24,7 +24,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Initializer = initializer;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.PropertyDeclaration;
+        public override SyntaxKind Kind => SyntaxKind.PropertyDeclaration;
 
         public SyntaxToken? PropertyKeyword { get; }
         public SyntaxToken Identifier { get; }

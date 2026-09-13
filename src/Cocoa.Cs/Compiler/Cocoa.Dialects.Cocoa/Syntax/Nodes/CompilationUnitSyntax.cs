@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 using Cocoa.CodeAnalysis.Syntax;
 
@@ -16,7 +16,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             EndOfFileToken = endOfFileToken;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.CompilationUnit;
+        public override SyntaxKind Kind => SyntaxKind.CompilationUnit;
 
         public ImmutableArray<MemberSyntax> Members { get; }
         public SyntaxToken EndOfFileToken { get; }

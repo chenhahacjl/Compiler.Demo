@@ -21,7 +21,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             DefaultValue = defaultValue;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.Parameter;
+        public override SyntaxKind Kind => SyntaxKind.Parameter;
 
         public SyntaxToken? Modifier { get; }
         public bool IsByRef => Modifier?.Kind is SyntaxKind.OutKeyword or SyntaxKind.RefKeyword;

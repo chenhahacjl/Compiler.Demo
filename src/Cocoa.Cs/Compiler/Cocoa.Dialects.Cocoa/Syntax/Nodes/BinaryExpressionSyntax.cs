@@ -15,7 +15,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Right = right;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.BinaryExpression;
+        public override SyntaxKind Kind => SyntaxKind.BinaryExpression;
 
         public ExpressionSyntax Left { get; }
         public SyntaxToken OperatorToken { get; }

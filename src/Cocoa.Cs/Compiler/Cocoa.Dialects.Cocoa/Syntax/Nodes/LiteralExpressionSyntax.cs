@@ -19,7 +19,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Value = value;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.LiteralExpression;
+        public override SyntaxKind Kind => SyntaxKind.LiteralExpression;
 
         public SyntaxToken LiteralToken { get; }
         public object Value { get; }

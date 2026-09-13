@@ -19,7 +19,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             CloseParenthesisToken = closeParenthesisToken;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.ExternMetadata;
+        public override SyntaxKind Kind => SyntaxKind.ExternMetadata;
 
         public SyntaxToken ExternKeyword { get; }
 
@@ -58,7 +58,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             Value = value;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.ExternMetadataArgument;
+        public override SyntaxKind Kind => SyntaxKind.ExternMetadataArgument;
 
         public SyntaxToken Key { get; }
 

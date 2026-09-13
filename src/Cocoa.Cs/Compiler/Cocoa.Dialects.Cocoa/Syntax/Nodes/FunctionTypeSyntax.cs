@@ -12,7 +12,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
     public sealed partial class FunctionTypeSyntax : TypeClauseSyntax
     {
         internal FunctionTypeSyntax(SyntaxTree syntaxTree, SyntaxToken openParenthesisToken, SeparatedSyntaxList<TypeClauseSyntax> parameterTypes, SyntaxToken closeParenthesisToken, SyntaxToken arrowToken, TypeClauseSyntax returnType)
-            : base(syntaxTree, colonToken: null, identifier: new SyntaxToken(syntaxTree, (SyntaxKind)CocoaSyntaxKind.IdentifierToken, syntaxTree.Text.Length, null, null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty))
+            : base(syntaxTree, colonToken: null, identifier: new SyntaxToken(syntaxTree, (SyntaxKind)SyntaxKind.IdentifierToken, syntaxTree.Text.Length, null, null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty))
         {
             OpenParenthesisToken = openParenthesisToken;
             ParameterTypes = parameterTypes;
@@ -21,7 +21,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             ReturnType = returnType;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.FunctionType;
+        public override SyntaxKind Kind => SyntaxKind.FunctionType;
 
         public SyntaxToken OpenParenthesisToken { get; }
 

@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
@@ -11,7 +11,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             ElseStatement = elseStatement;
         }
 
-        public override CocoaSyntaxKind Kind => CocoaSyntaxKind.ElseClause;
+        public override SyntaxKind Kind => SyntaxKind.ElseClause;
 
         public SyntaxToken ElseKeyword { get; }
         public StatementSyntax ElseStatement { get; }
