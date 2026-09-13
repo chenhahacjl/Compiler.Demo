@@ -33,6 +33,7 @@
                 <Separator />
                 <MenuItem Header="打开文件…"        Command="{Binding OpenFileCommand}" InputGesture="Ctrl+O" />
                 <MenuItem Header="打开解决方案…"    Command="{Binding OpenSolutionPickerCommand}" InputGesture="Ctrl+Shift+O" />
+                <MenuItem Header="打开最近项目…"    Command="{Binding OpenRecentProjectsCommand}" />
                 <Separator />
                 <MenuItem Header="保存"             Command="{Binding SaveCommand}" InputGesture="Ctrl+S" />
                 <MenuItem Header="全部保存"         Command="{Binding SaveAllCommand}" InputGesture="Ctrl+Shift+S" />

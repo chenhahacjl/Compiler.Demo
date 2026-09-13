@@ -114,6 +114,9 @@ public partial class MainViewModel : ObservableObject
 
     public void OpenFile(string path)
     {
+        if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
+            SettingsService.Current.AddRecent(SettingsService.Current.Settings.RecentFiles, path);
+
         // 若该文件已在任意窗口打开，直接激活对应标签
         foreach (var set in EditorTabsRegistry.All)
         {
@@ -248,6 +251,51 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>打开解决方案/项目路径（最近列表、启动参数、菜单共用）。</summary>
+    public void OpenSolution(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
+
+        SolutionTree.LoadPath(path);
+        StatusBar.SolutionName = SolutionTree.SolutionName;
+        SettingsService.Current.AddRecent(SettingsService.Current.Settings.RecentProjects, path);
+    }
+
+    /// <summary>按扩展名路由打开路径（.cosln/.coproj → 解决方案，其余 → 文件）。</summary>
+    public void OpenRecentPath(string path)
+    {
+        var ext = Path.GetExtension(path).ToLowerInvariant();
+        if (ext is ".cosln" or ".coproj") OpenSolution(path);
+        else OpenFile(path);
+    }
+
+    /// <summary>M6：显示「最近/固定项目」启动窗口并执行用户选择。</summary>
+    public async Task ShowStartupDialogAsync()
+    {
+        if (MainWindow is not { } owner) return;
+
+        var dialog = new StartupDialog();
+        await dialog.ShowDialog<StartupAction>(owner);
+        switch (dialog.Action)
+        {
+            case StartupAction.OpenRecent when dialog.SelectedPath != null:
+                OpenRecentPath(dialog.SelectedPath);
+                break;
+            case StartupAction.NewProject:
+                await NewProjectAsync();
+                break;
+            case StartupAction.OpenSolution:
+                await OpenSolutionPickerAsync();
+                break;
+            case StartupAction.OpenFile:
+                await OpenFileAsync();
+                break;
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenRecentProjectsAsync() => await ShowStartupDialogAsync();
+
     [RelayCommand]
     private async Task OpenSolutionPickerAsync()
     {
@@ -268,10 +316,7 @@ public partial class MainViewModel : ObservableObject
         {
             var path = files[0].TryGetLocalPath();
             if (path != null)
-            {
-                SolutionTree.LoadPath(path);
-                StatusBar.SolutionName = SolutionTree.SolutionName;
-            }
+                OpenSolution(path);
         }
     }
 

@@ -23,6 +23,7 @@ public partial class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            MainWindow.StartupPaths = desktop.Args ?? Array.Empty<string>();
             desktop.MainWindow = new MainWindow();
         }
         base.OnFrameworkInitializationCompleted();

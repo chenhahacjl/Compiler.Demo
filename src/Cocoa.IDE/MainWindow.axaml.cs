@@ -17,6 +17,9 @@ public partial class MainWindow : Window
 {
     private MainViewModel ViewModel => (MainViewModel)DataContext!;
 
+    /// <summary>M6：启动参数（命令行传入的解决方案/文件路径），由 App 创建窗口前赋值。</summary>
+    public static string[] StartupPaths { get; set; } = Array.Empty<string>();
+
     private bool _closingConfirmed;
 
     public MainWindow()
@@ -117,7 +120,27 @@ public partial class MainWindow : Window
                 OutputList.ScrollIntoView(OutputList.ItemCount - 1);
         };
 
+        Opened += OnWindowOpened;
         Closing += OnWindowClosing;
+    }
+
+    /// <summary>M6：窗口首次显示后按启动参数打开，或弹出「最近/固定项目」窗口。</summary>
+    private async void OnWindowOpened(object? sender, EventArgs e)
+    {
+        Opened -= OnWindowOpened;
+
+        if (StartupPaths.Length > 0)
+        {
+            foreach (var path in StartupPaths)
+            {
+                if (File.Exists(path))
+                    ViewModel.OpenRecentPath(path);
+            }
+            return;
+        }
+
+        if (SettingsService.Current.Settings.ShowStartDialog && !ViewModel.SolutionTree.HasSolution)
+            await ViewModel.ShowStartupDialogAsync();
     }
 
     // ─── 菜单/工具栏：退出、视图显隐、项目、帮助 ───
