@@ -124,7 +124,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             // 脚本链（REPL）：using 延续先前提交（对齐 csi）；非脚本编译每次独立
             var seedUsings = isScript && previous != null ? previous.UsingNamespaces : ImmutableArray<string>.Empty;
             var seedStatics = isScript && previous != null ? previous.UsingStatics : default(ImmutableArray<string>);
-            var binder = new CocoaBinder(isScript, parentScope, null, references?.ToImmutableArray() ?? ImmutableArray<string>.Empty, seedUsings, CocoaLanguage.Instance.LookupBuiltinType, seedStatics, codLibraries: codLibraries);
+            var binder = new CocoaBinder(isScript, parentScope, null, references?.ToImmutableArray() ?? ImmutableArray<string>.Empty, seedUsings, Language.Cocoa.LookupBuiltinType, seedStatics, codLibraries: codLibraries);
 
             binder.Diagnostics.AddRange(syntaxTrees.SelectMany(st => st.Diagnostics));
             if (binder.Diagnostics.HasErrors())
@@ -727,7 +727,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 bodyLocation = (CoreSyntax.SyntaxNode?)ctorSyntax.ConstructorKeyword ?? ctorSyntax.OpenParenthesisToken;
             }
 
-            var binder = new CocoaBinder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces, CocoaLanguage.Instance.LookupBuiltinType, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries, globalNamespace);
+            var binder = new CocoaBinder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces, Language.Cocoa.LookupBuiltinType, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries, globalNamespace);
             if (!function.IsLambda)
             {
                 // 6e-M22 C5：非 lambda 函数 = 环境宿主（其体内 lambda 的捕获变量由该环境对象承载）
@@ -788,7 +788,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 bodyLocation = (CoreSyntax.SyntaxNode?)ctorSyntax.ConstructorKeyword ?? ctorSyntax.OpenParenthesisToken;
             }
 
-            var binder = new CocoaBinder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces, CocoaLanguage.Instance.LookupBuiltinType, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries);
+            var binder = new CocoaBinder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces, Language.Cocoa.LookupBuiltinType, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries);
             if (!function.IsLambda)
             {
                 // 6e-M22 C5：非 lambda 函数 = 环境宿主（其体内 lambda 的捕获变量由该环境对象承载）

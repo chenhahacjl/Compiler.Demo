@@ -1,4 +1,6 @@
 using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Cocoa.Binding;
+using Cocoa.CodeAnalysis.Cocoa.Syntax;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
@@ -9,41 +11,25 @@ using System.Collections.Immutable;
 namespace Cocoa.CodeAnalysis
 {
     /// <summary>
-    /// 语言（M2 设计 X）：对标 Roslyn 语言前端抽象。去 C# 方言（2026-09-13）后仅剩 CO 单实现
-    /// <see cref="Cocoa.CodeAnalysis.CocoaLanguage"/>（已并入本程序集，无反射装载）。
+    /// 语言（M2 设计 X）。去 C# 方言 + Cocoa.Dialects.Cocoa 并入本程序集（2026-09-13）后，
+    /// 语言中间层塌缩为本具体类（Cocoa 宿主语言单一实现），无 dialects 差异分派。
+    /// 内建类型简写 i8/u8/i16/u16/i32/u32/i64/u64/f32/f64（+ i128/u128/f128 占位）。
     /// </summary>
-    public abstract class Language
+    public sealed class Language
     {
-        private static readonly Dictionary<string, Language> _registered = new();
-        private static Language? _cocoa;
+        /// <summary>单例（Cocoa 宿主语言，默认 `.co`）。</summary>
+        public readonly static Language Instance = new Language();
 
-        protected Language(string name)
+        private Language()
         {
-            Name = name;
-            _registered[name] = this;
         }
 
-        public string Name { get; }
+        /// <summary>Cocoa 宿主语言（默认，`.co`；等价 <see cref="Instance"/>）。</summary>
+        public static Language Cocoa => Instance;
 
-        /// <summary>Cocoa 宿主语言（默认，`.co`）。</summary>
-        public static Language Cocoa => _cocoa ??= CocoaLanguage.Instance;
+        public string Name => "cocoa";
 
-        public static bool TryGet(string name, out Language language)
-        {
-            return _registered.TryGetValue(name, out language!);
-        }
-
-        /// <summary>按名取已注册语言；未注册（对应语言程序集未装载）抛明确错误。</summary>
-        public static Language GetOrThrow(string name)
-        {
-            return _registered.TryGetValue(name, out var language)
-                ? language
-                : throw new NotSupportedException($"语言 '{name}' 未注册：请装载对应语言程序集并触达其 Language 实例" +
-                    $"（当前已注册：{(_registered.Count == 0 ? "(空)" : string.Join(", ", _registered.Keys))})。");
-        }
-
-        /// <summary>共享内建类型名（两语言同义：any/bool/char/string/void），未命中回落语言专属词汇。
-        /// 原 <see cref="Binding.Binder.LookupBuiltinType"/> 的方言分流收敛于此。</summary>
+        /// <summary>内建类型名（any/bool/char/string/void 共享 + CO 简写词汇）。</summary>
         public TypeSymbol? LookupBuiltinType(string name) => name switch
         {
             "any" => TypeSymbol.Any,
@@ -54,92 +40,168 @@ namespace Cocoa.CodeAnalysis
             _ => LookupSpecificBuiltinType(name),
         };
 
-        protected abstract TypeSymbol? LookupSpecificBuiltinType(string name);
+        private TypeSymbol? LookupSpecificBuiltinType(string name) => name switch
+        {
+            "i8" => TypeSymbol.Int8,
+            "u8" => TypeSymbol.UInt8,
+            "i16" => TypeSymbol.Int16,
+            "u16" => TypeSymbol.UInt16,
+            "i32" => TypeSymbol.Int32,
+            "u32" => TypeSymbol.UInt32,
+            "i64" => TypeSymbol.Int64,
+            "u64" => TypeSymbol.UInt64,
+            "f32" => TypeSymbol.Float,
+            "f64" => TypeSymbol.Double,
+            "i128" => TypeSymbol.Int128,
+            "u128" => TypeSymbol.UInt128,
+            "f128" => TypeSymbol.Float128,
+            "nint" => TypeSymbol.NativeInt32,
+            "nuint" => TypeSymbol.NativeUInt32,
+            _ => null,
+        };
 
-        /// <summary>
-        /// 关键字识别（P1-A 词法分家）：文本 → 关键字 kind，未命中返回 <see cref="SyntaxKind.IdentifierToken"/>。
-        /// 基类 = 共享关键字表（<see cref="SyntaxFacts.GetKeywordKind"/>）。
-        /// </summary>
-        public virtual SyntaxKind GetKeywordKind(string text)
+        /// <summary>关键字识别（P1-A）：文本 → 关键字 kind，未命中返回 <see cref="SyntaxKind.IdentifierToken"/>。</summary>
+        public SyntaxKind GetKeywordKind(string text)
         {
             return SyntaxFacts.GetKeywordKind(text);
         }
 
         /// <summary>按本语言创建解析器（完整树）。</summary>
-        public abstract IParser CreateParser(SyntaxTree syntaxTree);
+        public IParser CreateParser(SyntaxTree syntaxTree) => new CocoaParser(syntaxTree);
 
         /// <summary>按本语言创建解析器（预词法 token，插值洞子解析用）。</summary>
-        public abstract IParser CreateParser(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> tokens);
+        public IParser CreateParser(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> tokens)
+            => new CocoaParser(syntaxTree, tokens);
 
-        /// <summary>
-        /// 按本语言创建词法分析器（S-2 Lexer 分家，对称 <see cref="CreateParser(SyntaxTree)"/>）。
-        /// 共享 <see cref="SyntaxKind"/>（token 存储层留 Core）；CO/C# 各自实现
-        /// <see cref="Syntax.CocoaLexer"/>/<see cref="Syntax.CSharpLexer"/> 落位语言库。
-        /// </summary>
-        public abstract ILexer CreateLexer(SyntaxTree syntaxTree);
+        /// <summary>CO 词法分析器。</summary>
+        public ILexer CreateLexer(SyntaxTree syntaxTree)
+            => new CocoaLexer(syntaxTree);
 
         /// <summary>从指定位置开始词法（插值洞子解析，位置须指向洞首）。</summary>
-        public abstract ILexer CreateLexer(SyntaxTree syntaxTree, int start);
+        public ILexer CreateLexer(SyntaxTree syntaxTree, int start)
+            => new CocoaLexer(syntaxTree, start);
 
-        /// <summary>
-        /// 按本语言创建编译对象（S-4.2 Compilation 分家，对称 <see cref="CreateParser(SyntaxTree)"/>）。
-        /// CO/C# 子类各自返回 <see cref="CocoaCompilation"/>/<see cref="CSharpCompilation"/>（语言库内），
-        /// <see cref="Compilation.Create"/> 经此工厂分派，Core 不再直接实例化语言 Compilation 子类。
-        /// </summary>
-        public abstract Compilation CreateCompilation(bool isScript, Compilation? previous, string entryPointName, string[]? references, bool linkCodDynamically, SyntaxTree[] syntaxTrees);
+        /// <summary>CO 编译对象。<see cref="Compilation.Create"/> 经此工厂创建。</summary>
+        public Compilation CreateCompilation(bool isScript, Compilation? previous, string entryPointName, string[]? references, bool linkCodDynamically, SyntaxTree[] syntaxTrees)
+            => new CocoaCompilation(isScript, previous, entryPointName, references, linkCodDynamically, syntaxTrees);
 
-        /// <summary>
-        /// 按本语言创建绑定器（S-4.3b/c 分派：返回窄接口 <see cref="IBinder"/>，Core 共享服务经接口消费；
-        /// CO/C# 子类各自返回语言库 Binder 副本）。
-        /// </summary>
-        public abstract IBinder CreateBinder(bool isScript, Binding.BoundScope? parent, Symbols.FunctionSymbol? function, ImmutableArray<string> references, ImmutableArray<string> usingNamespaces, Func<string, Symbols.TypeSymbol?> builtinTypeResolver, ImmutableArray<string> usingStatics = default, ImmutableDictionary<string, string> usingAliases = null!, ImmutableArray<Serialization.CoaProgram> codLibraries = default, Symbols.NamespaceSymbol? globalNamespace = null);
+        /// <summary>CO 绑定器。<see cref="BindGlobalScope"/> 经此创建局部绑定器。</summary>
+        public IBinder CreateBinder(bool isScript, Binding.BoundScope? parent, Symbols.FunctionSymbol? function, ImmutableArray<string> references, ImmutableArray<string> usingNamespaces, Func<string, Symbols.TypeSymbol?> builtinTypeResolver, ImmutableArray<string> usingStatics = default, ImmutableDictionary<string, string> usingAliases = null!, ImmutableArray<Serialization.CoaProgram> codLibraries = default, Symbols.NamespaceSymbol? globalNamespace = null)
+            => new CocoaBinder(isScript, parent, function, references, usingNamespaces, builtinTypeResolver, usingStatics, usingAliases, codLibraries, globalNamespace);
 
-        /// <summary>
-        /// 按本语言构建单态化重绑函数体（S-4.3b 分派：Core <see cref="Binder.Monomorphizer"/> 经此调用，
-        /// 语言子类委托各自语言库 Binder 的静态 <c>BuildFunctionBodyForMonomorphization</c>）。
-        /// </summary>
-        public abstract (Binding.BoundBlockStatement Body, ImmutableArray<Diagnostic> Diagnostics) BuildFunctionBodyForMonomorphization(bool isScript, Binding.BoundScope parentScope, Symbols.FunctionSymbol function, Binding.BoundGlobalScope globalScope, ImmutableArray<Serialization.CoaProgram> codLibraries, Dictionary<string, Symbols.TypeSymbol> typeArgumentsByName);
+        /// <summary>单态化重绑函数体。<see cref="Binder.Monomorphizer"/> 经此调用。</summary>
+        public (Binding.BoundBlockStatement Body, ImmutableArray<Diagnostic> Diagnostics) BuildFunctionBodyForMonomorphization(bool isScript, Binding.BoundScope parentScope, Symbols.FunctionSymbol function, Binding.BoundGlobalScope globalScope, ImmutableArray<Serialization.CoaProgram> codLibraries, Dictionary<string, Symbols.TypeSymbol> typeArgumentsByName)
+            => CocoaBinder.BuildFunctionBodyForMonomorphization(isScript, parentScope, function, globalScope, codLibraries, this, typeArgumentsByName);
 
-        /// <summary>
-        /// 绿→类型化红节点（P1-3 钩子预备）：语言库各自持有一份类型化红节点构建器
-        /// （P2-4 落地；P1 委托共享 <see cref="GreenNode.CreateTypedRed"/> 保持行为不变）。
-        /// </summary>
-        public abstract SyntaxNode CreateTypedRed(GreenNode green, SyntaxTree syntaxTree, int position);
+        /// <summary>绿→类型化红节点。</summary>
+        public SyntaxNode CreateTypedRed(GreenNode green, SyntaxTree syntaxTree, int position)
+            => new CocoaGreenNodeFactory(green).CreateTypedRed(syntaxTree, position);
 
-        /// <summary>
-        /// 泛型用法扫描（P1-3 钩子预备）：返回语言中性的 (类型名, 实参列表) 对，共享
-        /// <see cref="Binder.Monomorphizer"/> 保持单实现（P1 委托共享扫描；P2-5 切语言节点后由语言库自持）。
-        /// </summary>
-        public abstract IEnumerable<(SyntaxToken Identifier, ImmutableArray<SyntaxNode> Arguments)> CollectGenericUsages(Binding.BoundGlobalScope globalScope);
+        /// <summary>泛型用法扫描（返回语言中性的 (类型名, 实参列表) 对）。</summary>
+        public IEnumerable<(SyntaxToken Identifier, ImmutableArray<SyntaxNode> Arguments)> CollectGenericUsages(Binding.BoundGlobalScope globalScope)
+        {
+            foreach (var root in Binding.Monomorphizer.CollectDeclarationRoots(globalScope))
+            {
+                foreach (var node in Binding.Monomorphizer.Walk(root))
+                {
+                    if (node is GenericTypeClauseSyntax genericClause)
+                    {
+                        yield return (genericClause.Identifier, genericClause.TypeArguments.Cast<SyntaxNode>().ToImmutableArray());
+                    }
+                    else if (node is ObjectCreationExpressionSyntax creation && creation.TypeArguments != null)
+                    {
+                        yield return (creation.Identifier, creation.TypeArguments.Arguments.Cast<SyntaxNode>().ToImmutableArray());
+                    }
+                }
+            }
+        }
 
-        /// <summary>
-        /// 声明的命名空间名集合（P1-3 钩子预备，P2-6 消费者适配用）。
-        /// </summary>
-        public abstract ImmutableArray<string> GetDeclaredNamespaceNames(SyntaxTree syntaxTree);
+        /// <summary>声明的命名空间名集合。</summary>
+        public ImmutableArray<string> GetDeclaredNamespaceNames(SyntaxTree syntaxTree)
+        {
+            var names = new List<string>();
+            CollectNamespaceNames(((CompilationUnitSyntax)syntaxTree.Root).Members, names);
+            return names.ToImmutableArray();
+        }
 
-        /// <summary>根成员集合（P1-3 钩子预备，P2-6 Repl/测试消费用）。</summary>
-        public abstract ImmutableArray<SyntaxNode> GetRootMembers(SyntaxTree syntaxTree);
+        private static void CollectNamespaceNames(ImmutableArray<MemberSyntax> members, List<string> names)
+        {
+            foreach (var member in members)
+            {
+                if (member is NamespaceDeclarationSyntax ns)
+                {
+                    names.Add(ns.Name);
+                    CollectNamespaceNames(ns.Members, names);
+                }
+            }
+        }
 
-        /// <summary>
-        /// 按本语言创建语义模型（P1-3 钩子预备；P1-5 落地 CocoaSemanticModel/CSharpSemanticModel 分派）。
-        /// </summary>
-        public abstract SemanticModel CreateSemanticModel(Compilation compilation, SyntaxTree syntaxTree);
+        /// <summary>根成员集合。</summary>
+        public ImmutableArray<SyntaxNode> GetRootMembers(SyntaxTree syntaxTree)
+            => ((CompilationUnitSyntax)syntaxTree.Root).Members.Cast<SyntaxNode>().ToImmutableArray();
 
-        /// <summary>
-        /// 不可达代码位置解析（P1-3 钩子预备；P1-4 供 <see cref="DiagnosticBag.ReportUnreachableCode(SyntaxNode)"/>
-        /// 分派，P2-5 切语言节点后由语言库自持）。
-        /// </summary>
-        public abstract TextLocation? GetUnreachableCodeLocation(SyntaxNode node);
+        /// <summary>语义模型。</summary>
+        public SemanticModel CreateSemanticModel(Compilation compilation, SyntaxTree syntaxTree)
+            => new CocoaSemanticModel(compilation, syntaxTree);
 
-        /// <summary>
-        /// 声明名 token 位置（P2-6 钩子）：供共享 Core 消费者（<c>Compilation</c>/<c>NativeImportValidator</c>）
-        /// 语言中性获取函数/类等声明的 <c>Identifier.Location</c>；语言库按语言节点实现。
-        /// </summary>
-        public abstract TextLocation? GetDeclarationNameLocation(SyntaxNode? declaration);
+        /// <summary>不可达代码位置解析。</summary>
+        public TextLocation? GetUnreachableCodeLocation(SyntaxNode node)
+        {
+            var kind = (node as CocoaSyntaxNode)?.Kind;
+            switch (kind)
+            {
+                case SyntaxKind.BlockStatement:
+                {
+                    var firstStatement = ((BlockStatementSyntax)node).Statements.FirstOrDefault();
+                    return firstStatement == null ? null : GetUnreachableCodeLocation(firstStatement);
+                }
+                case SyntaxKind.VariableDeclaration:
+                {
+                    var variableDeclaration = (VariableDeclarationSyntax)node;
+                    return variableDeclaration.Keyword?.Location ?? variableDeclaration.Location;
+                }
+                case SyntaxKind.IfStatement:
+                    return ((IfStatementSyntax)node).Keyword.Location;
+                case SyntaxKind.WhileStatement:
+                    return ((WhileStatementSyntax)node).Keyword.Location;
+                case SyntaxKind.DoWhileStatement:
+                    return ((DoWhileStatementSyntax)node).DoKeyword.Location;
+                case SyntaxKind.ForStatement:
+                    return ((ForStatementSyntax)node).Keyword.Location;
+                case SyntaxKind.ForeachStatement:
+                    return ((ForeachStatementSyntax)node).Keyword.Location;
+                case SyntaxKind.SwitchStatement:
+                    return ((SwitchStatementSyntax)node).Keyword.Location;
+                case SyntaxKind.BreakStatement:
+                    return ((BreakStatementSyntax)node).Keyword.Location;
+                case SyntaxKind.ContinueStatement:
+                    return ((ContinueStatementSyntax)node).Keyword.Location;
+                case SyntaxKind.ReturnStatement:
+                    return ((ReturnStatementSyntax)node).Keyword.Location;
+                case SyntaxKind.ExpressionStatement:
+                    return GetUnreachableCodeLocation(((ExpressionStatementSyntax)node).Expression);
+                case SyntaxKind.CallExpression:
+                    return ((CallExpressionSyntax)node).Identifier.Location;
+                case SyntaxKind.MemberCallExpression:
+                    return ((MemberCallExpressionSyntax)node).IdentifierToken.Location;
+                default:
+                    throw new Exception($"Unexpected syntax {node.Kind}");
+            }
+        }
 
-        /// <summary>
-        /// 类声明是否带 facade 修饰符（P2-6 钩子）：共享 Core <c>Compilation.DeclaredFacade</c> 经此分派。
-        /// </summary>
-        public abstract bool HasDeclaredFacadeModifier(SyntaxNode? declaration);
+        /// <summary>声明名 token 位置（供 Compilation/NativeImportValidator 语言中性获取）。</summary>
+        public TextLocation? GetDeclarationNameLocation(SyntaxNode? declaration)
+        {
+            if (declaration is FunctionDeclarationSyntax fn)
+                return fn.Identifier.Location;
+            if (declaration is ClassDeclarationSyntax cls)
+                return cls.Identifier.Location;
+            return declaration?.Location;
+        }
+
+        /// <summary>类声明是否带 facade 修饰符。</summary>
+        public bool HasDeclaredFacadeModifier(SyntaxNode? declaration)
+            => declaration is ClassDeclarationSyntax cls
+                && cls.Modifiers.Any(m => m.Kind == SyntaxKind.FacadeKeyword);
     }
 }

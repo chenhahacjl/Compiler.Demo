@@ -12,7 +12,7 @@ namespace Cocoa.Tests
         [ModuleInitializer]
         internal static void SeedLanguages()
         {
-            _ = CocoaLanguage.Instance;
+            _ = Language.Cocoa;
         }
     }
 }

@@ -10,7 +10,7 @@ namespace Cocoa.Compiler.Cocoa
     {
         private static int Main(string[] args)
         {
-            _ = CocoaLanguage.Instance;
+            _ = Language.Cocoa;
             return global::Cocoa.Cli.Program.CompileForLanguage(args, Language.Cocoa);
         }
     }
