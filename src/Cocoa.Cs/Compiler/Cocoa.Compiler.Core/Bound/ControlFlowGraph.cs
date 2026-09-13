@@ -267,7 +267,7 @@ namespace Cocoa.CodeAnalysis.Binding
             private BoundExpression Negate(BoundExpression condition)
             {
                 // 6e-M21：非 bool 条件（上游绑定错误的产物）不取反，避免 Debug.Assert 中断而掩盖真实诊断
-                if (condition.Type != Cocoa.CodeAnalysis.Symbols.TypeSymbol.Boolean)
+                if (condition.Type != Symbols.TypeSymbol.Boolean)
                 {
                     return condition;
                 }

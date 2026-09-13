@@ -17,7 +17,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         private SyntaxTree(SourceText text, ParseHandler handler, Language? language = null)
         {
             Text = text;
-            Language = language ?? Cocoa.CodeAnalysis.Language.Cocoa;
+            Language = language ?? Language.Cocoa;
 
             handler(this, out var root, out var diagnostics);
 

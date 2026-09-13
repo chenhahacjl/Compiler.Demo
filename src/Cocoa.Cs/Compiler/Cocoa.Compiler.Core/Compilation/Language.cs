@@ -10,8 +10,7 @@ namespace Cocoa.CodeAnalysis
 {
     /// <summary>
     /// 语言（M2 设计 X）：对标 Roslyn 语言前端抽象。去 C# 方言（2026-09-13）后仅剩 CO 单实现
-    /// <see cref="Cocoa.CodeAnalysis.CocoaLanguage"/>（独立程序集 Cocoa.CodeAnalysis.Cocoa），
-    /// 核心经 <see cref="Cocoa"/> 反射装载并触达之（默认解析路径依赖 Cocoa.CodeAnalysis.Cocoa 在应用目录）。
+    /// <see cref="Cocoa.CodeAnalysis.CocoaLanguage"/>（已并入本程序集，无反射装载）。
     /// </summary>
     public abstract class Language
     {
@@ -26,23 +25,8 @@ namespace Cocoa.CodeAnalysis
 
         public string Name { get; }
 
-        /// <summary>Cocoa 宿主语言（默认，`.co`）：实例位于 Cocoa.CodeAnalysis.Cocoa，此处经注册表 / 反射装载解析。</summary>
-        public static Language Cocoa => _cocoa ??= CreateCocoa();
-
-        private static Language CreateCocoa()
-        {
-            if (_registered.TryGetValue("cocoa", out var language))
-            {
-                return language;
-            }
-
-            // Y-A3-4：CocoaLanguage 随 CO L1 迁入 Cocoa.CodeAnalysis.Cocoa；反射装载并触达 Instance（静态初始化经 base("cocoa") 注册）。
-            var assembly = System.Reflection.Assembly.Load("Cocoa.Dialects.Cocoa");
-            var instance = assembly.GetType("Cocoa.CodeAnalysis.CocoaLanguage")!
-                .GetField("Instance", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!
-                .GetValue(null);
-            return (Language)instance!;
-        }
+        /// <summary>Cocoa 宿主语言（默认，`.co`）。</summary>
+        public static Language Cocoa => _cocoa ??= CocoaLanguage.Instance;
 
         public static bool TryGet(string name, out Language language)
         {
@@ -108,13 +92,13 @@ namespace Cocoa.CodeAnalysis
         /// 按本语言创建绑定器（S-4.3b/c 分派：返回窄接口 <see cref="IBinder"/>，Core 共享服务经接口消费；
         /// CO/C# 子类各自返回语言库 Binder 副本）。
         /// </summary>
-        public abstract IBinder CreateBinder(bool isScript, Binding.BoundScope? parent, Symbols.FunctionSymbol? function, ImmutableArray<string> references, ImmutableArray<string> usingNamespaces, Func<string, Symbols.TypeSymbol?> builtinTypeResolver, ImmutableArray<string> usingStatics = default, ImmutableDictionary<string, string> usingAliases = null!, ImmutableArray<Cocoa.CodeAnalysis.Serialization.CoaProgram> codLibraries = default, Symbols.NamespaceSymbol? globalNamespace = null);
+        public abstract IBinder CreateBinder(bool isScript, Binding.BoundScope? parent, Symbols.FunctionSymbol? function, ImmutableArray<string> references, ImmutableArray<string> usingNamespaces, Func<string, Symbols.TypeSymbol?> builtinTypeResolver, ImmutableArray<string> usingStatics = default, ImmutableDictionary<string, string> usingAliases = null!, ImmutableArray<Serialization.CoaProgram> codLibraries = default, Symbols.NamespaceSymbol? globalNamespace = null);
 
         /// <summary>
         /// 按本语言构建单态化重绑函数体（S-4.3b 分派：Core <see cref="Binder.Monomorphizer"/> 经此调用，
         /// 语言子类委托各自语言库 Binder 的静态 <c>BuildFunctionBodyForMonomorphization</c>）。
         /// </summary>
-        public abstract (Binding.BoundBlockStatement Body, ImmutableArray<Diagnostic> Diagnostics) BuildFunctionBodyForMonomorphization(bool isScript, Binding.BoundScope parentScope, Symbols.FunctionSymbol function, Binding.BoundGlobalScope globalScope, ImmutableArray<Cocoa.CodeAnalysis.Serialization.CoaProgram> codLibraries, Dictionary<string, Symbols.TypeSymbol> typeArgumentsByName);
+        public abstract (Binding.BoundBlockStatement Body, ImmutableArray<Diagnostic> Diagnostics) BuildFunctionBodyForMonomorphization(bool isScript, Binding.BoundScope parentScope, Symbols.FunctionSymbol function, Binding.BoundGlobalScope globalScope, ImmutableArray<Serialization.CoaProgram> codLibraries, Dictionary<string, Symbols.TypeSymbol> typeArgumentsByName);
 
         /// <summary>
         /// 绿→类型化红节点（P1-3 钩子预备）：语言库各自持有一份类型化红节点构建器
