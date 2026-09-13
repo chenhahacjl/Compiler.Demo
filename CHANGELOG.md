@@ -6,7 +6,15 @@
 
 ---
 
-## 未发布（2026-09-12）
+## 未发布（2026-09-13）
+
+### Cocoa.IDE M6：主题切换 / 语义着色 / 选项页 / 启动弹窗（2026-09-13）
+- **编译器侧前置**：`Classifier`/`Classification`/`ClassifiedSpan` 从 `Cocoa.Cli.Repl.Authoring` 物理迁入 `Cocoa.Compiler.Core`（命名空间 `Cocoa.CodeAnalysis.Authoring`），IDE 不再依赖 REPL 程序集；**C3** 构建带位置诊断补 `error:`/`warning:` 前缀，`BuildService` 据此区分严重性并写入错误列表。
+- **主题**：`%LOCALAPPDATA%\Cocoa\IDE\settings.json`（`System.Text.Json` + 原子写）+ `App.axaml` `ThemeDictionaries`(Dark/Light) 命名画刷；MainWindow/EditorPane/EditorView/浮窗/Icons/Dialog 共 ~85 处硬编码色资源化。`视图 → 主题` 即时切换并持久化，解决方案树图标随主题重算。
+- **编辑器语义着色**：`DiagnosticService` 重解析后随诊断下发 `SyntaxTree`，新增 `SemanticColorizer`（`DocumentColorizingTransformer`：预分类整树 + 按行二分 + 主题调色板），替代 xshd 静态高亮。
+- **选项页**：`工具 → 选项`（深/浅主题、编辑器字体/字号、启动显示开关、清除最近列表），保存即时应用。
+- **启动「最近/固定项目」窗口**：`StartupDialog` 列出最近 `.cosln/.coproj`（固定置顶、失效置灰、双击打开、右键固定/移除/定位/复制路径）+ 新建/打开入口；`MainWindow.Opened` 按启动参数直开或弹窗。
+- IDE 构建冒烟通过；编译器全量 **53477** 通过 / 1 跳过。
 
 ### 6e-M24：`///` 文档注释（XML 文档文件 + `.coa` 内嵌 + REPL `#docs`，2026-09-12）
 - **语言特性**：`///` 单行文档注释（双方言一致；`////` 及以上归普通注释），新 Trivia `SingleLineDocCommentTrivia`；标签集 `<summary>/<param>/<returns>/<remarks>`，未知标签宽容保留。

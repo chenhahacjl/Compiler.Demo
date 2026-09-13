@@ -1,6 +1,6 @@
 # Cocoa.IDE 设计 — 类 Visual Studio 桌面 IDE
 
-> 状态：🔧 实施中（M1~M5 已落地；2026-09-12 完成**第二轮审计（§5.5，A1–A10）**并修订路线图：新增 **M2b VS2022 两步式新建项目向导（§8.1）**、**M5b 工程上下文语义（§7.5）**、**M6c VS 风格解决方案资源管理器（§6.4）**；实施顺序见 §12.2）
+> 状态：🔧 实施中（M1~M6 已落地，2026-09-13 完成 M6 打磨：主题切换 + 语义着色 + 选项页 + 启动「最近/固定项目」弹窗；2026-09-12 完成**第二轮审计（§5.5，A1–A10）**并修订路线图：新增 **M2b VS2022 两步式新建项目向导（§8.1）**、**M5b 工程上下文语义（§7.5）**、**M6c VS 风格解决方案资源管理器（§6.4）**；实施顺序见 §12.2）
 > 目标：为 Cocoa 语言构建**类 Visual Studio 的桌面 IDE**——解决方案/项目管理 + 语法着色编辑器 + 实时诊断 + 补全/Hover/F12 + 构建运行 + （M7）解释器调试器，进程内直接复用编译器 `Cocoa.Compiler.Core` 完整编译管线。
 > 核心决策：**Avalonia 11 跨平台**；**直接消费既有 public API**（`Compilation.GetSemanticModel`/`SemanticModel`/`Classifier`/`BoundScope`/`Cocoa.Build` 全部已公开，零 `InternalsVisibleTo`，详见 §4）；**调试器基于解释器**（在 `Cocoa.CodeGen.Interpreter` 内新增 public `DebuggerSession`，见 §11）。
 > 相关文档：`docs/编译手册.md`（`cocoa` CLI 子命令）、`docs/项目格式规范.md`（`.coproj`/`.cosln`）、`docs-dev/实现目标.md`（编译器架构）
@@ -204,7 +204,7 @@ MainWindow 启动
 | **M4 构建运行** | F6 构建项目/解决方案；F5 运行产物；输出窗口；增量指示；清理 | `ProjectBuilder`/`SolutionBuilder`/`BuildCache` | ✅ 已落地（D5 关闭；A7 已修） |
 | **M5 语义服务** | Ctrl+Space 补全；Hover 显示签名；F12 跳转定义 | `SemanticModel`、`Compilation.GetSemanticModel`、`BoundScope` | ✅ 基础落地；**M5c 升级为 VS 式语境补全**（输入即触发 / 类型位置仅类型 / 成员-命名空间-声明名-语句表达式语境过滤 / 片段，提交 `M5c`）；**M5d 补全纳入形参与局部变量**；**M5e 按当前状态相关性排序**（局部/形参>成员>函数>类型>关键字，短名/大小写一致更优） |
 | **M5b 工程上下文语义** | 补全/诊断/Hover/F12 接入工程源文件集与 `References`（修跨文件误报、`Console.` 补全）；按内容缓存编译 | `Compilation.Create(references, trees)` | ✅ 已落地（§7.5） |
-| **M6 打磨** | 暗色/亮色主题；启动页（最近项目）；状态栏；选项页 | — | 📋 规划 |
+| **M6 打磨** | 暗/亮主题（整屏资源化）；启动「最近/固定项目」弹窗；选项页；编辑器语义着色；设置持久化 | `Classifier` + `SettingsService` | ✅ 已落地（M6a2/M6a3/M6d/M6e，含编译器侧 C3） |
 | **M6a UI 接线** | 空壳菜单（退出/视图/项目/生成清理/关于）、状态栏解决方案名、Ctrl+F 查找、错误过滤 UI、输出自动滚动 | AvaloniaEdit SearchPanel | ✅ 已落地 |
 | **M6b F12 定位与打磨** | 声明名字 token 精确定位；空补全不弹；着色扩展名判定；大文件只读/编码 | `Language.GetDeclarationNameLocation` | ✅ 已落地（F12 精确到声明名并覆盖变量/参数/成员，提交 `F12`；C3 待编译器侧） |
 | **M6c 解决方案资源管理器** | **VS 风格**：矢量图标、嵌套文件夹、引用/依赖项节点、工具栏（刷新/折叠全部/同步活动文档/显示所有文件/属性）、按种类右键、引用可编辑 | `CocoaProjectFile` + IDE `ProjectFileService` | ✅ 已落地（§6.4）；**M6c2 补齐 VS 式右键菜单**（生成/重新生成/清理/运行/调试/设为启动项目/添加项/引用/添加项目/移除）；**M6c3 项目属性页**（双击项目或右键“属性”打开的可编辑文档标签，写回 `.coproj`） |
@@ -419,11 +419,13 @@ MainWindow 启动
 
 ## 7. 语言服务设计
 
-### 7.1 语法着色
+### 7.1 语法着色（语义着色，M6a3 落地）
 
-M1/M1.1 阶段使用 `.xshd` 规则文件（关键词表枚举），不依赖编译器管线；**注意当前两文件单行注释规则有 `//.*$` 多余引号 Bug（B1），词表存在漂移（Q3），先修再用**。M5 前置切换为语义着色：`Classifier.Classify(SyntaxTree, TextSpan)` —— `Classifier`/`Classification`/`ClassifiedSpan` 已在 `Cocoa.Cli.Repl.Authoring` 以 public 形态存在，IDE 补引 `Cocoa.Cli.Repl.csproj` 即可直接用；若不想依赖 REPL 程序集，可选把 `Classifier` 物理迁入 `Cocoa.Compiler.Core`（§4.2）。
+M6a3 起改用编译器语义着色，弃用 `.xshd` 静态规则（两份 xshd 保留但不再加载）：`Classifier.Classify(SyntaxTree, TextSpan)`——**已由编译器侧迁入 `Cocoa.Compiler.Core`，命名空间 `Cocoa.CodeAnalysis.Authoring`**，IDE 直接复用具 Core 引用，不再依赖 `Cocoa.Cli.Repl` 程序集。
 
-分类枚举现状：Text / Keyword / Identifier / Number / String / Comment / Punctuation / Operator；语义着色需扩展 **Type** 区分（泛型/类名独立色）。
+- `DiagnosticService` 后台重解析产出 `SyntaxTree`，随 `DiagnosticsReady(file, tree, diagnostics)` 下发；`EditorTabViewModel.SyntaxTree` 缓存，`EditorView` 设入 `SemanticColorizer`（复用解析，不二次解析）。
+- `SemanticColorizer : DocumentColorizingTransformer`：预分类整棵树（按 Start 升序），`ColorizeLine` 二分定位行内区间后着色；调色板按主题（Dark/Light）取自命名画刷 `Syntax*Brush`，`ActualThemeVariantChanged` 时失效并重绘。
+- 分类枚举：Text / Keyword / Identifier / Number / String / Comment / Punctuation / Operator；**Type 区分尚未扩展**（泛型/类名与标识符同色，列为后续）。着色随 300ms 诊断防抖滞后，编辑瞬间可能短暂错色。
 
 ### 7.2 补全算法
 
@@ -681,8 +683,14 @@ internal Action<CallFrame, BoundStatement>? StatementBoundaryHook;
 | 25 | M7 后 | 引用支持选择 .coproj（解析为产物，并自动加入解决方案） | `M6c7：引用支持选择 .coproj(解析为产物 dll/coa，并自动加入解决方案)` | ✅ |
 | 26 | M7 后 | 补全纳入形参与局部变量（旧语义复用按 span 定位函数、开窗重算候选、`StartOffset` 置于前缀起点避免重复） | `M5d：补全纳入形参与局部变量(函数/方法作用域)` + `M5d：修复自动补全复用旧语义时局部变量不出现` + `M5d：修复补全替换段起点(StartOffset)导致的重复前缀(rresult)` | ✅ |
 | 27 | M7 后 | 补全按当前状态相关性排序 | `M5e：补全按当前状态相关性排序(局部/形参>成员>函数>类型>关键字，短名/大小写一致更优)` | ✅ |
+| 28 | 编译器 | `Classifier` 迁入 Core（`Cocoa.CodeAnalysis.Authoring`），IDE 不再依赖 REPL 程序集 | `refactor(classifier)：Classifier/Classification/ClassifiedSpan 迁入 Core` | ✅ |
+| 29 | M6 | 设置基础设施（settings.json）+ 主题切换（深/浅）+ 颜色资源化 | `M6a2：设置基础设施 + 主题切换(深/浅) + 颜色资源化` | ✅ |
+| 30 | M6 | 编辑器语义着色（Classifier + 主题调色板） | `M6a3：编辑器语义着色（编译器 Classifier + 主题调色板）` | ✅ |
+| 31 | M6 | 工具 → 选项页（VS 风格模态对话框） | `M6d：工具 → 选项（VS 风格模态对话框）` | ✅ |
+| 32 | M6 | 启动「最近/固定项目」窗口 + 最近项持久化 | `M6e：启动「最近/固定项目」窗口 + 最近项持久化` | ✅ |
+| 33 | 编译器 | C3 构建带位置诊断补严重性前缀（区分 error/warning） | `C3：构建带位置诊断补严重性前缀，区分 error/warning` | ✅ |
 
-> 顺序约束：M5b 为 M6a 的 `.` 自动补全提供工程上下文，不可颠倒；M7 唯一改动编译器（`Cocoa.CodeGen.Interpreter`），置于最后。F11–F14 为 M7 落地的体验修复轮次（IDE 侧，不触碰编译器）。
+> 顺序约束：M5b 为 M6a 的 `.` 自动补全提供工程上下文，不可颠倒；M7 唯一改动编译器（`Cocoa.CodeGen.Interpreter`），置于最后。F11–F14 为 M7 落地的体验修复轮次（IDE 侧，不触碰编译器）。M6a3 语义着色依赖序 28 的 `Classifier` 已入 Core；序 33（C3）为编译器侧遗留收口。
 
 ## 13. 风险与开放问题
 
@@ -699,7 +707,7 @@ internal Action<CallFrame, BoundStatement>? StatementBoundaryHook;
 
 **开放问题**：
 1. Docking 方案终选（Dock.Avalonia vs 自研）；
-2. 设置存储格式（`%LOCALAPPDATA%\Cocoa\IDE\*.json`）；
+2. ~~设置存储格式~~ ✅ 已定：`%LOCALAPPDATA%\Cocoa\IDE\settings.json`（M6a2，System.Text.Json + 原子写；含主题/字体/启动开关/最近项目·文件）；
 3. 多根工作区（无 `.cosln` 直接开文件夹）；
 4. `BuildReport` 结构化构建诊断返回；
 5. ~~「新建项目向导」实现方案终选~~ ✅ 已定：磁盘模板 XML（每模板一 `template.xml`）+ IDE 侧 `NewProjectService.CreateWithSolution`（M2b，§8.1）；
