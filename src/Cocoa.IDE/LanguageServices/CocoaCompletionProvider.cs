@@ -7,7 +7,6 @@ using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using CocoaUsing = Cocoa.CodeAnalysis.Cocoa.Syntax.UsingDirectiveSyntax;
-using CSharpUsing = Cocoa.CodeAnalysis.CSharp.Syntax.UsingDirectiveSyntax;
 
 namespace Cocoa.IDE.LanguageServices;
 
@@ -79,19 +78,6 @@ public static class CocoaCompletionProvider
         ("if", "if ($)\n{\n}"),
         ("else", "else\n{\n}"),
         ("for", "for var i = 0 to $\n{\n}"),
-        ("while", "while ($)\n{\n}"),
-        ("switch", "switch ($)\n{\n    case : break;\n    default: break;\n}"),
-        ("function", "function $()\n{\n}"),
-        ("class", "class $\n{\n}"),
-        ("try", "try\n{\n}\ncatch\n{\n}"),
-    };
-
-    private static readonly (string Text, string Body)[] CSharpSnippets =
-    {
-        ("if", "if ($)\n{\n}"),
-        ("else", "else\n{\n}"),
-        ("for", "for (var i = 0; i < $; i++)\n{\n}"),
-        ("foreach", "foreach (var item in $)\n{\n}"),
         ("while", "while ($)\n{\n}"),
         ("switch", "switch ($)\n{\n    case : break;\n    default: break;\n}"),
         ("function", "function $()\n{\n}"),
@@ -202,7 +188,7 @@ public static class CocoaCompletionProvider
 
     private static void AddSnippets(List<CocoaCompletionItem> items, string prefix, string dialect)
     {
-        var set = string.Equals(dialect, "CSharp", StringComparison.OrdinalIgnoreCase) ? CSharpSnippets : CocoaSnippets;
+        var set = CocoaSnippets;
         foreach (var (text, body) in set)
             if (Matches(text, prefix))
                 items.Add(new CocoaCompletionItem(text, "snippet", null, CompletionKind.Snippet, body)
@@ -412,8 +398,6 @@ public static class CocoaCompletionProvider
                 string? name = null;
                 if (node is CocoaUsing cu && cu.StaticKeyword == null && cu.AliasToken == null)
                     name = cu.Name;
-                else if (node is CSharpUsing cs && cs.StaticKeyword == null && cs.AliasToken == null)
-                    name = cs.Name;
 
                 if (!string.IsNullOrEmpty(name) && seen.Add(name!))
                     yield return name!;

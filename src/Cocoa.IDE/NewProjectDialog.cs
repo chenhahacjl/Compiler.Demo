@@ -33,7 +33,6 @@ public sealed class NewProjectDialog : Window
     private readonly TextBlock _detailName;
     private readonly TextBlock _detailDesc;
 
-    private readonly ComboBox _languageBox;
     private readonly ComboBox _backendBox;
     private readonly TextBox _nameBox;
     private readonly TextBox _locationBox;
@@ -90,9 +89,6 @@ public sealed class NewProjectDialog : Window
         _step1Panel = new StackPanel { Children = { step1Grid } };
 
         // ── 步骤 2：配置 ──
-        _languageBox = new ComboBox { HorizontalAlignment = HorizontalAlignment.Left, MinWidth = 160 };
-        _languageBox.SelectionChanged += (_, _) => UpdateDetails();
-
         _backendBox = new ComboBox { HorizontalAlignment = HorizontalAlignment.Left, MinWidth = 160 };
         foreach (var b in BackendLabels) _backendBox.Items.Add(b);
         _backendBox.SelectedIndex = 0;
@@ -224,9 +220,8 @@ public sealed class NewProjectDialog : Window
             grid.Children.Add(control);
         }
 
-        AddRow(0, "语言", _languageBox);
-        AddRow(1, "后端", _backendBox);
-        AddRow(2, "项目名称", _nameBox);
+        AddRow(0, "后端", _backendBox);
+        AddRow(1, "项目名称", _nameBox);
         AddRow(3, "位置", locationRow);
         AddRow(4, "解决方案名称", _solutionBox);
         AddRow(5, "目标框架", _tfmBox);
@@ -258,7 +253,8 @@ public sealed class NewProjectDialog : Window
 
         if (onConfig)
         {
-            PopulateLanguages();
+            _backendBox.IsEnabled = !IsSolutionCategory;
+            _tfmBox.IsEnabled = !IsSolutionCategory;
             if (string.IsNullOrWhiteSpace(_nameBox.Text))
                 _nameBox.Text = IsSolutionCategory ? "MySolution" : "MyApp";
         }
@@ -291,32 +287,13 @@ public sealed class NewProjectDialog : Window
         }
     }
 
-    private void PopulateLanguages()
-    {
-        var languages = _allOptions
-            .Where(o => o.Category == _selectedCategory)
-            .Select(o => o.Language)
-            .Distinct()
-            .ToList();
-
-        _languageBox.Items.Clear();
-        foreach (var lang in languages) _languageBox.Items.Add(lang);
-        _languageBox.SelectedIndex = languages.Count > 0 ? 0 : -1;
-        _languageBox.IsEnabled = languages.Count > 1;
-
-        _backendBox.IsEnabled = !IsSolutionCategory;
-        _tfmBox.IsEnabled = !IsSolutionCategory;
-    }
-
     private NewProjectService.TemplateOption? ResolveTemplate()
     {
         if (_selectedCategory == null) return null;
         if (IsSolutionCategory)
             return _allOptions.FirstOrDefault(o => o.IsSolution);
 
-        var language = _languageBox.SelectedItem?.ToString();
-        return _allOptions.FirstOrDefault(o => o.Category == _selectedCategory && o.Language == language)
-               ?? _allOptions.FirstOrDefault(o => o.Category == _selectedCategory);
+        return _allOptions.FirstOrDefault(o => o.Category == _selectedCategory);
     }
 
     private void OnCategorySelected()

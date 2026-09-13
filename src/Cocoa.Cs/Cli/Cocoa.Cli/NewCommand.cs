@@ -14,7 +14,6 @@ namespace Cocoa.Cli
         public const string ConsoleTemplate = "console";
         public const string LibraryTemplate = "library";
         public const string CocoaTemplate = "cocoa";
-        public const string CSharpTemplate = "csharp";
         public const string SolutionTemplate = "solution";
 
         private static readonly string[] KnownTemplates =
@@ -22,7 +21,6 @@ namespace Cocoa.Cli
             ConsoleTemplate,
             LibraryTemplate,
             CocoaTemplate,
-            CSharpTemplate,
             SolutionTemplate,
         };
 
@@ -300,47 +298,6 @@ var solution = $@"<Solution Version=""1"">
 }}
 ");
 
-                case CSharpTemplate:
-                    return (
-                        $@"<Project Version=""1"">
-  <PropertyGroup Label=""Language"">
-    <Language>CSharp</Language>
-  </PropertyGroup>
-  <PropertyGroup Label=""Assembly"">
-    <AssemblyName>{name}</AssemblyName>
-  </PropertyGroup>
-  <PropertyGroup Label=""Target"">
-    <Platform>x64</Platform>
-    <TargetFramework>{tfm}</TargetFramework>
-  </PropertyGroup>
-  <PropertyGroup Label=""Output"">
-    <OutputType>Executable</OutputType>
-  </PropertyGroup>
-  <PropertyGroup Label=""Build"">
-    <OutputPath>out</OutputPath>
-  </PropertyGroup>
-  <ItemGroup>
-    <Source Include=""*.cs"" />
-  </ItemGroup>
-</Project>
-",
-                        name + ".cs",
-                        $@"// C# 方言（.cs 严格子集，6e-M15）：类型前置、分号必选；不绑定 .NET BCL（用 System.Console.WriteLine/System.Runtime.* 核心库）
-
-namespace {name};
-
-public static void Main()
-{{
-    Console.WriteLine(""Hello from {name}!"");
-    Console.WriteLine(Add(2, 3));
-}}
-
-public int Add(int a, int b)
-{{
-    return a + b;
-}}
-");
-
                 case SolutionTemplate:
                     return (
                         $@"<Project Version=""1"">
@@ -433,7 +390,6 @@ function Main()
             Console.WriteLine("  console (default)  A console application (executable)");
             Console.WriteLine("  library            A .NET library (dll)");
             Console.WriteLine("  cocoa              A .coa Cocoa assembly (cocoa library)");
-            Console.WriteLine("  csharp             A C# dialect console application (.cs files, .coproj, 6e-M15)");
             Console.WriteLine("  solution           A solution (.cosln) with a console sub-project");
             Console.WriteLine();
             Console.WriteLine("options:");

@@ -11,7 +11,6 @@
   <Project Include="Tutorial/Interop/Interop/Interop.coproj" />
   <Project Include="Tutorial/Dialects/CsStyle/CsStyle.coproj" />
   <Project Include="Tutorial/Dialects/TopLevelFunctions/TopLevelFunctions.coproj" />
-  <Project Include="Tutorial/Dialects/CSharpDialect/CSharpDialect.coproj" />
   <Project Include="Libraries/NetLibrary/mylib/MyLib.coproj" />
   <Project Include="Libraries/NetLibrary/app/App.coproj" />
   <Project Include="Libraries/CodLibrary/mylib/MyLib.coproj" />

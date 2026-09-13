@@ -140,7 +140,6 @@ public partial class MainViewModel : ObservableObject
 
     private void Reanalyze(EditorTabViewModel tab)
     {
-        if (tab.Dialect == null) return;
         var context = SolutionTree.GetContext(tab.FilePath);
         DiagnosticService.TextChanged(tab.FilePath, tab.Content, tab.Dialect, context);
     }
@@ -163,7 +162,7 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        StatusBar.Language = tab.Dialect ?? "";
+        StatusBar.Language = tab.Dialect;
         StatusBar.CursorPosition = $"Ln {tab.CursorLine}, Col {tab.CursorColumn}";
         Properties.ShowDocument(tab);
 
@@ -238,7 +237,7 @@ public partial class MainViewModel : ObservableObject
             AllowMultiple = true,
             FileTypeFilter = new[]
             {
-                new FilePickerFileType("Cocoa 文件") { Patterns = new[] { "*.co", "*.cs" } },
+                new FilePickerFileType("Cocoa 文件") { Patterns = new[] { "*.co" } },
                 new FilePickerFileType("所有文件") { Patterns = new[] { "*.*" } }
             }
         });
@@ -695,7 +694,7 @@ public partial class MainViewModel : ObservableObject
         {
             if (activeTab != null && string.Equals(activeTab.FilePath, file, StringComparison.OrdinalIgnoreCase))
             {
-                var language = activeTab.Dialect == "CSharp" ? Language.CSharp : Language.Cocoa;
+                var language = Language.Cocoa;
                 trees.Add(SyntaxTree.Parse(SourceText.From(activeTab.Content, file), language));
             }
             else

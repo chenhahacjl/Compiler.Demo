@@ -13,7 +13,6 @@ public partial class EditorTabViewModel : ObservableObject
     public string FileName => _displayName ?? System.IO.Path.GetFileName(FilePath);
     public string DirectoryPath => System.IO.Path.GetDirectoryName(FilePath) ?? "";
 
-    private readonly string? _dialect;
     private readonly string? _displayName;
 
     /// <summary>非 null 时为“项目属性”虚拟标签（中央区显示属性页而非编辑器）。</summary>
@@ -24,12 +23,6 @@ public partial class EditorTabViewModel : ObservableObject
     public EditorTabViewModel(string filePath)
     {
         FilePath = filePath;
-        _dialect = System.IO.Path.GetExtension(filePath).ToLowerInvariant() switch
-        {
-            ".cs" => "CSharp",
-            ".co" => "Cocoa",
-            _     => null
-        };
 
         if (System.IO.File.Exists(filePath))
         {
@@ -73,7 +66,8 @@ public partial class EditorTabViewModel : ObservableObject
     /// <summary>M6a3：最近一次实时诊断所用的语法树，供编辑器语义着色。</summary>
     public SyntaxTree? SyntaxTree { get; set; }
 
-    public string? Dialect => _dialect;
+    /// <summary>方言：去 C# 方言后恒为 Cocoa（仅 `.co`）。</summary>
+    public string Dialect => "Cocoa";
 
     partial void OnContentChanged(string value)
     {

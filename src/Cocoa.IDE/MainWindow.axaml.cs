@@ -434,7 +434,7 @@ public partial class MainWindow : Window
             AllowMultiple = true,
             FileTypeFilter = new[]
             {
-                new FilePickerFileType("Cocoa 源文件") { Patterns = new[] { "*.co", "*.cs" } },
+                new FilePickerFileType("Cocoa 源文件") { Patterns = new[] { "*.co" } },
                 new FilePickerFileType("所有文件") { Patterns = new[] { "*.*" } },
             },
         });
@@ -524,8 +524,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var path = Path.Combine(dir, name.EndsWith(".co", StringComparison.OrdinalIgnoreCase) ||
-                                       name.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)
+        var path = Path.Combine(dir, name.EndsWith(".co", StringComparison.OrdinalIgnoreCase)
             ? name : name + ".co");
         if (File.Exists(path))
         {
@@ -576,7 +575,7 @@ public partial class MainWindow : Window
             ViewModel.StatusBar.ResetActiveDocument();
             return;
         }
-        ViewModel.StatusBar.Language = tab.Dialect ?? "";
+        ViewModel.StatusBar.Language = tab.Dialect;
         ViewModel.StatusBar.CursorPosition = $"Ln {tab.CursorLine}, Col {tab.CursorColumn}";
     }
 

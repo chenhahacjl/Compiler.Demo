@@ -180,7 +180,7 @@ public partial class SolutionTreeViewModel : ObservableObject
             {
                 if (included.Contains(file)) continue;
                 var ext = Path.GetExtension(file).ToLowerInvariant();
-                if (ext is not (".co" or ".cs" or ".cod" or ".coproj" or ".cosln")) continue;
+                if (ext is not (".co" or ".cod" or ".coproj" or ".cosln")) continue;
                 AddSourceByRelativePath(projectNode, project.Directory, file, isPhantom: true);
             }
         }
@@ -251,7 +251,7 @@ public partial class SolutionTreeViewModel : ObservableObject
         foreach (var file in Directory.EnumerateFiles(folderPath))
         {
             var ext = Path.GetExtension(file).ToLowerInvariant();
-            if (ext is ".co" or ".cs" or ".cod" or ".coproj" or ".cosln")
+            if (ext is ".co" or ".cod" or ".coproj" or ".cosln")
             {
                 var child = new TreeNodeViewModel(Path.GetFileName(file), false, NodeKind.Source) { FullPath = file };
                 child.Parent = parent;
@@ -493,7 +493,6 @@ public partial class SolutionTreeViewModel : ObservableObject
         if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) return null;
 
         var siblings = Directory.EnumerateFiles(dir, "*.co", SearchOption.TopDirectoryOnly)
-            .Concat(Directory.EnumerateFiles(dir, "*.cs", SearchOption.TopDirectoryOnly))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
         if (!siblings.Contains(filePath, StringComparer.OrdinalIgnoreCase))

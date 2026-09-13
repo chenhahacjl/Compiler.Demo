@@ -83,7 +83,6 @@ namespace Cocoa.Cli
             Console.WriteLine($"  {NewCommand.ConsoleTemplate.PadRight(10)} A console application (executable)");
             Console.WriteLine($"  {NewCommand.LibraryTemplate.PadRight(10)} A .NET library (dll)");
             Console.WriteLine($"  {NewCommand.CocoaTemplate.PadRight(10)} A .coa Cocoa assembly (cocoa library)");
-            Console.WriteLine($"  {NewCommand.CSharpTemplate.PadRight(10)} A C# dialect console application (.cs files, 6e-M15)");
             Console.WriteLine($"  {NewCommand.SolutionTemplate.PadRight(10)} A solution (.cosln) with a console sub-project");
             return 0;
         }

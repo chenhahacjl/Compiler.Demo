@@ -230,7 +230,6 @@ public partial class EditorView : UserControl
         if (filePath == null) return null;
         return Path.GetExtension(filePath).ToLowerInvariant() switch
         {
-            ".cs" => "CSharp",
             ".co" => "Cocoa",
             _     => null, // 非源码不着色
         };
@@ -240,7 +239,7 @@ public partial class EditorView : UserControl
     {
         if (filePath == null) return true;
         var ext = Path.GetExtension(filePath).ToLowerInvariant();
-        return ext is not (".co" or ".cs" or ".txt" or ".coproj" or ".cosln");
+        return ext is not (".co" or ".txt" or ".coproj" or ".cosln");
     }
 
     private static IHighlightingDefinition? GetHighlighting(string name)
@@ -261,7 +260,7 @@ public partial class EditorView : UserControl
                 if (definition != null)
                 {
                     HighlightingCache[name] = definition;
-                    HighlightingManager.Instance.RegisterHighlighting(name, new[] { name == "CSharp" ? ".cs" : ".co" }, definition);
+                    HighlightingManager.Instance.RegisterHighlighting(name, new[] { ".co" }, definition);
                     return definition;
                 }
             }

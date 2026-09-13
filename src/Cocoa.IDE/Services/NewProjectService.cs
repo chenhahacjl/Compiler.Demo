@@ -244,27 +244,17 @@ public static class NewProjectService
             new FileMapping("Class1.co", "{Name}.co"),
             new FileMapping("Project.coproj", "{Name}.coproj"),
         }, Order: 1, Category: "Library", Language: "Cocoa"),
-        new TemplateSpec("library-cs", "Library C#", ".NET 类库：.cs 源码（C# 方言）、dll 输出", null, new[]
-        {
-            new FileMapping("Class1.cs", "{Name}.cs"),
-            new FileMapping("Project.coproj", "{Name}.coproj"),
-        }, Order: 2, Category: "Library", Language: "CSharp"),
         new TemplateSpec("console", "Console Cocoa", "控制台应用：.co 源码、可执行、入口 main.co", null, new[]
         {
             new FileMapping("main.co", "main.co"),
             new FileMapping("Project.coproj", "{Name}.coproj"),
-        }, Order: 3, Category: "Console", Language: "Cocoa"),
-        new TemplateSpec("csharp", "Console C#", "控制台应用：.cs 源码（C# 方言）、可执行", null, new[]
-        {
-            new FileMapping("Class1.cs", "{Name}.cs"),
-            new FileMapping("Project.coproj", "{Name}.coproj"),
-        }, Order: 4, Category: "Console", Language: "CSharp"),
-        new TemplateSpec("solution", "BlankSolution", "空白解决方案：仅创建 .cosln（无项目）", "Solution", Array.Empty<FileMapping>(), Order: 5, Category: "Solution", Language: "Any"),
+        }, Order: 2, Category: "Console", Language: "Cocoa"),
+        new TemplateSpec("solution", "BlankSolution", "空白解决方案：仅创建 .cosln（无项目）", "Solution", Array.Empty<FileMapping>(), Order: 3, Category: "Solution", Language: "Any"),
         new TemplateSpec("cocoa", "Cocoa Assembly", "Cocoa 程序集库：.coa 输出、.co 源码", null, new[]
         {
             new FileMapping("Class1.co", "{Name}.co"),
             new FileMapping("Project.coproj", "{Name}.coproj"),
-        }, Order: 6, Category: "Cocoa Assembly", Language: "Cocoa"),
+        }, Order: 4, Category: "Cocoa Assembly", Language: "Cocoa"),
     };
 
     private static TemplateSpec FallbackSpec(string template)
@@ -312,81 +302,6 @@ public static class NewProjectService
     {{
         return ""Hello, "" + name
     }}
-}}
-");
-            case "library-cs":
-                return (
-                    $@"<Project Version=""1"">
-  <PropertyGroup Label=""Language"">
-    <Language>CSharp</Language>
-  </PropertyGroup>
-  <PropertyGroup Label=""Assembly"">
-    <AssemblyName>{name}</AssemblyName>
-  </PropertyGroup>
-  <PropertyGroup Label=""Target"">
-    <Platform>x64</Platform>
-    <TargetFramework>{tfm}</TargetFramework>
-  </PropertyGroup>
-  <PropertyGroup Label=""Output"">
-    <OutputType>Library</OutputType>
-  </PropertyGroup>
-  <PropertyGroup Label=""Build"">
-    <OutputPath>out</OutputPath>
-  </PropertyGroup>
-  <ItemGroup>
-    <Source Include=""*.cs"" />
-  </ItemGroup>
-</Project>
-",
-                    name + ".cs",
-                    $@"// C# 方言（.cs 严格子集）：类型前置、分号必选
-namespace {name};
-
-public class Greeter
-{{
-    public string Greet(string name)
-    {{
-        return ""Hello, "" + name + ""!"";
-    }}
-}}
-");
-            case "csharp":
-                return (
-                    $@"<Project Version=""1"">
-  <PropertyGroup Label=""Language"">
-    <Language>CSharp</Language>
-  </PropertyGroup>
-  <PropertyGroup Label=""Assembly"">
-    <AssemblyName>{name}</AssemblyName>
-  </PropertyGroup>
-  <PropertyGroup Label=""Target"">
-    <Platform>x64</Platform>
-    <TargetFramework>{tfm}</TargetFramework>
-  </PropertyGroup>
-  <PropertyGroup Label=""Output"">
-    <OutputType>Executable</OutputType>
-  </PropertyGroup>
-  <PropertyGroup Label=""Build"">
-    <OutputPath>out</OutputPath>
-  </PropertyGroup>
-  <ItemGroup>
-    <Source Include=""*.cs"" />
-  </ItemGroup>
-</Project>
-",
-                    name + ".cs",
-                    $@"// C# 方言（.cs 严格子集）：类型前置、分号必选
-namespace {name};
-
-public static void Main()
-{{
-    Console.WriteLine(""Hello from {name}!"");
-    Console.WriteLine(Add(2, 3));
-}}
-
-public int Add(int a, int b)
-{{
-    return a + b;
 }}
 ");
             default: // console — 类风格（namespace + class + static function Main）

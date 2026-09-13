@@ -109,8 +109,6 @@ public sealed class DiagnosticService
 
     private static Language LanguageFor(string? dialect)
     {
-        if (string.Equals(dialect, "CSharp", StringComparison.OrdinalIgnoreCase))
-            return Language.CSharp;
         return Language.Cocoa;
     }
 }

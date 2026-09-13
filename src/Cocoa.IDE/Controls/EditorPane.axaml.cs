@@ -159,7 +159,7 @@ public partial class EditorPane : UserControl
 
         var caretOffset = EditorHost.Editor.TextArea.Caret.Offset;
         var text = EditorHost.Editor.Text ?? "";
-        var dialect = tab.Dialect ?? "Cocoa";
+        var dialect = tab.Dialect;
 
         var list = _completionWindow.CompletionList;
         list.CompletionData.Clear();
@@ -186,12 +186,12 @@ public partial class EditorPane : UserControl
     private SemanticModelHost? EnsureSemanticHost()
     {
         var tab = EditorTabs?.ActiveTab;
-        if (tab == null || tab.Dialect == null) return null;
+        if (tab == null) return null;
 
         if (_hostFile == tab.FilePath && _hostText == tab.Content)
             return _semanticHost;
 
-        var language = tab.Dialect == "CSharp" ? Language.CSharp : Language.Cocoa;
+        var language = Language.Cocoa;
         var context = MainViewModel.Shared?.SolutionTree.GetContext(tab.FilePath);
         _semanticHost.Update(tab.Content, tab.FilePath, language, context);
         _hostFile = tab.FilePath;
@@ -203,7 +203,7 @@ public partial class EditorPane : UserControl
     private SemanticModelHost? EnsureSemanticHostReusable()
     {
         var tab = EditorTabs?.ActiveTab;
-        if (tab == null || tab.Dialect == null) return null;
+        if (tab == null) return null;
         return _hostFile == tab.FilePath ? _semanticHost : EnsureSemanticHost();
     }
 
@@ -232,7 +232,7 @@ public partial class EditorPane : UserControl
         var host = reuseStale ? EnsureSemanticHostReusable() : EnsureSemanticHost();
         if (host != null)
         {
-            var dialect = tab.Dialect ?? "Cocoa";
+            var dialect = tab.Dialect;
             foreach (var item in CocoaCompletionProvider.GetCompletions(host, caretOffset, text, dialect))
                 window.CompletionList.CompletionData.Add(item);
         }

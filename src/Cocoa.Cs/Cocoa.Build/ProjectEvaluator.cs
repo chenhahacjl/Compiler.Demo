@@ -183,8 +183,7 @@ namespace Cocoa.Build
             return language.ToLowerInvariant() switch
             {
                 "cocoa" => CocoaProjectLanguage.Cocoa,
-                "csharp" => CocoaProjectLanguage.CSharp,
-                _ => throw new ProjectFileFormatException($"invalid Language '{language}'. Expected: cocoa, csharp"),
+                _ => throw new ProjectFileFormatException($"invalid Language '{language}'. Expected: cocoa"),
             };
         }
 

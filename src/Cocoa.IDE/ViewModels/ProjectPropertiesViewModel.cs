@@ -16,7 +16,6 @@ public partial class ProjectPropertiesViewModel : ObservableObject
     public string ProjectDirectory { get; private set; } = "";
     public string DisplayName { get; private set; } = "项目属性";
 
-    public IReadOnlyList<string> Languages { get; } = new[] { "Cocoa", "CSharp" };
     public IReadOnlyList<string> OutputTypes { get; } = new[] { "Executable", "Library", "Cod" };
     public IReadOnlyList<string> Platforms { get; } = new[] { "AnyCPU", "x86", "x64" };
     public IReadOnlyList<string> TargetOses { get; } = new[] { "Windows", "Linux" };
@@ -24,7 +23,6 @@ public partial class ProjectPropertiesViewModel : ObservableObject
     public IReadOnlyList<string> Backends { get; } = new[] { "(默认 Managed)", "Managed", "Native" };
 
     [ObservableProperty] private string _assemblyName = "";
-    [ObservableProperty] private string _language = "Cocoa";
     [ObservableProperty] private string _outputType = "Executable";
     [ObservableProperty] private string _backend = "(默认 Managed)";
     [ObservableProperty] private string _platform = "AnyCPU";
@@ -56,7 +54,6 @@ public partial class ProjectPropertiesViewModel : ObservableObject
         DisplayName = project.Name + " 属性";
 
         AssemblyName = project.AssemblyName;
-        Language = project.Language == CocoaProjectLanguage.CSharp ? "CSharp" : "Cocoa";
         OutputType = project.Output switch
         {
             ProjectOutputFormat.Dll => "Library",
@@ -106,7 +103,6 @@ public partial class ProjectPropertiesViewModel : ObservableObject
         var values = new Dictionary<string, string?>(StringComparer.Ordinal)
         {
             ["AssemblyName"] = AssemblyName,
-            ["Language"] = Language,
             ["OutputType"] = OutputType,
             ["Backend"] = Backend == "Native" ? "Native" : Backend == "Managed" ? "Managed" : null,
             ["Platform"] = Platform,

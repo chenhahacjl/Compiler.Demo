@@ -33,9 +33,7 @@ public static class Icons
     public static (Geometry Geometry, IBrush Brush) ForTemplate(string templateKey) => templateKey switch
     {
         "console" => (Get(Project), B("#4EC9B0", "#267F99")),
-        "csharp" => (Get(File), B("#9B4F96", "#8B3A86")),
         "library" => (Get(Project), B("#DCDCAA", "#8A6D1B")),
-        "library-cs" => (Get(File), B("#9B4F96", "#8B3A86")),
         "cocoa" => (Get(Project), B("#E37933", "#B85C00")),
         "solution" => (Get(Solution), B("#007ACC", "#007ACC")),
         _ => (Get(File), B("#CCCCCC", "#555555")),
@@ -54,7 +52,6 @@ public static class Icons
             ViewModels.NodeKind.Reference => (Get(Reference), B("#4EC9B0", "#267F99")),
             _ => ext switch
             {
-                ".cs" => (Get(File), B("#9B4F96", "#8B3A86")),
                 ".co" => (Get(File), B("#E37933", "#B85C00")),
                 _ => (Get(File), B("#CCCCCC", "#555555")),
             },

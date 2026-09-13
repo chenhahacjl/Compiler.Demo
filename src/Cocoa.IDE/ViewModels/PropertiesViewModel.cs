@@ -75,7 +75,7 @@ public partial class PropertiesViewModel : ObservableObject
 
         Items.Add(new PropertyItemViewModel("文档", "文件名", tab.FileName));
         Items.Add(new PropertyItemViewModel("文档", "完整路径", tab.FilePath));
-        Items.Add(new PropertyItemViewModel("文档", "方言", tab.Dialect ?? "(无)"));
+        Items.Add(new PropertyItemViewModel("文档", "语言", tab.Dialect));
         Items.Add(new PropertyItemViewModel("文档", "已修改", tab.IsModified ? "是" : "否"));
         Items.Add(new PropertyItemViewModel("文档", "光标", $"第 {tab.CursorLine} 行，第 {tab.CursorColumn} 列"));
 

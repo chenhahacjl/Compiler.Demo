@@ -13,11 +13,10 @@ namespace Cocoa.Build
         Cod,
     }
 
-    /// <summary>项目语言：`Cocoa`（`.co`）或 `CSharp`（`.cs`）。</summary>
+    /// <summary>项目语言：去 C# 方言后仅 `Cocoa`（`.co`）。</summary>
     public enum CocoaProjectLanguage
     {
         Cocoa,
-        CSharp,
     }
 
     /// <summary>构建配置（替代旧版 `debug` bool）。</summary>
