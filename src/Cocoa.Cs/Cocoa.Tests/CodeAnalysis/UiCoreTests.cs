@@ -37,6 +37,7 @@ namespace Cocoa.Tests.CodeAnalysis
                 Path.Combine(root, "ImGuiStyle.co"),
                 Path.Combine(root, "ImGuiIO.co"),
                 Path.Combine(root, "ImGuiWindow.co"),
+                Path.Combine(root, "ImGui.co"),
             };
         }
 
@@ -91,7 +92,41 @@ function Main(): i32
         {
             var trees = CoreSources().Select(p => SyntaxTree.Parse(File.ReadAllText(p))).ToList();
             trees.Add(SyntaxTree.Parse(Harness));
+            AssertExpected(trees, Expected);
+        }
 
+        private const string WidgetHarness = @"using System
+using System.UI
+
+function Main(): i32
+{
+    var gui = new ImGui(256, 16)
+    var io = new ImGuiIO()
+    gui.NewFrame(io)
+    gui.Begin(""W"", f32(0.0), f32(0.0), f32(300.0), f32(200.0))
+    Console.WriteLine(gui.SliderInt(""v"", 1, 0, 10))
+    Console.WriteLine(gui.CollapsingHeader(""h"", 2))
+    Console.WriteLine(gui.TreeNode(""n"", 3))
+    gui.TreePop()
+    gui.Text(""hello"")
+    gui.End()
+    Console.WriteLine(gui.DrawList.VertexCount > 0)
+    Console.WriteLine(gui.DrawList.TextCount)
+    return 0
+}";
+
+        private const string WidgetExpected = "0\nTrue\nFalse\nTrue\n4\n";
+
+        [Fact]
+        public void ImGui_Widgets_Evaluator()
+        {
+            var trees = CoreSources().Select(p => SyntaxTree.Parse(File.ReadAllText(p))).ToList();
+            trees.Add(SyntaxTree.Parse(WidgetHarness));
+            AssertExpected(trees, WidgetExpected);
+        }
+
+        private static void AssertExpected(List<SyntaxTree> trees, string expected)
+        {
             var references = new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location };
             var compilation = Compilation.Create("Main", references, trees.ToArray());
 
@@ -100,10 +135,9 @@ function Main(): i32
             try
             {
                 Console.SetOut(writer);
-
                 var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
                 Assert.True(!result.Diagnostics.HasErrors(), string.Join("\n", result.Diagnostics.Select(d => d.Message)));
-                Assert.Equal(Expected, writer.ToString().Replace("\r\n", "\n"));
+                Assert.Equal(expected, writer.ToString().Replace("\r\n", "\n"));
             }
             catch (Exception ex)
             {

@@ -37,7 +37,18 @@ function Main(): i32
             gui.SameLine()
             gui.Checkbox("Enable", 1)
             gui.SliderFloat("Value", 2, f32(0.0), f32(100.0))
+            gui.SliderInt("Count", 3, 0, 20)
             gui.ProgressBar(f32(0.35))
+
+            if gui.CollapsingHeader("Advanced", 10)
+            {
+                if gui.TreeNode("Options", 11)
+                {
+                    gui.Checkbox("Option A", 12)
+                    gui.Checkbox("Option B", 13)
+                    gui.TreePop()
+                }
+            }
         }
 
         gui.End()
