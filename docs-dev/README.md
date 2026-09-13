@@ -22,7 +22,7 @@
 | [plan/语义债务清单.md](plan/语义债务清单.md) | 定夺类设计偏差 D1-D5（非 bug），修或维持需逐项拍板 |
 | [plan/重构执行计划.md](plan/重构执行计划.md) | 重构步骤与进度表（⬜/🔄/✅/⏭️ 标记） |
 | [plan/Cocoa.IDE设计.md](plan/Cocoa.IDE设计.md) | 类 Visual Studio 桌面 IDE：Avalonia 11 路线 + 功能矩阵 |
-| [plan/UI库规划.md](plan/UI库规划.md) | UI 生态系统：Handle 句柄类型 + System.UI 立即模式库（6e-M25；**阶段 1 已完成**：核心 + Win32 GDI 轮询后端 + BasicUI；实施记录见 §13） |
+| [plan/UI库规划.md](plan/UI库规划.md) | UI 生态系统：Handle 句柄类型 + System.UI 立即模式库（6e-M25；**阶段 1/2 已完成**：核心 + Win32 GDI 轮询后端 + 完整控件集/输入/滚动 + BasicUI/AdvancedUI；实施记录见 §13/§14） |
 
 ## 3. archive/ — 已实现 · 设计依据保留（🛑 归档）
 

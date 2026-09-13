@@ -311,9 +311,9 @@ WNDPROC 需要原生函数指针回调；Cocoa 双后端均无可靠路径（IL 
 |------|------|------|--------|
 | **0a** | Handle 类型（System.Core/Handle/）+ spike：① `extends` 继承链经 `.coa` 静态链接在 native 下验证（M19 理论支持无 UI 实例）；② long 参数/返回值 import 双后端 e2e | **`.coa` 序列化门禁扩展**（带属性实例类/含 body 静态类入库，见 §11 R1） | 1-2 天（门禁另计） |
 | **0b** | 编译器增强：native extern 参数上限 7→12+（x64 寄存器 4+栈；x86 栈压入，扩 PushSysCallArg 路径）+ 12 参 stdcall e2e（x86/x64） | — | 1-2 天 |
-| **1** | System.UI 基础框架 + GDI 轮询后端 + BasicUI 最小 demo（里程碑：窗口/双缓冲/Begin-End/Text/Button/点击动作） | 0a/0b | 1-2 周 |
-| **2** | 完整控件集（Checkbox/Slider/InputText/ProgressBar/Separator/SameLine/CollapsingHeader/TreeNode/Child 滚动） | 1 | 1-2 周 |
-| **3** | 主题系统（Dark/Light/Classic + PushStyleColor/Var）+ AdvancedUI demo | 2 | 1 周 |
+| **1** | System.UI 基础框架 + GDI 轮询后端 + BasicUI 最小 demo（里程碑：窗口/双缓冲/Begin-End/Text/Button/点击动作）—— ✅ 已完成（§13） | 0a/0b | 1-2 周 |
+| **2** | 完整控件集（Checkbox/Slider/InputText/ProgressBar/Separator/SameLine/CollapsingHeader/TreeNode/Child 滚动）—— ✅ 已完成（§14） | 1 | 1-2 周 |
+| **3** | 主题系统（Dark/Light/Classic + PushStyleColor/Var）+ AdvancedUI demo—— 主题 Dark/Light 与 AdvancedUI 已随阶段 2 完成（§14）；PushStyleColor/Var/Classic 待补 | 2 | 1 周 |
 | **4** | Native 后端适配（Win32NativeImports + SliderInt + 手动 UTF-16）+ NativeUI demo | 0b + 3 | 3-5 天 |
 | **5** | 声明式语法糖（UIView/VStack/HStack/Body() 约定/getter-setter lambda 双向绑定） | 3 | 1-2 周 |
 | **6** | Linux 跨平台（ELF 输出后：SDL2/OpenGL 后端） | 编译器 ELF | 远期 |
@@ -431,3 +431,26 @@ function Main(): i32
 - 仅 IL 后端（`net48`）；Native 后端为阶段 4。
 - 控件为最小集（Text/Button/Checkbox/SliderFloat/ProgressBar/Separator/SameLine）；完整控件集/主题切换/声明式语法糖属阶段 2/3/5。
 - 输入仅鼠标位置/按键/三键；键盘字符流/滚动/窗口缩放未接。
+
+---
+
+## 14. 实施记录（阶段 2，2026-09-13）
+
+**目标**：完整控件集 + 子区域滚动 + 键盘输入 + 综合示例。
+
+**已完成（三个独立提交）**：
+
+1. **2a 控件扩充** — `ImGui` 增 `Indent/Unindent`（`_indent` + `ItemX/ItemY` 辅助）、`Spacing`、`Dummy`、`TextColored`、`SliderInt`、`CollapsingHeader`（状态持久）、`TreeNode/TreePop`（展开自动缩进）；抽出 `Clicked/Fraction/DrawTrack` 复用。`UiCoreTests.ImGui_Widgets_Evaluator`。
+2. **2b InputText + 键盘** — `ImGuiIO` 增字符队列（`AddInputCharacter/CharAt/CharCount/ClearChars`）；`ImGui.InputText`：点击聚焦、消费本帧字符、退格、`maxLen` 限制、聚焦高亮；内部扁平 `char[]` 缓冲经 `System.Syscall.StringSyscall.StringFromChars` 构造显示串。`Win32Window.Pump`：`MSG` 缓冲扩至 48 字节、`TranslateMessage`、`WM_CHAR → io`。`UiCoreTests.ImGui_InputText_Evaluator`。
+3. **2c Child 滚动 + 裁剪** — `ImGuiDrawList` 增 `SetClipRect/ClearClip`（`AddRectFilled` 轴对齐裁剪、`AddText` 越界剔除）；`ImGui.BeginChild/EndChild`（子窗口独立游标/裁剪、滚轮滚动、滚动量经 storage 持久、`Render` 清零滚轮）；暴露 `Storage`。`Win32Window.Pump`：`WM_MOUSEWHEEL(0x020A) → io.MouseWheel`（wParam 高字）。`UiCoreTests.ImGui_ChildScrollClip_Evaluator`。
+
+**2d 综合示例** — `samples/Samples/UI/AdvancedUI/`（`AdvancedUI.coproj`/`main.co`/`build.cmd`）：左右双 Child 面板布局（导航树 + 内容区）、运行期深/浅主题切换（`Style.MakeDark/MakeLight`）、计数器 + 进度条 + 滑块 + InputText + 12 行可滚动列表。与 BasicUI 一样先建 System.UI 再建应用。
+
+**（阶段 2 期间未新增编译器修复——阶段 1 前置修复已足够。）**
+
+**已知限制（阶段 2 后）**：
+- 文本宽度仍为 8px/字符近似；无字库度量/换行。
+- 裁剪为整图元轴对齐裁剪（矩形精确；文本按行 y 越界剔除，非逐像素）。
+- 滚轮仅在 Child 内生效一次/帧（`Render` 清零）；无窗口缩放、无 `PushStyleColor/Var`、无 `ID栈(PushID/PopID)`。
+- 无多窗口浮动/停靠；`Begin` 仅单根窗口。
+

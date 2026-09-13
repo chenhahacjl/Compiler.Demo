@@ -15,7 +15,7 @@
 | [互操作手册](互操作手册.md) | native DLL / .NET DLL / `.coa` 三类互操作 | ✅ |
 | [项目格式规范](项目格式规范.md) | `.coproj` / `.cosln` / `.coa` / 增量缓存 | ✅ |
 | [标准库API参考](标准库API参考.md) | System.Core / System.Collections 现行成员清单 | ✅ |
-| [UI库手册](UI库手册.md) | System.UI 立即模式 UI 库（阶段 1，Win32 GDI 轮询后端） | 🔄 阶段 1 |
+| [UI库手册](UI库手册.md) | System.UI 立即模式 UI 库（阶段 2，完整控件集 + 键盘/滚轮 + Child 滚动） | ✅ 阶段 2 |
 | [ARCHITECTURE](ARCHITECTURE.md) | 架构总览 + 演进蓝图（服务与设计稿） | ✅ |
 | [文档格式规范](文档格式规范.md) | 本仓库 .md 写作约定 | ✅ |
 

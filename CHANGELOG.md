@@ -8,6 +8,14 @@
 
 ## 未发布（2026-09-13）
 
+### 6e-M25 阶段 2：System.UI 完整控件集 + 键盘/滚轮输入 + Child 滚动（2026-09-13）
+- **控件**：`ImGui` 增 `Indent/Unindent`、`Spacing`、`Dummy`、`TextColored`、`SliderInt`、`CollapsingHeader`、`TreeNode/TreePop`，抽出 `Clicked/Fraction/DrawTrack` 复用。
+- **文本输入**：`ImGuiIO` 字符队列（`AddInputCharacter/CharAt/CharCount/ClearChars`）+ `ImGui.InputText`（点击聚焦/退格/`maxLen`/聚焦高亮，内部扁平 `char[]` 经 `StringSyscall.StringFromChars`）；`Win32Window.Pump` 接 `WM_CHAR`（`TranslateMessage`，`MSG` 缓冲扩至 48 字节）。
+- **子区域与滚动**：`ImGuiDrawList.SetClipRect/ClearClip`（轴对齐裁剪，矩形精确/文本按行剔除）；`ImGui.BeginChild/EndChild`（独立游标/裁剪 + 滚轮滚动，滚动量经 storage 持久）；`Win32Window.Pump` 接 `WM_MOUSEWHEEL` → `io.MouseWheel`。
+- **示例**：新增 `samples/Samples/UI/AdvancedUI`（双 `BeginChild` 面板 + 导航树/折叠 + 计数/进度/滑块/输入 + 可滚动列表 + 运行期深/浅主题切换）。
+- 测试 +3（`ImGui_Widgets_Evaluator` / `ImGui_InputText_Evaluator` / `ImGui_ChildScrollClip_Evaluator`）；全量 **53483** 通过 / 1 跳过。
+- 文档：`docs/UI库手册.md` 升为阶段 2（组件/限制/综合示例）；规划 §8 状态行、§14 实施记录。
+
 ### 6e-M25 阶段 1：System.UI（立即模式 UI 库 + Win32 GDI 轮询后端 + BasicUI，2026-09-13）
 - **新库**：`src/Cocoa.UI/`（`System.UI.coa`，方案 B 独立库，不进 libs/）。核心：`ImTypes`(ImVec2/ImVec4 struct)、`ImGuiID`(FNV-1a)、`ImGuiStorage`(开放寻址 i32→i32/bool/f32)、`ImGuiStyle`(ABGR 打包 + Dark/Light)、`ImGuiIO`、`ImGuiWindow`+`ImGuiLayout`、`ImGuiDrawList`(顶点/索引/文本命令)、`ImGui` 门面（Begin/End/Text/Button/Checkbox/SliderFloat/ProgressBar/Separator/SameLine）。
 - **Win32 后端**：`Backends/Win32Imports`（user32/kernel32/gdi32 import，句柄 nint）+ `Win32Window`（内建 STATIC 类建窗 + PeekMessage/GetCursorPos/GetAsyncKeyState 轮询 + ESC 退出）+ `Win32GDIBackend`（memDC 双缓冲 + DrawList→Polygon/TextOutW + BitBlt）。
