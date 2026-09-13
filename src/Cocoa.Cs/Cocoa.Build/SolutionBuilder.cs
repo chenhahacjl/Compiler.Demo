@@ -156,8 +156,8 @@ namespace Cocoa.Build
                     continue;
                 }
 
-                var codOutputPath = GetCodOutputPath(projects[j]);
-                if (codOutputPath == null)
+                var outputPath = GetReferenceableOutputPath(projects[j]);
+                if (outputPath == null)
                 {
                     continue;
                 }
@@ -168,7 +168,7 @@ namespace Cocoa.Build
                         ? reference
                         : Path.GetFullPath(Path.Combine(project.Directory, reference));
 
-                    if (string.Equals(path, codOutputPath, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(path, outputPath, StringComparison.OrdinalIgnoreCase))
                     {
                         dependencies.Add(j);
                         break;
@@ -179,9 +179,10 @@ namespace Cocoa.Build
             return dependencies.ToImmutableArray();
         }
 
-        private static string? GetCodOutputPath(CocoaProjectFile project)
+        /// <summary>可被其它项目引用的产物路径：类库（dll）与 Cocoa 程序集（coa），不含可执行。</summary>
+        private static string? GetReferenceableOutputPath(CocoaProjectFile project)
         {
-            if (project.Output != ProjectOutputFormat.Cod)
+            if (project.Output is not (ProjectOutputFormat.Cod or ProjectOutputFormat.Dll))
             {
                 return null;
             }
