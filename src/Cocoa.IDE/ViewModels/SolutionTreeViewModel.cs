@@ -333,6 +333,43 @@ public partial class SolutionTreeViewModel : ObservableObject
         return true;
     }
 
+    /// <summary>把 .coproj 作为项目引用：解析其产物（dll/coa）写入引用；必要时把被引用项目加入解决方案以保证构建顺序。</summary>
+    public bool AddProjectReference(TreeNodeViewModel node, string referencedProjectPath, out string? error)
+    {
+        error = null;
+        CocoaProjectFile reference;
+        try
+        {
+            reference = CocoaProjectFile.Load(referencedProjectPath);
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+
+        if (reference.Output == ProjectOutputFormat.Exe)
+        {
+            error = $"'{reference.Name}' 是可执行项目，不能作为引用；请引用类库/程序集项目";
+            return false;
+        }
+
+        var output = Path.Combine(reference.GetOutputDirectory(), reference.GetDefaultOutputFileName());
+        if (!AddReferenceToProject(node, output))
+        {
+            error = "写入引用失败";
+            return false;
+        }
+
+        if (CurrentSolution != null &&
+            !Projects.Any(p => string.Equals(p.FilePath, reference.FilePath, StringComparison.OrdinalIgnoreCase)))
+        {
+            AddProjectToSolution(reference.FilePath, out _);
+        }
+
+        return true;
+    }
+
     /// <summary>从节点所属项目移除该引用，成功后刷新树。</summary>
     public bool RemoveReferenceFromProject(TreeNodeViewModel node)
     {

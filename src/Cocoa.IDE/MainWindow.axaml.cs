@@ -598,15 +598,29 @@ public partial class MainWindow : Window
             AllowMultiple = true,
             FileTypeFilter = new[]
             {
-                new FilePickerFileType("引用程序集") { Patterns = new[] { "*.coa", "*.dll" } },
+                new FilePickerFileType("引用（程序集/项目）") { Patterns = new[] { "*.coa", "*.dll", "*.coproj" } },
+                new FilePickerFileType("Cocoa 程序集") { Patterns = new[] { "*.coa" } },
+                new FilePickerFileType("程序集") { Patterns = new[] { "*.dll" } },
+                new FilePickerFileType("Cocoa 项目") { Patterns = new[] { "*.coproj" } },
                 new FilePickerFileType("所有文件") { Patterns = new[] { "*.*" } },
             },
         });
 
         foreach (var file in files)
         {
-            if (file.TryGetLocalPath() is { } path)
+            if (file.TryGetLocalPath() is not { } path) continue;
+
+            if (path.EndsWith(".coproj", StringComparison.OrdinalIgnoreCase))
+            {
+                if (ViewModel.SolutionTree.AddProjectReference(node, path, out var error))
+                    ViewModel.Output.AppendLine($"已添加项目引用：{Path.GetFileNameWithoutExtension(path)}");
+                else
+                    ViewModel.Output.AppendLine($"error: 添加项目引用失败：{error}");
+            }
+            else
+            {
                 ViewModel.SolutionTree.AddReferenceToProject(node, path);
+            }
         }
     }
 
