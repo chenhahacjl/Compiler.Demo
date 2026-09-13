@@ -1,7 +1,10 @@
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
+using Avalonia.VisualTree;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.IDE.Controls;
 using Cocoa.IDE.Services;
@@ -225,16 +228,36 @@ public partial class MainWindow : Window
 
     private TreeNodeViewModel? _ctxNode;
 
+    /// <summary>右键命中树节点：记录该节点（整行任意位置均可）；空白处清空。</summary>
+    private void OnSolutionTreeContextRequested(object? sender, ContextRequestedEventArgs e)
+    {
+        _ctxNode = FindTreeViewItem(e.Source)?.DataContext as TreeNodeViewModel;
+        if (_ctxNode != null)
+            SolutionTree.SelectedItem = _ctxNode;
+    }
+
+    private static TreeViewItem? FindTreeViewItem(object? source)
+    {
+        var current = source as Visual;
+        while (current != null)
+        {
+            if (current is TreeViewItem item) return item;
+            current = current.GetVisualParent();
+        }
+        return null;
+    }
+
     /// <summary>打开右键菜单时按节点类型动态构建条目；分隔符只插入在可见分组之间。</summary>
     private void OnNodeContextMenuOpening(object? sender, CancelEventArgs e)
     {
         if (sender is not ContextMenu menu) return;
 
-        _ctxNode = menu.DataContext as TreeNodeViewModel
-                   ?? (menu.Parent as Control)?.DataContext as TreeNodeViewModel
-                   ?? SolutionTree.SelectedItem as TreeNodeViewModel;
         var node = _ctxNode;
-        if (node == null) return;
+        if (node == null)
+        {
+            e.Cancel = true; // 空白处不弹菜单
+            return;
+        }
 
         menu.Items.Clear();
         var groups = new List<List<Control>>();

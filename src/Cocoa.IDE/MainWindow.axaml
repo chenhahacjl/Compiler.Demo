@@ -166,22 +166,25 @@
                                   Background="Transparent" Foreground="#CCCCCC"
                                   BorderThickness="0" Padding="4"
                                   SelectionChanged="OnTreeSelectionChanged"
+                                  ContextRequested="OnSolutionTreeContextRequested"
                                   DoubleTapped="OnTreeDoubleTapped">
                             <TreeView.Styles>
                                 <Style Selector="TreeViewItem">
                                     <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                                 </Style>
                             </TreeView.Styles>
+                            <!-- 菜单挂在树上：右键整行任意位置都可弹出（Opening 时按命中节点构建） -->
+                            <TreeView.ContextMenu>
+                                <ContextMenu Opening="OnNodeContextMenuOpening" />
+                            </TreeView.ContextMenu>
                             <TreeView.ItemTemplate>
                                 <TreeDataTemplate ItemsSource="{Binding Children}">
-                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <StackPanel Orientation="Horizontal" Spacing="4"
+                                                HorizontalAlignment="Stretch"
+                                                Background="Transparent">
                                         <PathIcon Data="{Binding Icon}" Foreground="{Binding IconBrush}"
                                                   Width="14" Height="14" VerticalAlignment="Center" />
                                         <TextBlock Text="{Binding Caption}" FontSize="13" VerticalAlignment="Center" />
-                                        <StackPanel.ContextMenu>
-                                            <!-- 菜单项在 Opening 时按节点类型动态构建，分隔符只在可见分组之间出现 -->
-                                            <ContextMenu DataContext="{Binding}" Opening="OnNodeContextMenuOpening" />
-                                        </StackPanel.ContextMenu>
                                     </StackPanel>
                                 </TreeDataTemplate>
                             </TreeView.ItemTemplate>
