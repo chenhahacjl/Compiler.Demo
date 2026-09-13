@@ -1,15 +1,17 @@
-// Cocoa mini-Lexer —— 自举翻译第 ⑦ 步开工（mini-Lexer 里程碑，M7-a0 起为阶段 7 增量一）：
-// 紧凑词法器覆盖核心 token 面（对齐自举缺口分析 §6 验收口径的子集）：
-//   标识符/关键字、数字（十进制 + 0x 十六进制 + 含指数 double）、
-//   字符串（含 \ 转义）、字符字面量、注释（// 与 /* */）、
-//   运算符/标点（最长匹配，含两字符算子）、EOF，并携带行号/列号。
+// Cocoa mini-Lexer —— 自举翻译第 ⑦ 步开工（mini-Lexer 里程碑，阶段 7 增量一）：
+// 词法器覆盖核心 token 面（对齐自举缺口分析 §6 验收口径，M7-a1 起对齐 LexerBase/CocoaSyntaxFacts）：
+//   标识符/关键字（@verbatim 标识符）、数字（十进制/0x/0b/含指数 double/_ 分隔/后缀 u·ul·l·f）、
+//   字符串（转义 + verbatim @"…" + raw """…""" + 插值 $"…"/$@"…"/@$"…"）、字符字面量、
+//   注释（// 与 /* */，/// 视作 // 记入 trivia 差异清单）、运算符/标点（三/两/单字符最长匹配）、
+//   错误 token（非法字符/未终止字符串·字符）、EOF，并携带行号/列号。
 // M7-a0：输出从格式化字符串改为结构化 Token（Kind/Text/Line/Column/Offset）+ Describe() 可读输出。
+// M7-a1：token 面补全（对齐 LexerBase.Token/Strings/CharsNumbers）；kind 为：Keyword/Identifier/Number/
+//   String/VerbatimString/RawString/InterpolatedString/Char/Symbol/Error/EOF。
 // 依赖：string.substring(start, length)（特殊成员，跨三后端）、Char.* 成员面、System.Console。
 
 namespace MiniLexer
 {
-    /// <summary>结构化 token：kind 为上档大写名（Keyword/Identifier/Number/String/Char/Symbol/EOF），
-    /// Describe() 输出 `KIND text line:col` 保持可读且稳定。</summary>
+    /// <summary>结构化 token：kind 为上档大写名，Describe() 输出 `KIND text line:col` 保持可读且稳定。</summary>
     class Token
     {
         private field _kind: string
@@ -158,6 +160,11 @@ namespace MiniLexer
 
             if c == '"'
             {
+                if Peek(1) == '"' && Peek(2) == '"'
+                {
+                    return ReadRawString(startLine, startCol)
+                }
+
                 return ReadString(startLine, startCol)
             }
 
@@ -166,7 +173,70 @@ namespace MiniLexer
                 return ReadChar(startLine, startCol)
             }
 
+            if c == '@'
+            {
+                return ReadAt(startLine, startCol)
+            }
+
+            if c == '$'
+            {
+                if Peek(1) == '"'
+                {
+                    return ReadInterpolated(startLine, startCol, false)
+                }
+
+                if Peek(1) == '@' && Peek(2) == '"'
+                {
+                    return ReadInterpolated(startLine, startCol, true)
+                }
+
+                let badStart = _pos
+                Advance()
+                let badText = _src.substring(badStart, _pos - badStart)
+                return Token.Create("Error", badText, startLine, startCol, badStart)
+            }
+
             return ReadSymbol(startLine, startCol)
+        }
+
+        /// <summary>@ 前缀：@"…" verbatim / @$"…" verbatim 插值 / @ident verbatim 标识符（恒 Identifier）/ 非法。</summary>
+        private function ReadAt(startLine: i32, startCol: i32): Token
+        {
+            let tokenStart = _pos
+            if Peek(1) == '"'
+            {
+                return ReadVerbatimString(startLine, startCol)
+            }
+
+            if Peek(1) == '$' && Peek(2) == '"'
+            {
+                return ReadInterpolated(startLine, startCol, true)
+            }
+
+            if IsIdentStart(Peek(1))
+            {
+                Advance()
+                Advance()
+                while !AtEnd()
+                {
+                    let c = Current()
+                    if IsIdentPart(c)
+                    {
+                        Advance()
+                    }
+                    else
+                    {
+                        break
+                    }
+                }
+
+                let text = _src.substring(tokenStart, _pos - tokenStart)
+                return Token.Create("Identifier", text, startLine, startCol, tokenStart)
+            }
+
+            Advance()
+            let badText = _src.substring(tokenStart, _pos - tokenStart)
+            return Token.Create("Error", badText, startLine, startCol, tokenStart)
         }
 
         private function SkipTrivia(): void
@@ -245,6 +315,22 @@ namespace MiniLexer
             return false
         }
 
+        /// <summary>字母或数字（不含下划线）——数字后缀边界判定对齐 C# char.IsLetterOrDigit。</summary>
+        private function IsAlphaNum(c: char): bool
+        {
+            if Char.IsLetter(c)
+            {
+                return true
+            }
+
+            if Char.IsDigit(c)
+            {
+                return true
+            }
+
+            return false
+        }
+
         /// <summary>十六进制字符判断（内联实现：Char.IsHexDigit 非 .NET 公开成员，避免 IL 重定向缺口）。</summary>
         private function IsHexChar(c: char): bool
         {
@@ -265,6 +351,11 @@ namespace MiniLexer
             }
 
             return false
+        }
+
+        private function IsBinaryChar(c: char): bool
+        {
+            return c == '0' || c == '1'
         }
 
         private function ReadIdent(startLine: i32, startCol: i32): Token
@@ -296,15 +387,37 @@ namespace MiniLexer
         private function ReadNumber(startLine: i32, startCol: i32): Token
         {
             let start = _pos
-            let first = Current()
+            var isHex = false
+            var isBin = false
+            var hasExponent = false
+            var first = Current()
             if first == '0' && (Peek(1) == 'x' || Peek(1) == 'X')
             {
+                isHex = true
                 Advance()
                 Advance()
                 while !AtEnd()
                 {
                     let c = Current()
-                    if IsHexChar(c)
+                    if IsHexChar(c) || c == '_'
+                    {
+                        Advance()
+                    }
+                    else
+                    {
+                        break
+                    }
+                }
+            }
+            else if first == '0' && (Peek(1) == 'b' || Peek(1) == 'B')
+            {
+                isBin = true
+                Advance()
+                Advance()
+                while !AtEnd()
+                {
+                    let c = Current()
+                    if IsBinaryChar(c) || c == '_'
                     {
                         Advance()
                     }
@@ -319,7 +432,7 @@ namespace MiniLexer
                 while !AtEnd()
                 {
                     let c = Current()
-                    if Char.IsDigit(c)
+                    if Char.IsDigit(c) || c == '_'
                     {
                         Advance()
                     }
@@ -331,8 +444,7 @@ namespace MiniLexer
 
                 if !AtEnd()
                 {
-                    let dot = Current() == '.'
-                    if dot
+                    if Current() == '.' && Char.IsDigit(Peek(1))
                     {
                         Advance()
                         while !AtEnd()
@@ -353,26 +465,16 @@ namespace MiniLexer
                 if !AtEnd()
                 {
                     let c = Current()
-                    let isE = c == 'e' || c == 'E'
-                    if isE
+                    if c == 'e' || c == 'E'
                     {
-                        let p1 = Peek(1)
-                        var expStart = Char.IsDigit(p1)
-                        if p1 == '+' || p1 == '-'
-                        {
-                            expStart = Char.IsDigit(Peek(2))
-                        }
-
-                        if expStart
+                        let hasSign = Peek(1) == '+' || Peek(1) == '-'
+                        let exponentDigit = hasSign ? Peek(2) : Peek(1)
+                        if Char.IsDigit(exponentDigit)
                         {
                             Advance()
-                            if !AtEnd()
+                            if hasSign
                             {
-                                let s = Current()
-                                if s == '+' || s == '-'
-                                {
-                                    Advance()
-                                }
+                                Advance()
                             }
 
                             while !AtEnd()
@@ -387,8 +489,47 @@ namespace MiniLexer
                                     break
                                 }
                             }
+
+                            hasExponent = true
                         }
                     }
+                }
+            }
+
+            // 类型后缀（6e-M21）：`42L`/`0xFFL`、`1u`/`1U`、`1ul`/`1UL`/`1lu`/`1LU`、`1.0f`/`1e5f`。
+            // 仅当后缀后非字母数字时生效，避免吞掉 let / long / ulong / using 等关键字/标识符。
+            if !AtEnd()
+            {
+                let s = Current()
+                let p1 = Peek(1)
+                let p2 = Peek(2)
+                if s == 'u' || s == 'U'
+                {
+                    if (p1 == 'l' || p1 == 'L') && !IsAlphaNum(p2)
+                    {
+                        Advance()
+                        Advance()
+                    }
+                    else if !IsAlphaNum(p1)
+                    {
+                        Advance()
+                    }
+                }
+                else if s == 'l' || s == 'L'
+                {
+                    if (p1 == 'u' || p1 == 'U') && !IsAlphaNum(p2)
+                    {
+                        Advance()
+                        Advance()
+                    }
+                    else if !IsAlphaNum(p1)
+                    {
+                        Advance()
+                    }
+                }
+                else if (s == 'f' || s == 'F') && !IsAlphaNum(p1)
+                {
+                    Advance()
                 }
             }
 
@@ -396,26 +537,35 @@ namespace MiniLexer
             return Token.Create("Number", text, startLine, startCol, start)
         }
 
+        /// <summary>普通字符串 "…"：\ 转义 + "" 转义引号；未终止（换行/结尾）停止但不消费。</summary>
         private function ReadString(startLine: i32, startCol: i32): Token
         {
             let start = _pos
             Advance()
-            while !AtEnd()
+            var done = false
+            while !done && !AtEnd()
             {
                 let c = Current()
                 if c == '"'
                 {
-                    Advance()
-                    break
-                }
-
-                if c == '\\'
-                {
-                    Advance()
-                    if !AtEnd()
+                    if Peek(1) == '"'
                     {
                         Advance()
+                        Advance()
                     }
+                    else
+                    {
+                        Advance()
+                        done = true
+                    }
+                }
+                else if c == '\\'
+                {
+                    ReadEscape()
+                }
+                else if c == '\r' || c == '\n'
+                {
+                    done = true
                 }
                 else
                 {
@@ -427,19 +577,27 @@ namespace MiniLexer
             return Token.Create("String", text, startLine, startCol, start)
         }
 
-        private function ReadChar(startLine: i32, startCol: i32): Token
+        /// <summary>verbatim 字符串 @"…"：不处理 \ 转义，"" 转义引号；允许多行；未终止仅结尾。</summary>
+        private function ReadVerbatimString(startLine: i32, startCol: i32): Token
         {
             let start = _pos
             Advance()
-            if !AtEnd()
+            Advance()
+            var done = false
+            while !done && !AtEnd()
             {
                 let c = Current()
-                if c == '\\'
+                if c == '"'
                 {
-                    Advance()
-                    if !AtEnd()
+                    if Peek(1) == '"'
                     {
                         Advance()
+                        Advance()
+                    }
+                    else
+                    {
+                        Advance()
+                        done = true
                     }
                 }
                 else
@@ -448,22 +606,421 @@ namespace MiniLexer
                 }
             }
 
-            if !AtEnd()
+            let text = _src.substring(start, _pos - start)
+            return Token.Create("VerbatimString", text, startLine, startCol, start)
+        }
+
+        /// <summary>raw 字符串 """…"""：定界符 = 起始最大引号串 N（≥3），同长 N 引号串闭合；不处理转义；未终止仅结尾。</summary>
+        private function ReadRawString(startLine: i32, startCol: i32): Token
+        {
+            let start = _pos
+            var delimiter = 0
+            while !AtEnd()
             {
                 let c = Current()
-                if c == '\''
+                if c == '"'
+                {
+                    delimiter = delimiter + 1
+                    Advance()
+                }
+                else
+                {
+                    break
+                }
+            }
+
+            var done = false
+            while !done && !AtEnd()
+            {
+                if Current() == '"'
+                {
+                    let runStart = _pos
+                    var run = 0
+                    while !AtEnd()
+                    {
+                        let c = Current()
+                        if c == '"'
+                        {
+                            run = run + 1
+                            Advance()
+                        }
+                        else
+                        {
+                            break
+                        }
+                    }
+
+                    if run >= delimiter
+                    {
+                        _pos = runStart + delimiter
+                        done = true
+                    }
+                }
+                else
                 {
                     Advance()
                 }
             }
 
             let text = _src.substring(start, _pos - start)
-            return Token.Create("Char", text, startLine, startCol, start)
+            return Token.Create("RawString", text, startLine, startCol, start)
         }
 
+        /// <summary>插值字符串 $"…" / $@"…" / @$"…"：{{/}} 转义；洞 {…} 按花括号深度 + 洞内字符串/字符/行注释跳过扫描。</summary>
+        private function ReadInterpolated(startLine: i32, startCol: i32, verbatim: bool): Token
+        {
+            let start = _pos
+            Advance()
+            if !AtEnd()
+            {
+                let c = Current()
+                if c == '@' || c == '$'
+                {
+                    Advance()
+                }
+            }
+
+            Advance()
+            var done = false
+            while !done && !AtEnd()
+            {
+                let c = Current()
+                if c == '"'
+                {
+                    if Peek(1) == '"'
+                    {
+                        Advance()
+                        Advance()
+                    }
+                    else
+                    {
+                        Advance()
+                        done = true
+                    }
+                }
+                else if c == '{'
+                {
+                    if Peek(1) == '{'
+                    {
+                        Advance()
+                        Advance()
+                    }
+                    else
+                    {
+                        Advance()
+                        var depth = 1
+                        while depth > 0 && !AtEnd()
+                        {
+                            let h = Current()
+                            if h == '{'
+                            {
+                                depth = depth + 1
+                                Advance()
+                            }
+                            else if h == '}'
+                            {
+                                depth = depth - 1
+                                Advance()
+                            }
+                            else if h == '"'
+                            {
+                                Advance()
+                                while !AtEnd()
+                                {
+                                    let d = Current()
+                                    if d == '"'
+                                    {
+                                        Advance()
+                                        if Current() != '"'
+                                        {
+                                            break
+                                        }
+                                    }
+                                    else
+                                    {
+                                        Advance()
+                                    }
+                                }
+                            }
+                            else if h == '\''
+                            {
+                                Advance()
+                                while !AtEnd()
+                                {
+                                    let d = Current()
+                                    if d == '\\'
+                                    {
+                                        Advance()
+                                        if !AtEnd()
+                                        {
+                                            Advance()
+                                        }
+                                    }
+                                    else if d == '\''
+                                    {
+                                        Advance()
+                                        break
+                                    }
+                                    else
+                                    {
+                                        Advance()
+                                    }
+                                }
+                            }
+                            else if h == '/' && Peek(1) == '/'
+                            {
+                                while !AtEnd()
+                                {
+                                    let d = Current()
+                                    if d == '\r' || d == '\n'
+                                    {
+                                        break
+                                    }
+
+                                    Advance()
+                                }
+                            }
+                            else if !verbatim && (h == '\r' || h == '\n')
+                            {
+                                done = true
+                                break
+                            }
+                            else
+                            {
+                                Advance()
+                            }
+                        }
+                    }
+                }
+                else if c == '}'
+                {
+                    if Peek(1) == '}'
+                    {
+                        Advance()
+                        Advance()
+                    }
+                    else
+                    {
+                        Advance()
+                    }
+                }
+                else if c == '\\'
+                {
+                    if verbatim
+                    {
+                        Advance()
+                    }
+                    else
+                    {
+                        ReadEscape()
+                    }
+                }
+                else if !verbatim && (c == '\r' || c == '\n')
+                {
+                    done = true
+                }
+                else
+                {
+                    Advance()
+                }
+            }
+
+            let text = _src.substring(start, _pos - start)
+            return Token.Create("InterpolatedString", text, startLine, startCol, start)
+        }
+
+        /// <summary>字符串内转义（span 精确）：n t r 0 \\ ' " 为 2 字符；u 固定 4 位；x 1~4 位；U 固定 8 位；非法则只消费 \。</summary>
+        private function ReadEscape(): void
+        {
+            Advance()
+            if AtEnd()
+            {
+                return
+            }
+
+            let c = Current()
+            if c == 'n' || c == 't' || c == 'r' || c == '0' || c == '\\' || c == '\'' || c == '"'
+            {
+                Advance()
+                return
+            }
+
+            if c == 'u'
+            {
+                Advance()
+                if IsHexChar(Current()) && IsHexChar(Peek(1)) && IsHexChar(Peek(2)) && IsHexChar(Peek(3))
+                {
+                    Advance()
+                    Advance()
+                    Advance()
+                    Advance()
+                }
+
+                return
+            }
+
+            if c == 'x'
+            {
+                Advance()
+                var digits = 0
+                while digits < 4 && !AtEnd() && IsHexChar(Current())
+                {
+                    Advance()
+                    digits = digits + 1
+                }
+
+                return
+            }
+
+            if c == 'U'
+            {
+                Advance()
+                if IsHexChar(Current()) && IsHexChar(Peek(1)) && IsHexChar(Peek(2)) && IsHexChar(Peek(3)) &&
+                    IsHexChar(Peek(4)) && IsHexChar(Peek(5)) && IsHexChar(Peek(6)) && IsHexChar(Peek(7))
+                {
+                    Advance()
+                    Advance()
+                    Advance()
+                    Advance()
+                    Advance()
+                    Advance()
+                    Advance()
+                    Advance()
+                }
+
+                return
+            }
+
+            Advance()
+        }
+
+        /// <summary>字符字面量 '…'：转义同字符串但非法转义报错；未闭合/空 → Error。</summary>
+        private function ReadChar(startLine: i32, startCol: i32): Token
+        {
+            let start = _pos
+            Advance()
+            var hasError = false
+            if !AtEnd()
+            {
+                let c = Current()
+                if c == '\''
+                {
+                    hasError = true
+                }
+                else if c == '\\'
+                {
+                    if ReadCharEscape()
+                    {
+                        hasError = true
+                    }
+                }
+                else if c == '\r' || c == '\n'
+                {
+                    hasError = true
+                }
+                else
+                {
+                    Advance()
+                }
+            }
+
+            if AtEnd() || hasError || Current() != '\''
+            {
+                let text = _src.substring(start, _pos - start)
+                return Token.Create("Error", text, startLine, startCol, start)
+            }
+
+            Advance()
+            let okText = _src.substring(start, _pos - start)
+            return Token.Create("Char", okText, startLine, startCol, start)
+        }
+
+        /// <summary>字符内转义：返回是否有错。u 固定 4 位；x 1~4 位；U 固定 8 位；非法不消费内容字符。</summary>
+        private function ReadCharEscape(): bool
+        {
+            Advance()
+            if AtEnd()
+            {
+                return true
+            }
+
+            let c = Current()
+            if c == 'n' || c == 't' || c == 'r' || c == '0' || c == '\\' || c == '\'' || c == '"'
+            {
+                Advance()
+                return false
+            }
+
+            if c == 'u'
+            {
+                Advance()
+                if IsHexChar(Current()) && IsHexChar(Peek(1)) && IsHexChar(Peek(2)) && IsHexChar(Peek(3))
+                {
+                    Advance()
+                    Advance()
+                    Advance()
+                    Advance()
+                    return false
+                }
+
+                return true
+            }
+
+            if c == 'x'
+            {
+                Advance()
+                var digits = 0
+                while digits < 4 && !AtEnd() && IsHexChar(Current())
+                {
+                    Advance()
+                    digits = digits + 1
+                }
+
+                if digits == 0
+                {
+                    return true
+                }
+
+                return false
+            }
+
+            if c == 'U'
+            {
+                Advance()
+                if IsHexChar(Current()) && IsHexChar(Peek(1)) && IsHexChar(Peek(2)) && IsHexChar(Peek(3)) &&
+                    IsHexChar(Peek(4)) && IsHexChar(Peek(5)) && IsHexChar(Peek(6)) && IsHexChar(Peek(7))
+                {
+                    Advance()
+                    Advance()
+                    Advance()
+                    Advance()
+                    Advance()
+                    Advance()
+                    Advance()
+                    Advance()
+                    return false
+                }
+
+                return true
+            }
+
+            return true
+        }
+
+        /// <summary>运算符/标点（三/两/单字符最长匹配）；无法识别 → Error token。</summary>
         private function ReadSymbol(startLine: i32, startCol: i32): Token
         {
             let start = _pos
+            let three = ThreeCharSymbol()
+            if three.Length > 0
+            {
+                Advance()
+                Advance()
+                Advance()
+                let text = _src.substring(start, _pos - start)
+                return Token.Create("Symbol", text, startLine, startCol, start)
+            }
+
             let two = TwoCharSymbol()
             if two.Length > 0
             {
@@ -473,15 +1030,46 @@ namespace MiniLexer
                 return Token.Create("Symbol", text, startLine, startCol, start)
             }
 
+            let one = OneCharSymbol()
+            if one.Length > 0
+            {
+                Advance()
+                let text = _src.substring(start, _pos - start)
+                return Token.Create("Symbol", text, startLine, startCol, start)
+            }
+
             Advance()
-            let one = _src.substring(start, _pos - start)
-            return Token.Create("Symbol", one, startLine, startCol, start)
+            let badText = _src.substring(start, _pos - start)
+            return Token.Create("Error", badText, startLine, startCol, start)
+        }
+
+        private function ThreeCharSymbol(): string
+        {
+            let a = Current()
+            let b = Peek(1)
+            let cc = Peek(2)
+            if a == '<' && b == '<' && cc == '=' { return "<<=" }
+            if a == '>' && b == '>' && cc == '=' { return ">>=" }
+            if a == '?' && b == '?' && cc == '=' { return "??=" }
+            return ""
         }
 
         private function TwoCharSymbol(): string
         {
             let a = Current()
             let b = Peek(1)
+            if a == '-' && b == '>' { return "->" }
+            if a == '.' && b == '.' { return ".." }
+            if a == '+' && b == '+' { return "++" }
+            if a == '-' && b == '-' { return "--" }
+            if a == '+' && b == '=' { return "+=" }
+            if a == '-' && b == '=' { return "-=" }
+            if a == '*' && b == '=' { return "*=" }
+            if a == '/' && b == '=' { return "/=" }
+            if a == '%' && b == '=' { return "%=" }
+            if a == '^' && b == '=' { return "^=" }
+            if a == '&' && b == '=' { return "&=" }
+            if a == '|' && b == '=' { return "|=" }
             if a == '=' && b == '=' { return "==" }
             if a == '!' && b == '=' { return "!=" }
             if a == '<' && b == '=' { return "<=" }
@@ -490,62 +1078,120 @@ namespace MiniLexer
             if a == '|' && b == '|' { return "||" }
             if a == '<' && b == '<' { return "<<" }
             if a == '>' && b == '>' { return ">>" }
-            if a == '+' && b == '+' { return "++" }
-            if a == '-' && b == '-' { return "--" }
-            if a == '+' && b == '=' { return "+=" }
-            if a == '-' && b == '=' { return "-=" }
-            if a == '*' && b == '=' { return "*=" }
-            if a == '/' && b == '=' { return "/=" }
-            if a == '%' && b == '=' { return "%=" }
-            if a == ':' && b == ':' { return "::" }
             if a == '=' && b == '>' { return "=>" }
+            if a == '?' && b == '?' { return "??" }
+            if a == '?' && b == '.' { return "?." }
             return ""
         }
 
+        private function OneCharSymbol(): string
+        {
+            let c = Current()
+            if c == '+' { return "+" }
+            if c == '-' { return "-" }
+            if c == '*' { return "*" }
+            if c == '/' { return "/" }
+            if c == '(' { return "(" }
+            if c == ')' { return ")" }
+            if c == '[' { return "[" }
+            if c == ']' { return "]" }
+            if c == '{' { return "{" }
+            if c == '}' { return "}" }
+            if c == ':' { return ":" }
+            if c == ',' { return "," }
+            if c == '.' { return "." }
+            if c == ';' { return ";" }
+            if c == '~' { return "~" }
+            if c == '^' { return "^" }
+            if c == '&' { return "&" }
+            if c == '|' { return "|" }
+            if c == '=' { return "=" }
+            if c == '!' { return "!" }
+            if c == '<' { return "<" }
+            if c == '>' { return ">" }
+            if c == '%' { return "%" }
+            if c == '?' { return "?" }
+            return ""
+        }
+
+        /// <summary>关键字全集（对齐 CocoaSyntaxFacts.GetKeywordKind，2026-09-13 共 75 个）。</summary>
         private function IsKeyword(text: string): bool
         {
-            if text == "function" { return true }
-            if text == "class" { return true }
-            if text == "interface" { return true }
-            if text == "struct" { return true }
-            if text == "enum" { return true }
-            if text == "namespace" { return true }
-            if text == "using" { return true }
-            if text == "public" { return true }
-            if text == "private" { return true }
-            if text == "internal" { return true }
-            if text == "protected" { return true }
-            if text == "static" { return true }
-            if text == "var" { return true }
-            if text == "let" { return true }
-            if text == "const" { return true }
-            if text == "if" { return true }
+            if text == "abstract" { return true }
+            if text == "as" { return true }
+            if text == "base" { return true }
+            if text == "break" { return true }
+            if text == "case" { return true }
+            if text == "cdecl" { return true }
+            if text == "continue" { return true }
+            if text == "default" { return true }
             if text == "else" { return true }
-            if text == "while" { return true }
+            if text == "false" { return true }
             if text == "for" { return true }
             if text == "foreach" { return true }
+            if text == "get" { return true }
+            if text == "set" { return true }
+            if text == "property" { return true }
+            if text == "class" { return true }
+            if text == "struct" { return true }
+            if text == "event" { return true }
+            if text == "delegate" { return true }
+            if text == "const" { return true }
+            if text == "constructor" { return true }
+            if text == "function" { return true }
+            if text == "if" { return true }
+            if text == "import" { return true }
             if text == "in" { return true }
-            if text == "return" { return true }
-            if text == "break" { return true }
-            if text == "continue" { return true }
+            if text == "interface" { return true }
+            if text == "is" { return true }
+            if text == "internal" { return true }
             if text == "new" { return true }
-            if text == "this" { return true }
-            if text == "base" { return true }
-            if text == "true" { return true }
-            if text == "false" { return true }
             if text == "null" { return true }
+            if text == "nameof" { return true }
             if text == "out" { return true }
+            if text == "namespace" { return true }
+            if text == "override" { return true }
+            if text == "partial" { return true }
+            if text == "params" { return true }
+            if text == "protected" { return true }
+            if text == "readonly" { return true }
             if text == "ref" { return true }
+            if text == "sealed" { return true }
+            if text == "static" { return true }
+            if text == "step" { return true }
+            if text == "switch" { return true }
+            if text == "this" { return true }
+            if text == "using" { return true }
+            if text == "virtual" { return true }
+            if text == "when" { return true }
+            if text == "while" { return true }
+            if text == "let" { return true }
+            if text == "return" { return true }
+            if text == "stdcall" { return true }
             if text == "syscall" { return true }
+            if text == "to" { return true }
+            if text == "true" { return true }
+            if text == "var" { return true }
+            if text == "do" { return true }
+            if text == "enum" { return true }
+            if text == "extends" { return true }
+            if text == "extern" { return true }
+            if text == "public" { return true }
+            if text == "private" { return true }
+            if text == "where" { return true }
+            if text == "facade" { return true }
             if text == "throw" { return true }
             if text == "try" { return true }
             if text == "catch" { return true }
             if text == "finally" { return true }
-            if text == "is" { return true }
-            if text == "as" { return true }
-            if text == "delegate" { return true }
-            if text == "event" { return true }
-            if text == "where" { return true }
+            if text == "and" { return true }
+            if text == "or" { return true }
+            if text == "not" { return true }
+            if text == "lock" { return true }
+            if text == "checked" { return true }
+            if text == "unchecked" { return true }
+            if text == "yield" { return true }
+            if text == "field" { return true }
             return false
         }
     }
