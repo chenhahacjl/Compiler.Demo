@@ -315,7 +315,7 @@ WNDPROC 需要原生函数指针回调；Cocoa 双后端均无可靠路径（IL 
 | **2** | 完整控件集（Checkbox/Slider/InputText/ProgressBar/Separator/SameLine/CollapsingHeader/TreeNode/Child 滚动）—— ✅ 已完成（§14） | 1 | 1-2 周 |
 | **3** | 主题系统（Dark/Light/Classic + PushStyleColor/Var）+ AdvancedUI demo—— ✅ 已完成（§15） | 2 | 1 周 |
 | **4** | Native 后端适配（Win32NativeImports + SliderInt + 手动 UTF-16）+ NativeUI demo—— ✅ 已完成（§16；改以编译器自动编组替代 Win32NativeImports） | 0b + 3 | 3-5 天 |
-| **5** | 声明式语法糖（UIView/VStack/HStack/Body() 约定/getter-setter lambda 双向绑定） | 3 | 1-2 周 |
+| **5** | 声明式语法糖（UIView/VStack/HStack/Body() 约定/getter-setter lambda 双向绑定）—— ✅ 已完成（§17；UIView/Body + VStack/HStack/Group/Panel 组合子；双向绑定以 `gui.Storage` 承载） | 3 | 1-2 周 |
 | **6** | Linux 跨平台（ELF 输出后：SDL2/OpenGL 后端） | 编译器 ELF | 远期 |
 
 执行纪律沿用仓库惯例：每步独立提交 + 全量测试绿 + 文档回填（§10）。
@@ -497,6 +497,30 @@ function Main(): i32
 - extern 编组目前覆盖 `string` 与值类型数组；`string[]`/引用类型数组、结构体按值尚未编组。
 - native 与 IL 共用同一控件集（未做简化子集）；`Alpha` 仍未由后台应用。
 - 原生 exe 为无签名构建，部分杀软环境会拦截（本地测试目录运行正常）。
+
+---
+
+## 17. 实施记录（阶段 5，2026-09-13）
+
+**目标**：声明式语法糖（`UIView` + `Body()` 约定 + `VStack`/`HStack` 组合子）；顺带把控件实现拆为一控件一文件。
+
+**新增编译器前提（提交 A）**——阶段 5 用 lambda 在**库外**组合界面，暴露并修复三处编译器缺口：
+1. `.coa` 函数类型零参数反解：写侧零参写作 `fnty{;void}`，读侧误把空首段当类型解析 → 跳过空段（`CoaSerializer.Resolve.cs`）。
+2. `.coa` 方法虚/抽象/重写/密封位缺失 → 跨库派生 `override` 解析失败。`fn` 段新增 `virt:/abs:/ovr:/seal:`（旧文件缺省 false 兼容；`CoaSerializer.Symbols.cs`/`Read.cs`）。
+3. 闭包环境类两处：同一宿主函数多个 lambda 捕获同名变量 → 环境类重复字段（`AddField` 去重）；lambda 体入 `functionBodies` 时未 Lower（结构化 `if` 使 IL/native 抛错）→ 补 `Lowerer.Lower`。（`CocoaBinder.Expressions.cs`/`CocoaBinder.cs`，并按漂移护栏同步 `CSharpBinder.*`。）
+
+**声明式层（提交 B）**：`Declarative.co`（`UIView.Body(gui)` 虚方法 + `Ui.VStack/HStack/Group/Panel/Render`）；`ImGui.BeginHorizontal/EndHorizontal` 与 `ImGuiWindow.Horizontal`（水平布局：`ImGuiLayout.ItemSize` 水平分支）；`UiCoreTests.ImGui_Declarative_Evaluator`（UIView 子类 + 嵌套 lambda：文本计数与同行断言）。示例 `samples/Samples/UI/DeclarativeUI`。
+
+**一控件一文件（提交 B）**：`ImGui` 改 `partial class`，核心留 `ImGui.co`，控件移至 `Widgets/`（Label/Button/CheckBox/TrackBar/ProgressBar/Separator/TextBox/GroupBox/TreeView/Layout）；`.coa` 与求值器（测试 `CoreSources` 目录发现）均验证通过。
+
+**验证**：System.UI（IL `.coa`）构建；BasicUI/AdvancedUI/DeclarativeUI（IL）与 NativeUI（native）构建并进入窗口渲染循环；`UiCoreTests` 7 例、漂移护栏绿；编译器全量见 CHANGELOG。
+
+**已知限制（阶段 5 后）**：
+- lambda 内不支持访问 `this` 字段（捕获 `this` 尚未支持）→ 跨帧状态经 `gui.Storage` 或宿主局部。
+- `override` 依赖 `.coa` 新增虚位字段；**旧 `.coa` 需重建**方能跨库 override（`libs/*.coa` 已随构建重建）。
+- 双向绑定经 `Storage`（非 getter/setter lambda 属性代理）；`@State`/trailing lambda 仍为编译器远期项。
+- 组合子为保序立即模式（无保留树/差异更新）。
+
 
 
 

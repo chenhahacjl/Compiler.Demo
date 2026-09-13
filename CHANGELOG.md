@@ -8,6 +8,14 @@
 
 ## 未发布（2026-09-13）
 
+### 6e-M25 阶段 5：声明式语法糖 + 一控件一文件（2026-09-13）
+- **声明式层**：`UIView.Body(gui)` 组件约定 + `Ui.VStack/HStack/Group/Panel/Render` 组合子（lambda `() => { ... }`，Elm/Flutter 风格，保序立即模式）；`ImGui.BeginHorizontal/EndHorizontal` + `ImGuiWindow.Horizontal` 水平布局。
+- **一控件一文件**：`ImGui` 改 `partial class`，核心留 `ImGui.co`，控件移至 `Widgets/`（Label/CheckBox/TextBox/TrackBar/ProgressBar/Separator/GroupBox/TreeView/Button/Layout）；`System.UI.coproj` 的 `Widgets/*.co` 生效。
+- **编译器前提修复**：① `.coa` 零参函数类型 `fnty{;void}` 读侧空段跳过；② `.coa` 方法新增 `virt/abs/ovr/seal` 位（跨库派生 override）；③ 闭包环境类同名捕获字段去重 + lambda 体补 `Lowerer.Lower`（IL/native 遇结构化 `if` 抛错）。按漂移护栏同步 C# 侧 binder。
+- **示例**：新增 `samples/Samples/UI/DeclarativeUI`（UIView 子类 + VStack/HStack/Group/Panel）。
+- 验证：System.UI（IL）/BasicUI/AdvancedUI/DeclarativeUI（IL）/NativeUI（native）构建并运行；`UiCoreTests` 7 例 + 漂移护栏绿；全量见下。
+- 规划 §8 状态行 + §17 实施记录；手册升为阶段 5（新增声明式与代码组织两节）。
+
 ### 6e-M25 阶段 4：native 后端 UI + WinForms 控件命名（2026-09-13）
 - **native extern 参数编组**（编译器）：`EmitExternCall` 先求值并编组全部实参再统一 `SetArg`（修复运行时调用覆盖已就位参数）；`string → null 结尾 LPCWSTR`（运行时 `ExternWidePtr0..3` + 4 独立编组缓冲）；值类型数组 → 元素区指针（`base+8`）。e2e：`GetModuleHandleW`/`CreateWindowExW`（12 参）原生通过。
 - **同一份 System.UI 双后端**：无需 `Win32NativeImports`/简化控件集，`.coa` 直接经 `-b native --platform x64` 构建运行。

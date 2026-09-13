@@ -1,6 +1,6 @@
-# Cocoa System.UI 手册（立即模式 UI 库，阶段 4）
+# Cocoa System.UI 手册（立即模式 UI 库，阶段 5）
 
-> 状态：✅ 阶段 4（2026-09-13）——完整控件集 + 输入/滚动 + 主题系统 + 样式栈；WinForms 命名；**IL 与 native 双后端可用**。
+> 状态：✅ 阶段 5（2026-09-13）——完整控件集 + 输入/滚动 + 主题/样式栈 + WinForms 命名 + **声明式语法糖（UIView/Body + VStack/HStack 组合子）**；IL 与 native 双后端可用；控件实现按 WinForms 惯例**一控件一文件**（`Widgets/*.co`，`partial class ImGui`）。
 > 设计依据：[`docs-dev/plan/UI库规划.md`](../docs-dev/plan/UI库规划.md)；相关：[`docs/互操作手册.md`](互操作手册.md)。
 
 ## 1. 定位与分发
@@ -143,5 +143,65 @@ gui.PopStyleVar()
 
 - `samples/Samples/UI/AdvancedUI/`：工具栏（计数/重置/主题三态切换 Dark→Light→Classic）+ 左右双 `BeginPanel` 面板（导航 `TreeView`/`GroupBox` + 内容区控件）+ 进度条/滑块/`TextBox` + 12 行可滚动日志列表；计数为正时以 `PushStyleColor` 高亮。
 - `samples/Samples/UI/NativeUI/`：`-b native --platform x64` 最小示例（Label/Button/CheckBox/TrackBar/TrackBarFloat/ProgressBar/GroupBox/Panel）。
+- `samples/Samples/UI/DeclarativeUI/`：声明式示例（见 §7）。
 
 构建见各目录 `build.cmd`。
+
+## 7. 声明式语法糖（阶段 5）
+
+**组件约定**：`UIView` 基类，子类重写 `Body(gui)` 描述界面，框架每帧调用；`Ui` 静态组合子以 lambda（`() => { ... }` / `(x: T) => ...`，Cocoa 函数类型 `() -> void`）组织层级（Elm/Flutter 风格）。
+
+```cocoa
+class CounterForm extends UIView
+{
+    public override function Body(gui: ImGui): void
+    {
+        Ui.VStack(gui, () => {
+            gui.Label("title")
+            Ui.HStack(gui, () => {
+                if gui.Button("Add") { gui.Storage.SetInt(99, gui.Storage.GetInt(99, 0) + 1) }
+                gui.Label("clicks = " + gui.Storage.GetInt(99, 0).ToString())
+            })
+            Ui.Group(gui, "Details", 2, () => {
+                Ui.Panel(gui, 3, f32(300.0), f32(70.0), () => {
+                    gui.Label("line 1")
+                    gui.Label("line 2")
+                })
+            })
+        })
+    }
+}
+
+// 宿主循环内：form.Render(gui) 或 Ui.Render(gui, form)
+```
+
+| 组合子 | 说明 |
+|--------|------|
+| `Ui.VStack(gui, body)` | 垂直堆叠（默认逐行） |
+| `Ui.HStack(gui, body)` | 水平堆叠（body 内控件持续同行，经 `ImGui.BeginHorizontal/EndHorizontal`） |
+| `Ui.Group(gui, label, id, body)` | GroupBox 展开时缩进渲染 body |
+| `Ui.Panel(gui, id, w, h, body)` | 可滚动 Panel 包裹 body |
+| `Ui.Render(gui, view)` | 调用 `view.Body(gui)` |
+
+> 状态一致性：lambda 捕获的是 `gui`；跨帧状态用 `gui.Storage`（或视图字段——注意当前编译器不支持在 lambda 内访问 `this` 字段，需经局部/Storage）。
+
+## 8. 代码组织（一控件一文件）
+
+`ImGui` 为 `partial class`，核心（生命周期/内部辅助）在 `ImGui.co`，各控件独立成文件（`System.UI.coproj` 已含 `Widgets/*.co`）：
+
+```
+src/Cocoa.UI/
+├── ImGui.co                 # 核心：字段/ctor/NewFrame/Render/Begin/End/Panel/样式栈/内部辅助
+├── Declarative.co           # UIView + Ui 组合子
+└── Widgets/
+    ├── Label.co             # Label / LabelColored
+    ├── Button.co            # Button
+    ├── CheckBox.co          # CheckBox
+    ├── TrackBar.co          # TrackBar / TrackBarFloat
+    ├── ProgressBar.co       # ProgressBar
+    ├── Separator.co         # Separator
+    ├── TextBox.co           # TextBox
+    ├── GroupBox.co          # GroupBox
+    ├── TreeView.co          # TreeView / EndTreeView
+    └── Layout.co            # SameLine/Spacing/Dummy/Indent/Unindent
+```
