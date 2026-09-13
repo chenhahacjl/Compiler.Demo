@@ -2,6 +2,8 @@
 <Template Key="library"
           Label="Library Cocoa"
           Description=".NET 类库：.co 源码、dll 输出"
+          Category="Library"
+          Language="Cocoa"
           Order="1">
   <File Source="Class1.co"        Target="{Name}.co" />
   <File Source="Project.coproj"   Target="{Name}.coproj" />

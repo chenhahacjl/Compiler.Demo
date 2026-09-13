@@ -10,9 +10,9 @@ namespace Cocoa.IDE.Services;
 /// 目标文件名支持 {Name}/{Tfm} 单花括号写法。</summary>
 public static class NewProjectService
 {
-    public sealed record TemplateOption(string Key, string Label, string Description);
+    public sealed record TemplateOption(string Key, string Label, string Description, string Category, string Language, bool IsSolution);
     public sealed record FileMapping(string Source, string Target);
-    public sealed record TemplateSpec(string Key, string Label, string Description, string? Special, IReadOnlyList<FileMapping> Files, int Order = 0);
+    public sealed record TemplateSpec(string Key, string Label, string Description, string? Special, IReadOnlyList<FileMapping> Files, int Order = 0, string Category = "Other", string Language = "Cocoa");
 
     /// <summary>生成结果：解决方案路径、项目路径（空白解决方案为 null）、全部生成文件。</summary>
     public sealed record NewProjectResult(string SolutionPath, string? ProjectPath, IReadOnlyList<string> CreatedFiles);
@@ -41,7 +41,9 @@ public static class NewProjectService
     }
 
     public static IReadOnlyList<TemplateOption> TemplateOptions =>
-        LoadSpecs().Select(s => new TemplateOption(s.Key, s.Label, s.Description)).ToList();
+        LoadSpecs()
+            .Select(s => new TemplateOption(s.Key, s.Label, s.Description, s.Category, s.Language, s.Special == "Solution"))
+            .ToList();
 
     public static IReadOnlyList<string> Templates => LoadSpecs().Select(t => t.Key).ToList();
 
@@ -73,7 +75,7 @@ public static class NewProjectService
     /// <paramref name="sameDirectory"/> 为 true 时项目与解决方案同层。空白解决方案（Special=Solution）只生成 .cosln。</summary>
     public static NewProjectResult CreateWithSolution(
         string template, string projectName, string solutionName,
-        string location, bool sameDirectory, string? dotnetRuntime = null)
+        string location, bool sameDirectory, string? dotnetRuntime = null, string? backend = null)
     {
         var projectPascal = ToPascalCase(projectName);
         var solutionPascal = ToPascalCase(solutionName);
@@ -90,6 +92,7 @@ public static class NewProjectService
             Directory.CreateDirectory(projectDir);
             created.AddRange(CreateProject(spec, projectPascal, projectDir, dotnetRuntime));
             projectPath = Path.Combine(projectDir, projectPascal + ".coproj");
+            ApplyBackend(projectPath, backend);
         }
 
         var solutionPath = Path.Combine(solutionDir, solutionPascal + ".cosln");
@@ -104,7 +107,7 @@ public static class NewProjectService
 
     /// <summary>在当前解决方案目录下新建项目：生成 <c>&lt;solutionDir&gt;\&lt;Project&gt;\&lt;Project&gt;.coproj</c>，
     /// 返回 .coproj 路径（由调用方写入 .cosln）。</summary>
-    public static string CreateProjectInto(string template, string projectName, string solutionDirectory, string? dotnetRuntime = null)
+    public static string CreateProjectInto(string template, string projectName, string solutionDirectory, string? dotnetRuntime = null, string? backend = null)
     {
         var spec = LoadSpecs().FirstOrDefault(s => s.Key == template) ?? FallbackSpec(template);
         if (spec.Special == "Solution")
@@ -114,7 +117,19 @@ public static class NewProjectService
         var projectDir = Path.Combine(solutionDirectory, projectPascal);
         Directory.CreateDirectory(projectDir);
         CreateProject(spec, projectPascal, projectDir, dotnetRuntime);
-        return Path.Combine(projectDir, projectPascal + ".coproj");
+        var projectPath = Path.Combine(projectDir, projectPascal + ".coproj");
+        ApplyBackend(projectPath, backend);
+        return projectPath;
+    }
+
+    /// <summary>把后端写入生成的 .coproj（backend = "Managed"/"Native"；空则不写）。</summary>
+    private static void ApplyBackend(string projectPath, string? backend)
+    {
+        if (string.IsNullOrEmpty(backend)) return;
+        ProjectFileService.UpdateProperties(
+            projectPath,
+            new Dictionary<string, string?> { ["Backend"] = backend },
+            out _);
     }
 
     private static IReadOnlyList<string> CreateProject(TemplateSpec spec, string name, string targetDir, string? dotnetRuntime)
@@ -207,7 +222,9 @@ public static class NewProjectService
                     (string?)el.Attribute("Description") ?? key,
                     (string?)el.Attribute("Special"),
                     files,
-                    order));
+                    order,
+                    (string?)el.Attribute("Category") ?? "Other",
+                    (string?)el.Attribute("Language") ?? "Cocoa"));
             }
 
             return specs.Count > 0 ? specs : null;
@@ -226,28 +243,28 @@ public static class NewProjectService
         {
             new FileMapping("Class1.co", "{Name}.co"),
             new FileMapping("Project.coproj", "{Name}.coproj"),
-        }, Order: 1),
+        }, Order: 1, Category: "Library", Language: "Cocoa"),
         new TemplateSpec("library-cs", "Library C#", ".NET 类库：.cs 源码（C# 方言）、dll 输出", null, new[]
         {
             new FileMapping("Class1.cs", "{Name}.cs"),
             new FileMapping("Project.coproj", "{Name}.coproj"),
-        }, Order: 2),
+        }, Order: 2, Category: "Library", Language: "CSharp"),
         new TemplateSpec("console", "Console Cocoa", "控制台应用：.co 源码、可执行、入口 main.co", null, new[]
         {
             new FileMapping("main.co", "main.co"),
             new FileMapping("Project.coproj", "{Name}.coproj"),
-        }, Order: 3),
+        }, Order: 3, Category: "Console", Language: "Cocoa"),
         new TemplateSpec("csharp", "Console C#", "控制台应用：.cs 源码（C# 方言）、可执行", null, new[]
         {
             new FileMapping("Class1.cs", "{Name}.cs"),
             new FileMapping("Project.coproj", "{Name}.coproj"),
-        }, Order: 4),
-        new TemplateSpec("solution", "BlankSolution", "空白解决方案：仅创建 .cosln（无项目）", "Solution", Array.Empty<FileMapping>(), Order: 5),
+        }, Order: 4, Category: "Console", Language: "CSharp"),
+        new TemplateSpec("solution", "BlankSolution", "空白解决方案：仅创建 .cosln（无项目）", "Solution", Array.Empty<FileMapping>(), Order: 5, Category: "Solution", Language: "Any"),
         new TemplateSpec("cocoa", "Cocoa Assembly", "Cocoa 程序集库：.coa 输出、.co 源码", null, new[]
         {
             new FileMapping("Class1.co", "{Name}.co"),
             new FileMapping("Project.coproj", "{Name}.coproj"),
-        }, Order: 6),
+        }, Order: 6, Category: "Cocoa Assembly", Language: "Cocoa"),
     };
 
     private static TemplateSpec FallbackSpec(string template)

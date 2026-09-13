@@ -2,6 +2,8 @@
 <Template Key="solution"
           Label="BlankSolution"
           Description="空白解决方案：仅创建 .cosln（无项目）"
+          Category="Solution"
+          Language="Any"
           Special="Solution"
           Order="5">
   <!-- Special=Solution：由 NewProjectService.CreateWithSolution 内联生成 .cosln（无项目），无需 File 映射。 -->

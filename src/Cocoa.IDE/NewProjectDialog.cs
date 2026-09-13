@@ -7,26 +7,34 @@ using Cocoa.IDE.Services;
 
 namespace Cocoa.IDE;
 
-/// <summary>VS2022 两步式新建项目向导：步骤 1 选模板，步骤 2 配置名称/位置/解决方案/目标框架。
-/// 统一生成「解决方案 + 项目子目录」；空白解决方案模板只生成 .cosln。
+/// <summary>VS2022 两步式新建项目向导：
+/// 步骤 1 选择项目类别（Console / Library / Cocoa Assembly / BlankSolution）；
+/// 步骤 2 配置语言（Cocoa/C#）、后端（托管/原生）及名称/位置/解决方案/目标框架。
 /// Close(NewProjectResult) 返回生成结果。</summary>
 public sealed class NewProjectDialog : Window
 {
     private static readonly string[] TargetFrameworks =
         { "net48", "net9.0", "net8.0", "net6.0", "netcoreapp3.1" };
 
+    private static readonly string[] CategoryOrder =
+        { "Console", "Library", "Cocoa Assembly", "Solution" };
+
+    private static readonly string[] BackendLabels = { "托管 (Managed)", "原生 (Native)" };
+
     private readonly IReadOnlyList<NewProjectService.TemplateOption> _allOptions;
+    private readonly List<string> _categories;
 
     private readonly StackPanel _step1Panel;
     private readonly Grid _step2Panel;
     private readonly TextBlock _headerText;
 
-    private readonly TextBox _searchBox;
-    private readonly ListBox _templateList;
+    private readonly ListBox _categoryList;
     private readonly PathIcon _detailIcon;
     private readonly TextBlock _detailName;
     private readonly TextBlock _detailDesc;
 
+    private readonly ComboBox _languageBox;
+    private readonly ComboBox _backendBox;
     private readonly TextBox _nameBox;
     private readonly TextBox _locationBox;
     private readonly TextBox _solutionBox;
@@ -38,9 +46,10 @@ public sealed class NewProjectDialog : Window
     private readonly Button _nextBtn;
     private readonly Button _createBtn;
 
-    private NewProjectService.TemplateOption? _selected;
+    private string? _selectedCategory;
     private bool _solutionEdited;
     private bool _syncingSolution;
+
     public NewProjectDialog()
     {
         Title = "创建新项目";
@@ -52,13 +61,11 @@ public sealed class NewProjectDialog : Window
         Background = new SolidColorBrush(Color.Parse("#1E1E1E"));
 
         _allOptions = NewProjectService.TemplateOptions;
+        _categories = OrderCategories(_allOptions.Select(o => o.Category).Distinct());
 
-        // ── 步骤 1：模板选择 ──
-        _searchBox = new TextBox { Watermark = "搜索模板", Margin = new Thickness(0, 0, 0, 8) };
-        _searchBox.TextChanged += (_, _) => FilterTemplates();
-
-        _templateList = new ListBox { Background = Brushes.Transparent, BorderThickness = new Thickness(0) };
-        _templateList.SelectionChanged += (_, _) => OnTemplateSelected();
+        // ── 步骤 1：类别选择 ──
+        _categoryList = new ListBox { Background = Brushes.Transparent, BorderThickness = new Thickness(0) };
+        _categoryList.SelectionChanged += (_, _) => OnCategorySelected();
 
         _detailIcon = new PathIcon { Width = 40, Height = 40, Margin = new Thickness(0, 0, 0, 10) };
         _detailName = new TextBlock { FontSize = 16, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap };
@@ -75,14 +82,21 @@ public sealed class NewProjectDialog : Window
             Children = { _detailIcon, _detailName, _detailDesc },
         };
         var step1Grid = new Grid { ColumnDefinitions = new ColumnDefinitions("3*,2*") };
-        Grid.SetColumn(_templateList, 0);
+        Grid.SetColumn(_categoryList, 0);
         Grid.SetColumn(detailPanel, 1);
-        step1Grid.Children.Add(_templateList);
+        step1Grid.Children.Add(_categoryList);
         step1Grid.Children.Add(detailPanel);
 
-        _step1Panel = new StackPanel { Children = { _searchBox, step1Grid } };
+        _step1Panel = new StackPanel { Children = { step1Grid } };
 
         // ── 步骤 2：配置 ──
+        _languageBox = new ComboBox { HorizontalAlignment = HorizontalAlignment.Left, MinWidth = 160 };
+        _languageBox.SelectionChanged += (_, _) => UpdateDetails();
+
+        _backendBox = new ComboBox { HorizontalAlignment = HorizontalAlignment.Left, MinWidth = 160 };
+        foreach (var b in BackendLabels) _backendBox.Items.Add(b);
+        _backendBox.SelectedIndex = 0;
+
         _nameBox = new TextBox();
         _nameBox.TextChanged += (_, _) => SyncSolutionName();
 
@@ -170,9 +184,19 @@ public sealed class NewProjectDialog : Window
 
         Content = root;
 
-        FilterTemplates();
-        if (_templateList.ItemCount > 0)
-            _templateList.SelectedIndex = 0;
+        PopulateCategories();
+        if (_categoryList.ItemCount > 0)
+            _categoryList.SelectedIndex = 0;
+    }
+
+    private static List<string> OrderCategories(IEnumerable<string> categories)
+    {
+        var present = categories.ToList();
+        var ordered = new List<string>();
+        foreach (var c in CategoryOrder)
+            if (present.Remove(c)) ordered.Add(c);
+        ordered.AddRange(present);
+        return ordered;
     }
 
     private Grid BuildForm(Grid locationRow)
@@ -180,7 +204,7 @@ public sealed class NewProjectDialog : Window
         var grid = new Grid
         {
             ColumnDefinitions = new ColumnDefinitions("120,*"),
-            RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,Auto"),
+            RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,Auto,Auto,Auto"),
         };
 
         void AddRow(int row, string label, Control control)
@@ -200,12 +224,14 @@ public sealed class NewProjectDialog : Window
             grid.Children.Add(control);
         }
 
-        AddRow(0, "项目名称", _nameBox);
-        AddRow(1, "位置", locationRow);
-        AddRow(2, "解决方案名称", _solutionBox);
-        AddRow(3, "目标框架", _tfmBox);
+        AddRow(0, "语言", _languageBox);
+        AddRow(1, "后端", _backendBox);
+        AddRow(2, "项目名称", _nameBox);
+        AddRow(3, "位置", locationRow);
+        AddRow(4, "解决方案名称", _solutionBox);
+        AddRow(5, "目标框架", _tfmBox);
 
-        Grid.SetRow(_sameDirBox, 4);
+        Grid.SetRow(_sameDirBox, 6);
         Grid.SetColumn(_sameDirBox, 1);
         _sameDirBox.Margin = new Thickness(0, 0, 0, 8);
         grid.Children.Add(_sameDirBox);
@@ -216,9 +242,9 @@ public sealed class NewProjectDialog : Window
     private void SetStep(int step)
     {
         SetError(null);
-        if (step == 1 && _selected == null)
+        if (step == 1 && _selectedCategory == null)
         {
-            SetError("请先选择模板");
+            SetError("请先选择项目类别");
             return;
         }
 
@@ -230,81 +256,93 @@ public sealed class NewProjectDialog : Window
         _nextBtn.IsVisible = !onConfig;
         _headerText.Text = onConfig ? "配置新项目" : "创建新项目";
 
-        if (onConfig && string.IsNullOrWhiteSpace(_nameBox.Text))
+        if (onConfig)
         {
-            _nameBox.Text = _selected!.Key switch
-            {
-                "solution" => "MySolution",
-                _ => "MyApp",
-            };
+            PopulateLanguages();
+            if (string.IsNullOrWhiteSpace(_nameBox.Text))
+                _nameBox.Text = IsSolutionCategory ? "MySolution" : "MyApp";
         }
     }
 
+    private bool IsSolutionCategory =>
+        string.Equals(_selectedCategory, "Solution", StringComparison.Ordinal);
+
     private void SetError(string? message) => _errorText.Text = message ?? "";
 
-    private void FilterTemplates()
+    private void PopulateCategories()
     {
-        var query = _searchBox.Text?.Trim() ?? "";
-        var filtered = _allOptions
-            .Where(o => query.Length == 0
-                        || o.Label.Contains(query, StringComparison.OrdinalIgnoreCase)
-                        || o.Description.Contains(query, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
-        var previousKey = _selected?.Key;
-        _templateList.Items.Clear();
-        foreach (var option in filtered)
+        _categoryList.Items.Clear();
+        foreach (var category in _categories)
         {
-            var (geometry, brush) = Icons.ForTemplate(option.Key);
+            var option = _allOptions.FirstOrDefault(o => o.Category == category);
+            var (geometry, brush) = Icons.ForTemplate(option?.Key ?? "console");
             var icon = new PathIcon { Data = geometry, Foreground = brush, Width = 18, Height = 18 };
             var texts = new StackPanel { Margin = new Thickness(8, 0, 0, 0) };
-            texts.Children.Add(new TextBlock { Text = option.Label });
+            texts.Children.Add(new TextBlock { Text = category });
             texts.Children.Add(new TextBlock
             {
-                Text = option.Description,
+                Text = option?.Description ?? "",
                 FontSize = 11,
                 Foreground = new SolidColorBrush(Color.Parse("#999999")),
                 TextWrapping = TextWrapping.Wrap,
             });
             var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { icon, texts } };
-            _templateList.Items.Add(new ListBoxItem { Content = row, Tag = option });
-        }
-
-        var target = previousKey == null
-            ? 0
-            : filtered.FindIndex(o => o.Key == previousKey);
-        if (_templateList.ItemCount > 0)
-            _templateList.SelectedIndex = target >= 0 ? target : 0;
-        else
-        {
-            _selected = null;
-            UpdateDetails();
+            _categoryList.Items.Add(new ListBoxItem { Content = row, Tag = category });
         }
     }
 
-    private void OnTemplateSelected()
+    private void PopulateLanguages()
     {
-        if (_templateList.SelectedItem is ListBoxItem { Tag: NewProjectService.TemplateOption option })
-            _selected = option;
+        var languages = _allOptions
+            .Where(o => o.Category == _selectedCategory)
+            .Select(o => o.Language)
+            .Distinct()
+            .ToList();
+
+        _languageBox.Items.Clear();
+        foreach (var lang in languages) _languageBox.Items.Add(lang);
+        _languageBox.SelectedIndex = languages.Count > 0 ? 0 : -1;
+        _languageBox.IsEnabled = languages.Count > 1;
+
+        _backendBox.IsEnabled = !IsSolutionCategory;
+        _tfmBox.IsEnabled = !IsSolutionCategory;
+    }
+
+    private NewProjectService.TemplateOption? ResolveTemplate()
+    {
+        if (_selectedCategory == null) return null;
+        if (IsSolutionCategory)
+            return _allOptions.FirstOrDefault(o => o.IsSolution);
+
+        var language = _languageBox.SelectedItem?.ToString();
+        return _allOptions.FirstOrDefault(o => o.Category == _selectedCategory && o.Language == language)
+               ?? _allOptions.FirstOrDefault(o => o.Category == _selectedCategory);
+    }
+
+    private void OnCategorySelected()
+    {
+        if (_categoryList.SelectedItem is ListBoxItem { Tag: string category })
+            _selectedCategory = category;
 
         UpdateDetails();
     }
 
     private void UpdateDetails()
     {
-        if (_selected == null)
+        var option = ResolveTemplate();
+        if (option == null)
         {
             _detailIcon.Data = null;
-            _detailName.Text = "";
+            _detailName.Text = _selectedCategory ?? "";
             _detailDesc.Text = "";
             return;
         }
 
-        var (geometry, brush) = Icons.ForTemplate(_selected.Key);
+        var (geometry, brush) = Icons.ForTemplate(option.Key);
         _detailIcon.Data = geometry;
         _detailIcon.Foreground = brush;
-        _detailName.Text = _selected.Label;
-        _detailDesc.Text = _selected.Description;
+        _detailName.Text = option.Label;
+        _detailDesc.Text = option.Description;
     }
 
     private void SyncSolutionName()
@@ -317,9 +355,10 @@ public sealed class NewProjectDialog : Window
 
     private void Create()
     {
-        if (_selected == null)
+        var option = ResolveTemplate();
+        if (option == null)
         {
-            SetError("请先选择模板");
+            SetError("请先选择项目类别");
             return;
         }
 
@@ -356,8 +395,9 @@ public sealed class NewProjectDialog : Window
         try
         {
             var tfm = _tfmBox.SelectedItem?.ToString();
+            var backend = IsSolutionCategory ? null : (_backendBox.SelectedIndex == 1 ? "Native" : "Managed");
             var result = NewProjectService.CreateWithSolution(
-                _selected.Key, projectName, solutionName, location, _sameDirBox.IsChecked == true, tfm);
+                option.Key, projectName, solutionName, location, _sameDirBox.IsChecked == true, tfm, backend);
             Close(result);
         }
         catch (Exception ex)

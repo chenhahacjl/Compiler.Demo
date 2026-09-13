@@ -2,6 +2,8 @@
 <Template Key="console"
           Label="Console Cocoa"
           Description="控制台应用：.co 源码、可执行、入口 main.co"
+          Category="Console"
+          Language="Cocoa"
           Order="3">
   <!-- Source = 本目录内模板文件；Target = 生成到目标项目的文件名，{Name} 为项目驼峰名。
        文件内容占位符：{{Name}}、{{Tfm}} -->

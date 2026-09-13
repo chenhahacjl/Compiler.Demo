@@ -7,14 +7,17 @@ namespace Cocoa.IDE;
 /// <summary>“向当前解决方案添加新建项目”对话框：选择模板 + 输入项目名。</summary>
 public sealed class AddProjectDialog : Window
 {
+    private static readonly string[] BackendLabels = { "托管 (Managed)", "原生 (Native)" };
+
     private readonly ComboBox _templates;
+    private readonly ComboBox _backend;
     private readonly TextBox _name;
 
     public AddProjectDialog()
     {
         Title = "新建项目";
         Width = 440;
-        MinHeight = 260;
+        MinHeight = 300;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
 
         var specs = NewProjectService.LoadSpecs()
@@ -32,6 +35,15 @@ public sealed class AddProjectDialog : Window
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
         root.Children.Add(_templates);
+
+        root.Children.Add(new TextBlock { Text = "后端", Margin = new Avalonia.Thickness(0, 6, 0, 0) });
+        _backend = new ComboBox
+        {
+            ItemsSource = BackendLabels.ToList(),
+            SelectedIndex = 0,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+        };
+        root.Children.Add(_backend);
 
         root.Children.Add(new TextBlock { Text = "项目名称", Margin = new Avalonia.Thickness(0, 6, 0, 0) });
         _name = new TextBox { Watermark = "MyLibrary" };
@@ -51,7 +63,8 @@ public sealed class AddProjectDialog : Window
             var spec = specs.FirstOrDefault(s => s.Label == label) ?? specs.FirstOrDefault();
             var name = _name.Text?.Trim();
             if (spec == null || string.IsNullOrWhiteSpace(name)) return;
-            Close(new NewProjectIntoResult(spec.Key, name));
+            var backend = _backend.SelectedIndex == 1 ? "Native" : "Managed";
+            Close(new NewProjectIntoResult(spec.Key, name, backend));
         };
         var cancel = new Button { Content = "取消", MinWidth = 86 };
         cancel.Click += (_, _) => Close(null);
@@ -64,4 +77,4 @@ public sealed class AddProjectDialog : Window
     }
 }
 
-public sealed record NewProjectIntoResult(string Template, string Name);
+public sealed record NewProjectIntoResult(string Template, string Name, string? Backend);

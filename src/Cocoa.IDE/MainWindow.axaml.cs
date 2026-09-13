@@ -412,7 +412,7 @@ public partial class MainWindow : Window
 
         try
         {
-            var projectPath = NewProjectService.CreateProjectInto(result.Template, result.Name, solutionDir);
+            var projectPath = NewProjectService.CreateProjectInto(result.Template, result.Name, solutionDir, null, result.Backend);
             if (ViewModel.SolutionTree.AddProjectToSolution(projectPath, out var error))
                 ViewModel.Output.AppendLine($"已新建项目：{result.Name}");
             else

@@ -116,6 +116,10 @@
                                     <ComboBox ItemsSource="{Binding OutputTypes}" SelectedItem="{Binding OutputType}" Width="360" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="后端" Width="150" VerticalAlignment="Center" Foreground="#CCCCCC" />
+                                    <ComboBox ItemsSource="{Binding Backends}" SelectedItem="{Binding Backend}" Width="360" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
                                     <TextBlock Text="目标平台" Width="150" VerticalAlignment="Center" Foreground="#CCCCCC" />
                                     <ComboBox ItemsSource="{Binding Platforms}" SelectedItem="{Binding Platform}" Width="360" />
                                 </StackPanel>

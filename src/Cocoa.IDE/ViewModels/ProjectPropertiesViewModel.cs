@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Cocoa.Build;
 using Cocoa.IDE.Services;
+using Cocoa.Targeting;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -20,10 +21,12 @@ public partial class ProjectPropertiesViewModel : ObservableObject
     public IReadOnlyList<string> Platforms { get; } = new[] { "AnyCPU", "x86", "x64" };
     public IReadOnlyList<string> TargetOses { get; } = new[] { "Windows", "Linux" };
     public IReadOnlyList<string> Configurations { get; } = new[] { "Debug", "Release" };
+    public IReadOnlyList<string> Backends { get; } = new[] { "(默认 Managed)", "Managed", "Native" };
 
     [ObservableProperty] private string _assemblyName = "";
     [ObservableProperty] private string _language = "Cocoa";
     [ObservableProperty] private string _outputType = "Executable";
+    [ObservableProperty] private string _backend = "(默认 Managed)";
     [ObservableProperty] private string _platform = "AnyCPU";
     [ObservableProperty] private string _targetFramework = "";
     [ObservableProperty] private string _targetOs = "Windows";
@@ -59,6 +62,12 @@ public partial class ProjectPropertiesViewModel : ObservableObject
             ProjectOutputFormat.Dll => "Library",
             ProjectOutputFormat.Cod => "Cod",
             _ => "Executable",
+        };
+        Backend = project.Backend switch
+        {
+            CodeBackend.Native => "Native",
+            CodeBackend.DotNet => "Managed",
+            _ => "(默认 Managed)",
         };
         Platform = project.Platform;
         TargetFramework = project.DotnetRuntime ?? "";
@@ -99,6 +108,7 @@ public partial class ProjectPropertiesViewModel : ObservableObject
             ["AssemblyName"] = AssemblyName,
             ["Language"] = Language,
             ["OutputType"] = OutputType,
+            ["Backend"] = Backend == "Native" ? "Native" : Backend == "Managed" ? "Managed" : null,
             ["Platform"] = Platform,
             ["TargetFramework"] = Blank(TargetFramework),
             ["TargetOS"] = TargetOs,
