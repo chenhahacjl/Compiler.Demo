@@ -51,3 +51,5 @@ TestResult.xml
 *.coproj.user
 samples/**/out/
 /.zcode
+
+src/Cocoa.Co/out/

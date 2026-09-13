@@ -1,0 +1,31 @@
+// B0 骨架（阶段 7 增量一 M7-a4）：自举词法器可执行程序。
+// 用 C# 编译器把 src/Cocoa.Co 构建为可运行二进制（native 与 IL），
+// 读入文件 → 自举 Lexer 逐 token Describe() 输出。验证自举源码可独立构建。
+// 用法：cocoa-co <file.co>
+
+using MiniLexer
+using System
+using System.IO
+
+function Main(args: string[]): i32
+{
+    if args.Length < 1
+    {
+        Console.WriteLine("usage: cocoa-co <file.co>")
+        return 1
+    }
+
+    let source = File.ReadAllText(args[0])
+    let lex = MiniLexer.Lexer.Create(source)
+    while true
+    {
+        let t = lex.Next()
+        Console.WriteLine(t.Describe())
+        if t.Kind() == "EOF"
+        {
+            break
+        }
+    }
+
+    return 0
+}
