@@ -50,6 +50,20 @@ function Main(): i32
                     gui.Checkbox("Option B", 13)
                     gui.TreePop()
                 }
+
+                if gui.BeginChild(30, f32(300.0), f32(70.0))
+                {
+                    gui.Text("scroll line 1")
+                    gui.Text("scroll line 2")
+                    gui.Text("scroll line 3")
+                    gui.Text("scroll line 4")
+                    gui.Text("scroll line 5")
+                    gui.Text("scroll line 6")
+                    gui.Text("scroll line 7")
+                    gui.Text("scroll line 8")
+                }
+
+                gui.EndChild()
             }
         }
 

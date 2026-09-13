@@ -24,6 +24,11 @@ namespace System.UI
         private field _textMaxLen: i32
         private field _focusId: i32
 
+        private field _parentWindow: ImGuiWindow
+        private field _inChild: bool
+        private field _childW: f32
+        private field _childH: f32
+
         public constructor(capacity: i32, storageCapacity: i32)
         {
             _drawList = new ImGuiDrawList(capacity)
@@ -41,6 +46,9 @@ namespace System.UI
             _textLens = new i32[_textCapacity]
             _textChars = new char[_textCapacity * _textMaxLen]
             _focusId = 0
+            _inChild = false
+            _childW = f32(0.0)
+            _childH = f32(0.0)
         }
 
         public property Style: ImGuiStyle
@@ -59,6 +67,14 @@ namespace System.UI
             }
         }
 
+        public property Storage: ImGuiStorage
+        {
+            get
+            {
+                return _storage
+            }
+        }
+
         public function NewFrame(io: ImGuiIO): void
         {
             _io = io
@@ -69,6 +85,11 @@ namespace System.UI
         public function Render(): ImGuiDrawList
         {
             _mouseWasDown = _io.IsMouseDown(0)
+            if _io != null
+            {
+                _io.MouseWheel = f32(0.0)
+            }
+
             return _drawList
         }
 
@@ -85,6 +106,44 @@ namespace System.UI
 
         public function End(): void
         {
+        }
+
+        /// <summary>子区域：独立裁剪 + 滚轮滚动（滚动量经 storage 持久）。</summary>
+        public function BeginChild(id: i32, w: f32, h: f32): bool
+        {
+            let x = _window.X + _window.CursorX
+            let y = _window.Y + _window.CursorY
+            _parentWindow = _window
+            _childW = w
+            _childH = h
+            _inChild = true
+            var scroll = _storage.GetFloat(id, f32(0.0))
+
+            if _io != null && HitTest(x, y, w, h)
+            {
+                scroll = scroll - _io.MouseWheel * f32(24.0)
+                if scroll < f32(0.0)
+                {
+                    scroll = f32(0.0)
+                }
+
+                _storage.SetFloat(id, scroll)
+            }
+
+            _window = new ImGuiWindow("", x, y - scroll, w, h)
+            _window.CursorX = _style.FramePaddingX
+            _window.CursorY = _style.FramePaddingY
+            _drawList.AddRectFilled(x, y, x + w, y + h, _style.GetColor(7))
+            _drawList.SetClipRect(x, y, x + w, y + h)
+            return true
+        }
+
+        public function EndChild(): void
+        {
+            _drawList.ClearClip()
+            _inChild = false
+            _window = _parentWindow
+            ImGuiLayout.ItemSize(_window, _childW, _childH + _style.ItemSpacingY)
         }
 
         /// <summary>当前 item 是否被鼠标悬停（上一个控件）。</summary>

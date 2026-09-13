@@ -19,6 +19,12 @@ namespace System.UI
         private field _textCount: i32
         private field _textCapacity: i32
 
+        private field _hasClip: bool
+        private field _clipX0: f32
+        private field _clipY0: f32
+        private field _clipX1: f32
+        private field _clipY1: f32
+
         public constructor(capacity: i32)
         {
             var cap: i32 = capacity
@@ -42,6 +48,27 @@ namespace System.UI
             _textColor = new i32[cap]
             _texts = new string[cap]
             _textCount = 0
+
+            _hasClip = false
+            _clipX0 = f32(0.0)
+            _clipY0 = f32(0.0)
+            _clipX1 = f32(0.0)
+            _clipY1 = f32(0.0)
+        }
+
+        /// <summary>设置裁剪矩形（后续图元按此裁剪；用于子区域滚动）。</summary>
+        public function SetClipRect(x0: f32, y0: f32, x1: f32, y1: f32): void
+        {
+            _hasClip = true
+            _clipX0 = x0
+            _clipY0 = y0
+            _clipX1 = x1
+            _clipY1 = y1
+        }
+
+        public function ClearClip(): void
+        {
+            _hasClip = false
         }
 
         public function Clear(): void
@@ -62,6 +89,24 @@ namespace System.UI
         /// <summary>登记一段文本（渲染后端延迟消费）。</summary>
         public function AddText(x: f32, y: f32, color: i32, text: string): void
         {
+            if _hasClip
+            {
+                if y > _clipY1
+                {
+                    return
+                }
+
+                if y + f32(16.0) < _clipY0
+                {
+                    return
+                }
+
+                if x > _clipX1
+                {
+                    return
+                }
+            }
+
             if _textCount >= _textCapacity
             {
                 return
@@ -129,14 +174,46 @@ namespace System.UI
         /// <summary>实心矩形�? 顶点 + 6 索引）�?/summary>
         public function AddRectFilled(minX: f32, minY: f32, maxX: f32, maxY: f32, col: i32): void
         {
+            var loX = minX
+            var loY = minY
+            var hiX = maxX
+            var hiY = maxY
+            if _hasClip
+            {
+                if loX < _clipX0
+                {
+                    loX = _clipX0
+                }
+
+                if loY < _clipY0
+                {
+                    loY = _clipY0
+                }
+
+                if hiX > _clipX1
+                {
+                    hiX = _clipX1
+                }
+
+                if hiY > _clipY1
+                {
+                    hiY = _clipY1
+                }
+
+                if hiX <= loX || hiY <= loY
+                {
+                    return
+                }
+            }
+
             let zero: f32 = f32(0.0)
             let one: f32 = f32(1.0)
             let start = _vtxCount
 
-            AddVertex(minX, minY, zero, zero, col)
-            AddVertex(maxX, minY, one, zero, col)
-            AddVertex(maxX, maxY, one, one, col)
-            AddVertex(minX, maxY, zero, one, col)
+            AddVertex(loX, loY, zero, zero, col)
+            AddVertex(hiX, loY, one, zero, col)
+            AddVertex(hiX, hiY, one, one, col)
+            AddVertex(loX, hiY, zero, one, col)
 
             AddIndex(start)
             AddIndex(start + 1)

@@ -155,6 +155,47 @@ function Main(): i32
             AssertExpected(trees, InputExpected);
         }
 
+        private const string ChildHarness = @"using System
+using System.UI
+
+function Main(): i32
+{
+    var gui = new ImGui(512, 16)
+    var io = new ImGuiIO()
+    io.MouseX = f32(50.0)
+    io.MouseY = f32(50.0)
+    io.MouseWheel = f32(0.0) - f32(2.0)
+    gui.NewFrame(io)
+    gui.Begin(""W"", f32(0.0), f32(0.0), f32(300.0), f32(200.0))
+    gui.BeginChild(30, f32(200.0), f32(80.0))
+    gui.Text(""in child"")
+    gui.EndChild()
+    gui.End()
+    gui.Render()
+    Console.WriteLine(gui.Storage.GetFloat(30, f32(0.0)))
+
+    var dl = new ImGuiDrawList(64)
+    dl.SetClipRect(f32(0.0), f32(0.0), f32(100.0), f32(50.0))
+    dl.AddRectFilled(f32(0.0), f32(0.0), f32(100.0), f32(50.0), 0)
+    Console.WriteLine(dl.VertexCount)
+    dl.AddRectFilled(f32(200.0), f32(200.0), f32(300.0), f32(300.0), 0)
+    Console.WriteLine(dl.VertexCount)
+    dl.ClearClip()
+    dl.AddRectFilled(f32(0.0), f32(0.0), f32(10.0), f32(10.0), 0)
+    Console.WriteLine(dl.VertexCount)
+    return 0
+}";
+
+        private const string ChildExpected = "48\n4\n4\n8\n";
+
+        [Fact]
+        public void ImGui_ChildScrollClip_Evaluator()
+        {
+            var trees = CoreSources().Select(p => SyntaxTree.Parse(File.ReadAllText(p))).ToList();
+            trees.Add(SyntaxTree.Parse(ChildHarness));
+            AssertExpected(trees, ChildExpected);
+        }
+
         private static void AssertExpected(List<SyntaxTree> trees, string expected)
         {
             var references = new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location };

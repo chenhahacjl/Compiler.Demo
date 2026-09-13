@@ -41,6 +41,18 @@ namespace System.UI.Backends
                     io.AddInputCharacter(msg[4])
                 }
 
+                // WM_MOUSEWHEEL(0x020A) → 滚轮增量（wParam 高字，±120）；索引 5 为 wParam 高 dword
+                if m == 522
+                {
+                    var hi = (msg[5] >> 16) & 65535
+                    if hi > 32767
+                    {
+                        hi = hi - 65536
+                    }
+
+                    io.MouseWheel = f32(hi) / f32(120.0)
+                }
+
                 User32.TranslateMessage(msg)
             }
 
