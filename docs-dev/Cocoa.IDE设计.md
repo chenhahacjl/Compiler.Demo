@@ -202,7 +202,7 @@ MainWindow 启动
 | **M2b 新建项目向导** | **VS2022 两步式向导**（模板选择 → 名称/位置/解决方案名/目标框架）；统一生成 `.cosln` + 项目子目录；空白解决方案模板；位置自动创建 | `Cocoa.Build` + 模板 XML | ✅ 已落地（§8.1）；**M2c 升级为「类别 → 参数」多级**：第 1 步选类别（Console/Library/Cocoa Assembly/BlankSolution），第 2 步选语言（Cocoa/C#）、后端（托管/原生）及名称/位置/解决方案/目标框架 |
 | **M3 实时诊断** | 防抖重解析管线；错误列表（过滤、双击定位，改 ObservableCollection + 全量筛选 D6）；编辑器波浪线 | `SemanticModel.GetDiagnostics` | ✅ 已落地（D6 关闭） |
 | **M4 构建运行** | F6 构建项目/解决方案；F5 运行产物；输出窗口；增量指示；清理 | `ProjectBuilder`/`SolutionBuilder`/`BuildCache` | ✅ 已落地（D5 关闭；A7 已修） |
-| **M5 语义服务** | Ctrl+Space 补全；Hover 显示签名；F12 跳转定义 | `SemanticModel`、`Compilation.GetSemanticModel`、`BoundScope` | ✅ 基础落地；**M5c 升级为 VS 式语境补全**（输入即触发 / 类型位置仅类型 / 成员-命名空间-声明名-语句表达式语境过滤 / 片段，提交 `M5c`）；**M5d 补全纳入形参与局部变量** |
+| **M5 语义服务** | Ctrl+Space 补全；Hover 显示签名；F12 跳转定义 | `SemanticModel`、`Compilation.GetSemanticModel`、`BoundScope` | ✅ 基础落地；**M5c 升级为 VS 式语境补全**（输入即触发 / 类型位置仅类型 / 成员-命名空间-声明名-语句表达式语境过滤 / 片段，提交 `M5c`）；**M5d 补全纳入形参与局部变量**；**M5e 按当前状态相关性排序**（局部/形参>成员>函数>类型>关键字，短名/大小写一致更优） |
 | **M5b 工程上下文语义** | 补全/诊断/Hover/F12 接入工程源文件集与 `References`（修跨文件误报、`Console.` 补全）；按内容缓存编译 | `Compilation.Create(references, trees)` | ✅ 已落地（§7.5） |
 | **M6 打磨** | 暗色/亮色主题；启动页（最近项目）；状态栏；选项页 | — | 📋 规划 |
 | **M6a UI 接线** | 空壳菜单（退出/视图/项目/生成清理/关于）、状态栏解决方案名、Ctrl+F 查找、错误过滤 UI、输出自动滚动 | AvaloniaEdit SearchPanel | ✅ 已落地 |
@@ -680,6 +680,7 @@ internal Action<CallFrame, BoundStatement>? StatementBoundaryHook;
 | 24 | M7 后 | 解决方案构建把 dll/coa 项目引用识别为依赖并排序 | `M2d(编译器侧)：解决方案构建把 dll/coa 项目引用识别为依赖并排序` | ✅ |
 | 25 | M7 后 | 引用支持选择 .coproj（解析为产物，并自动加入解决方案） | `M6c7：引用支持选择 .coproj(解析为产物 dll/coa，并自动加入解决方案)` | ✅ |
 | 26 | M7 后 | 补全纳入形参与局部变量（旧语义复用按 span 定位函数、开窗重算候选、`StartOffset` 置于前缀起点避免重复） | `M5d：补全纳入形参与局部变量(函数/方法作用域)` + `M5d：修复自动补全复用旧语义时局部变量不出现` + `M5d：修复补全替换段起点(StartOffset)导致的重复前缀(rresult)` | ✅ |
+| 27 | M7 后 | 补全按当前状态相关性排序 | `M5e：补全按当前状态相关性排序(局部/形参>成员>函数>类型>关键字，短名/大小写一致更优)` | ✅ |
 
 > 顺序约束：M5b 为 M6a 的 `.` 自动补全提供工程上下文，不可颠倒；M7 唯一改动编译器（`Cocoa.CodeGen.Interpreter`），置于最后。F11–F14 为 M7 落地的体验修复轮次（IDE 侧，不触碰编译器）。
 
