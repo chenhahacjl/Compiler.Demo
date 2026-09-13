@@ -151,7 +151,7 @@ public static class CocoaCompletionProvider
             var isStatement = IsStatementContext(text, offset);
             if (isStatement) AddSnippets(items, prefix, dialect);
 
-            foreach (var sym in host.GetScopeSymbols())
+            foreach (var sym in host.GetScopeSymbols(offset))
             {
                 if (!Matches(sym.Name, prefix)) continue;
                 var desc = sym.ToString();

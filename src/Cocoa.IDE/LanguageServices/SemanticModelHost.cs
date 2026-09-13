@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.IDE.Services;
@@ -147,8 +148,8 @@ public sealed class SemanticModelHost
         return (null, token.Parent);
     }
 
-    /// <summary>补全候选：作用域内符号（全局函数/变量/类/枚举/内建函数/内建类型）。</summary>
-    public IEnumerable<Symbol> GetScopeSymbols()
+    /// <summary>补全候选：作用域内符号（全局函数/变量/类/枚举/内建函数/内建类型；给定 offset 时含形参与局部变量）。</summary>
+    public IEnumerable<Symbol> GetScopeSymbols(int offset = -1)
     {
         if (_compilation == null) yield break;
 
@@ -170,6 +171,60 @@ public sealed class SemanticModelHost
 
         foreach (var t in _compilation.GlobalNamespace.GetTypeMembers())
             yield return t;
+
+        if (offset >= 0)
+            foreach (var local in GetLocalsAt(offset))
+                yield return local;
+    }
+
+    /// <summary>光标所在函数的形参 + 声明于光标之前的局部变量（含 for 循环变量）。</summary>
+    private IEnumerable<Symbol> GetLocalsAt(int offset)
+    {
+        if (_tree == null || _model == null) yield break;
+
+        offset = Math.Clamp(offset, 0, _tree.Text.Length);
+        var token = FindToken(_tree, offset);
+        var cursor = token?.Parent;
+
+        SyntaxNode? functionDecl = null;
+        while (cursor != null && cursor.Kind != SyntaxKind.CompilationUnit)
+        {
+            if (cursor.Kind.ToString().Contains("FunctionDeclaration", StringComparison.Ordinal))
+            {
+                functionDecl = cursor;
+                break;
+            }
+            cursor = cursor.Parent;
+        }
+        if (functionDecl == null) yield break;
+
+        if (ResolveFunctionSymbol(functionDecl) is { } function)
+            foreach (var parameter in function.Parameters)
+                yield return parameter;
+
+        foreach (var node in functionDecl.DescendantNodes())
+        {
+            if (_model.GetOperation(node) is BoundVariableDeclaration { Variable: var variable } declaration
+                && declaration.Syntax != null
+                && declaration.Syntax.Span.Start < offset)
+                yield return variable;
+        }
+    }
+
+    /// <summary>由函数声明语法找到其函数符号（顶层函数经 GetDeclaredSymbol；类方法按父类型 Methods 匹配 Declaration）。</summary>
+    private FunctionSymbol? ResolveFunctionSymbol(SyntaxNode functionDecl)
+    {
+        if (_model == null) return null;
+        if (_model.GetDeclaredSymbol(functionDecl) is FunctionSymbol direct) return direct;
+
+        for (var current = functionDecl.Parent; current != null; current = current.Parent)
+        {
+            if (!current.Kind.ToString().Contains("ClassDeclaration", StringComparison.Ordinal)) continue;
+            if (_model.GetDeclaredSymbol(current) is NamedTypeSymbol type)
+                return type.Methods.FirstOrDefault(m => ReferenceEquals(m.Declaration, functionDecl));
+            break;
+        }
+        return null;
     }
 
     /// <summary>成员补全：类型的所有公开成员（含继承与 facade）。</summary>
