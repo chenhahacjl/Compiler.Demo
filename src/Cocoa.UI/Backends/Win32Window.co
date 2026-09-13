@@ -1,0 +1,79 @@
+// Cocoa UI 库 · System.UI.Backends
+// Win32Window —— 窗口生命周期 + 每帧消息/输入采样（轮询架构）。
+
+namespace System.UI.Backends
+{
+    public class Win32Window
+    {
+        /// <summary>建顶层窗口（内建 "STATIC" 类，规避 WNDCLASSEX 结构体）；返回 HWND 或 0。</summary>
+        public static function Create(title: string, w: i32, h: i32): nint
+        {
+            let hwnd = User32.CreateWindowExW(0, "STATIC", title, 0x00CF0000, 120, 120, w, h, 0, 0, 0, 0)
+            if hwnd != 0
+            {
+                User32.ShowWindow(hwnd, 5)
+                User32.UpdateWindow(hwnd)
+            }
+
+            return hwnd
+        }
+
+        /// <summary>每帧泵：窗口存活则采样输入并返回 true；窗口消失/退出返回 false。</summary>
+        public static function Pump(io: ImGuiIO, hwnd: nint): bool
+        {
+            if User32.IsWindow(hwnd) == 0
+            {
+                return false
+            }
+
+            var msg = new i32[10]
+            while User32.PeekMessageW(msg, 0, 0, 0, 1) != 0
+            {
+                if msg[2] == 18
+                {
+                    return false
+                }
+            }
+
+            var pt = new i32[2]
+            User32.GetCursorPos(pt)
+            User32.ScreenToClient(hwnd, pt)
+            io.MouseX = f32(pt[0])
+            io.MouseY = f32(pt[1])
+            io.SetMouseButton(0, (i32(User32.GetAsyncKeyState(1)) & 32768) != 0)
+            io.SetMouseButton(1, (i32(User32.GetAsyncKeyState(2)) & 32768) != 0)
+            io.SetMouseButton(2, (i32(User32.GetAsyncKeyState(4)) & 32768) != 0)
+
+            var rc = new i32[4]
+            User32.GetClientRect(hwnd, rc)
+            io.DisplayWidth = f32(rc[2])
+            io.DisplayHeight = f32(rc[3])
+
+            // ESC 退出（无消息 Dispatch，关闭按钮不触发；见规划轮询架构）
+            if (i32(User32.GetAsyncKeyState(27)) & 32768) != 0
+            {
+                return false
+            }
+
+            return true
+        }
+
+        public static function Destroy(hwnd: nint): void
+        {
+            if hwnd != 0
+            {
+                User32.DestroyWindow(hwnd)
+            }
+        }
+
+        public static function Now(): i32
+        {
+            return Kernel32.GetTickCount()
+        }
+
+        public static function Sleep(ms: i32): void
+        {
+            Kernel32.Sleep(ms)
+        }
+    }
+}

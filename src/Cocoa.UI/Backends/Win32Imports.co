@@ -1,0 +1,57 @@
+// Cocoa UI 库 · System.UI（namespace System.UI.Backends）
+// Win32 import 声明（IL 后端：string 经 CLR 编组 LPWSTR；句柄/指针一律 nint）。
+// 轮询架构：用内建窗口类（"STATIC"）经 CreateWindowExW 建顶层窗口，规避 WNDCLASSEX 结构体指针
+// （语言暂无取址/内存写原语）；消息自 PeekMessage 取样，不 Dispatch，自绘。
+
+namespace System.UI.Backends
+{
+    public class User32
+    {
+        import user32.dll
+        {
+            static stdcall function CreateWindowExW(dwExStyle: i32, lpClassName: string, lpWindowName: string, dwStyle: i32, x: i32, y: i32, nWidth: i32, nHeight: i32, hWndParent: nint, hMenu: nint, hInstance: nint, lpParam: nint): nint
+            static stdcall function DestroyWindow(hWnd: nint): i32
+            static stdcall function ShowWindow(hWnd: nint, nCmdShow: i32): i32
+            static stdcall function UpdateWindow(hWnd: nint): i32
+            static stdcall function IsWindow(hWnd: nint): i32
+            static stdcall function GetDC(hWnd: nint): nint
+            static stdcall function ReleaseDC(hWnd: nint, hDC: nint): i32
+            static stdcall function GetClientRect(hWnd: nint, lpRect: i32[]): i32
+            static stdcall function PeekMessageW(lpMsg: i32[], hWnd: nint, wMsgFilterMin: i32, wMsgFilterMax: i32, wRemoveMsg: i32): i32
+            static stdcall function TranslateMessage(lpMsg: i32[]): i32
+            static stdcall function GetCursorPos(lpPoint: i32[]): i32
+            static stdcall function ScreenToClient(hWnd: nint, lpPoint: i32[]): i32
+            static stdcall function GetAsyncKeyState(vKey: i32): i16
+            static stdcall function SetWindowTextW(hWnd: nint, lpString: string): i32
+            static stdcall function InvalidateRect(hWnd: nint, lpRect: nint, bErase: i32): i32
+            static stdcall function FillRect(hdc: nint, lprc: i32[], hbr: nint): i32
+        }
+    }
+
+    public class Kernel32
+    {
+        import kernel32.dll
+        {
+            static stdcall function GetTickCount(): i32
+            static stdcall function Sleep(ms: i32): void
+        }
+    }
+
+    public class Gdi32
+    {
+        import gdi32.dll
+        {
+            static stdcall function CreateCompatibleDC(hdc: nint): nint
+            static stdcall function CreateCompatibleBitmap(hdc: nint, cx: i32, cy: i32): nint
+            static stdcall function CreateSolidBrush(color: i32): nint
+            static stdcall function SelectObject(hdc: nint, h: nint): nint
+            static stdcall function DeleteObject(ho: nint): i32
+            static stdcall function DeleteDC(hdc: nint): i32
+            static stdcall function Polygon(hdc: nint, lpPoints: i32[], nCount: i32): i32
+            static stdcall function SetBkMode(hdc: nint, mode: i32): i32
+            static stdcall function SetTextColor(hdc: nint, color: i32): i32
+            static stdcall function TextOutW(hdc: nint, x: i32, y: i32, lpString: string, c: i32): i32
+            static stdcall function BitBlt(hdcDest: nint, x: i32, y: i32, cx: i32, cy: i32, hdcSrc: nint, x1: i32, y1: i32, rop: i32): i32
+        }
+    }
+}

@@ -1,4 +1,4 @@
-// Cocoa UI �?· System.UI（namespace System.UI�?// ImGuiDrawList —�?顶点/索引并行数组（模�?vector，无 struct 数组依赖）�?// 顶点：pos(x,y) + uv(u,v) + col(packed ABGR i32)；索引三角形列表�?
+// Cocoa UI �?· System.UI（namespace System.UI�?// ImGuiDrawList —�?顶点/索引并行数组（模�?vector，无 struct 数组依赖）�?// 顶点：pos(x,y) + uv(u,v) + col(packed ABGR i32)；索引三角形列表�?
 namespace System.UI
 {
     public class ImGuiDrawList
@@ -12,27 +12,86 @@ namespace System.UI
         private field _vtxCount: i32
         private field _idxCount: i32
 
+        private field _textX: f32[]
+        private field _textY: f32[]
+        private field _textColor: i32[]
+        private field _texts: string[]
+        private field _textCount: i32
+        private field _textCapacity: i32
+
         public constructor(capacity: i32)
         {
-            if capacity < 16
+            var cap: i32 = capacity
+            if cap < 16
             {
-                capacity = 16
+                cap = 16
             }
 
-            _posX = new f32[capacity]
-            _posY = new f32[capacity]
-            _uvX = new f32[capacity]
-            _uvY = new f32[capacity]
-            _col = new i32[capacity]
-            _idx = new i32[capacity * 3]
+            _posX = new f32[cap]
+            _posY = new f32[cap]
+            _uvX = new f32[cap]
+            _uvY = new f32[cap]
+            _col = new i32[cap]
+            _idx = new i32[cap * 3]
             _vtxCount = 0
             _idxCount = 0
+
+            _textCapacity = cap
+            _textX = new f32[cap]
+            _textY = new f32[cap]
+            _textColor = new i32[cap]
+            _texts = new string[cap]
+            _textCount = 0
         }
 
         public function Clear(): void
         {
             _vtxCount = 0
             _idxCount = 0
+            _textCount = 0
+        }
+
+        public property TextCount: i32
+        {
+            get
+            {
+                return _textCount
+            }
+        }
+
+        /// <summary>登记一段文本（渲染后端延迟消费）。</summary>
+        public function AddText(x: f32, y: f32, color: i32, text: string): void
+        {
+            if _textCount >= _textCapacity
+            {
+                return
+            }
+
+            _textX[_textCount] = x
+            _textY[_textCount] = y
+            _textColor[_textCount] = color
+            _texts[_textCount] = text
+            _textCount = _textCount + 1
+        }
+
+        public function TextX(i: i32): f32
+        {
+            return _textX[i]
+        }
+
+        public function TextY(i: i32): f32
+        {
+            return _textY[i]
+        }
+
+        public function TextColor(i: i32): i32
+        {
+            return _textColor[i]
+        }
+
+        public function Text(i: i32): string
+        {
+            return _texts[i]
         }
 
         public property VertexCount: i32
@@ -67,7 +126,7 @@ namespace System.UI
             _idxCount = _idxCount + 1
         }
 
-        /// <summary>实心矩形�? 顶点 + 6 索引）�?/summary>
+        /// <summary>实心矩形�? 顶点 + 6 索引）�?/summary>
         public function AddRectFilled(minX: f32, minY: f32, maxX: f32, maxY: f32, col: i32): void
         {
             let zero: f32 = f32(0.0)
@@ -87,7 +146,7 @@ namespace System.UI
             AddIndex(start + 3)
         }
 
-        /// <summary>矩形边框（四�?1px 实心边）�?/summary>
+        /// <summary>矩形边框（四�?1px 实心边）�?/summary>
         public function AddRect(minX: f32, minY: f32, maxX: f32, maxY: f32, col: i32): void
         {
             let one: f32 = f32(1.0)
@@ -98,7 +157,7 @@ namespace System.UI
             AddRectFilled(maxX - one, minY, maxX, maxY, col)
         }
 
-        /// <summary>gdi 翻译输出：顶�?x/y/color 读取（供后端遍历，见 Win32GDIBackend）�?/summary>
+        /// <summary>gdi 翻译输出：顶�?x/y/color 读取（供后端遍历，见 Win32GDIBackend）�?/summary>
         public function PosX(i: i32): f32
         {
             return _posX[i]

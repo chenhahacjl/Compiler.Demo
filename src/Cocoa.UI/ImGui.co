@@ -1,0 +1,249 @@
+// Cocoa UI 库 · System.UI（namespace System.UI）
+// ImGui —— 立即模式门面（实例上下文，规避静态字段）：NewFrame → Begin/Widgets → End → Render。
+// 布局：窗口局部 cursor 由 ImGuiLayout 推进；持久状态经 ImGuiStorage（id 键）。
+
+namespace System.UI
+{
+    public class ImGui
+    {
+        private field _drawList: ImGuiDrawList
+        private field _style: ImGuiStyle
+        private field _storage: ImGuiStorage
+        private field _window: ImGuiWindow
+        private field _io: ImGuiIO
+        private field _mouseWasDown: bool
+        private field _lastHovered: bool
+
+        public constructor(capacity: i32, storageCapacity: i32)
+        {
+            _drawList = new ImGuiDrawList(capacity)
+            _style = new ImGuiStyle()
+            _style.MakeDark()
+            _storage = new ImGuiStorage(storageCapacity)
+            _window = new ImGuiWindow("", f32(0.0), f32(0.0), f32(1.0), f32(1.0))
+            _mouseWasDown = false
+            _lastHovered = false
+        }
+
+        public property Style: ImGuiStyle
+        {
+            get
+            {
+                return _style
+            }
+        }
+
+        public property DrawList: ImGuiDrawList
+        {
+            get
+            {
+                return _drawList
+            }
+        }
+
+        public function NewFrame(io: ImGuiIO): void
+        {
+            _io = io
+            _drawList.Clear()
+            _lastHovered = false
+        }
+
+        public function Render(): ImGuiDrawList
+        {
+            _mouseWasDown = _io.IsMouseDown(0)
+            return _drawList
+        }
+
+        public function Begin(title: string, x: f32, y: f32, w: f32, h: f32): bool
+        {
+            _window = new ImGuiWindow(title, x, y, w, h)
+            _drawList.AddRectFilled(x, y, x + w, y + h, _style.GetColor(1))
+            _drawList.AddRect(x, y, x + w, y + h, _style.GetColor(2))
+            _window.CursorX = _style.FramePaddingX
+            _window.CursorY = _style.FramePaddingY
+            return true
+        }
+
+        public function End(): void
+        {
+        }
+
+        /// <summary>当前 item 是否被鼠标悬停（上一个控件）。</summary>
+        public function IsItemHovered(): bool
+        {
+            return _lastHovered
+        }
+
+        public function Text(text: string): void
+        {
+            let x = _window.X + _window.CursorX
+            let y = _window.Y + _window.CursorY
+            _drawList.AddText(x, y, _style.GetColor(0), text)
+            ImGuiLayout.ItemSize(_window, MeasureText(text), f32(18.0))
+        }
+
+        public function Separator(): void
+        {
+            let x = _window.X + _window.CursorX
+            let y = _window.Y + _window.CursorY + f32(4.0)
+            let x2 = _window.X + _window.Width - _style.FramePaddingX
+            _drawList.AddRectFilled(x, y, x2, y + f32(1.0), _style.GetColor(11))
+            ImGuiLayout.ItemSize(_window, _window.Width - _style.FramePaddingX * f32(2.0), f32(9.0))
+        }
+
+        public function SameLine(): void
+        {
+            ImGuiLayout.SameLine(_window)
+        }
+
+        public function Button(label: string): bool
+        {
+            let x = _window.X + _window.CursorX
+            let y = _window.Y + _window.CursorY
+            let w = MeasureText(label) + _style.FramePaddingX * f32(2.0)
+            let h = f32(22.0)
+            let hovered = HitTest(x, y, w, h)
+            _lastHovered = hovered
+
+            var col = _style.GetColor(3)
+            if hovered
+            {
+                col = _style.GetColor(4)
+            }
+
+            _drawList.AddRectFilled(x, y, x + w, y + h, col)
+            _drawList.AddRect(x, y, x + w, y + h, _style.GetColor(2))
+            _drawList.AddText(x + _style.FramePaddingX, y + _style.FramePaddingY, _style.GetColor(0), label)
+            ImGuiLayout.ItemSize(_window, w, h + _style.ItemSpacingY)
+
+            return hovered && _io.IsMouseDown(0) && !_mouseWasDown
+        }
+
+        public function Checkbox(label: string, id: i32): bool
+        {
+            let x = _window.X + _window.CursorX
+            let y = _window.Y + _window.CursorY
+            let box = f32(14.0)
+            let hovered = HitTest(x, y, box, box)
+            _lastHovered = hovered
+
+            var value = _storage.GetBool(id, false)
+            if hovered && _io.IsMouseDown(0) && !_mouseWasDown
+            {
+                value = !value
+                _storage.SetBool(id, value)
+            }
+
+            _drawList.AddRectFilled(x, y, x + box, y + box, _style.GetColor(7))
+            _drawList.AddRect(x, y, x + box, y + box, _style.GetColor(2))
+            if value
+            {
+                _drawList.AddRectFilled(x + f32(3.0), y + f32(3.0), x + box - f32(3.0), y + box - f32(3.0), _style.GetColor(6))
+            }
+
+            _drawList.AddText(x + box + f32(6.0), y, _style.GetColor(0), label)
+            ImGuiLayout.ItemSize(_window, box + f32(6.0) + MeasureText(label), box + _style.ItemSpacingY)
+            return value
+        }
+
+        public function SliderFloat(label: string, id: i32, min: f32, max: f32): f32
+        {
+            let x = _window.X + _window.CursorX
+            let y = _window.Y + _window.CursorY
+            let w = f32(180.0)
+            let h = f32(18.0)
+            let hovered = HitTest(x, y, w, h)
+            _lastHovered = hovered
+
+            var value = _storage.GetFloat(id, min)
+            if hovered && _io.IsMouseDown(0)
+            {
+                var t = (_io.MouseX - x) / w
+                if t < f32(0.0)
+                {
+                    t = f32(0.0)
+                }
+
+                if t > f32(1.0)
+                {
+                    t = f32(1.0)
+                }
+
+                value = min + t * (max - min)
+                _storage.SetFloat(id, value)
+            }
+
+            _drawList.AddRectFilled(x, y, x + w, y + h, _style.GetColor(7))
+            var frac = f32(0.0)
+            if max > min
+            {
+                frac = (value - min) / (max - min)
+            }
+
+            _drawList.AddRectFilled(x, y, x + w * frac, y + h, _style.GetColor(8))
+            _drawList.AddRect(x, y, x + w, y + h, _style.GetColor(2))
+            _drawList.AddText(x + w + f32(8.0), y, _style.GetColor(0), label)
+            ImGuiLayout.ItemSize(_window, w + f32(8.0) + MeasureText(label), h + _style.ItemSpacingY)
+            return value
+        }
+
+        public function ProgressBar(fraction: f32): void
+        {
+            let x = _window.X + _window.CursorX
+            let y = _window.Y + _window.CursorY
+            let w = f32(200.0)
+            let h = f32(16.0)
+            var f = fraction
+            if f < f32(0.0)
+            {
+                f = f32(0.0)
+            }
+
+            if f > f32(1.0)
+            {
+                f = f32(1.0)
+            }
+
+            _drawList.AddRectFilled(x, y, x + w, y + h, _style.GetColor(7))
+            _drawList.AddRectFilled(x, y, x + w * f, y + h, _style.GetColor(9))
+            _drawList.AddRect(x, y, x + w, y + h, _style.GetColor(2))
+            ImGuiLayout.ItemSize(_window, w, h + _style.ItemSpacingY)
+        }
+
+        /// <summary>粗略文本宽度（等宽近似：8px/字符）。</summary>
+        public function MeasureText(text: string): f32
+        {
+            return f32(text.Length) * f32(8.0)
+        }
+
+        private function HitTest(x: f32, y: f32, w: f32, h: f32): bool
+        {
+            if _io == null
+            {
+                return false
+            }
+
+            if _io.MouseX < x
+            {
+                return false
+            }
+
+            if _io.MouseY < y
+            {
+                return false
+            }
+
+            if _io.MouseX > x + w
+            {
+                return false
+            }
+
+            if _io.MouseY > y + h
+            {
+                return false
+            }
+
+            return true
+        }
+    }
+}

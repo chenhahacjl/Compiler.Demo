@@ -1,0 +1,82 @@
+// Cocoa UI 库 · System.UI.Backends
+// Win32GDIBackend —— DrawList → GDI 双缓冲渲染（memDC 绘制 → BitBlt 到窗口）。
+// 三角形以 Polygon + 单色画刷近似（顶点色取首顶点；矩形均为同色故无失真）。
+
+namespace System.UI.Backends
+{
+    public class Win32GDIBackend
+    {
+        /// <summary>创建与窗口兼容的内存 DC 并选入位图（调用方持有句柄，DestroyBuffer 释放）。</summary>
+        public static function CreateBuffer(hwnd: nint, width: i32, height: i32): nint
+        {
+            let screenDC = User32.GetDC(hwnd)
+            let memDC = Gdi32.CreateCompatibleDC(screenDC)
+            let bmp = Gdi32.CreateCompatibleBitmap(screenDC, width, height)
+            Gdi32.SelectObject(memDC, bmp)
+            User32.ReleaseDC(hwnd, screenDC)
+            return memDC
+        }
+
+        public static function DestroyBuffer(memDC: nint): void
+        {
+            Gdi32.DeleteDC(memDC)
+        }
+
+        public static function Present(hwnd: nint, memDC: nint, drawList: ImGuiDrawList, width: i32, height: i32, clearColor: i32): void
+        {
+            var rc = new i32[4]
+            rc[0] = 0
+            rc[1] = 0
+            rc[2] = width
+            rc[3] = height
+            let bg = Gdi32.CreateSolidBrush(PackRgb(clearColor))
+            User32.FillRect(memDC, rc, bg)
+            Gdi32.DeleteObject(bg)
+
+            let idxCount = drawList.IndexCount
+            var i: i32 = 0
+            while i + 2 < idxCount
+            {
+                let i0 = drawList.Index(i)
+                let i1 = drawList.Index(i + 1)
+                let i2 = drawList.Index(i + 2)
+                let pts = new i32[6]
+                pts[0] = i32(drawList.PosX(i0))
+                pts[1] = i32(drawList.PosY(i0))
+                pts[2] = i32(drawList.PosX(i1))
+                pts[3] = i32(drawList.PosY(i1))
+                pts[4] = i32(drawList.PosX(i2))
+                pts[5] = i32(drawList.PosY(i2))
+                let brush = Gdi32.CreateSolidBrush(PackRgb(drawList.Color(i0)))
+                Gdi32.SelectObject(memDC, brush)
+                Gdi32.Polygon(memDC, pts, 3)
+                Gdi32.DeleteObject(brush)
+                i = i + 3
+            }
+
+            Gdi32.SetBkMode(memDC, 1)
+            let textCount = drawList.TextCount
+            var t: i32 = 0
+            while t < textCount
+            {
+                let text = drawList.Text(t)
+                Gdi32.SetTextColor(memDC, PackRgb(drawList.TextColor(t)))
+                Gdi32.TextOutW(memDC, i32(drawList.TextX(t)), i32(drawList.TextY(t)), text, text.Length)
+                t = t + 1
+            }
+
+            let screenDC = User32.GetDC(hwnd)
+            if screenDC != 0
+            {
+                Gdi32.BitBlt(screenDC, 0, 0, width, height, memDC, 0, 0, 0x00CC0020)
+                User32.ReleaseDC(hwnd, screenDC)
+            }
+        }
+
+        /// <summary>ABGR 打包 → GDI COLORREF（低 24 位 0x00BBGGRR）。</summary>
+        public static function PackRgb(abgr: i32): i32
+        {
+            return abgr & 16777215
+        }
+    }
+}
