@@ -15,7 +15,7 @@ namespace Cocoa.Tests.CodeAnalysis
 {
     /// <summary>
     /// 自举第 ⑦ 步开工：mini-Lexer 三后端锁定（Evaluator/IL/native x64）。
-    /// 源码集成 `src/Cocoa.Cs/Cocoa.Tests/Resources/MiniLexer.co`，内嵌代表性源文本
+    /// 源码集成 `src/Cocoa.Co/Lexer/Lexer.co`（M7-a0 起结构化 Token + Describe() 输出），内嵌代表性源文本
     /// 覆盖：关键字/标识符、数字（十进制/0x 十六进制/含指数 double）、字符串（含 \n 转义）、
     /// 字符字面量、注释（// 与跨行 /* */）、运算符/标点（两字符最长匹配）、行号/列号、EOF。
     /// </summary>
@@ -42,7 +42,7 @@ namespace Cocoa.Tests.CodeAnalysis
                 .Replace("\\", "\\\\")
                 .Replace("\"", "\\\"")
                 .Replace("\n", "\\n");
-            return "using MiniLexer\nusing System\n\nfunction Main(): i32\n{\n    let lex = MiniLexer.Lexer.Create(\"" + embedded + "\")\n    while true\n    {\n        let t = lex.Next()\n        System.Console.WriteLine(t)\n        if t == \"EOF\"\n        {\n            break\n        }\n    }\n    return 0\n}";
+            return "using MiniLexer\nusing System\n\nfunction Main(): i32\n{\n    let lex = MiniLexer.Lexer.Create(\"" + embedded + "\")\n    while true\n    {\n        let t = lex.Next()\n        System.Console.WriteLine(t.Describe())\n        if t.Kind() == \"EOF\"\n        {\n            break\n        }\n    }\n    return 0\n}";
         }
 
         private const string ExpectedOutput =
@@ -87,7 +87,7 @@ namespace Cocoa.Tests.CodeAnalysis
             "Symbol => 13:7\n" +
             "Identifier g 13:10\n" +
             "Symbol } 14:1\n" +
-            "EOF\n";
+            "EOF  14:2\n";
 
         private static string RepoRoot()
         {
@@ -103,7 +103,7 @@ namespace Cocoa.Tests.CodeAnalysis
 
         private static ImmutableArray<SyntaxTree> BuildTrees()
         {
-            var lexerCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Cs", "Cocoa.Tests", "Resources", "MiniLexer.co"));
+            var lexerCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Lexer", "Lexer.co"));
             return ImmutableArray.Create(SyntaxTree.Parse(lexerCo), SyntaxTree.Parse(MainSource()));
         }
 

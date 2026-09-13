@@ -1,12 +1,74 @@
-// Cocoa mini-Lexer —— 自举翻译第 ⑦ 步开工（mini-Lexer 里程碑）：
+// Cocoa mini-Lexer —— 自举翻译第 ⑦ 步开工（mini-Lexer 里程碑，M7-a0 起为阶段 7 增量一）：
 // 紧凑词法器覆盖核心 token 面（对齐自举缺口分析 §6 验收口径的子集）：
 //   标识符/关键字、数字（十进制 + 0x 十六进制 + 含指数 double）、
 //   字符串（含 \ 转义）、字符字面量、注释（// 与 /* */）、
 //   运算符/标点（最长匹配，含两字符算子）、EOF，并携带行号/列号。
+// M7-a0：输出从格式化字符串改为结构化 Token（Kind/Text/Line/Column/Offset）+ Describe() 可读输出。
 // 依赖：string.substring(start, length)（特殊成员，跨三后端）、Char.* 成员面、System.Console。
 
 namespace MiniLexer
 {
+    /// <summary>结构化 token：kind 为上档大写名（Keyword/Identifier/Number/String/Char/Symbol/EOF），
+    /// Describe() 输出 `KIND text line:col` 保持可读且稳定。</summary>
+    class Token
+    {
+        private field _kind: string
+        private field _text: string
+        private field _line: i32
+        private field _col: i32
+        private field _offset: i32
+
+        public constructor()
+        {
+            _kind = "EOF"
+            _text = ""
+            _line = 0
+            _col = 0
+            _offset = 0
+        }
+
+        public static function Create(kind: string, text: string, line: i32, col: i32, offset: i32): Token
+        {
+            var t = new Token()
+            t._kind = kind
+            t._text = text
+            t._line = line
+            t._col = col
+            t._offset = offset
+            return t
+        }
+
+        public function Kind(): string
+        {
+            return _kind
+        }
+
+        public function Text(): string
+        {
+            return _text
+        }
+
+        public function Line(): i32
+        {
+            return _line
+        }
+
+        public function Column(): i32
+        {
+            return _col
+        }
+
+        public function Offset(): i32
+        {
+            return _offset
+        }
+
+        public function Describe(): string
+        {
+            return _kind + " " + _text + " " + string(_line) + ":" + string(_col)
+        }
+    }
+
     class Lexer
     {
         private field _src: string
@@ -72,13 +134,13 @@ namespace MiniLexer
             _pos = _pos + 1
         }
 
-        /// <summary>下一个 token，格式 `KIND text line:col`；无剩余时返回 `EOF`。</summary>
-        public function Next(): string
+        /// <summary>下一个 token（结构化）；无剩余时返回 `EOF` token。</summary>
+        public function Next(): Token
         {
             SkipTrivia()
             if AtEnd()
             {
-                return "EOF"
+                return Token.Create("EOF", "", _line, _col, _pos)
             }
 
             let startLine = _line
@@ -205,7 +267,7 @@ namespace MiniLexer
             return false
         }
 
-        private function ReadIdent(startLine: i32, startCol: i32): string
+        private function ReadIdent(startLine: i32, startCol: i32): Token
         {
             let start = _pos
             Advance()
@@ -225,13 +287,13 @@ namespace MiniLexer
             let text = _src.substring(start, _pos - start)
             if IsKeyword(text)
             {
-                return "Keyword " + text + " " + string(startLine) + ":" + string(startCol)
+                return Token.Create("Keyword", text, startLine, startCol, start)
             }
 
-            return "Identifier " + text + " " + string(startLine) + ":" + string(startCol)
+            return Token.Create("Identifier", text, startLine, startCol, start)
         }
 
-        private function ReadNumber(startLine: i32, startCol: i32): string
+        private function ReadNumber(startLine: i32, startCol: i32): Token
         {
             let start = _pos
             let first = Current()
@@ -331,10 +393,10 @@ namespace MiniLexer
             }
 
             let text = _src.substring(start, _pos - start)
-            return "Number " + text + " " + string(startLine) + ":" + string(startCol)
+            return Token.Create("Number", text, startLine, startCol, start)
         }
 
-        private function ReadString(startLine: i32, startCol: i32): string
+        private function ReadString(startLine: i32, startCol: i32): Token
         {
             let start = _pos
             Advance()
@@ -362,10 +424,10 @@ namespace MiniLexer
             }
 
             let text = _src.substring(start, _pos - start)
-            return "String " + text + " " + string(startLine) + ":" + string(startCol)
+            return Token.Create("String", text, startLine, startCol, start)
         }
 
-        private function ReadChar(startLine: i32, startCol: i32): string
+        private function ReadChar(startLine: i32, startCol: i32): Token
         {
             let start = _pos
             Advance()
@@ -396,10 +458,10 @@ namespace MiniLexer
             }
 
             let text = _src.substring(start, _pos - start)
-            return "Char " + text + " " + string(startLine) + ":" + string(startCol)
+            return Token.Create("Char", text, startLine, startCol, start)
         }
 
-        private function ReadSymbol(startLine: i32, startCol: i32): string
+        private function ReadSymbol(startLine: i32, startCol: i32): Token
         {
             let start = _pos
             let two = TwoCharSymbol()
@@ -408,12 +470,12 @@ namespace MiniLexer
                 Advance()
                 Advance()
                 let text = _src.substring(start, _pos - start)
-                return "Symbol " + text + " " + string(startLine) + ":" + string(startCol)
+                return Token.Create("Symbol", text, startLine, startCol, start)
             }
 
             Advance()
             let one = _src.substring(start, _pos - start)
-            return "Symbol " + one + " " + string(startLine) + ":" + string(startCol)
+            return Token.Create("Symbol", one, startLine, startCol, start)
         }
 
         private function TwoCharSymbol(): string
