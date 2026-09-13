@@ -4,6 +4,38 @@
              xmlns:vm="using:Cocoa.IDE.ViewModels"
              x:Class="Cocoa.IDE.Controls.EditorPane">
 
+    <UserControl.Styles>
+        <!-- 去掉 ListBoxItem 默认选中/悬停/焦点视觉（Fluent 会画大字重边框） -->
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="FocusAdorner" Value="{x:Null}" />
+        </Style>
+        <Style Selector="ListBoxItem /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="0" />
+        </Style>
+        <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="ListBoxItem:selected:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <!-- 用标签自身底色区分选中态 -->
+        <Style Selector="ListBoxItem:selected Border#TabChrome">
+            <Setter Property="Background" Value="#1E1E1E" />
+        </Style>
+        <Style Selector="ListBoxItem:selected TextBlock#TabTitle">
+            <Setter Property="Foreground" Value="#FFFFFF" />
+        </Style>
+    </UserControl.Styles>
+
     <DockPanel>
         <!-- 标签栏 -->
         <Border DockPanel.Dock="Top"
@@ -15,6 +47,7 @@
                      SelectedItem="{Binding ActiveTab, Mode=TwoWay}"
                      Background="Transparent"
                      BorderThickness="0"
+                     FocusAdorner="{x:Null}"
                      Padding="0">
                 <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -23,23 +56,25 @@
                 </ListBox.ItemsPanel>
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Border Padding="10,5"
-                                Background="#1E1E1E"
+                        <Border x:Name="TabChrome"
+                                Padding="10,5"
+                                Background="#252526"
                                 CornerRadius="3,3,0,0"
                                 Margin="1,0"
                                 PointerPressed="OnTabPointerPressed"
                                 PointerMoved="OnTabPointerMoved"
                                 PointerReleased="OnTabPointerReleased">
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <TextBlock Text="{Binding FileName}" FontSize="12"
+                                <TextBlock x:Name="TabTitle" Text="{Binding FileName}" FontSize="12"
                                            Foreground="#CCCCCC" VerticalAlignment="Center" />
                                 <TextBlock Text="●" FontSize="8" Foreground="#4EC9B0"
                                            IsVisible="{Binding IsModified}"
                                            VerticalAlignment="Center" />
                                 <Button Content="✕" FontSize="9" Padding="3,0"
                                         Background="Transparent" BorderThickness="0"
+                                        FocusAdorner="{x:Null}"
                                         Foreground="#999"
-                                        Command="{Binding CloseCommand}"
+                                        Command="{Binding $parent[UserControl].DataContext.CloseCommand}"
                                         CommandParameter="{Binding}" />
                             </StackPanel>
                         </Border>
