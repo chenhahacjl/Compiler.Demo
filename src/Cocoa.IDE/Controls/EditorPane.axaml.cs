@@ -220,11 +220,15 @@ public partial class EditorPane : UserControl
         };
         _completionWindow = window;
 
+        var caretOffset = EditorHost.Editor.TextArea.Caret.Offset;
+        var text = EditorHost.Editor.Text ?? "";
+
+        // 替换段起点 = 前缀起点，否则已输入的字符会被保留导致重复（如 r + result → rresult）
+        window.StartOffset = caretOffset - ExtractPrefix(text, caretOffset).Length;
+
         var host = reuseStale ? EnsureSemanticHostReusable() : EnsureSemanticHost();
         if (host != null)
         {
-            var caretOffset = EditorHost.Editor.TextArea.Caret.Offset;
-            var text = EditorHost.Editor.Text ?? "";
             var dialect = tab.Dialect ?? "Cocoa";
             foreach (var item in CocoaCompletionProvider.GetCompletions(host, caretOffset, text, dialect))
                 window.CompletionList.CompletionData.Add(item);
