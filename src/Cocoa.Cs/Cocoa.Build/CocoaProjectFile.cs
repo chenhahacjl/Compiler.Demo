@@ -2,6 +2,7 @@ using System;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using Cocoa.Targeting;
 
 namespace Cocoa.Build
 {
@@ -68,6 +69,7 @@ namespace Cocoa.Build
             string? assemblyName,
             CocoaProjectLanguage language,
             ProjectOutputFormat output,
+            CodeBackend? backend,
             CocoaTargetOs targetOs,
             string platform,
             bool prefer32Bit,
@@ -93,6 +95,7 @@ namespace Cocoa.Build
             AssemblyName = assemblyName ?? name;
             Language = language;
             Output = output;
+            Backend = backend;
             TargetOs = targetOs;
             Platform = platform;
             Prefer32Bit = prefer32Bit;
@@ -119,6 +122,10 @@ namespace Cocoa.Build
         public string AssemblyName { get; }
         public CocoaProjectLanguage Language { get; }
         public ProjectOutputFormat Output { get; }
+
+        /// <summary>代码生成后端（null = 用构建默认，即托管 DotNet）。</summary>
+        public CodeBackend? Backend { get; }
+
         public CocoaTargetOs TargetOs { get; }
         public string Platform { get; }
         public bool Prefer32Bit { get; }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
+using Cocoa.Targeting;
 
 namespace Cocoa.Build
 {
@@ -139,6 +140,7 @@ namespace Cocoa.Build
                 assemblyName,
                 ParseLanguage(languageText),
                 ParseOutput(state.Get("OutputType") ?? "Executable"),
+                ParseBackend(state.Get("Backend")),
                 ParseTargetOs(state.Get("TargetOS") ?? "Windows"),
                 ProjectFileParser.ValidatePlatform(state.Get("Platform") ?? "AnyCPU", 0),
                 ParseBool(state.Get("Prefer32Bit") ?? "false"),
@@ -194,6 +196,17 @@ namespace Cocoa.Build
                 "library" => ProjectOutputFormat.Dll,
                 "cocoa" => ProjectOutputFormat.Cod,
                 _ => throw new ProjectFileFormatException($"invalid OutputType '{text}'. Expected: executable, library, cocoa"),
+            };
+        }
+
+        private static CodeBackend? ParseBackend(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return null;
+            return text.ToLowerInvariant() switch
+            {
+                "managed" or "dotnet" => CodeBackend.DotNet,
+                "native" => CodeBackend.Native,
+                _ => throw new ProjectFileFormatException($"invalid Backend '{text}'. Expected: managed, native"),
             };
         }
 

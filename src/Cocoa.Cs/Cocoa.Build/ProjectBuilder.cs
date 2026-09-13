@@ -18,7 +18,7 @@ namespace Cocoa.Build
         {
             var format = options.FormatOverride ?? project.Output;
 
-            var backend = options.Backend ?? ProjectBuildOptions.DefaultBackend;
+            var backend = options.Backend ?? project.Backend ?? ProjectBuildOptions.DefaultBackend;
 
             // T3：`<TreatWarningsAsErrors>` 把构建告警（模式未命中 / [imports] / Content 未命中 + 诊断 Warning 级）升级为错误
             var warningsAsErrors = project.TreatWarningsAsErrors;
