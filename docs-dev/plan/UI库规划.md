@@ -1,7 +1,7 @@
 # UI 生态系统规划（Handle + System.UI，6e-M25 规划）
 
-> 规划标记：🧭 规划/待办（2026-09-08 定稿；未开工）
-> 状态：📋 设计定稿（2026-09-08，经范式调研 + 仓颉 eDSL 调研 + 双轮审查修正）
+> 规划标记：🔄 实施中（2026-09-13；**阶段 1 已完成**：Handle 0a/0b 前置 + System.UI 核心 + Win32 GDI 轮询后端 + BasicUI）
+> 状态：📋 设计定稿（2026-09-08，经范式调研 + 仓颉 eDSL 调研 + 双轮审查修正）；实施记录见 §13
 > 目标：为 Cocoa 建立 **UI 生态系统**两块基石——① `Handle` 通用资源句柄类型（System.Core，对接 Win32/POSIX 句柄语义，修复 64 位指针截断隐患）；② `System.UI` 独立立即模式 UI 库（ImGui 风格，双后端 IL + Native，先 Windows 后 Linux），远期叠加**声明式语法糖**（函数调用风格，仓颉 eDSL 方向）。
 > 核心决策（ADR 登记 docs-dev/README §4）：
 > ① **UI 范式 = 立即模式**（microui 1.1k 行下限 / Nuklear 18k 行参照；Cocoa 现有特性 100% 覆盖，保留模式与 XAML 声明式不采用）；
@@ -407,3 +407,27 @@ function Main(): i32
 | A5 | **无回调轮询架构**（DefWindowProc 地址 + PeekMessage + GetAsyncKeyState） | 双后端无可靠函数指针回调路径；立即模式输入本就每帧采样 | 2026-09-08 |
 | A6 | 编译器前置增强两项：**native extern 参数上限 7→12+**；**`.coa` 序列化门禁扩展** | CreateWindowExW 12 参硬需求；Handle/实体类入库硬前置（与流式库前置项同源） | 2026-09-08 |
 | A7 | UI 库位置 **`src/Cocoa.UI/`**（与 Cocoa.Cs/SDK 平级），开发期同仓库，成熟后可分仓 | 编译器快速迭代期分仓同步成本高；发布 v1.0 后再评估 | 2026-09-08 |
+
+---
+
+## 13. 实施记录（阶段 1，2026-09-13）
+
+**已完成**：`src/Cocoa.UI/`（`System.UI.coproj`，OutputType=Cocoa，产物 `out/System.UI.coa`，方案 B 不进 libs/）——ImTypes/ImGuiID/ImGuiStorage/ImGuiStyle/ImGuiIO/ImGuiWindow+Layout/ImGuiDrawList + ImGui 门面 + `Backends/`（Win32Imports/Win32Window/Win32GDIBackend）+ `samples/Samples/UI/BasicUI`。
+
+**实施偏离（与 §5/§6 设计的差异，均有客观约束）**：
+
+1. **窗口用内建 `STATIC` 类，未走 `RegisterClassExW`**：`WNDCLASSEX` 需要结构体指针，而语言暂无可寻址/内存写原语，且无 string→指针；`CreateWindowExW(lpClassName: string, ...)` 可直建顶层窗口（probe 验证 hwnd/DC/GetClientRect 正常），轮询架构下本就不需要自定义 WNDPROC，故采用。副作用：无 `DispatchMessage`，关闭按钮不触发 → **ESC 退出**（`PeekMessage` 仅检 WM_QUIT）。
+2. **ImGui 为实例上下文（`new ImGui(cap, storageCap)`），非静态门面**：规避静态字段不确定性；API 形态与 §5.3 基本一致（`gui.Begin/Text/Button/...`）。
+3. **值表达**：无 `^`/`~` 运算符依赖——XOR 用 `a|b-a&b`，清位用减法；无参数赋值（IL 发射器限制）→ 构造器改用局部。
+4. **文本**：DrawList 增文本命令缓冲；GDI `TextOutW` 渲染；宽度用 8px/字符近似（无字库度量）。
+5. **三角形**：GDI 无单色三角原语 → `Polygon` + 生成期单色画刷（矩形同色故无失真）。
+6. **构建/分发**：BasicUI `build.cmd` 先建 System.UI 再建应用；`.coa` 未提交（`*.coa` 忽略），依赖现建。
+
+**为支撑本阶段落的编译器修复**（各自独立提交）：
+- `.coa` 门禁放行跨库 cod 基类；IL 跨库 `.ctor` 链解析；派生类不重列基类已实现接口（1a）。
+- `.coa` 值编解码补 u32/f32 常量；求值器值类型数组默认零值；`.coa` 读侧字段/属性类型**延后解析**（前向引用）；体读侧成员赋值支持变量目标；**IL 支持 `f32[]`**（1b/1c 前置）。
+
+**已知限制 / 后置**：
+- 仅 IL 后端（`net48`）；Native 后端为阶段 4。
+- 控件为最小集（Text/Button/Checkbox/SliderFloat/ProgressBar/Separator/SameLine）；完整控件集/主题切换/声明式语法糖属阶段 2/3/5。
+- 输入仅鼠标位置/按键/三键；键盘字符流/滚动/窗口缩放未接。

@@ -8,6 +8,14 @@
 
 ## 未发布（2026-09-13）
 
+### 6e-M25 阶段 1：System.UI（立即模式 UI 库 + Win32 GDI 轮询后端 + BasicUI，2026-09-13）
+- **新库**：`src/Cocoa.UI/`（`System.UI.coa`，方案 B 独立库，不进 libs/）。核心：`ImTypes`(ImVec2/ImVec4 struct)、`ImGuiID`(FNV-1a)、`ImGuiStorage`(开放寻址 i32→i32/bool/f32)、`ImGuiStyle`(ABGR 打包 + Dark/Light)、`ImGuiIO`、`ImGuiWindow`+`ImGuiLayout`、`ImGuiDrawList`(顶点/索引/文本命令)、`ImGui` 门面（Begin/End/Text/Button/Checkbox/SliderFloat/ProgressBar/Separator/SameLine）。
+- **Win32 后端**：`Backends/Win32Imports`（user32/kernel32/gdi32 import，句柄 nint）+ `Win32Window`（内建 STATIC 类建窗 + PeekMessage/GetCursorPos/GetAsyncKeyState 轮询 + ESC 退出）+ `Win32GDIBackend`（memDC 双缓冲 + DrawList→Polygon/TextOutW + BitBlt）。
+- **示例**：`samples/Samples/UI/BasicUI`（显式 Reference System.UI.coa）；端到端弹出窗口并渲染，无异常。
+- **编译器修复（支撑跨库 + UI 库）**：① `.coa` 门禁放行跨库 cod 基类 + IL 跨库 `.ctor` 链 + 派生类不重列基类接口（跨程序集 TypeLoad 修复）；② `.coa` 值编解码补 u32/f32；③ 求值器值类型数组默认零值；④ `.coa` 读侧字段/属性类型延后解析（**前向引用**）；⑤ 体读侧 `memberassign` 支持变量目标；⑥ **IL 支持 `f32[]`**。
+- 回归：编译器全量 **53480** 通过 / 1 跳过（1 例已知 flaky 重跑通过）；IDE 构建不受影响。
+- 规划状态回填 [`docs-dev/plan/UI库规划.md`](docs-dev/plan/UI库规划.md) §13（实施偏离纪要）。
+
 ### Cocoa.IDE M6：主题切换 / 语义着色 / 选项页 / 启动弹窗（2026-09-13）
 - **编译器侧前置**：`Classifier`/`Classification`/`ClassifiedSpan` 从 `Cocoa.Cli.Repl.Authoring` 物理迁入 `Cocoa.Compiler.Core`（命名空间 `Cocoa.CodeAnalysis.Authoring`），IDE 不再依赖 REPL 程序集；**C3** 构建带位置诊断补 `error:`/`warning:` 前缀，`BuildService` 据此区分严重性并写入错误列表。
 - **主题**：`%LOCALAPPDATA%\Cocoa\IDE\settings.json`（`System.Text.Json` + 原子写）+ `App.axaml` `ThemeDictionaries`(Dark/Light) 命名画刷；MainWindow/EditorPane/EditorView/浮窗/Icons/Dialog 共 ~85 处硬编码色资源化。`视图 → 主题` 即时切换并持久化，解决方案树图标随主题重算。
