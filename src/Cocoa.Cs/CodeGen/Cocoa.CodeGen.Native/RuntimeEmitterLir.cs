@@ -66,7 +66,8 @@ namespace Cocoa.CodeGen.Native
                 _zeroString = "", _negZeroString = "", _infinityString = "", _negInfinityString = "", _nanString = "",
                 _formatBuffer = "", _fmtBigBuf = "", _formatOne = "", _formatTen = "", _formatTrue = "", _formatFalse = "",
                 _formatZero = "", _formatHalf = "",
-                _bcryptAlg = "", _bcryptHash = "";
+                _bcryptAlg = "", _bcryptHash = "",
+                _extMarshal0 = "", _extMarshal1 = "", _extMarshal2 = "", _extMarshal3 = "";
 
             public RuntimeFunctionEmitter(LirProgram program, TargetPlatform platform)
             {
@@ -285,6 +286,16 @@ namespace Cocoa.CodeGen.Native
                 _ = BeginFunctionTyped("StringFromChars", new[] { 8 }, LirType.Addr);
                 EmitStringFromChars();
 
+                // 6e-M25 阶段 4：CO string → null 结尾 LPCWSTR（extern 编组；4 个独立缓冲供同调用多 string 参数）
+                _ = BeginFunctionTyped("ExternWidePtr0", new[] { 8 }, LirType.Addr);
+                EmitExternWidePtr(_extMarshal0);
+                _ = BeginFunctionTyped("ExternWidePtr1", new[] { 8 }, LirType.Addr);
+                EmitExternWidePtr(_extMarshal1);
+                _ = BeginFunctionTyped("ExternWidePtr2", new[] { 8 }, LirType.Addr);
+                EmitExternWidePtr(_extMarshal2);
+                _ = BeginFunctionTyped("ExternWidePtr3", new[] { 8 }, LirType.Addr);
+                EmitExternWidePtr(_extMarshal3);
+
                 _ = BeginFunctionTyped("Sha256Hash", new[] { 8 }, LirType.Addr);
                 EmitSha256Hash();
 
@@ -311,6 +322,11 @@ namespace Cocoa.CodeGen.Native
                 _fileBuffer = _program.AddData(LirDataItem.ByteArray(Prefix + "FileBuffer", new byte[0x8000]));
                 _fileBuffer2 = _program.AddData(LirDataItem.ByteArray(Prefix + "FileBuffer2", new byte[0x8000]));
                 _fileBuffer3 = _program.AddData(LirDataItem.ByteArray(Prefix + "FileBuffer3", new byte[0x8000]));
+                // 6e-M25 阶段 4：extern string 参数编组缓冲（每次调用 string 参数按其序号取用，避免互相覆盖）
+                _extMarshal0 = _program.AddData(LirDataItem.ByteArray(Prefix + "ExtMarshal0", new byte[0x8000]));
+                _extMarshal1 = _program.AddData(LirDataItem.ByteArray(Prefix + "ExtMarshal1", new byte[0x8000]));
+                _extMarshal2 = _program.AddData(LirDataItem.ByteArray(Prefix + "ExtMarshal2", new byte[0x8000]));
+                _extMarshal3 = _program.AddData(LirDataItem.ByteArray(Prefix + "ExtMarshal3", new byte[0x8000]));
                 // C 风格 null 结尾宽串（LirDataItem.Utf16 是长度前缀式 COM 串，不能直接当 LPCWSTR 用）
                 _rbMode = _program.AddData(LirDataItem.ByteArray(Prefix + "RbMode", new byte[] { (byte)'r', 0, (byte)'b', 0, 0, 0 }));
                 _wbMode = _program.AddData(LirDataItem.ByteArray(Prefix + "WbMode", new byte[] { (byte)'w', 0, (byte)'b', 0, 0, 0 }));

@@ -206,11 +206,37 @@ namespace Cocoa.CodeGen.Native
             var instructions = _currentFunction.Instructions;
             var count = arguments.Length;
 
-        // 函数调用
+        // 函数调用：先求值并编组全部实参（可能触发运行时调用），再统一 SetArg，
+        // 避免中途的运行时调用覆盖已就位的 extern 参数寄存器/栈槽（6e-M25 阶段 4）。
+            var values = new LirVirtualRegister[count];
+            var stringSlot = 0;
             for (var i = 0; i < count; i++)
             {
                 var value = EmitExpression(arguments[i]);
-                Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(i), LirOperand.Reg(value)));
+                var parameterType = function.Parameters[i].Type;
+
+                if (parameterType == TypeSymbol.String)
+                {
+                    value = EmitExternStringArg(value, stringSlot);
+                    stringSlot = stringSlot + 1;
+                    if (stringSlot > 3)
+                    {
+                        stringSlot = 0;
+                    }
+                }
+                else if (IsBlittableExternArray(parameterType))
+                {
+                    var elementPtr = AllocateRegister(LirType.Addr);
+                    Add(instructions, new LirInstruction(LirOpCode.Lea, elementPtr, LirOperand.Reg(value), LirOperand.None, 8, 0));
+                    value = elementPtr;
+                }
+
+                values[i] = value;
+            }
+
+            for (var i = 0; i < count; i++)
+            {
+                Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(i), LirOperand.Reg(values[i])));
             }
 
             var import = new LirImport(function.DllName!, function.EntryPoint ?? function.Name, function.CallingConvention == CallingConvention.Cdecl);
@@ -222,6 +248,32 @@ namespace Cocoa.CodeGen.Native
             var result = function.ReturnType == TypeSymbol.Void ? null : AllocateRegister(TypeOf(function.ReturnType));
             Add(instructions, new LirInstruction(LirOpCode.SysCall, result, LirOperand.Import(import), LirOperand.Constant(count)));
             return result ?? VoidResult();
+        }
+
+        /// <summary>extern string 参数编组：复制为 null 结尾宽串（按序号取用独立缓冲）并返回 LPCWSTR。</summary>
+        private LirVirtualRegister EmitExternStringArg(LirVirtualRegister value, int slot)
+        {
+            var instructions = _currentFunction.Instructions;
+            Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(value)));
+            var ptr = AllocateRegister(LirType.Addr);
+            Add(instructions, new LirInstruction(LirOpCode.Call, ptr, LirOperand.Runtime("ExternWidePtr" + slot), LirOperand.Constant(0)));
+            return ptr;
+        }
+
+        private static bool IsBlittableExternArray(TypeSymbol type)
+        {
+            var element = type.ElementType;
+            if (element == null)
+            {
+                return false;
+            }
+
+            return element == TypeSymbol.Int8 || element == TypeSymbol.UInt8
+                || element == TypeSymbol.Int16 || element == TypeSymbol.UInt16
+                || element == TypeSymbol.Int32 || element == TypeSymbol.UInt32
+                || element == TypeSymbol.Int64 || element == TypeSymbol.UInt64
+                || element == TypeSymbol.Char || element == TypeSymbol.Float
+                || element == TypeSymbol.Double || element == TypeSymbol.Boolean;
         }
 
         private LirVirtualRegister VoidResult()

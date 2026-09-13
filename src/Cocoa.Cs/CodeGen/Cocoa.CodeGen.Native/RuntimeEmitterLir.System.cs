@@ -460,6 +460,14 @@ namespace Cocoa.CodeGen.Native
 
             /// <summary>复制到主缓冲（单路径场景）。</summary>
             private LirVirtualRegister WidePtrZ(LirVirtualRegister s) => WidePtrZInto(s, _fileBuffer);
+
+            /// <summary>6e-M25 阶段 4：extern string 参数编组——复制为 null 结尾宽串到指定缓冲并返回 LPCWSTR。</summary>
+            private void EmitExternWidePtr(string bufferKey)
+            {
+                var p = WidePtrZInto(_args[0], bufferKey);
+                StoreRet(p);
+                EndFunction(_currentFunction!, 8);
+            }
         }
     }
 }

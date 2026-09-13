@@ -101,6 +101,68 @@ function Main()
         }
 
         [Fact]
+        public void Native_ExternString_GetModuleHandleW()
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function GetModuleHandleW(lpModuleName: string): nint
+    }
+}
+
+function Main()
+{
+    var h = Kernel32.GetModuleHandleW(""kernel32.dll"")
+    if h != 0
+    {
+        Console.WriteLine(""ok"")
+    }
+    else
+    {
+        Console.WriteLine(""fail"")
+    }
+}", "native-extern-string-gmh", X64);
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("ok", stdout.Trim());
+        }
+
+        [Fact]
+        public void Native_ExternString_CreateWindowExW()
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
+class User32
+{
+    import user32.dll
+    {
+        static stdcall function CreateWindowExW(dwExStyle: i32, lpClassName: string, lpWindowName: string, dwStyle: i32, x: i32, y: i32, nWidth: i32, nHeight: i32, hWndParent: nint, hMenu: nint, hInstance: nint, lpParam: nint): nint
+        static stdcall function DestroyWindow(hWnd: nint): i32
+    }
+}
+
+function Main()
+{
+    var h = User32.CreateWindowExW(0, ""STATIC"", ""Cocoa Native Test"", 0x00CF0000, 60, 60, 240, 120, 0, 0, 0, 0)
+    if h != 0
+    {
+        Console.WriteLine(""ok"")
+        User32.DestroyWindow(h)
+    }
+    else
+    {
+        Console.WriteLine(""fail"")
+    }
+}", "native-extern-string-createwindow", X64);
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("ok", stdout.Trim());
+        }
+
+        [Fact]
         public void Native_CrossDll_GetTickCountAndUser32MessageBeep()
         {
             var (exitCode, stdout) = EmitNativeAndRun(@"using System
