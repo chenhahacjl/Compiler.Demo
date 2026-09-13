@@ -1,0 +1,43 @@
+// Cocoa UI 库 · System.UI · 控件：TreeView / EndTreeView（树节点）
+namespace System.UI
+{
+    public partial class ImGui
+    {
+        /// <summary>树节点（展开时自动缩进；须配对 EndTreeView）。</summary>
+        public function TreeView(label: string, id: i32): bool
+        {
+            var open = _storage.GetBool(id, false)
+            let x = ItemX()
+            let y = ItemY()
+            let w = _window.Width - VarOf(ImGuiStyleVar.FramePaddingX, _style.FramePaddingX) * f32(2.0) - f32(_indent)
+            let h = f32(18.0)
+            let hovered = HitTest(x, y, w, h)
+            _lastHovered = hovered
+            if Clicked(hovered)
+            {
+                open = !open
+                _storage.SetBool(id, open)
+            }
+
+            var arrow = "> "
+            if open
+            {
+                arrow = "v "
+            }
+
+            _drawList.AddText(x, y, ColorOf(0), arrow + label)
+            ImGuiLayout.ItemSize(_window, w, h)
+            if open
+            {
+                Indent()
+            }
+
+            return open
+        }
+
+        public function EndTreeView(): void
+        {
+            Unindent()
+        }
+    }
+}

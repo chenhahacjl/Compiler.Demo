@@ -1,0 +1,82 @@
+// Cocoa UI 库 · System.UI · 控件：TrackBar / TrackBarFloat（滑动条）
+namespace System.UI
+{
+    public partial class ImGui
+    {
+        public function TrackBarFloat(label: string, id: i32, min: f32, max: f32): f32
+        {
+            let x = ItemX()
+            let y = ItemY()
+            let w = f32(180.0)
+            let h = f32(18.0)
+            let hovered = HitTest(x, y, w, h)
+            _lastHovered = hovered
+
+            var value = _storage.GetFloat(id, min)
+            if hovered && _io.IsMouseDown(0)
+            {
+                var t = (_io.MouseX - x) / w
+                if t < f32(0.0)
+                {
+                    t = f32(0.0)
+                }
+
+                if t > f32(1.0)
+                {
+                    t = f32(1.0)
+                }
+
+                value = min + t * (max - min)
+                _storage.SetFloat(id, value)
+            }
+
+            DrawTrack(x, y, w, h, Fraction(value, min, max))
+            _drawList.AddText(x + w + f32(8.0), y, ColorOf(0), label)
+            ImGuiLayout.ItemSize(_window, w + f32(8.0) + MeasureText(label), h + VarOf(ImGuiStyleVar.ItemSpacingY, _style.ItemSpacingY))
+            return value
+        }
+
+        public function TrackBar(label: string, id: i32, min: i32, max: i32): i32
+        {
+            let x = ItemX()
+            let y = ItemY()
+            let w = f32(180.0)
+            let h = f32(18.0)
+            let hovered = HitTest(x, y, w, h)
+            _lastHovered = hovered
+
+            var value = _storage.GetInt(id, min)
+            if hovered && _io.IsMouseDown(0)
+            {
+                var t = (_io.MouseX - x) / w
+                if t < f32(0.0)
+                {
+                    t = f32(0.0)
+                }
+
+                if t > f32(1.0)
+                {
+                    t = f32(1.0)
+                }
+
+                value = min + i32(t * f32(max - min))
+                if value < min
+                {
+                    value = min
+                }
+
+                if value > max
+                {
+                    value = max
+                }
+
+                _storage.SetInt(id, value)
+            }
+
+            DrawTrack(x, y, w, h, Fraction(f32(value), f32(min), f32(max)))
+            _drawList.AddText(x + w + f32(8.0), y, ColorOf(0), label)
+            ImGuiLayout.ItemSize(_window, w + f32(8.0) + MeasureText(label), h + VarOf(ImGuiStyleVar.ItemSpacingY, _style.ItemSpacingY))
+            return value
+        }
+    }
+}

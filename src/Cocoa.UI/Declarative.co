@@ -1,0 +1,65 @@
+// Cocoa UI 库 · System.UI（namespace System.UI）
+// Declarative —— 声明式语法糖（函数调用风格）：UIView/Body 组件约定 + VStack/HStack/Panel/Group 组合子。
+// 依赖 Cocoa 的 lambda（`() => { ... }`）与函数类型（`() -> void`）；保序立即模式，无保留树。
+
+namespace System.UI
+{
+    /// <summary>组件基类（Elm/Flutter 风格）：子类重写 Body(gui) 描述界面，框架每帧调用。</summary>
+    public class UIView
+    {
+        public virtual function Body(gui: ImGui): void
+        {
+        }
+
+        public function Render(gui: ImGui): void
+        {
+            Body(gui)
+        }
+    }
+
+    /// <summary>声明式组合子：以 lambda 组织子界面（函数调用风格）。</summary>
+    public static class Ui
+    {
+        /// <summary>垂直堆叠（默认逐行布局）。</summary>
+        public static function VStack(gui: ImGui, body: () -> void): void
+        {
+            body()
+        }
+
+        /// <summary>水平堆叠：body 内控件持续同行。</summary>
+        public static function HStack(gui: ImGui, body: () -> void): void
+        {
+            gui.BeginHorizontal()
+            body()
+            gui.EndHorizontal()
+        }
+
+        /// <summary>分组框：展开时缩进渲染 body。</summary>
+        public static function Group(gui: ImGui, label: string, id: i32, body: () -> void): void
+        {
+            if gui.GroupBox(label, id)
+            {
+                gui.Indent()
+                body()
+                gui.Unindent()
+            }
+        }
+
+        /// <summary>可滚动子面板（Panel）。</summary>
+        public static function Panel(gui: ImGui, id: i32, w: f32, h: f32, body: () -> void): void
+        {
+            if gui.BeginPanel(id, w, h)
+            {
+                body()
+            }
+
+            gui.EndPanel()
+        }
+
+        /// <summary>渲染组件对象。</summary>
+        public static function Render(gui: ImGui, view: UIView): void
+        {
+            view.Body(gui)
+        }
+    }
+}

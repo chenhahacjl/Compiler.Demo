@@ -1,0 +1,24 @@
+// Cocoa UI 库 · System.UI · 控件：Label / LabelColored（WinForms 命名）
+// ImGui 为 partial class，各控件独立成文件（namespace System.UI）。
+
+namespace System.UI
+{
+    public partial class ImGui
+    {
+        public function Label(text: string): void
+        {
+            let x = ItemX()
+            let y = ItemY()
+            _drawList.AddText(x, y, ColorOf(0), text)
+            ImGuiLayout.ItemSize(_window, MeasureText(text), f32(18.0))
+        }
+
+        public function LabelColored(text: string, color: i32): void
+        {
+            let x = ItemX()
+            let y = ItemY()
+            _drawList.AddText(x, y, color, text)
+            ImGuiLayout.ItemSize(_window, MeasureText(text), f32(18.0))
+        }
+    }
+}

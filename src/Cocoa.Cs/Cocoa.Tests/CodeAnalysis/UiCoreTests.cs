@@ -28,7 +28,7 @@ namespace Cocoa.Tests.CodeAnalysis
         private static string[] CoreSources()
         {
             var root = Path.Combine(RepoRoot(), "src", "Cocoa.UI");
-            return new[]
+            var files = new List<string>
             {
                 Path.Combine(root, "ImTypes.co"),
                 Path.Combine(root, "ImGuiID.co"),
@@ -38,7 +38,10 @@ namespace Cocoa.Tests.CodeAnalysis
                 Path.Combine(root, "ImGuiIO.co"),
                 Path.Combine(root, "ImGuiWindow.co"),
                 Path.Combine(root, "ImGui.co"),
+                Path.Combine(root, "Declarative.co"),
             };
+            files.AddRange(Directory.GetFiles(Path.Combine(root, "Widgets"), "*.co"));
+            return files.ToArray();
         }
 
         private const string Harness = @"using System
@@ -230,6 +233,51 @@ function Main(): i32
             var trees = CoreSources().Select(p => SyntaxTree.Parse(File.ReadAllText(p))).ToList();
             trees.Add(SyntaxTree.Parse(StyleHarness));
             AssertExpected(trees, StyleExpected);
+        }
+
+        private const string DeclarativeHarness = @"using System
+using System.UI
+
+class Form extends UIView
+{
+    public override function Body(gui: ImGui): void
+    {
+        Ui.VStack(gui, () => {
+            gui.Label(""title"")
+            Ui.HStack(gui, () => {
+                gui.Label(""a"")
+                gui.Label(""b"")
+            })
+            Ui.Panel(gui, 5, f32(200.0), f32(60.0), () => {
+                gui.Label(""in panel"")
+            })
+        })
+    }
+}
+
+function Main(): i32
+{
+    var gui = new ImGui(512, 16)
+    var io = new ImGuiIO()
+    gui.NewFrame(io)
+    gui.Begin(""W"", f32(0.0), f32(0.0), f32(300.0), f32(200.0))
+    var form = new Form()
+    Ui.Render(gui, form)
+    gui.End()
+    Console.WriteLine(gui.DrawList.TextX(1) < gui.DrawList.TextX(2))
+    Console.WriteLine(gui.DrawList.TextY(1) == gui.DrawList.TextY(2))
+    Console.WriteLine(gui.DrawList.TextCount)
+    return 0
+}";
+
+        private const string DeclarativeExpected = "True\nTrue\n4\n";
+
+        [Fact]
+        public void ImGui_Declarative_Evaluator()
+        {
+            var trees = CoreSources().Select(p => SyntaxTree.Parse(File.ReadAllText(p))).ToList();
+            trees.Add(SyntaxTree.Parse(DeclarativeHarness));
+            AssertExpected(trees, DeclarativeExpected);
         }
 
         private static void AssertExpected(List<SyntaxTree> trees, string expected)

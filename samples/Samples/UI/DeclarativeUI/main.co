@@ -1,0 +1,74 @@
+using System
+using System.UI
+using System.UI.Backends
+
+// 6e-M25 阶段 5 DeclarativeUI：声明式语法糖示例。
+// UIView 子类重写 Body(gui) 描述界面；Ui.VStack/HStack/Group/Panel 以 lambda 组合子组织层级。
+
+class CounterForm extends UIView
+{
+    public override function Body(gui: ImGui): void
+    {
+        Ui.VStack(gui, () => {
+            gui.Label("Declarative UI (UIView + VStack/HStack)")
+            gui.Separator()
+            Ui.HStack(gui, () => {
+                if gui.Button("Add")
+                {
+                    gui.Storage.SetInt(99, gui.Storage.GetInt(99, 0) + 1)
+                }
+
+                gui.Label("clicks = " + gui.Storage.GetInt(99, 0).ToString())
+            })
+            gui.CheckBox("Enable", 1)
+            Ui.Group(gui, "Details", 2, () => {
+                Ui.Panel(gui, 3, f32(300.0), f32(70.0), () => {
+                    gui.Label("line 1")
+                    gui.Label("line 2")
+                    gui.Label("line 3")
+                    gui.Label("line 4")
+                    gui.Label("line 5")
+                })
+            })
+        })
+    }
+}
+
+function Main(): i32
+{
+    var gui = new ImGui(8192, 64)
+    var io = new ImGuiIO()
+
+    let hwnd = Win32Window.Create("Cocoa.UI DeclarativeUI", 640, 420)
+    if hwnd == 0
+    {
+        Console.WriteLine("failed to create window")
+        return 1
+    }
+
+    let memDC = Win32GDIBackend.CreateBuffer(hwnd, 640, 420)
+    var form = new CounterForm()
+    var running = true
+
+    while running
+    {
+        running = Win32Window.Pump(io, hwnd)
+        io.NewFrame(f32(0.016))
+        gui.NewFrame(io)
+
+        if gui.Begin("DeclarativeUI", f32(10.0), f32(10.0), f32(620.0), f32(400.0))
+        {
+            form.Render(gui)
+        }
+
+        gui.End()
+
+        let drawList = gui.Render()
+        Win32GDIBackend.Present(hwnd, memDC, drawList, 640, 420, ImGuiStyle.Abgr(30, 30, 30, 255))
+        Win32Window.Sleep(16)
+    }
+
+    Win32GDIBackend.DestroyBuffer(memDC)
+    Win32Window.Destroy(hwnd)
+    return 0
+}

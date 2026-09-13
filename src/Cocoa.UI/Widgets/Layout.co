@@ -1,0 +1,35 @@
+// Cocoa UI 库 · System.UI · 布局辅助：SameLine / Spacing / Dummy / Indent / Unindent
+namespace System.UI
+{
+    public partial class ImGui
+    {
+        public function SameLine(): void
+        {
+            ImGuiLayout.SameLine(_window)
+        }
+
+        public function Spacing(): void
+        {
+            ImGuiLayout.ItemSize(_window, f32(0.0), VarOf(ImGuiStyleVar.ItemSpacingY, _style.ItemSpacingY))
+        }
+
+        public function Dummy(w: f32, h: f32): void
+        {
+            ImGuiLayout.ItemSize(_window, w, h)
+        }
+
+        public function Indent(): void
+        {
+            _indent = _indent + 16
+        }
+
+        public function Unindent(): void
+        {
+            _indent = _indent - 16
+            if _indent < 0
+            {
+                _indent = 0
+            }
+        }
+    }
+}

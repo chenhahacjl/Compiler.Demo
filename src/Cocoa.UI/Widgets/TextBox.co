@@ -1,0 +1,70 @@
+// Cocoa UI 库 · System.UI · 控件：TextBox（单行文本输入）
+namespace System.UI
+{
+    public partial class ImGui
+    {
+        /// <summary>单行文本输入（点击聚焦；消费本帧 io 字符）。返回当前文本。</summary>
+        public function TextBox(label: string, id: i32, maxLen: i32): string
+        {
+            var slot = TextFind(id)
+            if slot < 0
+            {
+                slot = TextCreate(id)
+            }
+
+            var len = _textLens[slot]
+            let x = ItemX()
+            let y = ItemY()
+            let w = f32(200.0)
+            let h = f32(20.0)
+            let hovered = HitTest(x, y, w, h)
+            _lastHovered = hovered
+            if Clicked(hovered)
+            {
+                _focusId = id
+            }
+
+            if _focusId == id && _io != null
+            {
+                var i: i32 = 0
+                while i < _io.CharCount
+                {
+                    let c = _io.CharAt(i)
+                    if c == 8
+                    {
+                        if len > 0
+                        {
+                            len = len - 1
+                        }
+                    }
+                    else if c >= 32 && c < 127
+                    {
+                        if len < maxLen && len < _textMaxLen
+                        {
+                            _textChars[slot * _textMaxLen + len] = (char)c
+                            len = len + 1
+                        }
+                    }
+
+                    i = i + 1
+                }
+
+                _io.ClearChars()
+            }
+
+            _textLens[slot] = len
+            var border = ColorOf(2)
+            if _focusId == id
+            {
+                border = ColorOf(5)
+            }
+
+            _drawList.AddRectFilled(x, y, x + w, y + h, ColorOf(7))
+            _drawList.AddRect(x, y, x + w, y + h, border)
+            _drawList.AddText(x + f32(4.0), y + f32(3.0), ColorOf(0), TextSlice(slot, len))
+            _drawList.AddText(x + w + f32(8.0), y + f32(3.0), ColorOf(0), label)
+            ImGuiLayout.ItemSize(_window, w + f32(8.0) + MeasureText(label), h + VarOf(ImGuiStyleVar.ItemSpacingY, _style.ItemSpacingY))
+            return TextSlice(slot, len)
+        }
+    }
+}

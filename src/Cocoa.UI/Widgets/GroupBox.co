@@ -1,0 +1,34 @@
+// Cocoa UI 库 · System.UI · 控件：GroupBox（可折叠标题栏）
+namespace System.UI
+{
+    public partial class ImGui
+    {
+        /// <summary>可折叠标题栏；返回 true 表示展开（状态经 storage 持久）。</summary>
+        public function GroupBox(label: string, id: i32): bool
+        {
+            var open = _storage.GetBool(id, true)
+            let x = ItemX()
+            let y = ItemY()
+            let w = _window.Width - VarOf(ImGuiStyleVar.FramePaddingX, _style.FramePaddingX) * f32(2.0) - f32(_indent)
+            let h = f32(20.0)
+            let hovered = HitTest(x, y, w, h)
+            _lastHovered = hovered
+            if Clicked(hovered)
+            {
+                open = !open
+                _storage.SetBool(id, open)
+            }
+
+            _drawList.AddRectFilled(x, y, x + w, y + h, ColorOf(10))
+            var arrow = "> "
+            if open
+            {
+                arrow = "v "
+            }
+
+            _drawList.AddText(x + f32(4.0), y + f32(3.0), ColorOf(0), arrow + label)
+            ImGuiLayout.ItemSize(_window, w, h + f32(2.0))
+            return open
+        }
+    }
+}

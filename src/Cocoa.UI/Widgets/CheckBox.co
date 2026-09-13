@@ -1,0 +1,33 @@
+// Cocoa UI 库 · System.UI · 控件：CheckBox
+namespace System.UI
+{
+    public partial class ImGui
+    {
+        public function CheckBox(label: string, id: i32): bool
+        {
+            let x = ItemX()
+            let y = ItemY()
+            let box = f32(14.0)
+            let hovered = HitTest(x, y, box, box)
+            _lastHovered = hovered
+
+            var value = _storage.GetBool(id, false)
+            if Clicked(hovered)
+            {
+                value = !value
+                _storage.SetBool(id, value)
+            }
+
+            _drawList.AddRectFilled(x, y, x + box, y + box, ColorOf(7))
+            _drawList.AddRect(x, y, x + box, y + box, ColorOf(2))
+            if value
+            {
+                _drawList.AddRectFilled(x + f32(3.0), y + f32(3.0), x + box - f32(3.0), y + box - f32(3.0), ColorOf(6))
+            }
+
+            _drawList.AddText(x + box + f32(6.0), y, ColorOf(0), label)
+            ImGuiLayout.ItemSize(_window, box + f32(6.0) + MeasureText(label), box + VarOf(ImGuiStyleVar.ItemSpacingY, _style.ItemSpacingY))
+            return value
+        }
+    }
+}

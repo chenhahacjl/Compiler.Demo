@@ -1,0 +1,28 @@
+// Cocoa UI 库 · System.UI · 控件：Button
+namespace System.UI
+{
+    public partial class ImGui
+    {
+        public function Button(label: string): bool
+        {
+            let x = ItemX()
+            let y = ItemY()
+            let w = MeasureText(label) + VarOf(ImGuiStyleVar.FramePaddingX, _style.FramePaddingX) * f32(2.0)
+            let h = f32(22.0)
+            let hovered = HitTest(x, y, w, h)
+            _lastHovered = hovered
+
+            var col = ColorOf(3)
+            if hovered
+            {
+                col = ColorOf(4)
+            }
+
+            _drawList.AddRectFilled(x, y, x + w, y + h, col)
+            _drawList.AddRect(x, y, x + w, y + h, ColorOf(2))
+            _drawList.AddText(x + VarOf(ImGuiStyleVar.FramePaddingX, _style.FramePaddingX), y + VarOf(ImGuiStyleVar.FramePaddingY, _style.FramePaddingY), ColorOf(0), label)
+            ImGuiLayout.ItemSize(_window, w, h + VarOf(ImGuiStyleVar.ItemSpacingY, _style.ItemSpacingY))
+            return Clicked(hovered)
+        }
+    }
+}

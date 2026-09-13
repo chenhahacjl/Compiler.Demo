@@ -1,0 +1,27 @@
+// Cocoa UI 库 · System.UI · 控件：ProgressBar
+namespace System.UI
+{
+    public partial class ImGui
+    {
+        public function ProgressBar(fraction: f32): void
+        {
+            let x = ItemX()
+            let y = ItemY()
+            let w = f32(200.0)
+            let h = f32(16.0)
+            var f = fraction
+            if f < f32(0.0)
+            {
+                f = f32(0.0)
+            }
+
+            if f > f32(1.0)
+            {
+                f = f32(1.0)
+            }
+
+            DrawTrack(x, y, w, h, f)
+            ImGuiLayout.ItemSize(_window, w, h + VarOf(ImGuiStyleVar.ItemSpacingY, _style.ItemSpacingY))
+        }
+    }
+}

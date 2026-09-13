@@ -21,6 +21,9 @@ namespace System.UI
         public field SameLinePending: bool
         public field ScrollY: f32
 
+        /// <summary>true 时后续控件持续同行（HStack/水平布局），直至 EndHorizontal。</summary>
+        public field Horizontal: bool
+
         public constructor(title: string, x: f32, y: f32, w: f32, h: f32)
         {
             Title = title
@@ -33,6 +36,7 @@ namespace System.UI
             LineHeight = f32(0.0)
             SameLinePending = false
             ScrollY = f32(0.0)
+            Horizontal = false
         }
 
         public function ResetCursor(): void
@@ -41,15 +45,28 @@ namespace System.UI
             CursorY = f32(0.0)
             LineHeight = f32(0.0)
             SameLinePending = false
+            Horizontal = false
         }
     }
 
     /// <summary>布局推进：cursor 前进 / ItemSize / SameLine。</summary>
     public class ImGuiLayout
     {
-        /// <summary>登记一个 item 的尺寸并推进游标（SameLine 时同行追加，否则换行）。</summary>
+        /// <summary>登记一个 item 的尺寸并推进游标（SameLine/水平时同行追加，否则换行）。</summary>
         public static function ItemSize(win: ImGuiWindow, w: f32, h: f32): void
         {
+            if win.Horizontal
+            {
+                win.CursorX = win.CursorX + w
+                if h > win.LineHeight
+                {
+                    win.LineHeight = h
+                }
+
+                win.SameLinePending = false
+                return
+            }
+
             if win.SameLinePending
             {
                 win.SameLinePending = false
