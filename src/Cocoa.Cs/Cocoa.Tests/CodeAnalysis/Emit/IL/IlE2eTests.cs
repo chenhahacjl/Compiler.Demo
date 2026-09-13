@@ -18,14 +18,11 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
         }
 
         internal static (int ExitCode, string Stdout) EmitAndRun(string source, string name, string? input = null)
-            => EmitAndRun(source, name, "Main", input, null, useCs: false);
+            => EmitAndRun(source, name, "Main", input, null);
 
-        private static (int ExitCode, string Stdout) EmitAndRunCs(string source, string name, string? input = null)
-            => EmitAndRun(source, name, "Main", input, null, useCs: true);
-
-        private static (int ExitCode, string Stdout) EmitAndRun(string source, string name, string entryPointName, string? input = null, string[]? processArgs = null, bool useCs = false)
+        private static (int ExitCode, string Stdout) EmitAndRun(string source, string name, string entryPointName, string? input = null, string[]? processArgs = null)
         {
-            var syntaxTree = useCs ? Cocoa.CodeAnalysis.Syntax.SyntaxTree.ParseCs(source) : Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(source);
+            var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(source);
             var compilation = Cocoa.CodeAnalysis.Compilation.Create(entryPointName, new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, syntaxTree);
             var exePath = GetOutputPath(name);
             // netcore：托管 exe + runtimeconfig，由 `dotnet <exe>` 运行（netfx 不写 runtimeconfig）
@@ -1614,49 +1611,6 @@ function Main()
         }
 
         [Fact]
-        public void CSStyleFor_PostfixIncrement_OnDotnetHost()
-        {
-            var (exitCode, stdout) = EmitAndRunCs(@"using System;
-
-public static void Main()
-{
-    var sum = 0;
-    for (var i = 0; i < 5; i++)
-    {
-        sum = sum + i;
-    }
-    Console.WriteLine(sum);
-    var j = 10;
-    j--;
-    Console.WriteLine(j);
-    j++;
-    Console.WriteLine(j);
-    var total = 0;
-    for (;;)
-    {
-        total = total + 1;
-        if (total == 3)
-        {
-            break;
-        }
-    }
-    Console.WriteLine(total);
-    var k = 0;
-    for (; k < 4; k = k + 1)
-    {
-        if (k == 2)
-        {
-            continue;
-        }
-        Console.WriteLine(k);
-    }
-}", "e2e-cstyle-for");
-
-            Assert.Equal(0, exitCode);
-            Assert.Equal("10\r\n9\r\n10\r\n3\r\n0\r\n1\r\n3\r\n", stdout);
-        }
-
-        [Fact]
         public void ModuloAndShift_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"using System
@@ -1873,45 +1827,6 @@ function Main()
         }
 
         [Fact]
-        public void CSharpStyle_Members_OnDotnetHost()
-        {
-            var (exitCode, stdout) = EmitAndRunCs(@"using System;
-
-public class Person
-{
-    private string _name;
-    private int _age;
-    public static int Count = 0;
-
-    public Person(string name, int age)
-    {
-        _name = name;
-        _age = age;
-        Count = Count + 1;
-    }
-
-    public string Name { get; set; }
-
-    public int GetAge()
-    {
-        return _age;
-    }
-}
-
-public static void Main()
-{
-    var p = new Person(""Alice"", 30);
-    p.Name = ""Bob"";
-    Console.WriteLine(p.Name);
-    Console.WriteLine(p.GetAge());
-    Console.WriteLine(Person.Count);
-}", "e2e-cs-style-members");
-
-            Assert.Equal(0, exitCode);
-            Assert.Equal("Bob\r\n30\r\n1\r\n", stdout);
-        }
-
-        [Fact]
         public void FieldInitializer_Instance_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"using System
@@ -2041,62 +1956,6 @@ function Main()
         }
 
         [Fact]
-        public void CSharpStyle_LocalVariables_OnDotnetHost()
-        {
-            var (exitCode, stdout) = EmitAndRunCs(@"using System;
-
-public class Calc
-{
-    public int Sum(int a, int b)
-    {
-        int sum = a + b;
-        var product = a * b;
-        return sum + product;
-    }
-}
-
-public static void Main()
-{
-    var c = new Calc();
-    Console.WriteLine(c.Sum(2, 3));
-}", "e2e-cs-locals");
-
-            Assert.Equal(0, exitCode);
-            Assert.Equal("11\r\n", stdout);
-        }
-
-        [Fact]
-        public void CSharpStyle_TopLevelFunctions_OnDotnetHost()
-        {
-            var (exitCode, stdout) = EmitAndRunCs(@"using System;
-
-public static void Main()
-{
-    Console.WriteLine(Add(2, 3));
-    Console.WriteLine(Square(4));
-    Console.WriteLine(Dup(""hi""));
-}
-
-public int Add(int x, int y)
-{
-    return x + y;
-}
-
-public int Square(int n)
-{
-    return n * n;
-}
-
-public string Dup(string s)
-{
-    return s + s;
-}", "e2e-cs-top-level-functions");
-
-            Assert.Equal(0, exitCode);
-            Assert.Equal("5\r\n16\r\nhihi\r\n", stdout);
-        }
-
-        [Fact]
         public void NoKeyword_TopLevelFunction_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"using System
@@ -2132,27 +1991,6 @@ function Greet()
 
             Assert.Equal(0, exitCode);
             Assert.Equal("hello\r\n", stdout);
-        }
-
-        [Fact]
-        public void CSharpStyle_TopLevelFunction_ArrayReturnType_OnDotnetHost()
-        {
-            var (exitCode, stdout) = EmitAndRunCs(@"using System;
-
-public static void Main()
-{
-    var nums = GetNums();
-    Console.WriteLine(nums.Length);
-    Console.WriteLine(nums[0] + nums[1]);
-}
-
-public int[] GetNums()
-{
-    return new int[] { 3, 4 };
-}", "e2e-cs-top-level-array-return");
-
-            Assert.Equal(0, exitCode);
-            Assert.Equal("2\r\n7\r\n", stdout);
         }
 
         [Fact]
@@ -2321,15 +2159,6 @@ public class Program
             return diagnostics.Select(d => d.Message).ToArray();
         }
 
-        private static string[] GetEmitDiagnosticsCs(string source, string entryPointName)
-        {
-            var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.ParseCs(source);
-            var compilation = Cocoa.CodeAnalysis.Compilation.Create(entryPointName, new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, syntaxTree);
-            var exePath = Path.Combine(Path.GetTempPath(), "cocoa-il-tests", "entry-diag-cs.exe");
-            var diagnostics = compilation.Emit("entry-diag-cs", new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, exePath);
-            return diagnostics.Select(d => d.Message).ToArray();
-        }
-
         [Fact]
         public void Entry_QualifiedClassNotFound_Diagnostic()
         {
@@ -2367,37 +2196,6 @@ public class Foo { public static function Main() { Console.WriteLine(2) } }", "M
         {
             var messages = GetEmitDiagnostics("function Main() { }", "My.App.Program.Main");
             Assert.Contains(messages, m => m.Contains("入口函数指定的类 'My.App.Program' 不存在"));
-        }
-
-        [Fact]
-        public void CSharpStyleConstLocal_OnDotnetHost()
-        {
-            var (exitCode, stdout) = EmitAndRunCs(@"using System;
-
-public static void Main()
-{
-    const int x = 10;
-    Console.WriteLine(x);
-    const string s = ""hi"";
-    Console.WriteLine(s);
-    const double d = 3.5;
-    Console.WriteLine(d);
-}", "e2e-cs-const");
-
-            Assert.Equal(0, exitCode);
-            Assert.Equal("10\r\nhi\r\n3.5\r\n", stdout);
-        }
-
-        [Fact]
-        public void CSharpStyleConstLocal_NotAssignable_ReportsError()
-        {
-            var messages = GetEmitDiagnosticsCs(@"
-public static void Main()
-{
-    const int x = 10;
-    x = 20;
-}", "Main");
-            Assert.Contains(messages, m => m.Contains("read-only and cannot be assigned"));
         }
 
         [Fact]

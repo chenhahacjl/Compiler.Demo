@@ -212,34 +212,5 @@ function Main()
 "));
             Assert.Contains(compilation.GlobalScope.Diagnostics, d => d.Message.Contains("could not be resolved"));
         }
-
-        [Fact]
-        public void CsDialect_UsingStatic_SemicolonRequired()
-        {
-            // .cs 方言：using 必须以分号结尾
-            var syntaxTree = SyntaxTree.ParseCs("using static System.Math\nfunction Main() {}");
-            Assert.NotEmpty(syntaxTree.Diagnostics);
-        }
-
-        [Fact]
-        public void CsDialect_UsingAlias_SemicolonRequired()
-        {
-            var syntaxTree = SyntaxTree.ParseCs("using M = System.Math\nfunction Main() {}");
-            Assert.NotEmpty(syntaxTree.Diagnostics);
-        }
-
-        [Fact]
-        public void CsDialect_UsingStatic_WithSemicolon_NoDiagnostics()
-        {
-            var syntaxTree = SyntaxTree.ParseCs("using static System.Math;");
-            Assert.Empty(syntaxTree.Diagnostics);
-        }
-
-        [Fact]
-        public void CsDialect_UsingAlias_WithSemicolon_NoDiagnostics()
-        {
-            var syntaxTree = SyntaxTree.ParseCs("using M = System.Math;");
-            Assert.Empty(syntaxTree.Diagnostics);
-        }
     }
 }

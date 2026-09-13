@@ -3,7 +3,6 @@ using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Cocoa.Syntax;
-using CSyntax = global::Cocoa.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
@@ -673,26 +672,6 @@ function Main()
             Assert.Equal("i32", typed.ReturnType!.Identifier.Text);
             Assert.NotNull(typed.OpenParenToken);
             Assert.NotNull(typed.CloseParenToken);
-        }
-
-        [Fact]
-        public void GreenRoot_RoundTrips_DelegateCsForm()
-        {
-            var code = @"public delegate int Transformer(int x);";
-            var tree = SyntaxTree.ParseCs(code);
-
-            Assert.Equal(code, tree.GreenRoot.ToString());
-
-            var delegateDecl = ((CSyntax.CompilationUnitSyntax)tree.Root).Members.OfType<CSyntax.DelegateDeclarationSyntax>().First();
-            Assert.Equal("Transformer", delegateDecl.Identifier.Text);
-            Assert.NotNull(delegateDecl.ReturnType);
-            Assert.Null(delegateDecl.ReturnType!.ColonToken);
-            Assert.NotNull(delegateDecl.SemicolonToken);
-
-            var typed = Assert.IsType<CSyntax.DelegateDeclarationSyntax>(tree.GreenRoot.CreateTypedRed(tree).DescendantNodes().OfType<CSyntax.DelegateDeclarationSyntax>().First());
-            Assert.Equal("Transformer", typed.Identifier.Text);
-            Assert.Equal("int", typed.ReturnType!.Identifier.Text);
-            Assert.NotNull(typed.SemicolonToken);
         }
 
         [Fact]

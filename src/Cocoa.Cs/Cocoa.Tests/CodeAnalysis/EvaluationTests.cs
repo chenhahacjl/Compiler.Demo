@@ -406,21 +406,6 @@ function Main(): i32
         }
 
         [Theory]
-        [InlineData("{ var result = 0; for (var i = 0; i < 10; i++) { result = result + i; } return result; }", 45)]
-        [InlineData("{ var result = 0; for (var i = 0; i <= 10; i = i + 1) { result = result + i; } return result; }", 55)]
-        [InlineData("{ var result = 0; for (var i = 10; i > 0; i--) { result = result + i; } return result; }", 55)]
-        [InlineData("{ var result = 0; for (var i = 0; i < 5; i++) { if (i == 2) continue; result = result + i; } return result; }", 8)]
-        [InlineData("{ var result = 0; for (var i = 10; i > 0; i--) { if (i == 5) continue; result = result + i; } return result; }", 50)]
-        [InlineData("{ var result = 0; for (var i = 0;; i++) { result = result + 1; if (result == 5) break; } return result; }", 5)]
-        [InlineData("{ var i = 0; for (; i < 5; i = i + 1) { } return i; }", 5)]
-        [InlineData("{ var i = 0; for (; i < 5;) { i = i + 1; } return i; }", 5)]
-        [InlineData("{ var result = 0; for (;;) { result = result + 1; if (result == 5) break; } return result; }", 5)]
-        public void Evaluator_CSStyleFor_Computes_CorrectValues(string text, object expectedValue)
-        {
-            AssertValueCs(text, expectedValue);
-        }
-
-        [Theory]
         [InlineData("{ var result = 0 for (var i = 0 to 10 step 2) { result = result + i } return result }", 30)]
         [InlineData("{ var result = 0 for (var i = 1 to 9 step 2) { result = result + 1 } return result }", 5)]
         [InlineData("{ var result = 0 for (var i = 0 to 10 step 3) { result = result + i } return result }", 18)]
@@ -1348,22 +1333,6 @@ function Main()
         }
 
         [Fact]
-        public void Evaluator_CSStyleForStatement_Reports_CannotConvert_Condition()
-        {
-            var text = @"
-                for (var i = 0; [10]; i++)
-                {
-                }
-            ";
-
-            var diagnostics = @"
-                Cannot convert type 'int' to 'bool'.
-            ";
-
-            AssertDiagnosticsCs(text, diagnostics);
-        }
-
-        [Fact]
         public void Evaluator_PostfixIncrement_ReadOnly_ReportsCannotAssign()
         {
             var text = @"
@@ -1842,17 +1811,6 @@ function Main()
         private static void AssertValue(string text, object expectedValue)
         {
             var syntaxTree = SyntaxTree.Parse(text);
-            var compilation = Compilation.CreateScript(null, syntaxTree);
-            var variables = new Dictionary<VariableSymbol, object>();
-            var result = compilation.Evaluate(variables);
-
-            Assert.False(result.Diagnostics.HasErrors());
-            Assert.Equal(expectedValue, result.Value);
-        }
-
-        private static void AssertValueCs(string text, object expectedValue)
-        {
-            var syntaxTree = SyntaxTree.ParseCs(text);
             var compilation = Compilation.CreateScript(null, syntaxTree);
             var variables = new Dictionary<VariableSymbol, object>();
             var result = compilation.Evaluate(variables);
@@ -2928,43 +2886,6 @@ var s = [a as IShape]";
         {
             var annotatedText = AnnotatedText.Parse(text);
             var syntaxTree = SyntaxTree.Parse(annotatedText.Text);
-            var compilation = Compilation.CreateScript(null, syntaxTree);
-            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
-
-            var expectedDiagnostics = AnnotatedText.UnindentLines(diagnosticText);
-
-            if (annotatedText.Spans.Length != expectedDiagnostics.Length)
-            {
-                throw new Exception("ERROR: Must mark as many spans as there are expected diagnostics");
-            }
-
-            var diagnostics = result.Diagnostics;
-            Assert.Equal(expectedDiagnostics.Length, diagnostics.Length);
-
-            for (var i = 0; i < expectedDiagnostics.Length; i++)
-            {
-                var expectedMessage = expectedDiagnostics[i];
-                var actualMessage = diagnostics[i].Message;
-                Assert.Equal(expectedMessage, actualMessage);
-
-                if (assertLocation)
-                {
-                    var expectedSpan = annotatedText.Spans[i];
-                    var actualSpan = diagnostics[i].Location.Span;
-                    Assert.Equal(expectedSpan, actualSpan);
-                }
-            }
-        }
-
-        private void AssertDiagnosticsCs(string text, string diagnosticText)
-        {
-            AssertDiagnosticsCs(text, diagnosticText, true);
-        }
-
-        private void AssertDiagnosticsCs(string text, string diagnosticText, bool assertLocation)
-        {
-            var annotatedText = AnnotatedText.Parse(text);
-            var syntaxTree = SyntaxTree.ParseCs(annotatedText.Text);
             var compilation = Compilation.CreateScript(null, syntaxTree);
             var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
 

@@ -1,7 +1,6 @@
 using System.Linq;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Cocoa.Syntax;
-using CSyntax = global::Cocoa.CodeAnalysis.CSharp.Syntax;
 using Cocoa.CodeAnalysis.Syntax;
 using Xunit;
 
@@ -67,34 +66,6 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         }
 
         // ------------------------------------------------------------------
-        // 声明位（.cs）
-        // ------------------------------------------------------------------
-
-        [Fact]
-        public void Cs_Parameter_OutModifier_Parses()
-        {
-            var tree = SyntaxTree.ParseCs("bool TryParse(string s, out int value) { return true; }");
-            Assert.Empty(tree.Diagnostics.Where(d => d.IsError));
-
-            var function = Assert.IsType<CSyntax.FunctionDeclarationSyntax>(Assert.Single(((CSyntax.CompilationUnitSyntax)tree.Root).Members));
-            var modified = function.Parameters[1];
-            Assert.NotNull(modified.Modifier);
-            Assert.Equal(SyntaxKind.OutKeyword, modified.Modifier!.Kind);
-            Assert.True(modified.IsByRef);
-            Assert.Equal("value", modified.Identifier.Text);
-        }
-
-        [Fact]
-        public void Cs_Parameter_RefModifier_Parses()
-        {
-            var tree = SyntaxTree.ParseCs("void Swap(ref int[] a) { }");            Assert.Empty(tree.Diagnostics.Where(d => d.IsError));
-
-            var function = Assert.IsType<CSyntax.FunctionDeclarationSyntax>(Assert.Single(((CSyntax.CompilationUnitSyntax)tree.Root).Members));
-            Assert.NotNull(function.Parameters[0].Modifier);
-            Assert.Equal(SyntaxKind.RefKeyword, function.Parameters[0].Modifier!.Kind);
-        }
-
-        // ------------------------------------------------------------------
         // 调用点 byref 实参（out n / ref arr[i]）
         // ------------------------------------------------------------------
 
@@ -108,18 +79,6 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             Assert.Equal(SyntaxKind.OutKeyword, byRef.Keyword.Kind);
             Assert.False(byRef.IsRef);
             Assert.Equal(CocoaSyntaxKind.NameExpression, byRef.Expression.Kind);
-        }
-
-        [Fact]
-        public void Cs_CallSite_RefElementArgument_Parses()
-        {
-            var tree = SyntaxTree.ParseCs("void M(int[] a) { N(ref a[0]); }");
-            Assert.Empty(tree.Diagnostics.Where(d => d.IsError));
-
-            var byRef = FindFirst<CSyntax.ByRefArgumentExpressionSyntax>(tree.Root)!;
-            Assert.Equal(SyntaxKind.RefKeyword, byRef.Keyword.Kind);
-            Assert.True(byRef.IsRef);
-            Assert.Equal(CSharpSyntaxKind.ElementAccessExpression, byRef.Expression.Kind);
         }
 
         // ------------------------------------------------------------------

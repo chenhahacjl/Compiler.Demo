@@ -2,7 +2,6 @@ using System.Linq;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Cocoa.Syntax;
-using CSyntax = global::Cocoa.CodeAnalysis.CSharp.Syntax;
 using Cocoa.CodeAnalysis.Syntax;
 using Xunit;
 
@@ -55,14 +54,6 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             Assert.Empty(tree.Diagnostics.Where(d => d.IsError));
         }
 
-        [Fact]
-        public void Cs_FunctionTypeArrow_Rejected()
-        {
-            // .cs 无箭头函数类型（Func 家族 C3 接入）：`->` 拼写产生语法诊断
-            var tree = SyntaxTree.ParseCs("void apply((int) -> int f) { }");
-            Assert.Contains(tree.Diagnostics, d => d.IsError);
-        }
-
         // ------------------------------------------------------------------
         // Lambda
         // ------------------------------------------------------------------
@@ -104,35 +95,6 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         {
             var tree = SyntaxTree.Parse("let f = (x) => x");
             Assert.Contains(tree.Diagnostics, d => d.IsError && d.Message.Contains("显式标注类型"));
-        }
-
-        [Fact]
-        public void Cs_Lambda_Parenless_Parses()
-        {
-            var tree = SyntaxTree.ParseCs("var f = x => x + 1;");
-            Assert.Empty(tree.Diagnostics.Where(d => d.IsError));
-
-            var lambda = FindLambda<CSyntax.LambdaExpressionSyntax>(tree.Root)!;
-            Assert.Null(lambda.OpenParenthesisToken);
-            Assert.Single(lambda.Parameters);
-        }
-
-        [Fact]
-        public void Cs_Lambda_ImplicitParameters_Parses()
-        {
-            var tree = SyntaxTree.ParseCs("var add = (x, y) => x + y;");
-            Assert.Empty(tree.Diagnostics.Where(d => d.IsError));
-
-            var lambda = FindLambda<CSyntax.LambdaExpressionSyntax>(tree.Root)!;
-            Assert.Equal(2, lambda.Parameters.Count);
-            Assert.False(lambda.HasExplicitParameterTypes);
-        }
-
-        [Fact]
-        public void Cs_Lambda_MixedExplicitImplicit_Diagnosed()
-        {
-            var tree = SyntaxTree.ParseCs("var f = (int x, y) => x;");
-            Assert.Contains(tree.Diagnostics, d => d.IsError && d.Message.Contains("不可混用"));
         }
 
         [Fact]

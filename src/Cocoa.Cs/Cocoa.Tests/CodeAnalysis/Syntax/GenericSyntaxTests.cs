@@ -1,5 +1,4 @@
 using Cocoa.CodeAnalysis.Cocoa.Syntax;
-using CSyntax = global::Cocoa.CodeAnalysis.CSharp.Syntax;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Linq;
 using Xunit;
@@ -213,55 +212,6 @@ function Max<T>(a: T, b: T): T where T: IComparable<T>
             Assert.Equal("T", Assert.Single(constraint.TypeArguments).Identifier.Text);
         }
 
-        [Fact]
-        public void Parser_CSharpStyle_GenericClassMethod_ParsesTypeParameters()
-        {
-            var syntaxTree = SyntaxTree.ParseCs(@"
-public static T Max<T>(T a, T b) where T : IComparable<T>
-{
-    return a;
-}");
-            var function = Assert.IsType<CSyntax.FunctionDeclarationSyntax>(Assert.Single(((CSyntax.CompilationUnitSyntax)syntaxTree.Root).Members));
-
-            Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
-            Assert.NotNull(function.TypeParameters);
-            Assert.Equal("Max", function.Identifier.Text);
-            Assert.Equal("T", Assert.Single(function!.TypeParameters!.Parameters).Identifier.Text);
-            Assert.Single(function.WhereClauses);
-        }
-
-        [Fact]
-        public void Parser_CSharpStyle_TopLevelFunctionReturningGeneric()
-        {
-            var syntaxTree = SyntaxTree.ParseCs(@"
-List<int> MakeList(int capacity)
-{
-    return null;
-}");
-            var function = Assert.IsType<CSyntax.FunctionDeclarationSyntax>(Assert.Single(((CSyntax.CompilationUnitSyntax)syntaxTree.Root).Members));
-
-            Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
-            Assert.Equal("MakeList", function.Identifier.Text);
-            var returnType = Assert.IsType<CSyntax.GenericTypeClauseSyntax>(function.Type!);
-            Assert.Equal("List", returnType.Identifier.Text);
-        }
-
-        [Fact]
-        public void Parser_CSharpStyle_GenericClassField_ParsesPrefixGenericType()
-        {
-            var syntaxTree = SyntaxTree.ParseCs(@"
-class Box
-{
-    private List<int> _items;
-}");
-            var classDeclaration = Assert.IsType<CSyntax.ClassDeclarationSyntax>(Assert.Single(((CSyntax.CompilationUnitSyntax)syntaxTree.Root).Members));
-            var field = Assert.IsType<CSyntax.ClassFieldDeclarationSyntax>(Assert.Single(classDeclaration.Members));
-
-            Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
-            var typeClause = Assert.IsType<CSyntax.GenericTypeClauseSyntax>(field.Type);
-            Assert.Equal("List", typeClause.Identifier.Text);
-        }
-
         private static ExpressionSyntax ParseExpression(string text)
         {
             var syntaxTree = SyntaxTree.Parse(text);
@@ -283,23 +233,6 @@ class Box
             var parameter = Assert.Single(delegateDeclaration!.TypeParameters!.Parameters);
             Assert.Equal(SyntaxKind.InKeyword, parameter.VarianceKeyword!.Kind);
             Assert.Equal("T", parameter.Identifier.Text);
-        }
-
-        [Fact]
-        public void Cs_DelegateTypeParameter_Variance_Annotation_Parses()
-        {
-            var syntaxTree = SyntaxTree.ParseCs("delegate TResult Handler<in T, out TResult>(T arg);");
-            var delegateDeclaration = Assert.IsType<CSyntax.DelegateDeclarationSyntax>(Assert.Single(((CSyntax.CompilationUnitSyntax)syntaxTree.Root).Members));
-
-            Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
-            Assert.Equal("Handler", delegateDeclaration.Identifier.Text);
-            Assert.NotNull(delegateDeclaration.TypeParameters);
-            var parameters = delegateDeclaration!.TypeParameters!.Parameters;
-            Assert.Equal(2, parameters.Length);
-            Assert.Equal(SyntaxKind.InKeyword, parameters[0].VarianceKeyword!.Kind);
-            Assert.Equal("T", parameters[0].Identifier.Text);
-            Assert.Equal(SyntaxKind.OutKeyword, parameters[1].VarianceKeyword!.Kind);
-            Assert.Equal("TResult", parameters[1].Identifier.Text);
         }
 
         [Fact]

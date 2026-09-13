@@ -36,8 +36,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
         public ExpressionSyntax? DefaultValue { get; }
         public bool HasDefaultValue => DefaultValue != null;
 
-        /// <summary>是否为 C# 方言参数形态（`类型 名称`，类型前置）；Cocoa 恒为 `名称: 类型`（名称前置）。</summary>
-        private bool IsTypeFirst => SyntaxTree.Language.ParametersAreTypeFirst;
+        /// <summary>是否为类型前置参数形态（`类型 名称`）；Cocoa 恒为 `名称: 类型`（名称前置），去 C# 方言后恒 false。</summary>
+        private bool IsTypeFirst => false;
 
         /// <summary>红→绿源序化（P0）：按方言保留 `[out|ref] 类型 名称`（.cs）或 `[out|ref] 名称: 类型`（.co）
         /// 的源码顺序，保证 `GreenRoot.ToString() == 源码`。</summary>

@@ -72,16 +72,11 @@ namespace Cocoa.Tests.CodeAnalysis
         [Fact]
         public void Binder_FuncFamily_ResolvesToFunctionType()
         {
-            // .co 亦可用 Func 家族拼写（两方言共享）；仅声明不调用，Evaluate 零错误即绑定成功
+            // Func 家族拼写（去 C# 方言后为唯一拼写）；仅声明不调用，Evaluate 零错误即绑定成功
             var coTree = SyntaxTree.Parse("function apply(f: Func<i64, bool>, g: Action<i64>): void { }");
             var coCompilation = Compilation.Create(coTree);
             var coResult = coCompilation.Evaluate(new System.Collections.Generic.Dictionary<VariableSymbol, object>());
             Assert.Empty(coResult.Diagnostics.Where(d => d.IsError));
-
-            var csTree = SyntaxTree.ParseCs("void apply(Func<long, bool> f, Action<long> g) { }");
-            var csCompilation = Compilation.Create(csTree);
-            var csResult = csCompilation.Evaluate(new System.Collections.Generic.Dictionary<VariableSymbol, object>());
-            Assert.Empty(csResult.Diagnostics.Where(d => d.IsError));
         }
 
         [Fact]

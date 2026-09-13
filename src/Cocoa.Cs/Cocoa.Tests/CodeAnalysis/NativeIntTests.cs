@@ -130,21 +130,6 @@ function Main(): i32
             Assert.Empty(diagnostics.Where(d => d.IsError));
         }
 
-        [Fact]
-        public void Cs_Dialect_Nint_Accepted()
-        {
-            var diagnostics = Compilation.Create(SyntaxTree.ParseCs(@"using System;
-public static void Main()
-{
-    nint n = 0;
-    nuint u = 0U;
-    Console.WriteLine(n == 0);
-    Console.WriteLine(u == 0);
-}")).GetDiagnostics();
-
-            Assert.Empty(diagnostics.Where(d => d.IsError));
-        }
-
         // ---- IL --------------------------------------------------------------
 
         [Fact]

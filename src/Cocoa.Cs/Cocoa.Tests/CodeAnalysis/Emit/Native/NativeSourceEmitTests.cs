@@ -19,10 +19,10 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
             return Path.Combine(directory, name + "-" + target + ".exe");
         }
 
-        private static string CompileAndRun(string source, string name, string target, string? input = null, int expectedExitCode = 0, bool useCs = false)
+        private static string CompileAndRun(string source, string name, string target, string? input = null, int expectedExitCode = 0)
         {
             TargetPlatform.TryParse(target, out var platform);
-            var syntaxTree = useCs ? SyntaxTree.ParseCs(source) : SyntaxTree.Parse(source);
+            var syntaxTree = SyntaxTree.Parse(source);
             var compilation = Compilation.Create(syntaxTree);
             var exePath = GetExePath(name, target);
 
@@ -376,50 +376,6 @@ function Main()
 }", "src-range-for-descending", target);
 
             Assert.Equal("55\r\n30\r\n0\r\n55\r\n30\r\n", output);
-        }
-
-        [Theory]
-        [InlineData(X64)]
-        [InlineData(X86)]
-        public void NativeSource_CSStyleFor_PostfixIncrement(string target)
-        {
-            var output = CompileAndRun(@"using System;
-
-public static void Main()
-{
-    var sum = 0;
-    for (var i = 0; i < 5; i++)
-    {
-        sum = sum + i;
-    }
-    Console.WriteLine(sum);
-    var j = 10;
-    j--;
-    Console.WriteLine(j);
-    j++;
-    Console.WriteLine(j);
-    var total = 0;
-    for (;;)
-    {
-        total = total + 1;
-        if (total == 3)
-        {
-            break;
-        }
-    }
-    Console.WriteLine(total);
-    var k = 0;
-    for (; k < 4; k = k + 1)
-    {
-        if (k == 2)
-        {
-            continue;
-        }
-        Console.WriteLine(k);
-    }
-}", "src-cstyle-for", target, useCs: true);
-
-            Assert.Equal("10\r\n9\r\n10\r\n3\r\n0\r\n1\r\n3\r\n", output);
         }
 
         [Theory]
@@ -1178,32 +1134,6 @@ function Main()
         [Theory]
         [InlineData(X64)]
         [InlineData(X86)]
-        public void NativeSource_CSharpStyleTopLevelFunctions(string target)
-        {
-            var output = CompileAndRun(@"using System;
-
-public static void Main()
-{
-    Console.WriteLine(Add(2, 3));
-    Console.WriteLine(Square(4));
-}
-
-public int Add(int x, int y)
-{
-    return x + y;
-}
-
-public int Square(int n)
-{
-    return n * n;
-}", "src-cs-top-level", target, useCs: true);
-
-            Assert.Equal("5\r\n16\r\n", output);
-        }
-
-        [Theory]
-        [InlineData(X64)]
-        [InlineData(X86)]
         public void NativeSource_NoKeywordTopLevelFunction(string target)
         {
             var output = CompileAndRun(@"using System
@@ -1219,24 +1149,6 @@ function Add(a: i32, b: i32): i32
 }", "src-no-keyword-top-level", target);
 
             Assert.Equal("5\r\n", output);
-        }
-
-        [Theory]
-        [InlineData(X64)]
-        [InlineData(X86)]
-        public void NativeSource_CSharpStyleConstLocal(string target)
-        {
-            var output = CompileAndRun(@"using System;
-
-public static void Main()
-{
-    const int x = 10;
-    Console.WriteLine(x);
-    const string s = ""hi"";
-    Console.WriteLine(s);
-}", "src-cs-const", target, useCs: true);
-
-            Assert.Equal("10\r\nhi\r\n", output);
         }
 
         [Theory]

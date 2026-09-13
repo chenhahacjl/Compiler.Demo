@@ -9,19 +9,14 @@ using System.Collections.Immutable;
 namespace Cocoa.CodeAnalysis
 {
     /// <summary>
-    /// 语言（M2 设计 X）：对标 Roslyn 语言前端抽象。每门语言一个实例，承载
-    /// 名字 / 内建类型名词汇 / 解析器工厂 / 参数拼写策略；
-    /// 语言专属实现以 <see cref="Language"/> 子类落入各自程序集。
-    /// C# 方言全套位于独立程序集 Cocoa.CodeAnalysis.CSharp（<see cref="Cocoa.CodeAnalysis.CSharpLanguage"/>）；
-    /// CO 宿主语言 CocoaLanguage（Y-A3-4）迁入独立程序集 Cocoa.CodeAnalysis.Cocoa，
+    /// 语言（M2 设计 X）：对标 Roslyn 语言前端抽象。去 C# 方言（2026-09-13）后仅剩 CO 单实现
+    /// <see cref="Cocoa.CodeAnalysis.CocoaLanguage"/>（独立程序集 Cocoa.CodeAnalysis.Cocoa），
     /// 核心经 <see cref="Cocoa"/> 反射装载并触达之（默认解析路径依赖 Cocoa.CodeAnalysis.Cocoa 在应用目录）。
-    /// 新语言 = 新增 Language 子类（含解析器），核心零改动（设计 X §6.3）。
     /// </summary>
     public abstract class Language
     {
         private static readonly Dictionary<string, Language> _registered = new();
         private static Language? _cocoa;
-        private static Language? _csharp;
 
         protected Language(string name)
         {
@@ -34,9 +29,6 @@ namespace Cocoa.CodeAnalysis
         /// <summary>Cocoa 宿主语言（默认，`.co`）：实例位于 Cocoa.CodeAnalysis.Cocoa，此处经注册表 / 反射装载解析。</summary>
         public static Language Cocoa => _cocoa ??= CreateCocoa();
 
-        /// <summary>C# 方言（`.cs`）：实例位于 Cocoa.CodeAnalysis.CSharp，此处经注册表 / 反射装载解析。</summary>
-        public static Language CSharp => _csharp ??= CreateCSharp();
-
         private static Language CreateCocoa()
         {
             if (_registered.TryGetValue("cocoa", out var language))
@@ -47,20 +39,6 @@ namespace Cocoa.CodeAnalysis
             // Y-A3-4：CocoaLanguage 随 CO L1 迁入 Cocoa.CodeAnalysis.Cocoa；反射装载并触达 Instance（静态初始化经 base("cocoa") 注册）。
             var assembly = System.Reflection.Assembly.Load("Cocoa.Dialects.Cocoa");
             var instance = assembly.GetType("Cocoa.CodeAnalysis.CocoaLanguage")!
-                .GetField("Instance", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!
-                .GetValue(null);
-            return (Language)instance!;
-        }
-
-        private static Language CreateCSharp()
-        {
-            if (_registered.TryGetValue("csharp", out var language))
-            {
-                return language;
-            }
-
-            var assembly = System.Reflection.Assembly.Load("Cocoa.Dialects.CSharp");
-            var instance = assembly.GetType("Cocoa.CodeAnalysis.CSharpLanguage")!
                 .GetField("Instance", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!
                 .GetValue(null);
             return (Language)instance!;
@@ -94,14 +72,9 @@ namespace Cocoa.CodeAnalysis
 
         protected abstract TypeSymbol? LookupSpecificBuiltinType(string name);
 
-        /// <summary>参数拼写：true = 类型前置（`.cs` `int x`）；false = 名称前置（`.co` `x: i32`）。
-        /// 供参数绿往返源序化（ParameterSyntax.IsTypeFirst）判别。</summary>
-        public virtual bool ParametersAreTypeFirst => false;
-
         /// <summary>
         /// 关键字识别（P1-A 词法分家）：文本 → 关键字 kind，未命中返回 <see cref="SyntaxKind.IdentifierToken"/>。
-        /// 基类 = 共享关键字表（<see cref="SyntaxFacts.GetKeywordKind"/>）；
-        /// 语言专属表经 override 排除对方语言独占词（C# 侧 CO 词在 P1-A(ii) 回落标识符）。
+        /// 基类 = 共享关键字表（<see cref="SyntaxFacts.GetKeywordKind"/>）。
         /// </summary>
         public virtual SyntaxKind GetKeywordKind(string text)
         {

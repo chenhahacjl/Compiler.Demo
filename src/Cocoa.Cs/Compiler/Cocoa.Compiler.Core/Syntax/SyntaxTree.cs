@@ -43,11 +43,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             var text = File.ReadAllText(fileName);
             var sourceText = SourceText.From(text, fileName);
-            var language = Path.GetExtension(fileName).Equals(".cs", StringComparison.OrdinalIgnoreCase)
-                ? Language.GetOrThrow("csharp")
-                : Language.Cocoa;
-
-            return Parse(sourceText, language);
+            return Parse(sourceText, Language.Cocoa);
         }
 
         private static void Parse(SyntaxTree syntaxTree, out SyntaxNode root, out ImmutableArray<Diagnostic> diagnostics)
@@ -67,12 +63,6 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             var sourceText = SourceText.From(text);
             return Parse(sourceText, language);
-        }
-
-        /// <summary>以严格 C# 方言解析文本（测试辅助，等价 <c>Parse(text, Language.GetOrThrow("csharp"))</c>）。</summary>
-        public static SyntaxTree ParseCs(string text)
-        {
-            return Parse(text, Language.GetOrThrow("csharp"));
         }
 
         public static SyntaxTree Parse(SourceText text)
