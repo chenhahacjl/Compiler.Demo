@@ -102,6 +102,21 @@ public static class NewProjectService
         return new NewProjectResult(solutionPath, projectPath, created);
     }
 
+    /// <summary>在当前解决方案目录下新建项目：生成 <c>&lt;solutionDir&gt;\&lt;Project&gt;\&lt;Project&gt;.coproj</c>，
+    /// 返回 .coproj 路径（由调用方写入 .cosln）。</summary>
+    public static string CreateProjectInto(string template, string projectName, string solutionDirectory, string? dotnetRuntime = null)
+    {
+        var spec = LoadSpecs().FirstOrDefault(s => s.Key == template) ?? FallbackSpec(template);
+        if (spec.Special == "Solution")
+            throw new InvalidOperationException("空白解决方案不能作为项目添加");
+
+        var projectPascal = ToPascalCase(projectName);
+        var projectDir = Path.Combine(solutionDirectory, projectPascal);
+        Directory.CreateDirectory(projectDir);
+        CreateProject(spec, projectPascal, projectDir, dotnetRuntime);
+        return Path.Combine(projectDir, projectPascal + ".coproj");
+    }
+
     private static IReadOnlyList<string> CreateProject(TemplateSpec spec, string name, string targetDir, string? dotnetRuntime)
     {
         Directory.CreateDirectory(targetDir);

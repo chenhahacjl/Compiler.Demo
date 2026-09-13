@@ -180,7 +180,7 @@
                                         <TextBlock Text="{Binding Caption}" FontSize="13" VerticalAlignment="Center" />
                                         <StackPanel.ContextMenu>
                                             <!-- 菜单项在 Opening 时按节点类型动态构建，分隔符只在可见分组之间出现 -->
-                                            <ContextMenu Opening="OnNodeContextMenuOpening" />
+                                            <ContextMenu DataContext="{Binding}" Opening="OnNodeContextMenuOpening" />
                                         </StackPanel.ContextMenu>
                                     </StackPanel>
                                 </TreeDataTemplate>

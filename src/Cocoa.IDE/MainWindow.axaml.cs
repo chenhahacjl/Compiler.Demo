@@ -4,6 +4,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.IDE.Controls;
+using Cocoa.IDE.Services;
 using Cocoa.IDE.ViewModels;
 using System.ComponentModel;
 
@@ -260,9 +261,10 @@ public partial class MainWindow : Window
             if (node.IsSolution)
             {
                 if (add.Items.Count > 0) add.Items.Add(new Separator());
+                add.Items.Add(Item("新建项目…", OnCtxAddNewProject));
                 add.Items.Add(Item("现有项目…", OnCtxAddExistingProject));
             }
-            groups.Add(new() { add });
+            if (add.Items.Count > 0) groups.Add(new() { add });
         }
 
         var fileGroup = new List<Control>();
@@ -389,6 +391,36 @@ public partial class MainWindow : Window
         {
             if (file.TryGetLocalPath() is { } path)
                 ViewModel.SolutionTree.AddSourceToProject(node, path);
+        }
+    }
+
+    /// <summary>向当前解决方案添加新建项目（模板 + 名称）。</summary>
+    private async void OnCtxAddNewProject(object? sender, RoutedEventArgs e)
+    {
+        if (CtxNode(sender) is not { IsSolution: true }) return;
+
+        var solutionDir = ViewModel.SolutionTree.CurrentSolution?.Directory;
+        if (solutionDir == null)
+        {
+            ViewModel.Output.AppendLine("error: 当前没有打开解决方案");
+            return;
+        }
+
+        var dialog = new AddProjectDialog();
+        var result = await dialog.ShowDialog<NewProjectIntoResult?>(this);
+        if (result == null) return;
+
+        try
+        {
+            var projectPath = NewProjectService.CreateProjectInto(result.Template, result.Name, solutionDir);
+            if (ViewModel.SolutionTree.AddProjectToSolution(projectPath, out var error))
+                ViewModel.Output.AppendLine($"已新建项目：{result.Name}");
+            else
+                ViewModel.Output.AppendLine($"error: {error}");
+        }
+        catch (Exception ex)
+        {
+            ViewModel.Output.AppendLine("error: " + ex.Message);
         }
     }
 
