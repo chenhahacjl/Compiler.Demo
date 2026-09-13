@@ -2,11 +2,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ae="using:AvaloniaEdit"
              x:Class="Cocoa.IDE.Controls.EditorView"
-             Background="#1E1E1E">
+             Background="{DynamicResource EditorBackgroundBrush}">
 
     <ae:TextEditor x:Name="AvaloniaEdit"
-                   Background="#1E1E1E"
-                   Foreground="#D4D4D4"
+                   Background="{DynamicResource EditorBackgroundBrush}"
+                   Foreground="{DynamicResource EditorForegroundBrush}"
                    FontFamily="Cascadia Code, Consolas, Courier New"
                    FontSize="14"
                    ShowLineNumbers="True"

@@ -7,7 +7,7 @@
         Width="1280" Height="800"
         MinWidth="800" MinHeight="500"
         WindowStartupLocation="CenterScreen"
-        Background="#1E1E1E">
+        Background="{DynamicResource EditorBackgroundBrush}">
 
     <Window.KeyBindings>
         <KeyBinding Gesture="Ctrl+Shift+N" Command="{Binding NewProjectCommand}" />
@@ -27,7 +27,7 @@
 
     <DockPanel>
         <!-- ═══ ① 菜单栏 ═══ -->
-        <Menu DockPanel.Dock="Top" Background="#2D2D30">
+        <Menu DockPanel.Dock="Top" Background="{DynamicResource ChromeBrush}">
             <MenuItem Header="文件(_F)">
                 <MenuItem Header="新建项目…"        Command="{Binding NewProjectCommand}" InputGesture="Ctrl+Shift+N" />
                 <Separator />
@@ -56,6 +56,11 @@
                 <MenuItem x:Name="ViewPropertiesItem" Header="属性窗口" ToggleType="CheckBox" IsChecked="True" Click="OnToggleProperties" />
                 <MenuItem x:Name="ViewErrorItem" Header="错误列表" ToggleType="CheckBox" IsChecked="True" Click="OnToggleErrors" />
                 <MenuItem x:Name="ViewOutputItem" Header="输出" ToggleType="CheckBox" IsChecked="True" Click="OnToggleOutput" />
+                <Separator />
+                <MenuItem Header="主题">
+                    <MenuItem Header="深色" Command="{Binding SetThemeCommand}" CommandParameter="Dark" />
+                    <MenuItem Header="浅色" Command="{Binding SetThemeCommand}" CommandParameter="Light" />
+                </MenuItem>
             </MenuItem>
             <MenuItem Header="项目(_P)">
                 <MenuItem Header="添加现有文件…" Click="OnProjectAddExistingFile" IsEnabled="{Binding SolutionTree.HasSolution}" />
@@ -89,22 +94,22 @@
 
         <!-- ═══ ② 工具栏 ═══ -->
         <Border DockPanel.Dock="Top"
-                Background="#2D2D30"
-                BorderBrush="#3F3F46"
+                Background="{DynamicResource ChromeBrush}"
+                BorderBrush="{DynamicResource SeparatorBrush}"
                 BorderThickness="0,0,0,1"
                 Padding="4,2">
             <StackPanel Orientation="Horizontal" Spacing="6">
                 <Button Content="➕" ToolTip.Tip="新建项目" Command="{Binding NewProjectCommand}" />
                 <Button Content="📂" ToolTip.Tip="打开文件" Command="{Binding OpenFileCommand}" />
                 <Button Content="📁" ToolTip.Tip="打开解决方案" Command="{Binding OpenSolutionPickerCommand}" />
-                <Border Width="1" Background="#3F3F46" Margin="4,2" />
+                <Border Width="1" Background="{DynamicResource SeparatorBrush}" Margin="4,2" />
                 <Button Content="↩" ToolTip.Tip="撤销 (Ctrl+Z)" Command="{Binding UndoCommand}" />
                 <Button Content="↪" ToolTip.Tip="重做 (Ctrl+Y)" Command="{Binding RedoCommand}" />
-                <Border Width="1" Background="#3F3F46" Margin="4,2" />
+                <Border Width="1" Background="{DynamicResource SeparatorBrush}" Margin="4,2" />
                 <Button Content="✂" ToolTip.Tip="剪切 (Ctrl+X)" Command="{Binding CutCommand}" />
                 <Button Content="📋" ToolTip.Tip="复制 (Ctrl+C)" Command="{Binding CopyCommand}" />
                 <Button Content="📥" ToolTip.Tip="粘贴 (Ctrl+V)" Command="{Binding PasteCommand}" />
-                <Border Width="1" Background="#3F3F46" Margin="4,2" />
+                <Border Width="1" Background="{DynamicResource SeparatorBrush}" Margin="4,2" />
                 <Button Content="🔨" ToolTip.Tip="生成 (F6)" Command="{Binding BuildCommand}" />
                 <Button Content="▶"  ToolTip.Tip="运行 (Ctrl+F5)" Command="{Binding RunCommand}" />
                 <Button Content="🐞" ToolTip.Tip="调试 (F5)" Command="{Binding DebugStartCommand}" />
@@ -114,20 +119,20 @@
 
         <!-- ═══ ⑤ 状态栏 ═══ -->
         <Border DockPanel.Dock="Bottom"
-                Background="#007ACC"
+                Background="{DynamicResource StatusBarBrush}"
                 Padding="8,2">
             <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Grid.Column="0" Text="{Binding StatusBar.StatusText}"
-                           Foreground="White" FontSize="12" VerticalAlignment="Center" />
+                           Foreground="{DynamicResource StatusBarTextBrush}" FontSize="12" VerticalAlignment="Center" />
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16">
                     <TextBlock Text="{Binding SolutionTree.SolutionName}"
-                               Foreground="White" FontSize="12" />
+                               Foreground="{DynamicResource StatusBarTextBrush}" FontSize="12" />
                     <TextBlock Text="{Binding StatusBar.CursorPosition}"
-                               Foreground="White" FontSize="12" />
+                               Foreground="{DynamicResource StatusBarTextBrush}" FontSize="12" />
                     <TextBlock Text="{Binding StatusBar.Language}"
-                               Foreground="White" FontSize="12" />
+                               Foreground="{DynamicResource StatusBarTextBrush}" FontSize="12" />
                     <TextBlock Text="{Binding StatusBar.Encoding}"
-                               Foreground="White" FontSize="12" />
+                               Foreground="{DynamicResource StatusBarTextBrush}" FontSize="12" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -137,19 +142,19 @@
             <Grid x:Name="MainContentGrid" Grid.Row="0" ColumnDefinitions="280,4,*,4,300">
                 <!-- 左：解决方案资源管理器（VS 风格） -->
                 <Border Grid.Column="0" x:Name="ExplorerPanel"
-                        Background="#252526"
-                        BorderBrush="#3F3F46"
+                        Background="{DynamicResource PanelBrush}"
+                        BorderBrush="{DynamicResource SeparatorBrush}"
                         BorderThickness="0,0,1,0">
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Top"
                                    Text="解决方案资源管理器"
                                    FontSize="12" FontWeight="SemiBold"
-                                   Padding="8,6" Foreground="#CCCCCC"
-                                   Background="#333337" />
+                                   Padding="8,6" Foreground="{DynamicResource TextBrush}"
+                                   Background="{DynamicResource PanelHeaderBrush}" />
                         <!-- 工具栏 -->
                         <Border DockPanel.Dock="Top"
-                                Background="#2D2D30"
-                                BorderBrush="#3F3F46"
+                                Background="{DynamicResource ChromeBrush}"
+                                BorderBrush="{DynamicResource SeparatorBrush}"
                                 BorderThickness="0,0,0,1"
                                 Padding="4,2">
                             <StackPanel Orientation="Horizontal" Spacing="4">
@@ -163,7 +168,7 @@
                         <TreeView x:Name="SolutionTree"
                                   ItemsSource="{Binding SolutionTree.RootNodes}"
                                   SelectedItem="{Binding SolutionTree.SelectedNode, Mode=TwoWay}"
-                                  Background="Transparent" Foreground="#CCCCCC"
+                                  Background="Transparent" Foreground="{DynamicResource TextBrush}"
                                   BorderThickness="0" Padding="4"
                                   SelectionChanged="OnTreeSelectionChanged"
                                   ContextRequested="OnSolutionTreeContextRequested"
@@ -192,24 +197,24 @@
                     </DockPanel>
                 </Border>
 
-                <GridSplitter Grid.Column="1" x:Name="ExplorerSplitter" Background="#3F3F46" Width="4" />
+                <GridSplitter Grid.Column="1" x:Name="ExplorerSplitter" Background="{DynamicResource SeparatorBrush}" Width="4" />
 
                 <!-- 中央：编辑器（EditorPane 内嵌标签栏 + 编辑器） -->
                 <controls:EditorPane Grid.Column="2" x:Name="Pane" />
 
-                <GridSplitter Grid.Column="3" x:Name="PropertiesSplitter" Background="#3F3F46" Width="4" />
+                <GridSplitter Grid.Column="3" x:Name="PropertiesSplitter" Background="{DynamicResource SeparatorBrush}" Width="4" />
 
                 <!-- 右：属性窗口（VS 风格，选中自动填充） -->
                 <Border Grid.Column="4" x:Name="PropertiesPanel"
-                        Background="#252526"
-                        BorderBrush="#3F3F46"
+                        Background="{DynamicResource PanelBrush}"
+                        BorderBrush="{DynamicResource SeparatorBrush}"
                         BorderThickness="1,0,0,0">
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Top"
                                    Text="属性"
                                    FontSize="12" FontWeight="SemiBold"
-                                   Padding="8,6" Foreground="#CCCCCC"
-                                   Background="#333337" />
+                                   Padding="8,6" Foreground="{DynamicResource TextBrush}"
+                                   Background="{DynamicResource PanelHeaderBrush}" />
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <ItemsControl ItemsSource="{Binding Properties.Items}">
                                 <ItemsControl.ItemTemplate>
@@ -217,10 +222,10 @@
                                         <Grid ColumnDefinitions="110,*"
                                               Margin="4,2" VerticalAlignment="Center">
                                             <TextBlock Grid.Column="0" Text="{Binding Name}"
-                                                       FontSize="12" Foreground="#9CDCFE"
+                                                       FontSize="12" Foreground="{DynamicResource IdentifierBrush}"
                                                        VerticalAlignment="Center" />
                                             <TextBlock Grid.Column="1" Text="{Binding Value}"
-                                                       FontSize="12" Foreground="#CCCCCC"
+                                                       FontSize="12" Foreground="{DynamicResource TextBrush}"
                                                        TextWrapping="Wrap" VerticalAlignment="Center" />
                                         </Grid>
                                     </DataTemplate>
@@ -233,15 +238,15 @@
 
             <!-- ═══ ④ 底部面板：输出 / 错误列表 ═══ -->
             <Border Grid.Row="1" x:Name="BottomPanel"
-                    Background="#252526"
-                    BorderBrush="#3F3F46"
+                    Background="{DynamicResource PanelBrush}"
+                    BorderBrush="{DynamicResource SeparatorBrush}"
                     BorderThickness="0,1,0,0">
                 <TabControl x:Name="BottomTabs" Padding="0">
                     <TabItem Header="输出">
                         <DockPanel>
                             <Border DockPanel.Dock="Top"
-                                    Background="#2D2D30"
-                                    BorderBrush="#3F3F46"
+                                    Background="{DynamicResource ChromeBrush}"
+                                    BorderBrush="{DynamicResource SeparatorBrush}"
                                     BorderThickness="0,0,0,1"
                                     Padding="4,2">
                                 <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
@@ -254,7 +259,7 @@
                             <ListBox x:Name="OutputList"
                                      ItemsSource="{Binding Output.Lines}"
                                      Background="Transparent"
-                                     Foreground="#CCCCCC"
+                                     Foreground="{DynamicResource TextBrush}"
                                      BorderThickness="0">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
@@ -267,8 +272,8 @@
                     <TabItem Header="错误列表">
                         <DockPanel>
                             <Border DockPanel.Dock="Top"
-                                    Background="#2D2D30"
-                                    BorderBrush="#3F3F46"
+                                    Background="{DynamicResource ChromeBrush}"
+                                    BorderBrush="{DynamicResource SeparatorBrush}"
                                     BorderThickness="0,0,0,1"
                                     Padding="8,2">
                                 <StackPanel Orientation="Horizontal" Spacing="16">
@@ -279,7 +284,7 @@
                             <ListBox x:Name="ErrorListBox"
                                      ItemsSource="{Binding ErrorList.FilteredItems}"
                                      Background="Transparent"
-                                     Foreground="#CCCCCC"
+                                     Foreground="{DynamicResource TextBrush}"
                                      BorderThickness="0"
                                      DoubleTapped="OnErrorDoubleTapped"
                                      SelectionChanged="OnErrorSelectionChanged">
@@ -287,10 +292,10 @@
                                     <DataTemplate>
                                         <Grid ColumnDefinitions="24,*,110">
                                             <TextBlock Grid.Column="0" Text="{Binding SeverityIcon}"
-                                                       Foreground="Red" FontSize="12" />
+                                                        Foreground="{DynamicResource ErrorBrush}" FontSize="12" />
                                             <TextBlock Grid.Column="1" Text="{Binding Message}" FontSize="12" />
                                             <TextBlock Grid.Column="2" Text="{Binding Location}" FontSize="12"
-                                                       Foreground="#999" />
+                                                       Foreground="{DynamicResource SubtleTextBrush}" />
                                         </Grid>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
@@ -299,13 +304,13 @@
                     </TabItem>
                     <TabItem Header="局部变量">
                         <ListBox ItemsSource="{Binding DebugLocals}"
-                                 Background="Transparent" Foreground="#CCCCCC"
+                                 Background="Transparent" Foreground="{DynamicResource TextBrush}"
                                  BorderThickness="0">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Grid ColumnDefinitions="160,120,*">
-                                        <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12" Foreground="#9CDCFE" />
-                                        <TextBlock Grid.Column="1" Text="{Binding Type}" FontSize="12" Foreground="#4EC9B0" />
+                                        <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12" Foreground="{DynamicResource IdentifierBrush}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Type}" FontSize="12" Foreground="{DynamicResource TypeBrush}" />
                                         <TextBlock Grid.Column="2" Text="{Binding Value}" FontSize="12" />
                                     </Grid>
                                 </DataTemplate>
@@ -314,14 +319,14 @@
                     </TabItem>
                     <TabItem Header="调用栈">
                         <ListBox ItemsSource="{Binding DebugCallStack}"
-                                 Background="Transparent" Foreground="#CCCCCC"
+                                 Background="Transparent" Foreground="{DynamicResource TextBrush}"
                                  BorderThickness="0">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Grid ColumnDefinitions="200,*,Auto">
                                         <TextBlock Grid.Column="0" Text="{Binding Function}" FontSize="12" />
-                                        <TextBlock Grid.Column="1" Text="{Binding FilePath}" FontSize="12" Foreground="#999" />
-                                        <TextBlock Grid.Column="2" Text="{Binding Line}" FontSize="12" Foreground="#999" />
+                                        <TextBlock Grid.Column="1" Text="{Binding FilePath}" FontSize="12" Foreground="{DynamicResource SubtleTextBrush}" />
+                                        <TextBlock Grid.Column="2" Text="{Binding Line}" FontSize="12" Foreground="{DynamicResource SubtleTextBrush}" />
                                     </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>

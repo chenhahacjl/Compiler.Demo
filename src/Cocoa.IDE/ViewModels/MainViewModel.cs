@@ -324,6 +324,18 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void Find() => EditActionRequested?.Invoke("Find");
 
+    /// <summary>M6：切换主题（Dark/Light）并持久化；刷新树以重算图标配色。</summary>
+    [RelayCommand]
+    private void SetTheme(string? variant)
+    {
+        var value = string.Equals(variant, "Light", StringComparison.OrdinalIgnoreCase) ? "Light" : "Dark";
+        SettingsService.Current.Settings.ThemeVariant = value;
+        SettingsService.Current.Save();
+        App.ApplyTheme(value);
+        SolutionTree.Refresh();
+        StatusBar.StatusText = value == "Light" ? "已切换到浅色主题" : "已切换到深色主题";
+    }
+
     /// <summary>新建项目向导：弹对话框 → 生成工程 → 加载返回的解决方案。</summary>
     public async Task<NewProjectService.NewProjectResult?> ShowNewProjectDialog(Window owner)
     {

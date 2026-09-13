@@ -1,4 +1,6 @@
+using Avalonia;
 using Avalonia.Media;
+using Avalonia.Styling;
 
 namespace Cocoa.IDE;
 
@@ -22,16 +24,21 @@ public static class Icons
         return geometry;
     }
 
+    /// <summary>按当前主题取色（深色/浅色两套，保证浅色下图标可见）。</summary>
+    private static bool IsLight => Application.Current?.ActualThemeVariant == ThemeVariant.Light;
+
+    private static IBrush B(string dark, string light) => new SolidColorBrush(Color.Parse(IsLight ? light : dark));
+
     /// <summary>模板种类 →（图标, 强调色）。</summary>
     public static (Geometry Geometry, IBrush Brush) ForTemplate(string templateKey) => templateKey switch
     {
-        "console" => (Get(Project), new SolidColorBrush(Color.Parse("#4EC9B0"))),
-        "csharp" => (Get(File), new SolidColorBrush(Color.Parse("#9B4F96"))),
-        "library" => (Get(Project), new SolidColorBrush(Color.Parse("#DCDCAA"))),
-        "library-cs" => (Get(File), new SolidColorBrush(Color.Parse("#9B4F96"))),
-        "cocoa" => (Get(Project), new SolidColorBrush(Color.Parse("#E37933"))),
-        "solution" => (Get(Solution), new SolidColorBrush(Color.Parse("#007ACC"))),
-        _ => (Get(File), new SolidColorBrush(Color.Parse("#CCCCCC"))),
+        "console" => (Get(Project), B("#4EC9B0", "#267F99")),
+        "csharp" => (Get(File), B("#9B4F96", "#8B3A86")),
+        "library" => (Get(Project), B("#DCDCAA", "#8A6D1B")),
+        "library-cs" => (Get(File), B("#9B4F96", "#8B3A86")),
+        "cocoa" => (Get(Project), B("#E37933", "#B85C00")),
+        "solution" => (Get(Solution), B("#007ACC", "#007ACC")),
+        _ => (Get(File), B("#CCCCCC", "#555555")),
     };
 
     /// <summary>树节点种类 →（图标, 强调色）；源文件按扩展名区色。</summary>
@@ -40,16 +47,16 @@ public static class Icons
         var ext = System.IO.Path.GetExtension(name).ToLowerInvariant();
         return kind switch
         {
-            ViewModels.NodeKind.Solution => (Get(Solution), new SolidColorBrush(Color.Parse("#007ACC"))),
-            ViewModels.NodeKind.Project => (Get(Project), new SolidColorBrush(Color.Parse("#DCDCAA"))),
-            ViewModels.NodeKind.Folder => (Get(Folder), new SolidColorBrush(Color.Parse("#DCDCAA"))),
-            ViewModels.NodeKind.Dependencies => (Get(Folder), new SolidColorBrush(Color.Parse("#AAAAAA"))),
-            ViewModels.NodeKind.Reference => (Get(Reference), new SolidColorBrush(Color.Parse("#4EC9B0"))),
+            ViewModels.NodeKind.Solution => (Get(Solution), B("#007ACC", "#007ACC")),
+            ViewModels.NodeKind.Project => (Get(Project), B("#DCDCAA", "#8A6D1B")),
+            ViewModels.NodeKind.Folder => (Get(Folder), B("#DCDCAA", "#8A6D1B")),
+            ViewModels.NodeKind.Dependencies => (Get(Folder), B("#AAAAAA", "#777777")),
+            ViewModels.NodeKind.Reference => (Get(Reference), B("#4EC9B0", "#267F99")),
             _ => ext switch
             {
-                ".cs" => (Get(File), new SolidColorBrush(Color.Parse("#9B4F96"))),
-                ".co" => (Get(File), new SolidColorBrush(Color.Parse("#E37933"))),
-                _ => (Get(File), new SolidColorBrush(Color.Parse("#CCCCCC"))),
+                ".cs" => (Get(File), B("#9B4F96", "#8B3A86")),
+                ".co" => (Get(File), B("#E37933", "#B85C00")),
+                _ => (Get(File), B("#CCCCCC", "#555555")),
             },
         };
     }

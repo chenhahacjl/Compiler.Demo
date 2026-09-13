@@ -12,6 +12,7 @@ using AvaloniaEdit.Rendering;
 using AvaloniaEdit.Search;
 using Avalonia.Media;
 using Cocoa.CodeAnalysis;
+using Cocoa.IDE.Services;
 using System.Xml;
 
 namespace Cocoa.IDE.Controls;
@@ -45,6 +46,9 @@ public partial class EditorView : UserControl
         // 通过代码配置 AXAML 中不支持的属性
         TextEditor.WordWrap = false;
         TextEditor.ShowLineNumbers = true;
+
+        // M6：应用设置中的编辑器字体/字号
+        ApplyEditorFont();
 
         TextEditor.Document.TextChanged += (_, _) =>
         {
@@ -110,6 +114,17 @@ public partial class EditorView : UserControl
     public void ToggleBreakpointAtCaret() => BreakpointToggled?.Invoke(TextEditor.TextArea.Caret.Line);
 
     public string? CurrentFilePath => _currentFilePath;
+
+    /// <summary>M6：应用设置中的编辑器字体/字号（选项页保存后调用）。</summary>
+    public void ApplyEditorFont()
+    {
+        var settings = SettingsService.Current.Settings;
+        var family = string.IsNullOrWhiteSpace(settings.EditorFontFamily)
+            ? "Cascadia Code, Consolas, Courier New"
+            : settings.EditorFontFamily;
+        TextEditor.FontFamily = new FontFamily(family);
+        TextEditor.FontSize = settings.EditorFontSize > 1 ? settings.EditorFontSize : 14;
+    }
 
     /// <summary>设置当前文件的诊断（波浪线）。诊断位置必须落在当前 Document 范围内。</summary>
     public void SetDiagnostics(IEnumerable<Diagnostic> diagnostics)

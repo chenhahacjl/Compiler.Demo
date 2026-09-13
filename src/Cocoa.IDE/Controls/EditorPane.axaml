@@ -29,18 +29,18 @@
         </Style>
         <!-- 用标签自身底色区分选中态 -->
         <Style Selector="ListBoxItem:selected Border#TabChrome">
-            <Setter Property="Background" Value="#1E1E1E" />
+            <Setter Property="Background" Value="{DynamicResource TabActiveBrush}" />
         </Style>
         <Style Selector="ListBoxItem:selected TextBlock#TabTitle">
-            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="Foreground" Value="{DynamicResource TabActiveTextBrush}" />
         </Style>
     </UserControl.Styles>
 
     <DockPanel>
         <!-- 标签栏 -->
         <Border DockPanel.Dock="Top"
-                Background="#2D2D30"
-                BorderBrush="#3F3F46"
+                Background="{DynamicResource ChromeBrush}"
+                BorderBrush="{DynamicResource SeparatorBrush}"
                 BorderThickness="0,0,0,1">
             <ListBox x:Name="TabList"
                      ItemsSource="{Binding Tabs}"
@@ -58,7 +58,7 @@
                     <DataTemplate>
                         <Border x:Name="TabChrome"
                                 Padding="10,5"
-                                Background="#252526"
+                                Background="{DynamicResource TabInactiveBrush}"
                                 CornerRadius="3,3,0,0"
                                 Margin="1,0"
                                 PointerPressed="OnTabPointerPressed"
@@ -66,14 +66,14 @@
                                 PointerReleased="OnTabPointerReleased">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <TextBlock x:Name="TabTitle" Text="{Binding FileName}" FontSize="12"
-                                           Foreground="#CCCCCC" VerticalAlignment="Center" />
-                                <TextBlock Text="●" FontSize="8" Foreground="#4EC9B0"
+                                           Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" />
+                                <TextBlock Text="●" FontSize="8" Foreground="{DynamicResource TypeBrush}"
                                            IsVisible="{Binding IsModified}"
                                            VerticalAlignment="Center" />
                                 <Button Content="✕" FontSize="9" Padding="3,0"
                                         Background="Transparent" BorderThickness="0"
                                         FocusAdorner="{x:Null}"
-                                        Foreground="#999"
+                                        Foreground="{DynamicResource SubtleTextBrush}"
                                         Command="{Binding $parent[UserControl].DataContext.CloseCommand}"
                                         CommandParameter="{Binding}" />
                             </StackPanel>
@@ -87,95 +87,95 @@
         <Grid>
             <controls:EditorView x:Name="EditorHost" />
             <!-- 空态：用不透明面板覆盖编辑器（编辑器常驻可见以规避 AvaloniaEdit 布局问题） -->
-            <Border x:Name="EmptyStatePanel" Background="#1E1E1E">
+            <Border x:Name="EmptyStatePanel" Background="{DynamicResource EditorBackgroundBrush}">
                 <TextBlock Text="打开文件或解决方案开始编辑"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"
-                           Foreground="#666" FontSize="16" />
+                           Foreground="{DynamicResource EmptyStateTextBrush}" FontSize="16" />
             </Border>
             <!-- 项目属性页（VS 风格）：作为标签页内容覆盖编辑器 -->
-            <Border x:Name="PropertiesDocPanel" Background="#1E1E1E" IsVisible="False">
+            <Border x:Name="PropertiesDocPanel" Background="{DynamicResource EditorBackgroundBrush}" IsVisible="False">
                 <ScrollViewer>
                     <StackPanel Margin="28" Spacing="10" MaxWidth="640" HorizontalAlignment="Left">
-                        <TextBlock Text="{Binding DisplayName}" FontSize="20" FontWeight="SemiBold" Foreground="#DDDDDD" />
-                        <TextBlock Text="{Binding ProjectFilePath}" FontSize="11" Foreground="#808080" TextWrapping="Wrap" />
-                        <Border Height="1" Background="#3F3F46" Margin="0,6" />
+                        <TextBlock Text="{Binding DisplayName}" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                        <TextBlock Text="{Binding ProjectFilePath}" FontSize="11" Foreground="{DynamicResource SubtleTextBrush}" TextWrapping="Wrap" />
+                        <Border Height="1" Background="{DynamicResource SeparatorBrush}" Margin="0,6" />
 
                         <Grid ColumnDefinitions="150,*" RowDefinitions="Auto" >
                             <StackPanel Grid.ColumnSpan="2" Spacing="8">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="程序集名称" Width="150" VerticalAlignment="Center" Foreground="#CCCCCC" />
+                                    <TextBlock Text="程序集名称" Width="150" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}" />
                                     <TextBox Text="{Binding AssemblyName}" Width="360" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="语言" Width="150" VerticalAlignment="Center" Foreground="#CCCCCC" />
+                                    <TextBlock Text="语言" Width="150" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}" />
                                     <ComboBox ItemsSource="{Binding Languages}" SelectedItem="{Binding Language}" Width="360" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="输出类型" Width="150" VerticalAlignment="Center" Foreground="#CCCCCC" />
+                                    <TextBlock Text="输出类型" Width="150" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}" />
                                     <ComboBox ItemsSource="{Binding OutputTypes}" SelectedItem="{Binding OutputType}" Width="360" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="后端" Width="150" VerticalAlignment="Center" Foreground="#CCCCCC" />
+                                    <TextBlock Text="后端" Width="150" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}" />
                                     <ComboBox ItemsSource="{Binding Backends}" SelectedItem="{Binding Backend}" Width="360" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="目标平台" Width="150" VerticalAlignment="Center" Foreground="#CCCCCC" />
+                                    <TextBlock Text="目标平台" Width="150" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}" />
                                     <ComboBox ItemsSource="{Binding Platforms}" SelectedItem="{Binding Platform}" Width="360" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="目标框架" Width="150" VerticalAlignment="Center" Foreground="#CCCCCC" />
+                                    <TextBlock Text="目标框架" Width="150" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}" />
                                     <TextBox Text="{Binding TargetFramework}" Width="360" Watermark="net48 / net9.0（可空）" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="目标系统" Width="150" VerticalAlignment="Center" Foreground="#CCCCCC" />
+                                    <TextBlock Text="目标系统" Width="150" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}" />
                                     <ComboBox ItemsSource="{Binding TargetOses}" SelectedItem="{Binding TargetOs}" Width="360" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="配置" Width="150" VerticalAlignment="Center" Foreground="#CCCCCC" />
+                                    <TextBlock Text="配置" Width="150" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}" />
                                     <ComboBox ItemsSource="{Binding Configurations}" SelectedItem="{Binding Configuration}" Width="360" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="输出目录" Width="150" VerticalAlignment="Center" Foreground="#CCCCCC" />
+                                    <TextBlock Text="输出目录" Width="150" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}" />
                                     <TextBox Text="{Binding OutputPath}" Width="360" Watermark="out" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="启动对象" Width="150" VerticalAlignment="Center" Foreground="#CCCCCC" />
+                                    <TextBlock Text="启动对象" Width="150" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}" />
                                     <TextBox Text="{Binding StartupObject}" Width="360" Watermark="Main（可空）" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="子系统" Width="150" VerticalAlignment="Center" Foreground="#CCCCCC" />
+                                    <TextBlock Text="子系统" Width="150" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}" />
                                     <TextBox Text="{Binding Subsystem}" Width="360" Watermark="console / windows（可空）" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="警告视为错误" Width="150" VerticalAlignment="Center" Foreground="#CCCCCC" />
+                                    <TextBlock Text="警告视为错误" Width="150" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}" />
                                     <CheckBox IsChecked="{Binding TreatWarningsAsErrors}" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="优化" Width="150" VerticalAlignment="Center" Foreground="#CCCCCC" />
+                                    <TextBlock Text="优化" Width="150" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}" />
                                     <CheckBox IsChecked="{Binding Optimize}" />
                                 </StackPanel>
                             </StackPanel>
                         </Grid>
 
-                        <Border Height="1" Background="#3F3F46" Margin="0,6" />
-                        <TextBlock Text="源文件模式" Foreground="#CCCCCC" />
+                        <Border Height="1" Background="{DynamicResource SeparatorBrush}" Margin="0,6" />
+                        <TextBlock Text="源文件模式" Foreground="{DynamicResource TextBrush}" />
                         <ItemsControl ItemsSource="{Binding SourcePatterns}">
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate><TextBlock Text="{Binding}" Foreground="#9CDCFE" FontSize="12" /></DataTemplate>
+                                <DataTemplate><TextBlock Text="{Binding}" Foreground="{DynamicResource IdentifierBrush}" FontSize="12" /></DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <TextBlock Text="引用（用解决方案树右键“添加引用”增删）" Foreground="#CCCCCC" Margin="0,6,0,0" />
+                        <TextBlock Text="引用（用解决方案树右键“添加引用”增删）" Foreground="{DynamicResource TextBrush}" Margin="0,6,0,0" />
                         <ItemsControl ItemsSource="{Binding References}">
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate><TextBlock Text="{Binding}" Foreground="#9CDCFE" FontSize="12" /></DataTemplate>
+                                <DataTemplate><TextBlock Text="{Binding}" Foreground="{DynamicResource IdentifierBrush}" FontSize="12" /></DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
                         <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,12,0,0">
                             <Button Content="保存" Command="{Binding SaveCommand}" MinWidth="90" />
                             <Button Content="重新加载" Command="{Binding ReloadCommand}" MinWidth="90" />
-                            <TextBlock Text="{Binding StatusText}" Foreground="#4EC9B0" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource TypeBrush}" VerticalAlignment="Center" />
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>

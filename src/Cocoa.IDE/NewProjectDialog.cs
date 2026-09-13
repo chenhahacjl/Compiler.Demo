@@ -58,7 +58,7 @@ public sealed class NewProjectDialog : Window
         MinWidth = 640;
         MinHeight = 460;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Background = new SolidColorBrush(Color.Parse("#1E1E1E"));
+        Background = ThemeBrushes.Brush("EditorBackgroundBrush", "#1E1E1E");
 
         _allOptions = NewProjectService.TemplateOptions;
         _categories = OrderCategories(_allOptions.Select(o => o.Category).Distinct());
@@ -72,7 +72,7 @@ public sealed class NewProjectDialog : Window
         _detailDesc = new TextBlock
         {
             Margin = new Thickness(0, 6, 0, 0),
-            Foreground = new SolidColorBrush(Color.Parse("#AAAAAA")),
+            Foreground = ThemeBrushes.Brush("SubtleTextBrush", "#AAAAAA"),
             TextWrapping = TextWrapping.Wrap,
         };
 
@@ -139,7 +139,7 @@ public sealed class NewProjectDialog : Window
         // ── 页脚 ──
         _errorText = new TextBlock
         {
-            Foreground = new SolidColorBrush(Color.Parse("#F48771")),
+            Foreground = ThemeBrushes.Brush("ErrorBrush", "#F48771"),
             TextWrapping = TextWrapping.Wrap,
             VerticalAlignment = VerticalAlignment.Center,
             MaxWidth = 420,
@@ -283,7 +283,7 @@ public sealed class NewProjectDialog : Window
             {
                 Text = option?.Description ?? "",
                 FontSize = 11,
-                Foreground = new SolidColorBrush(Color.Parse("#999999")),
+                Foreground = ThemeBrushes.Brush("SubtleTextBrush", "#999999"),
                 TextWrapping = TextWrapping.Wrap,
             });
             var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { icon, texts } };
