@@ -111,7 +111,20 @@ public sealed class SemanticModelHost
         {
             // 1) 表达式/调用 → 符号（最精确）
             var info = model.GetSymbolInfo(cursor);
-            if (info != null) return (info, cursor);
+            if (info != null)
+            {
+                // 类内非限定静态调用（如 `Factorial(...)`）被绑定为 this 类型 → 按名字回落到该类型成员
+                if (info is NamedTypeSymbol namedType && token.Kind == SyntaxKind.IdentifierToken &&
+                    token.Text != namedType.Name)
+                {
+                    var member = namedType.GetMethod(token.Text)
+                        ?? (Symbol?)namedType.GetField(token.Text)
+                        ?? namedType.GetProperty(token.Text);
+                    if (member != null) return (member, cursor);
+                }
+
+                return (info, cursor);
+            }
 
             // 2) 类型信息（仅当确实是名字/类型节点时）
             var type = model.GetTypeInfo(cursor);
