@@ -8,6 +8,13 @@
 
 ## 未发布（2026-09-13）
 
+### 去 C# 方言（只留 .co）——架构塌缩（2026-09-13）
+- **C# 方言整体移除**：删除 `Cocoa.Dialects.CSharp`（104 源文件 ~920KB，整前端手写双份 + 逐字节镜像 CSharpBinder）+ `Cocoa.Compiler.CSharp`（csc）+ 6 个方言测试类；迁移/删除全部 `ParseCs` 测试（基线 53494 → 53354，删 ~140 个）。
+- **编译器 Core 钩子简化**：删 `Language.CSharp`/`ParseCs`/`.cs` 扩展名分派/`ParametersAreTypeFirst`；语言中间层塌缩——`CocoaLanguage` 并入 `Language` 具体类（删注册表/`GetOrThrow`/抽象分派，单实现直接用）；`Cocoa.Dialects.Cocoa`（108 文件）并入 `Cocoa.Compiler.Core` 单装配件（去反射装载）。
+- **B 层重复合并**：`CocoaSyntaxKind`/`CocoaSyntaxKindMappings`/`CocoaKind()` → 共享 `SyntaxKind`；`CocoaSyntaxFacts` → 共享 `SyntaxFacts`（去 `new abstract Kind` 遮蔽与重复 Keyword 表）。
+- **IDE/CLI/样例去语言选择**：`cocoa new csharp` 模板、IDE `csharp`/`library-cs` 模板、`.cs` 高亮/图标/文件选择器、`CocoaProjectLanguage.CSharp`、`CSharpDialect` 样例全部移除；文档（语法对照表删除、语法手册 §46、编译手册、快速上手）收敛为单 `.co` 拼写。
+- 验证：全量 **53354** 通过 / 1 跳过；IDE/CLI/样例双后端构建绿。
+
 ### 6e-M25 阶段 5：声明式语法糖 + 一控件一文件（2026-09-13）
 - **声明式层**：`UIView.Body(gui)` 组件约定 + `Ui.VStack/HStack/Group/Panel/Render` 组合子（lambda `() => { ... }`，Elm/Flutter 风格，保序立即模式）；`ImGui.BeginHorizontal/EndHorizontal` + `ImGuiWindow.Horizontal` 水平布局。
 - **一控件一文件**：`ImGui` 改 `partial class`，核心留 `ImGui.co`，控件移至 `Widgets/`（Label/CheckBox/TextBox/TrackBar/ProgressBar/Separator/GroupBox/TreeView/Button/Layout）；`System.UI.coproj` 的 `Widgets/*.co` 生效。

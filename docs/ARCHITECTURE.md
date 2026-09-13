@@ -17,6 +17,12 @@
 >
 > **合并吸收（2026-09-06）**：本文扩为「架构总览与演进」权威——§9 吸收 `docs/ARCHITECTURE.md`、
 > §10 吸收 `docs/ARCHITECTURE.md` 与 `docs/ARCHITECTURE.md`（三稿已归档删除，git 可追溯）。
+>
+> **去 C# 方言（2026-09-13）**：C# 方言（`.cs`）整体移除，仅保留 `.co`（Cocoa 方言）。以下内容
+> 已过时、勿按此查找代码：双前端（Cocoa.Core.Cocoa + Cocoa.Core.CSharp）、双 Binder/双 Compilation/
+> 双 SemanticModel、`CocoaSyntaxKind`/`CocoaSyntaxFacts`、`Language` 注册表与反射装载。
+> 现行：前端仅单实现，`Cocoa.Dialects.Cocoa` 已并入 `Cocoa.Compiler.Core`（2026-09-13），
+> `CocoaLanguage` 并入 `Language` 具体类（无中间层、无 dialects 差异分派）。
 
 ---
 
