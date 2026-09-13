@@ -8,6 +8,14 @@
 
 ## 未发布（2026-09-13）
 
+### 6e-M25 阶段 4：native 后端 UI + WinForms 控件命名（2026-09-13）
+- **native extern 参数编组**（编译器）：`EmitExternCall` 先求值并编组全部实参再统一 `SetArg`（修复运行时调用覆盖已就位参数）；`string → null 结尾 LPCWSTR`（运行时 `ExternWidePtr0..3` + 4 独立编组缓冲）；值类型数组 → 元素区指针（`base+8`）。e2e：`GetModuleHandleW`/`CreateWindowExW`（12 参）原生通过。
+- **同一份 System.UI 双后端**：无需 `Win32NativeImports`/简化控件集，`.coa` 直接经 `-b native --platform x64` 构建运行。
+- **WinForms 命名**：`Text→Label`、`TextColored→LabelColored`、`InputText→TextBox`、`Checkbox→CheckBox`、`SliderInt→TrackBar`、`SliderFloat→TrackBarFloat`、`CollapsingHeader→GroupBox`、`TreeNode/TreePop→TreeView/EndTreeView`、`BeginChild/EndChild→BeginPanel/EndPanel`；文档增 WinForms 对照表。
+- **示例**：新增 `samples/Samples/UI/NativeUI`（native x64 最小集）；BasicUI/AdvancedUI 同步改名。
+- 验证：BasicUI/NativeUI 原生构建并进入窗口渲染循环；`UiCoreTests` 5 例绿；全量 **53486** 通过 / 1 跳过。
+- 规划 §8 状态行 + §16 实施记录；手册升为阶段 4。
+
 ### 6e-M25 阶段 3：主题系统（Dark/Light/Classic + 样式栈）（2026-09-13）
 - **预设**：`ImGuiStyle.MakeClassic()`（Dear ImGui Classic 风：黑底灰阶控件），与既有 `MakeDark`/`MakeLight` 三态可运行期切换。
 - **样式栈**：`ImGui.PushStyleColor/PopStyleColor`（颜色 LIFO 覆盖，`ColorOf` 栈顶优先）与 `PushStyleVar/PopStyleVar`（新 `ImGuiStyleVar` 枚举：`Alpha`/`FramePaddingX/Y`/`ItemSpacingX/Y`/`FrameRounding`，`VarOf` 生效）；控件全部改经 `ColorOf`/`VarOf` 读取，即时响应覆盖。

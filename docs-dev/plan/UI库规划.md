@@ -314,7 +314,7 @@ WNDPROC 需要原生函数指针回调；Cocoa 双后端均无可靠路径（IL 
 | **1** | System.UI 基础框架 + GDI 轮询后端 + BasicUI 最小 demo（里程碑：窗口/双缓冲/Begin-End/Text/Button/点击动作）—— ✅ 已完成（§13） | 0a/0b | 1-2 周 |
 | **2** | 完整控件集（Checkbox/Slider/InputText/ProgressBar/Separator/SameLine/CollapsingHeader/TreeNode/Child 滚动）—— ✅ 已完成（§14） | 1 | 1-2 周 |
 | **3** | 主题系统（Dark/Light/Classic + PushStyleColor/Var）+ AdvancedUI demo—— ✅ 已完成（§15） | 2 | 1 周 |
-| **4** | Native 后端适配（Win32NativeImports + SliderInt + 手动 UTF-16）+ NativeUI demo | 0b + 3 | 3-5 天 |
+| **4** | Native 后端适配（Win32NativeImports + SliderInt + 手动 UTF-16）+ NativeUI demo—— ✅ 已完成（§16；改以编译器自动编组替代 Win32NativeImports） | 0b + 3 | 3-5 天 |
 | **5** | 声明式语法糖（UIView/VStack/HStack/Body() 约定/getter-setter lambda 双向绑定） | 3 | 1-2 周 |
 | **6** | Linux 跨平台（ELF 输出后：SDL2/OpenGL 后端） | 编译器 ELF | 远期 |
 
@@ -472,5 +472,31 @@ function Main(): i32
 - `Alpha` 变量已登记但后端未应用全局透明度（需在 GDI 输出叠加 alpha，后续）。
 - 颜色覆盖按 `ImGuiCol` 索引；`PushStyleColor` 无「按枚举重载」——传 i32 颜色槽位。
 - 无 `PushID/PopID` ID 栈；无多窗口。
+
+---
+
+## 16. 实施记录（阶段 4，2026-09-13）
+
+**目标**：System.UI 在 native 后端可用 + NativeUI demo。
+
+**关键决策偏离**：原计划新增 `Win32NativeImports` 并在库内手动做 UTF-16 转换。实际改为**在 native 代码生成器统一编组 extern 实参**，从而**同一份 `System.UI` 源码/`.coa` 同时供 IL 与 native 后端消费**，无需后端专属 import 层或简化控件集。
+
+**编译器改动（提交 42321f9）**：
+- `MirToLir` `EmitExternCall`：先求值并编组全部实参，再统一 `SetArg`——修复中途运行时调用覆盖已就位 extern 参数的问题（12 参 `CreateWindowExW` 曾因此失败）。
+- `string` 实参 → null 结尾 `LPCWSTR`：新增运行时 `ExternWidePtr0..3`（4 个独立 32KB 编组缓冲，同一次调用多个 string 参数互不覆盖）。
+- 值类型数组实参 → 元素区指针（`base+8`，跳过 4 字节长度 + 8 字节对齐头）。
+- e2e：`GetModuleHandleW(string)`、`CreateWindowExW`（12 参 / 2 string）原生通过。
+
+**命名对齐 WinForms（提交 b6f3543）**：`Text→Label`、`TextColored→LabelColored`、`InputText→TextBox`、`Checkbox→CheckBox`、`SliderInt→TrackBar`、`SliderFloat→TrackBarFloat`、`CollapsingHeader→GroupBox`、`TreeNode/TreePop→TreeView/EndTreeView`、`BeginChild/EndChild→BeginPanel/EndPanel`；`Button`/`ProgressBar`/`Separator`/布局辅助不变。
+
+**示例（2d）**：`samples/Samples/UI/NativeUI/`（`NativeUI.coproj`/`main.co`/`build.cmd`，`-b native --platform x64`）：Label/Button/CheckBox/TrackBar/TrackBarFloat/ProgressBar/GroupBox/Panel 最小集；与 BasicUI 同类项并额外演示原生窗口 + 渲染循环。
+
+**验证**：BasicUI 与 NativeUI 均原生构建成功且进入「窗口 + GDI 渲染循环」（轮询存活、无异常）；`UiCoreTests` 5 例绿；编译器全量 **53486** 通过 / 1 跳过。
+
+**已知限制（阶段 4 后）**：
+- extern 编组目前覆盖 `string` 与值类型数组；`string[]`/引用类型数组、结构体按值尚未编组。
+- native 与 IL 共用同一控件集（未做简化子集）；`Alpha` 仍未由后台应用。
+- 原生 exe 为无签名构建，部分杀软环境会拦截（本地测试目录运行正常）。
+
 
 

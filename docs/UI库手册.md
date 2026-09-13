@@ -1,6 +1,6 @@
-# Cocoa System.UI 手册（立即模式 UI 库，阶段 3）
+# Cocoa System.UI 手册（立即模式 UI 库，阶段 4）
 
-> 状态：✅ 阶段 3（2026-09-13）——完整控件集 + 键盘/滚轮输入 + Child 滚动/裁剪 + 主题系统（Dark/Light/Classic + 样式栈）；IL 后端可用，Native 后端属阶段 4。
+> 状态：✅ 阶段 4（2026-09-13）——完整控件集 + 输入/滚动 + 主题系统 + 样式栈；WinForms 命名；**IL 与 native 双后端可用**。
 > 设计依据：[`docs-dev/plan/UI库规划.md`](../docs-dev/plan/UI库规划.md)；相关：[`docs/互操作手册.md`](互操作手册.md)。
 
 ## 1. 定位与分发
@@ -122,21 +122,26 @@ gui.PopStyleVar()
 
 | 类 | 职责 |
 |----|------|
-| `Win32Window` | `Create`（内建 `STATIC` 类）/`Pump`（PeekMessage + 光标/按键采样）/`Destroy`/`Now`/`Sleep` |
+| `Win32Window` | `Create`（内建 `STATIC` 类）/`Pump`（PeekMessage + 光标/按键/字符/滚轮采样）/`Destroy`/`Now`/`Sleep` |
 | `Win32GDIBackend` | `CreateBuffer`/`Present`（memDC 双缓冲 + Polygon/TextOutW + BitBlt）/`DestroyBuffer` |
 | `Win32Imports` | user32/kernel32/gdi32 extern 声明（句柄统一 `nint`） |
 
+**双后端**：同一份 `System.UI`（`.coa`）同时供 `-b dotnet`（IL, `net48`）与 `-b native --platform x64` 使用。native 侧由代码生成器自动编组 extern 实参：`string → LPCWSTR`、值类型数组 → 元素区指针（无需后端专属 import 层）。示例见 `samples/Samples/UI/{BasicUI,AdvancedUI,NativeUI}`。
+
 ## 5. 已知限制
 
-- 仅 **IL 后端**（示例目标 `net48`）；Native 后端为阶段 4。
 - 文本宽度按 **8px/字符** 近似；无字库度量、无自动换行。
 - 裁剪为**整图元轴对齐**（矩形精确；文本按行 y 越界剔除，非逐像素）。
-- 滚轮仅在 `BeginChild` 内生效（每帧一次，`Render` 清零）；无窗口缩放。
+- 滚轮仅在 `BeginPanel` 内生效（每帧一次，`Render` 清零）；无窗口缩放。
 - 样式栈为 LIFO 覆盖（`PushStyleColor`/`PushStyleVar` 不跨帧）；`ImGuiStyleVar.Alpha` 已登记但当前扁平渲染后端未应用全局透明度。
 - 无 `PushID/PopID` 的 ID 栈；`Begin` 仅单根窗口，无多窗口浮动/停靠。
 - 无消息 `DispatchMessage`：窗口关闭按钮无效，用 ESC 退出。
+- native extern 编组覆盖 `string` 与值类型数组；`string[]`/引用类型数组、结构体按值尚未编组。
 - 值表达式约束：不使用 `^`/`~` 运算符与参数赋值（当前实现以等价写法规避）。
 
-## 6. 综合示例（AdvancedUI）
+## 6. 综合示例
 
-`samples/Samples/UI/AdvancedUI/` 综合演示：工具栏（计数/重置/主题三态切换 Dark→Light→Classic）+ 左右双 `BeginPanel` 面板（导航 `TreeView`/`GroupBox` + 内容区控件）+ 进度条/滑块/`TextBox` + 12 行可滚动日志列表；计数为正时以 `PushStyleColor` 高亮。构建见其 `build.cmd`。
+- `samples/Samples/UI/AdvancedUI/`：工具栏（计数/重置/主题三态切换 Dark→Light→Classic）+ 左右双 `BeginPanel` 面板（导航 `TreeView`/`GroupBox` + 内容区控件）+ 进度条/滑块/`TextBox` + 12 行可滚动日志列表；计数为正时以 `PushStyleColor` 高亮。
+- `samples/Samples/UI/NativeUI/`：`-b native --platform x64` 最小示例（Label/Button/CheckBox/TrackBar/TrackBarFloat/ProgressBar/GroupBox/Panel）。
+
+构建见各目录 `build.cmd`。
