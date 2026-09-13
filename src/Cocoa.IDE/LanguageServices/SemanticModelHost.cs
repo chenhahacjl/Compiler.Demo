@@ -183,18 +183,15 @@ public sealed class SemanticModelHost
         if (_tree == null || _model == null) yield break;
 
         offset = Math.Clamp(offset, 0, _tree.Text.Length);
-        var token = FindToken(_tree, offset);
-        var cursor = token?.Parent;
 
+        // 按 span 包含关系找最内层函数声明（不依赖 token，避免光标落在空白/trivia 时找不到）
         SyntaxNode? functionDecl = null;
-        while (cursor != null && cursor.Kind != SyntaxKind.CompilationUnit)
+        foreach (var node in _tree.Root.DescendantNodes())
         {
-            if (cursor.Kind.ToString().Contains("FunctionDeclaration", StringComparison.Ordinal))
-            {
-                functionDecl = cursor;
-                break;
-            }
-            cursor = cursor.Parent;
+            if (!node.Kind.ToString().Contains("FunctionDeclaration", StringComparison.Ordinal)) continue;
+            if (node.Span.Start <= offset && offset <= node.Span.End &&
+                (functionDecl == null || node.Span.Length < functionDecl.Span.Length))
+                functionDecl = node;
         }
         if (functionDecl == null) yield break;
 

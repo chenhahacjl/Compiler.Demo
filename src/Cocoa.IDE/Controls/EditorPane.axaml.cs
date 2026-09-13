@@ -133,12 +133,51 @@ public partial class EditorPane : UserControl
             return;
         }
 
-        // M5c：输入标识符字符自动弹补全；窗口已打开时交给 CompletionWindow 过滤，避免重建
-        if (_completionWindow == null && IsIdentifierStart(e.Text[0]))
-            ShowCompletion(reuseStale: true);
+        // M5c：输入标识符字符自动弹补全；已开窗则重算候选（保证局部变量等新候选能出现）
+        if (IsIdentifierStart(e.Text[0]))
+        {
+            if (_completionWindow == null)
+                ShowCompletion();
+            else
+                RefreshCompletion();
+        }
     }
 
     private static bool IsIdentifierStart(char c) => char.IsLetter(c) || c == '_';
+
+    /// <summary>已开窗时按最新文本重算候选并保留前缀过滤。</summary>
+    private void RefreshCompletion()
+    {
+        var tab = EditorTabs?.ActiveTab;
+        if (tab == null || _completionWindow == null) return;
+
+        var host = EnsureSemanticHostReusable();
+        if (host == null) return;
+
+        var caretOffset = EditorHost.Editor.TextArea.Caret.Offset;
+        var text = EditorHost.Editor.Text ?? "";
+        var dialect = tab.Dialect ?? "Cocoa";
+
+        var list = _completionWindow.CompletionList;
+        list.CompletionData.Clear();
+        foreach (var item in CocoaCompletionProvider.GetCompletions(host, caretOffset, text, dialect))
+            list.CompletionData.Add(item);
+
+        if (list.CompletionData.Count == 0)
+        {
+            _completionWindow.Close();
+            return;
+        }
+
+        list.SelectItem(ExtractPrefix(text, caretOffset));
+    }
+
+    private static string ExtractPrefix(string text, int offset)
+    {
+        var i = offset;
+        while (i > 0 && (char.IsLetterOrDigit(text[i - 1]) || text[i - 1] == '_')) i--;
+        return i < offset ? text.Substring(i, offset - i) : "";
+    }
 
     /// <summary>按需（文件或内容变化时）重建语义宿主；Hover 等高频调用复用缓存，避免重复解析全目录。</summary>
     private SemanticModelHost? EnsureSemanticHost()
