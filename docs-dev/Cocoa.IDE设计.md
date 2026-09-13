@@ -199,7 +199,7 @@ MainWindow 启动
 | **M1 IDE 骨架** | 五区布局主窗口；多标签编辑器（着色/行号/折叠/括号匹配/Ctrl+F）；打开 `.co/.cs/.coproj/.cosln` | `SyntaxTree.Parse` | ✅ 已落地（审计清单见 §5.4） |
 | **M1.1 编辑器接线** | EditorView 实际嵌入中央区；VM↔编辑器双向同步（Text/Caret）；标签点击激活+高亮+关闭按钮；状态栏 Ln/Col/Language 联动；B1-B5 修复 | AvaloniaEdit 事件桥接 | ✅ 已落地（B1-B5/D2-D4/D7 关闭） |
 | **M2 项目系统** | 解决方案树改走 `Cocoa.Build`（`CocoaSolutionFile`/`CocoaProjectFile`/`Glob`），删手写解析（D1） | `Cocoa.Build` | ✅ 已落地（D1 关闭） |
-| **M2b 新建项目向导** | **VS2022 两步式向导**（模板选择 → 名称/位置/解决方案名/目标框架）；统一生成 `.cosln` + 项目子目录；空白解决方案模板；位置自动创建 | `Cocoa.Build` + 模板 XML | ✅ 已落地（§8.1） |
+| **M2b 新建项目向导** | **VS2022 两步式向导**（模板选择 → 名称/位置/解决方案名/目标框架）；统一生成 `.cosln` + 项目子目录；空白解决方案模板；位置自动创建 | `Cocoa.Build` + 模板 XML | ✅ 已落地（§8.1）；**M2c 升级为「类别 → 参数」多级**：第 1 步选类别（Console/Library/Cocoa Assembly/BlankSolution），第 2 步选语言（Cocoa/C#）、后端（托管/原生）及名称/位置/解决方案/目标框架 |
 | **M3 实时诊断** | 防抖重解析管线；错误列表（过滤、双击定位，改 ObservableCollection + 全量筛选 D6）；编辑器波浪线 | `SemanticModel.GetDiagnostics` | ✅ 已落地（D6 关闭） |
 | **M4 构建运行** | F6 构建项目/解决方案；F5 运行产物；输出窗口；增量指示；清理 | `ProjectBuilder`/`SolutionBuilder`/`BuildCache` | ✅ 已落地（D5 关闭；A7 已修） |
 | **M5 语义服务** | Ctrl+Space 补全；Hover 显示签名；F12 跳转定义 | `SemanticModel`、`Compilation.GetSemanticModel`、`BoundScope` | ✅ 基础落地；**M5c 升级为 VS 式语境补全**（输入即触发 / 类型位置仅类型 / 成员-命名空间-声明名-语句表达式语境过滤 / 片段，提交 `M5c`） |
@@ -269,7 +269,7 @@ MainWindow 启动
 
 > 修复归属：A=M6a 前的正确性修复；C=M5b/M6b。所有位置均经源码核对。
 >
-> 修复状态（2026-09-12）：**A1–A10、B6–B9、C1、C2、C4、C5 已修复**（提交 `F8`/`F9`/`M2b`/`M5b`/`M6a`/`M6b`）；**C3 待编译器侧**——定位诊断行需带 `warning:`/`error:` 前缀，`Diagnostic.ToString()` 当前仅返回消息，IDE 无法区分严重性。M7 落地后的体验修复轮：**F11**（调试圆点/当前行随滚动）、**F12**（F12 精确到声明名）、**M5c**（VS 式语境补全）、**F13**（运行独立控制台窗口 + 调试输出重定向）、**F14**（行号槽任意位置打断点）、**F15**（类内非限定静态调用 F12 定位修正）、**F16**（标签栏去掉选中/焦点黄框、修正关闭按钮绑定）、**F17**（无标签时不透明空态面板覆盖编辑器）、**M6c2**（解决方案资源管理器 VS 式右键菜单）、**M6c3**（项目属性页）、**M6c4**（右键菜单动态构建，分隔符只在可见分组间）、**M6c5**（解决方案右键“添加 → 新建项目/现有项目”）均已修复。
+> 修复状态（2026-09-12）：**A1–A10、B6–B9、C1、C2、C4、C5 已修复**（提交 `F8`/`F9`/`M2b`/`M5b`/`M6a`/`M6b`）；**C3 待编译器侧**——定位诊断行需带 `warning:`/`error:` 前缀，`Diagnostic.ToString()` 当前仅返回消息，IDE 无法区分严重性。M7 落地后的体验修复轮：**F11**（调试圆点/当前行随滚动）、**F12**（F12 精确到声明名）、**M5c**（VS 式语境补全）、**F13**（运行独立控制台窗口 + 调试输出重定向）、**F14**（行号槽任意位置打断点）、**F15**（类内非限定静态调用 F12 定位修正）、**F16**（标签栏去掉选中/焦点黄框、修正关闭按钮绑定）、**F17**（无标签时不透明空态面板覆盖编辑器）、**M6c2**（解决方案资源管理器 VS 式右键菜单）、**M6c3**（项目属性页）、**M6c4**（右键菜单动态构建，分隔符只在可见分组间）、**M6c5**（解决方案右键“添加 → 新建项目/现有项目”）、**M2c**（新建向导类别/语言/后端多级选择 + 项目 Backend 属性）均已修复。
 
 **A 级 — 明确缺陷**
 
@@ -477,34 +477,37 @@ ResolveAtPosition(tree, position):
 | 能力 | 实现 |
 |------|------|
 | 解决方案树 | `CocoaSolutionFile.Load` → `CocoaProjectFile.Load` → `Glob.Expand` 懒展开（M2 已落地）；M6c 重做为 VS 风格（§6.4） |
-| 新建项目向导 | M2 已落地第一版（磁盘模板 XML）；M2b 重做为 VS2022 两步式（§8.1） |
+| 新建项目向导 | M2 已落地第一版（磁盘模板 XML）；M2b/M2c 重做为「类别 → 语言/后端/参数」多级（§8.1） |
 | 添加/移除文件 | 文本级改写 `.coproj`（M6a）；引用增删见 §6.4 |
 | 文件监听 | `FileSystemWatcher`；外部改动 → DocumentService 缓冲失效（P2） |
 
-### 8.1 VS2022 两步式新建项目向导（M2b）
+### 8.1 新建项目向导：类别 → 参数 多级（M2b/M2c）
 
-> 替代现有 520px 单页表单（`NewProjectDialog.cs`）。**步骤 1** 选模板，**步骤 2** 配置；对齐 Visual Studio 2022「创建新项目」。
+> `NewProjectDialog.cs`。**步骤 1** 选项目类别，**步骤 2** 配置语言/后端/名称/位置/解决方案/目标框架；对齐 Visual Studio 2022「创建新项目」。
 
-**模板集（`Templates/<key>/template.xml`，按 `Order` 排序）**
+**模板集（`Templates/<key>/template.xml`，按 `Order` 排序；含 `Category`/`Language`）**
 
-| Order | Key | Label | 输出 | 源 |
-|:--:|-----|-------|------|----|
-| 1 | `library` | Library Cocoa | dll | `.co` |
-| 2 | `library-cs` | Library C# | dll | `.cs`（C# 方言） |
-| 3 | `console` | Console Cocoa | exe | `.co`（入口 `main.co`） |
-| 4 | `csharp` | Console C# | exe | `.cs`（C# 方言） |
-| 5 | `solution` | BlankSolution | 仅 `.cosln` | 无 |
-| 6 | `cocoa` | Cocoa Assembly | `.coa` | `.co` |
+| Order | Key | Category | Language | Label | 输出 | 源 |
+|:--:|-----|----------|----------|-------|------|----|
+| 1 | `library` | Library | Cocoa | Library Cocoa | dll | `.co` |
+| 2 | `library-cs` | Library | CSharp | Library C# | dll | `.cs`（C# 方言） |
+| 3 | `console` | Console | Cocoa | Console Cocoa | exe | `.co`（入口 `main.co`） |
+| 4 | `csharp` | Console | CSharp | Console C# | exe | `.cs`（C# 方言） |
+| 5 | `solution` | Solution | Any | BlankSolution | 仅 `.cosln` | 无 |
+| 6 | `cocoa` | Cocoa Assembly | Cocoa | Cocoa Assembly | `.coa` | `.co` |
 
-**步骤 1 · 创建新项目**
+> GUI 类别暂不提供（运行时暂无窗口/GUI 库）；后续加入 GUI 运行时后可新增 `gui` 模板。
 
-- 顶部搜索框（按模板名称/描述过滤）
-- 中央模板卡片列表：图标字形 + `Label` + `Description`，可选中
-- 右侧选中项详情（图标、名称、描述）
+**步骤 1 · 选择类别**
+
+- 类别列表（Console / Library / Cocoa Assembly / BlankSolution）：图标 + 名称 + 描述
+- 右侧选中类别详情
 - 底部 `下一步` / `取消`
 
 **步骤 2 · 配置新项目**
 
+- **语言**：该类别可用语言（Cocoa / C#）；单一语言时禁用
+- **后端**：托管 (Managed) / 原生 (Native) → 写入 `.coproj` 的 `<Backend>`（见 §12.2-21）
 - 项目名称、位置（`浏览…`）、解决方案名称
 - ☐ 将解决方案和项目放在同一目录中
 - 目标框架下拉：`net48`（默认）/`net9.0`/`net8.0`/`net6.0`/`netcoreapp3.1`
@@ -671,6 +674,8 @@ internal Action<CallFrame, BoundStatement>? StatementBoundaryHook;
 | 18 | M7 后 | 项目属性页（VS 式文档标签，可编辑写回 .coproj） | `M6c3：项目属性页(VS 式文档标签，可编辑写回 .coproj) + 添加项目健壮性` | ✅ |
 | 19 | M7 后 | 右键菜单动态构建，分隔符只在可见分组间 | `M6c4：解决方案树右键菜单改为动态构建，消除多余分隔符` | ✅ |
 | 20 | M7 后 | 解决方案右键“添加 → 新建项目/现有项目” | `M6c5：解决方案右键添加项目(新建项目/现有项目)` | ✅ |
+| 21 | M7 后 | 项目 Backend 属性（托管/原生），构建按项目选择 | `M2c(编译器侧)：项目支持 Backend 属性(托管/原生)，构建按项目后端选择` | ✅ |
+| 22 | M7 后 | 新建向导按类别/语言/后端多级选择；项目属性可改后端 | `M2c：新建向导按类别/语言/后端多级选择；项目属性页可选后端` | ✅ |
 
 > 顺序约束：M5b 为 M6a 的 `.` 自动补全提供工程上下文，不可颠倒；M7 唯一改动编译器（`Cocoa.CodeGen.Interpreter`），置于最后。F11–F14 为 M7 落地的体验修复轮次（IDE 侧，不触碰编译器）。
 
