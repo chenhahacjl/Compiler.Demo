@@ -39,6 +39,8 @@ function Main(): i32
             gui.SliderFloat("Value", 2, f32(0.0), f32(100.0))
             gui.SliderInt("Count", 3, 0, 20)
             gui.ProgressBar(f32(0.35))
+            var name = gui.InputText("Name", 20, 32)
+            gui.Text("Hello, " + name)
 
             if gui.CollapsingHeader("Advanced", 10)
             {

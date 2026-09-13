@@ -125,6 +125,36 @@ function Main(): i32
             AssertExpected(trees, WidgetExpected);
         }
 
+        private const string InputHarness = @"using System
+using System.UI
+
+function Main(): i32
+{
+    var gui = new ImGui(256, 16)
+    var io = new ImGuiIO()
+    io.SetMouseButton(0, true)
+    io.MouseX = f32(50.0)
+    io.MouseY = f32(10.0)
+    io.AddInputCharacter(65)
+    io.AddInputCharacter(66)
+    gui.NewFrame(io)
+    gui.Begin(""W"", f32(0.0), f32(0.0), f32(300.0), f32(200.0))
+    Console.WriteLine(gui.InputText(""t"", 1, 16))
+    gui.End()
+    gui.Render()
+    return 0
+}";
+
+        private const string InputExpected = "AB\n";
+
+        [Fact]
+        public void ImGui_InputText_Evaluator()
+        {
+            var trees = CoreSources().Select(p => SyntaxTree.Parse(File.ReadAllText(p))).ToList();
+            trees.Add(SyntaxTree.Parse(InputHarness));
+            AssertExpected(trees, InputExpected);
+        }
+
         private static void AssertExpected(List<SyntaxTree> trees, string expected)
         {
             var references = new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location };

@@ -26,13 +26,22 @@ namespace System.UI.Backends
                 return false
             }
 
-            var msg = new i32[10]
+            var msg = new i32[12]
             while User32.PeekMessageW(msg, 0, 0, 0, 1) != 0
             {
-                if msg[2] == 18
+                let m = msg[2]
+                if m == 18
                 {
                     return false
                 }
+
+                // WM_CHAR(0x0102) → 字符输入（wParam 低位在 i32 索引 4）
+                if m == 258
+                {
+                    io.AddInputCharacter(msg[4])
+                }
+
+                User32.TranslateMessage(msg)
             }
 
             var pt = new i32[2]

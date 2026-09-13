@@ -2,6 +2,8 @@
 // ImGui —— 立即模式门面（实例上下文，规避静态字段）：NewFrame → Begin/Widgets → End → Render。
 // 布局：窗口局部 cursor 由 ImGuiLayout 推进 + 缩进 `_indent`；持久状态经 ImGuiStorage（id 键）。
 
+using System.Syscall
+
 namespace System.UI
 {
     public class ImGui
@@ -15,6 +17,13 @@ namespace System.UI
         private field _lastHovered: bool
         private field _indent: i32
 
+        private field _textIds: i32[]
+        private field _textLens: i32[]
+        private field _textChars: char[]
+        private field _textCapacity: i32
+        private field _textMaxLen: i32
+        private field _focusId: i32
+
         public constructor(capacity: i32, storageCapacity: i32)
         {
             _drawList = new ImGuiDrawList(capacity)
@@ -25,6 +34,13 @@ namespace System.UI
             _mouseWasDown = false
             _lastHovered = false
             _indent = 0
+
+            _textCapacity = 16
+            _textMaxLen = 64
+            _textIds = new i32[_textCapacity]
+            _textLens = new i32[_textCapacity]
+            _textChars = new char[_textCapacity * _textMaxLen]
+            _focusId = 0
         }
 
         public property Style: ImGuiStyle
@@ -124,6 +140,70 @@ namespace System.UI
         public function Dummy(w: f32, h: f32): void
         {
             ImGuiLayout.ItemSize(_window, w, h)
+        }
+
+        /// <summary>单行文本输入（点击聚焦；消费本帧 io 字符）。返回当前文本。</summary>
+        public function InputText(label: string, id: i32, maxLen: i32): string
+        {
+            var slot = TextFind(id)
+            if slot < 0
+            {
+                slot = TextCreate(id)
+            }
+
+            var len = _textLens[slot]
+            let x = ItemX()
+            let y = ItemY()
+            let w = f32(200.0)
+            let h = f32(20.0)
+            let hovered = HitTest(x, y, w, h)
+            _lastHovered = hovered
+            if Clicked(hovered)
+            {
+                _focusId = id
+            }
+
+            if _focusId == id && _io != null
+            {
+                var i: i32 = 0
+                while i < _io.CharCount
+                {
+                    let c = _io.CharAt(i)
+                    if c == 8
+                    {
+                        if len > 0
+                        {
+                            len = len - 1
+                        }
+                    }
+                    else if c >= 32 && c < 127
+                    {
+                        if len < maxLen && len < _textMaxLen
+                        {
+                            _textChars[slot * _textMaxLen + len] = (char)c
+                            len = len + 1
+                        }
+                    }
+
+                    i = i + 1
+                }
+
+                _io.ClearChars()
+            }
+
+            _textLens[slot] = len
+            var border = _style.GetColor(2)
+            if _focusId == id
+            {
+                border = _style.GetColor(5)
+            }
+
+            _drawList.AddRectFilled(x, y, x + w, y + h, _style.GetColor(7))
+            _drawList.AddRect(x, y, x + w, y + h, border)
+            _drawList.AddText(x + f32(4.0), y + f32(3.0), _style.GetColor(0), TextSlice(slot, len))
+            _drawList.AddText(x + w + f32(8.0), y + f32(3.0), _style.GetColor(0), label)
+            ImGuiLayout.ItemSize(_window, w + f32(8.0) + MeasureText(label), h + _style.ItemSpacingY)
+            return TextSlice(slot, len)
         }
 
         public function SameLine(): void
@@ -391,6 +471,53 @@ namespace System.UI
             _drawList.AddRectFilled(x, y, x + w, y + h, _style.GetColor(7))
             _drawList.AddRectFilled(x, y, x + w * f, y + h, _style.GetColor(8))
             _drawList.AddRect(x, y, x + w, y + h, _style.GetColor(2))
+        }
+
+        private function TextFind(id: i32): i32
+        {
+            var i: i32 = 0
+            while i < _textCapacity
+            {
+                if _textIds[i] == id
+                {
+                    return i
+                }
+
+                i = i + 1
+            }
+
+            return -1
+        }
+
+        private function TextCreate(id: i32): i32
+        {
+            var i: i32 = 0
+            while i < _textCapacity
+            {
+                if _textIds[i] == 0
+                {
+                    _textIds[i] = id
+                    _textLens[i] = 0
+                    return i
+                }
+
+                i = i + 1
+            }
+
+            return 0
+        }
+
+        private function TextSlice(slot: i32, len: i32): string
+        {
+            var buf = new char[len]
+            var i: i32 = 0
+            while i < len
+            {
+                buf[i] = _textChars[slot * _textMaxLen + i]
+                i = i + 1
+            }
+
+            return StringSyscall.StringFromChars(buf)
         }
 
         private function HitTest(x: f32, y: f32, w: f32, h: f32): bool

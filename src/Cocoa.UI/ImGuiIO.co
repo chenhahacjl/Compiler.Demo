@@ -17,6 +17,9 @@ namespace System.UI
         public field QuitRequested: bool
 
         private field _keys: i32[]
+        private field _charBuf: i32[]
+        private field _charCount: i32
+        private field _charCapacity: i32
 
         public constructor()
         {
@@ -30,6 +33,37 @@ namespace System.UI
             FrameCount = 0
             QuitRequested = false
             _keys = new i32[256]
+            _charCapacity = 64
+            _charBuf = new i32[_charCapacity]
+            _charCount = 0
+        }
+
+        /// <summary>本帧字符输入（WM_CHAR；InputText 消费后 ClearChars）。</summary>
+        public property CharCount: i32
+        {
+            get
+            {
+                return _charCount
+            }
+        }
+
+        public function CharAt(i: i32): i32
+        {
+            return _charBuf[i]
+        }
+
+        public function AddInputCharacter(c: i32): void
+        {
+            if _charCount < _charCapacity
+            {
+                _charBuf[_charCount] = c
+                _charCount = _charCount + 1
+            }
+        }
+
+        public function ClearChars(): void
+        {
+            _charCount = 0
         }
 
         public function NewFrame(dt: f32): void
