@@ -1,0 +1,34 @@
+// Cocoa UI 库 · System.UI（namespace System.UI）
+// 基础值类型：ImVec2 / ImVec4 —— 布局坐标与颜色（struct 值语义）。
+// 颜色统一用 packed ABGR（i32）在 DrawList 中承载；ImVec4 用于样式定义。
+
+namespace System.UI
+{
+    public struct ImVec2
+    {
+        public field x: f32
+        public field y: f32
+
+        public constructor(px: f32, py: f32)
+        {
+            x = px
+            y = py
+        }
+    }
+
+    public struct ImVec4
+    {
+        public field r: f32
+        public field g: f32
+        public field b: f32
+        public field a: f32
+
+        public constructor(pr: f32, pg: f32, pb: f32, pa: f32)
+        {
+            r = pr
+            g = pg
+            b = pb
+            a = pa
+        }
+    }
+}

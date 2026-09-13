@@ -1,0 +1,38 @@
+// Cocoa UI 库 · System.UI（namespace System.UI）
+// ImGuiID —— 标签 → 稳定 ID（FNV-1a 32 位，以 i32 承载；位模式与 unsigned 等价）。
+// 注：Cocoa 暂无 `^` 运算符，用恒等式 `a ^ b == (a | b) & ~(a & b)` 计算。
+
+namespace System.UI
+{
+    public class ImGuiID
+    {
+        /// <summary>按位异或（等价 `^`；`a|b - a&b`，无 `~` 依赖）。</summary>
+        public static function Xor(a: i32, b: i32): i32
+        {
+            return (a | b) - (a & b)
+        }
+
+        /// <summary>FNV-1a（默认种子 2166136261，i32 表示为 -2128831035）。</summary>
+        public static function HashString(s: string): i32
+        {
+            return HashStringSeed(s, -2128831035)
+        }
+
+        /// <summary>FNV-1a 带种子（用于 ID 栈：seed = 栈顶 ID）。</summary>
+        public static function HashStringSeed(s: string, seed: i32): i32
+        {
+            var hash: i32 = seed
+            var i: i32 = 0
+            let len: i32 = s.Length
+            while i < len
+            {
+                let c: i32 = i32(s[i])
+                hash = Xor(hash, c)
+                hash = hash * 16777619
+                i = i + 1
+            }
+
+            return hash
+        }
+    }
+}

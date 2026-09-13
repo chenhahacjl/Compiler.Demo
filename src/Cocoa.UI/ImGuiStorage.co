@@ -1,0 +1,177 @@
+// Cocoa UI 库 · System.UI（namespace System.UI）
+// ImGuiStorage —— 开放寻址哈希表（i32 id → i32/bool/f32 三视图），承载控件持久状态。
+// 空槽以 _used=0 标记（key 可为 0）；哈希取 key 低 31 位保证非负索引。
+
+namespace System.UI
+{
+    public class ImGuiStorage
+    {
+        private field _keys: i32[]
+        private field _used: i32[]
+        private field _intVals: i32[]
+        private field _boolVals: i32[]
+        private field _floatVals: f32[]
+        private field _capacity: i32
+        private field _count: i32
+
+        public constructor(capacity: i32)
+        {
+            var cap: i32 = capacity
+            if cap < 4
+            {
+                cap = 4
+            }
+
+            _capacity = cap
+            _keys = new i32[cap]
+            _used = new i32[cap]
+            _intVals = new i32[cap]
+            _boolVals = new i32[cap]
+            _floatVals = new f32[cap]
+            _count = 0
+        }
+
+        public property Count: i32
+        {
+            get
+            {
+                return _count
+            }
+        }
+
+        /// <summary>已存在键的槽位；不存在返回 -1。</summary>
+        private function Lookup(key: i32): i32
+        {
+            var hash: i32 = key & 2147483647
+            var idx: i32 = hash % _capacity
+            var probes: i32 = 0
+            while probes < _capacity
+            {
+                if _used[idx] == 0
+                {
+                    return -1
+                }
+
+                if _keys[idx] == key
+                {
+                    return idx
+                }
+
+                idx = (idx + 1) % _capacity
+                probes = probes + 1
+            }
+
+            return -1
+        }
+
+        /// <summary>为不存在的键找空槽并占位；返回槽位或 -1（表满）。</summary>
+        private function Place(key: i32): i32
+        {
+            var hash: i32 = key & 2147483647
+            var idx: i32 = hash % _capacity
+            var probes: i32 = 0
+            while probes < _capacity
+            {
+                if _used[idx] == 0
+                {
+                    _used[idx] = 1
+                    _keys[idx] = key
+                    _count = _count + 1
+                    return idx
+                }
+
+                idx = (idx + 1) % _capacity
+                probes = probes + 1
+            }
+
+            return -1
+        }
+
+        public function GetInt(key: i32, defaultValue: i32): i32
+        {
+            let idx = Lookup(key)
+            if idx < 0
+            {
+                return defaultValue
+            }
+
+            return _intVals[idx]
+        }
+
+        public function SetInt(key: i32, value: i32): void
+        {
+            let idx = Lookup(key)
+            if idx >= 0
+            {
+                _intVals[idx] = value
+                return
+            }
+
+            let slot = Place(key)
+            if slot >= 0
+            {
+                _intVals[slot] = value
+            }
+        }
+
+        public function GetBool(key: i32, defaultValue: bool): bool
+        {
+            let idx = Lookup(key)
+            if idx < 0
+            {
+                return defaultValue
+            }
+
+            return _boolVals[idx] == 1
+        }
+
+        public function SetBool(key: i32, value: bool): void
+        {
+            var stored: i32 = 0
+            if value
+            {
+                stored = 1
+            }
+
+            let idx = Lookup(key)
+            if idx >= 0
+            {
+                _boolVals[idx] = stored
+                return
+            }
+
+            let slot = Place(key)
+            if slot >= 0
+            {
+                _boolVals[slot] = stored
+            }
+        }
+
+        public function GetFloat(key: i32, defaultValue: f32): f32
+        {
+            let idx = Lookup(key)
+            if idx < 0
+            {
+                return defaultValue
+            }
+
+            return _floatVals[idx]
+        }
+
+        public function SetFloat(key: i32, value: f32): void
+        {
+            let idx = Lookup(key)
+            if idx >= 0
+            {
+                _floatVals[idx] = value
+                return
+            }
+
+            let slot = Place(key)
+            if slot >= 0
+            {
+                _floatVals[slot] = value
+            }
+        }
+    }
+}

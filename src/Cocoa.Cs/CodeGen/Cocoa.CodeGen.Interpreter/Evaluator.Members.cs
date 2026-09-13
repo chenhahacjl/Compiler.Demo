@@ -31,6 +31,20 @@ namespace Cocoa.CodeGen.Interpreter
             var length = Convert.ToInt32(EvaluateExpression(node.Length));
             var array = new object[length];
 
+            // 6e-M25：值类型数组槽默认零值初始化（求值器以 object[] 承载，
+            // 未初始化槽为 null 会在读取/传参时触发 Debug.Assert(value != null)）。
+            if (node.Type.ElementType is { } elementType)
+            {
+                var defaultValue = DefaultValueOf(elementType);
+                if (defaultValue != null)
+                {
+                    for (var i = 0; i < length; i++)
+                    {
+                        array[i] = defaultValue;
+                    }
+                }
+            }
+
             for (var i = 0; i < node.Initializers.Length; i++)
             {
                 array[i] = EvaluateExpression(node.Initializers[i])!;

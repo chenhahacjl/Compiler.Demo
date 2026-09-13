@@ -1,0 +1,122 @@
+// Cocoa UI �?· System.UI（namespace System.UI�?// ImGuiDrawList —�?顶点/索引并行数组（模�?vector，无 struct 数组依赖）�?// 顶点：pos(x,y) + uv(u,v) + col(packed ABGR i32)；索引三角形列表�?
+namespace System.UI
+{
+    public class ImGuiDrawList
+    {
+        private field _posX: f32[]
+        private field _posY: f32[]
+        private field _uvX: f32[]
+        private field _uvY: f32[]
+        private field _col: i32[]
+        private field _idx: i32[]
+        private field _vtxCount: i32
+        private field _idxCount: i32
+
+        public constructor(capacity: i32)
+        {
+            if capacity < 16
+            {
+                capacity = 16
+            }
+
+            _posX = new f32[capacity]
+            _posY = new f32[capacity]
+            _uvX = new f32[capacity]
+            _uvY = new f32[capacity]
+            _col = new i32[capacity]
+            _idx = new i32[capacity * 3]
+            _vtxCount = 0
+            _idxCount = 0
+        }
+
+        public function Clear(): void
+        {
+            _vtxCount = 0
+            _idxCount = 0
+        }
+
+        public property VertexCount: i32
+        {
+            get
+            {
+                return _vtxCount
+            }
+        }
+
+        public property IndexCount: i32
+        {
+            get
+            {
+                return _idxCount
+            }
+        }
+
+        public function AddVertex(x: f32, y: f32, u: f32, v: f32, col: i32): void
+        {
+            _posX[_vtxCount] = x
+            _posY[_vtxCount] = y
+            _uvX[_vtxCount] = u
+            _uvY[_vtxCount] = v
+            _col[_vtxCount] = col
+            _vtxCount = _vtxCount + 1
+        }
+
+        public function AddIndex(i: i32): void
+        {
+            _idx[_idxCount] = i
+            _idxCount = _idxCount + 1
+        }
+
+        /// <summary>实心矩形�? 顶点 + 6 索引）�?/summary>
+        public function AddRectFilled(minX: f32, minY: f32, maxX: f32, maxY: f32, col: i32): void
+        {
+            let zero: f32 = f32(0.0)
+            let one: f32 = f32(1.0)
+            let start = _vtxCount
+
+            AddVertex(minX, minY, zero, zero, col)
+            AddVertex(maxX, minY, one, zero, col)
+            AddVertex(maxX, maxY, one, one, col)
+            AddVertex(minX, maxY, zero, one, col)
+
+            AddIndex(start)
+            AddIndex(start + 1)
+            AddIndex(start + 2)
+            AddIndex(start)
+            AddIndex(start + 2)
+            AddIndex(start + 3)
+        }
+
+        /// <summary>矩形边框（四�?1px 实心边）�?/summary>
+        public function AddRect(minX: f32, minY: f32, maxX: f32, maxY: f32, col: i32): void
+        {
+            let one: f32 = f32(1.0)
+
+            AddRectFilled(minX, minY, maxX, minY + one, col)
+            AddRectFilled(minX, maxY - one, maxX, maxY, col)
+            AddRectFilled(minX, minY, minX + one, maxY, col)
+            AddRectFilled(maxX - one, minY, maxX, maxY, col)
+        }
+
+        /// <summary>gdi 翻译输出：顶�?x/y/color 读取（供后端遍历，见 Win32GDIBackend）�?/summary>
+        public function PosX(i: i32): f32
+        {
+            return _posX[i]
+        }
+
+        public function PosY(i: i32): f32
+        {
+            return _posY[i]
+        }
+
+        public function Color(i: i32): i32
+        {
+            return _col[i]
+        }
+
+        public function Index(i: i32): i32
+        {
+            return _idx[i]
+        }
+    }
+}

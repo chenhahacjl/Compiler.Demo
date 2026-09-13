@@ -101,12 +101,14 @@ namespace Cocoa.CodeAnalysis.Serialization
             switch (value)
             {
                 case null: return "n:"; // 6e-M19 M5-a：null 常量
-case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
+                case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
                 case long l: return "l:" + l.ToString(CultureInfo.InvariantCulture); // 6e-M23 R8：i64 常量
                 case ulong ul: return "U:" + ul.ToString(CultureInfo.InvariantCulture); // 6b：u64 常量（M0-4 随 TryParse 引入）。
+                case uint ui: return "v:" + ui.ToString(CultureInfo.InvariantCulture); // 6e-M25：u32 常量
                 case bool b: return "b:" + (b ? 1 : 0);
                 case char c: return "c:" + ((int)c).ToString(CultureInfo.InvariantCulture);
                 case byte u: return "u:" + u.ToString(CultureInfo.InvariantCulture);
+                case float f: return "f:" + f.ToString("R", CultureInfo.InvariantCulture); // 6e-M25：f32 常量
                 case double d: return "d:" + d.ToString("R", CultureInfo.InvariantCulture);
                 case string s: return "s:" + Escape(s);
                 default:
@@ -127,6 +129,8 @@ case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
                 case 'c': return (char)int.Parse(rest, CultureInfo.InvariantCulture);
                 case 'u': return (byte)int.Parse(rest, CultureInfo.InvariantCulture);
                 case 'U': return ulong.Parse(rest, CultureInfo.InvariantCulture); // 6b：u64 常量
+                case 'v': return uint.Parse(rest, CultureInfo.InvariantCulture); // 6e-M25：u32 常量
+                case 'f': return float.Parse(rest, NumberStyles.Float, CultureInfo.InvariantCulture); // 6e-M25：f32 常量
                 case 'd': return double.Parse(rest, NumberStyles.Float, CultureInfo.InvariantCulture);
                 case 's': return Unescape(rest);
                 default:
