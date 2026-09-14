@@ -66,6 +66,9 @@ namespace Cocoa.Tests.CodeAnalysis
             "let b = x is T\nlet c = a as T\nlet d = e ?? f\n",
             "let arr = new string[] {\"x\", \"y\"}\n",
             "class Point\n{\n    public field X: i32\n    public field Y: i32\n    public function Distance(p: Point): f64\n    {\n        return 0\n    }\n}\n",
+            "using System\nusing MiniLexer\n\nfunction Main()\n{\n    print(1)\n}\n",
+            "using System.Collections.Generic\n\nlet items = new List<i32>()\n",
+            "let p = new Point()\n",
         };
 
         [Fact]
@@ -106,6 +109,8 @@ namespace Cocoa.Tests.CodeAnalysis
                 "let b = x is T\nlet c = a as T\nlet d = e ?? f\n",
                 "let arr = new string[] {\"x\", \"y\"}\n",
                 "class Point\n{\n    public field X: i32\n    public field Y: i32\n    public function Distance(p: Point): f64\n    {\n        return 0\n    }\n}\n",
+                "using System\nusing MiniLexer\n\nfunction Main()\n{\n    print(1)\n}\n",
+                "using System.Collections.Generic\n\nlet items = new List<i32>()\n",
             };
 
             var sb = new StringBuilder();

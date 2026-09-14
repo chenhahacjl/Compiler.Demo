@@ -202,6 +202,11 @@ namespace MiniParser
                 return ParseInterfaceDeclaration()
             }
 
+            if IsKeywordText("using")
+            {
+                return ParseUsingDirective()
+            }
+
             let mods = new Node[8]
             var modCount = 0
             while IsModifier()
@@ -288,6 +293,20 @@ namespace MiniParser
 
             iface.Add(Match("CloseBraceToken"))
             return iface
+        }
+
+        private function ParseUsingDirective(): Node
+        {
+            let node = Node.MakeCompound("UsingDirective")
+            node.Add(Match("UsingKeyword"))
+            node.Add(Match("IdentifierToken"))
+            while KindName() == "DotToken"
+            {
+                node.Add(Match("DotToken"))
+                node.Add(Match("IdentifierToken"))
+            }
+
+            return node
         }
 
         private function ParseClassMember(): Node
@@ -863,7 +882,7 @@ namespace MiniParser
 
             if IsKeywordText("new")
             {
-                return ParseArrayCreation()
+                return ParseNewExpression()
             }
 
             // 兜底：单 token 原样消费
@@ -872,29 +891,65 @@ namespace MiniParser
             return any
         }
 
-        private function ParseArrayCreation(): Node
+        private function ParseNewExpression(): Node
         {
-            let node = Node.MakeCompound("ArrayCreationExpression")
-            node.Add(Match("NewKeyword"))
-            node.Add(Match("IdentifierToken"))
-            node.Add(Match("OpenBracketToken"))
-            node.Add(Match("CloseBracketToken"))
-            if KindName() == "OpenBraceToken"
+            let newTok = Match("NewKeyword")
+            let name = Match("IdentifierToken")
+
+            if KindName() == "OpenBracketToken"
             {
-                node.Add(Match("OpenBraceToken"))
-                if KindName() != "CloseBraceToken"
+                // 数组创建 `new T[] {...}`
+                let node = Node.MakeCompound("ArrayCreationExpression")
+                node.Add(newTok)
+                node.Add(name)
+                node.Add(Match("OpenBracketToken"))
+                node.Add(Match("CloseBracketToken"))
+                if KindName() == "OpenBraceToken"
                 {
-                    node.Add(ParseExpression())
-                    while KindName() == "CommaToken"
+                    node.Add(Match("OpenBraceToken"))
+                    if KindName() != "CloseBraceToken"
                     {
-                        node.Add(Match("CommaToken"))
                         node.Add(ParseExpression())
+                        while KindName() == "CommaToken"
+                        {
+                            node.Add(Match("CommaToken"))
+                            node.Add(ParseExpression())
+                        }
                     }
+
+                    node.Add(Match("CloseBraceToken"))
                 }
 
-                node.Add(Match("CloseBraceToken"))
+                return node
             }
 
+            // 对象创建 `new T()` / `new T<...>(...)`
+            let node = Node.MakeCompound("ObjectCreationExpression")
+            node.Add(newTok)
+            node.Add(name)
+            if KindName() == "LessToken"
+            {
+                let tal = Node.MakeCompound("TypeArgumentList")
+                tal.Add(Match("LessToken"))
+                let arg = Node.MakeCompound("TypeClause")
+                arg.Add(Match("IdentifierToken"))
+                tal.Add(arg)
+                tal.Add(Match("GreaterToken"))
+                node.Add(tal)
+            }
+
+            node.Add(Match("OpenParenthesisToken"))
+            if KindName() != "CloseParenthesisToken"
+            {
+                node.Add(ParseExpression())
+                while KindName() == "CommaToken"
+                {
+                    node.Add(Match("CommaToken"))
+                    node.Add(ParseExpression())
+                }
+            }
+
+            node.Add(Match("CloseParenthesisToken"))
             return node
         }
 
