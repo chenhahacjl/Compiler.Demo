@@ -9,7 +9,7 @@ using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis
 {
-    public abstract partial class Compilation
+    public partial class Compilation
     {
         private BoundGlobalScope? _globalScope;
         private readonly string _entryPointName;
@@ -52,16 +52,16 @@ namespace Cocoa.CodeAnalysis
         public static void RegisterInterpreterEvaluator(Func<BoundProgram, string[]?, Dictionary<VariableSymbol, object>, object?> evaluator)
             => _interpreterEvaluator = evaluator;
 
-        public abstract Language Language { get; }
+        /// <summary>编译语言（去 C# 方言后恒为 Cocoa）。</summary>
+        public Language Language => Language.Cocoa;
 
-        /// <summary>
-        /// 按本语言绑定全局作用域（S-4.3 Compilation 驱动 Binder：对齐 Roslyn
-        /// <c>CSharpCompilation</c> 驱动 <c>CSharpBinder</c>）。语言子类调用各自语言库的 Binder 静态编排。
-        /// </summary>
-        public abstract BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<SyntaxTree> syntaxTrees, string entryPointName, string[]? references, ImmutableArray<CoaProgram> codLibraries);
+        /// <summary>绑定全局作用域（经 <see cref="CocoaBinder"/>.BindGlobalScope 静态编排）。</summary>
+        public BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<SyntaxTree> syntaxTrees, string entryPointName, string[]? references, ImmutableArray<CoaProgram> codLibraries)
+            => CocoaBinder.BindGlobalScope(isScript, previous, syntaxTrees, entryPointName, references, codLibraries);
 
-        /// <summary>按本语言绑定程序（含单态化/降级；见 <see cref="BindGlobalScope"/>）。</summary>
-        public abstract BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> codLibraries, Language dialect, bool linkCodDynamically, NamespaceSymbol? globalNamespace);
+        /// <summary>绑定程序（含单态化/降级；见 <see cref="BindGlobalScope"/>）。</summary>
+        public BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> codLibraries, Language dialect, bool linkCodDynamically, NamespaceSymbol? globalNamespace)
+            => CocoaBinder.BindProgram(isScript, previous, globalScope, codLibraries, dialect, linkCodDynamically, globalNamespace);
 
         protected Compilation(bool isScript, Compilation? previous, string entryPointName, string[]? references, bool linkCodDynamically = false, params SyntaxTree[] syntaxTrees)
         {
@@ -125,16 +125,9 @@ namespace Cocoa.CodeAnalysis
             return CreateCompilation(isScript: true, previous, entryPointName: "Main", references: references, linkCodDynamically: false, syntaxTrees);
         }
 
-        /// <summary>
-        /// 经语言工厂分派（Y §6.7 A0 + S-4.2 Compilation 分家）：CO → <see cref="CocoaCompilation"/>，
-        /// C# → <see cref="CSharpCompilation"/>；子类随语言库落位，Core 仅持 <see cref="Language"/> 抽象。
-        /// 空语法树 / 脚本默认 Cocoa，行为等价，API 面不变。
-        /// </summary>
+        /// <summary>构造编译对象（去 C# 方言后单语言，直接实例化）。</summary>
         private static Compilation CreateCompilation(bool isScript, Compilation? previous, string entryPointName, string[]? references, bool linkCodDynamically, SyntaxTree[] syntaxTrees)
-        {
-            var language = syntaxTrees.Length == 0 ? Language.Cocoa : syntaxTrees[0].Language;
-            return language.CreateCompilation(isScript, previous, entryPointName, references, linkCodDynamically, syntaxTrees);
-        }
+            => new Compilation(isScript, previous, entryPointName, references, linkCodDynamically, syntaxTrees);
 
         public bool IsScript { get; }
         public Compilation? Previous { get; }

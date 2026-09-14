@@ -9,7 +9,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// 所有 virtual/abstract 方法替换为具体实现；无继承、无 virtual 方法。
     /// S-5 P2-1：产出 Cocoa 语言节点（<c>Cocoa.CodeAnalysis.Syntax</c>），token 判断保留共享 <see cref="SyntaxKind"/>。
     /// </summary>
-    internal sealed partial class CocoaParser : IParser
+    internal sealed partial class CocoaParser
     {
         private readonly DiagnosticBag _diagnostics = new DiagnosticBag();
         private readonly SyntaxTree _syntaxTree;
@@ -641,7 +641,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             var arrowToken = MatchToken(SyntaxKind.FatArrowToken);
 
-            CocoaSyntaxNode body = Current.Kind == SyntaxKind.OpenBraceToken
+            SyntaxNode body = Current.Kind == SyntaxKind.OpenBraceToken
                 ? ParseBlockStatement()
                 : ParseExpression();
 

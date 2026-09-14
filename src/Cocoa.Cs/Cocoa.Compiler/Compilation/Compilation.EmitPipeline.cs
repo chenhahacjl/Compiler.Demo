@@ -13,7 +13,7 @@ namespace Cocoa.CodeAnalysis
     /// <summary>
     /// 发射管线（4.2 自 Compilation.cs 拆出，partial 分文件）：EmitTree/Emit/EmitNative/EmitCocoa 与函数值/OOP 门禁扫描。
     /// </summary>
-    public abstract partial class Compilation
+    public partial class Compilation
     {
 
         public void EmitTree(TextWriter writer)

@@ -9,12 +9,11 @@ using System.Linq;
 namespace Cocoa.CodeAnalysis
 {
     /// <summary>
-    /// 语义模型抽象基类（P1-5 拆分：对齐 Roslyn <see cref="Microsoft.CodeAnalysis.SemanticModel"/>）。
-    /// 共享绑定树基础设施（Syntax→BoundNode 映射 / GetOperation / GetDiagnostics），语言专属的名字解析
-    /// （GetTypeInfo/GetDeclaredSymbol/GetSymbolInfo 及其节点分派）由语言库子类
-    /// <c>CocoaSemanticModel</c>/<c>CSharpSemanticModel</c> 实现（<see cref="Language.CreateSemanticModel"/> 分派）。
+    /// 语义模型（对齐 Roslyn <see cref="Microsoft.CodeAnalysis.SemanticModel"/>）。去 C# 方言后单语言单实现：
+    /// 绑定树基础设施（Syntax→BoundNode 映射 / GetOperation / GetDiagnostics）与 Cocoa 名字解析
+    /// （GetTypeInfo/GetDeclaredSymbol/GetSymbolInfo）合一。
     /// </summary>
-    public abstract class SemanticModel
+    public class SemanticModel
     {
         private readonly Compilation _compilation;
         private readonly SyntaxTree _syntaxTree;
@@ -93,16 +92,145 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>表达式类型：优先绑定树（任意表达式，含局部变量/参数/实例成员）；类型名节点回落名称解析。</summary>
-        public abstract TypeSymbol? GetTypeInfo(SyntaxNode node);
+        public TypeSymbol? GetTypeInfo(SyntaxNode node)
+        {
+            if (node != null && BoundBySyntax.TryGetValue(node, out var bound) && bound is BoundExpression expression)
+            {
+                return expression.Type;
+            }
 
-        /// <summary>解析声明语法节点对应的符号（对齐 Roslyn <c>SemanticModel.GetDeclaredSymbol</c>）：
-        /// 类/枚举 → 命名类型（类按声明引用精确匹配、枚举按名）；顶层函数 → 函数符号；其余返回 null。
-        /// 嵌套类型/构造器等不在全局命名空间树，暂不支持。</summary>
-        public abstract Symbol? GetDeclaredSymbol(SyntaxNode declaration);
+            string? name = node switch
+            {
+                NameExpressionSyntax nameExpression => nameExpression.IdentifierToken.Text,
+                TypeClauseSyntax typeClause => typeClause.Identifier.Text,
+                null => null,
+                _ => null,
+            };
 
-        /// <summary>表达式对应符号（对齐 Roslyn <c>SemanticModel.GetSymbolInfo</c>）。
-        /// 优先绑定树（局部变量/参数/实例成员等返回真实绑定符号）；未命中回落名称/成员解析。</summary>
-        public abstract Symbol? GetSymbolInfo(SyntaxNode node);
+            if (name == null)
+            {
+                return null;
+            }
+
+            return ResolveBuiltin(name) ?? Compilation.GetTypeByMetadataName(name);
+        }
+
+        /// <summary>解析声明语法节点对应的符号：类/枚举 → 命名类型（类按声明引用精确匹配、枚举按名）；
+        /// 顶层函数 → 函数符号；其余返回 null。</summary>
+        public Symbol? GetDeclaredSymbol(SyntaxNode declaration)
+        {
+            if (declaration is FunctionDeclarationSyntax function)
+            {
+                foreach (var ns in EnumerateNamespaces(GlobalNamespace))
+                {
+                    foreach (var member in ns.GetFunctionMembers())
+                    {
+                        if (ReferenceEquals(member.Declaration, function))
+                        {
+                            return member;
+                        }
+                    }
+                }
+
+                return null;
+            }
+
+            if (declaration is ClassDeclarationSyntax classDeclaration)
+            {
+                foreach (var ns in EnumerateNamespaces(GlobalNamespace))
+                {
+                    foreach (var member in ns.GetTypeMembers())
+                    {
+                        if (member is NamedTypeSymbol named && ReferenceEquals(named.Declaration, classDeclaration))
+                        {
+                            return named;
+                        }
+                    }
+                }
+
+                return null;
+            }
+
+            if (declaration is EnumDeclarationSyntax enumDeclaration)
+            {
+                foreach (var ns in EnumerateNamespaces(GlobalNamespace))
+                {
+                    foreach (var member in ns.GetTypeMembers())
+                    {
+                        if (member is NamedTypeSymbol { TypeKind: TypeKind.Enum } named && named.Name == enumDeclaration.Identifier.Text)
+                        {
+                            return named;
+                        }
+                    }
+                }
+
+                return null;
+            }
+
+            return null;
+        }
+
+        /// <summary>表达式对应符号：优先绑定树（局部变量/参数/实例成员等返回真实绑定符号）；未命中回落名称/成员解析。</summary>
+        public Symbol? GetSymbolInfo(SyntaxNode node)
+        {
+            if (node != null && BoundBySyntax.TryGetValue(node, out var bound))
+            {
+                switch (bound)
+                {
+                    case BoundVariableExpression variableExpression:
+                        return variableExpression.Variable;
+                    case BoundCallExpression callExpression:
+                        return callExpression.Function;
+                    case BoundMemberCallExpression memberCallExpression:
+                        // 属性/索引器读（getter 调用）→ 属性符号（对齐 Roslyn：obj.Prop / obj[i] 返回属性而非 getter）
+                        return memberCallExpression.Method?.ContainingProperty != null
+                            ? memberCallExpression.Method.ContainingProperty
+                            : memberCallExpression.Method;
+                    case BoundMemberAccessExpression memberAccessExpression:
+                        return memberAccessExpression.Field;
+                    case BoundThisExpression thisExpression:
+                        return thisExpression.Type;
+                    case BoundBaseExpression baseExpression:
+                        return baseExpression.Type;
+                }
+            }
+
+            return node switch
+            {
+                NameExpressionSyntax nameExpression => ResolveName(nameExpression.IdentifierToken.Text),
+                CallExpressionSyntax callExpression => ResolveName(callExpression.Identifier.Text),
+                MemberAccessExpressionSyntax memberAccess => ResolveMemberAccess(memberAccess.Expression, memberAccess.IdentifierToken.Text),
+                MemberCallExpressionSyntax memberCall => ResolveMemberAccess(memberCall.Expression, memberCall.IdentifierToken.Text),
+                null => null,
+                _ => null,
+            };
+        }
+
+        /// <summary>成员解析：接收者解析为类型（静态成员，如 <c>Utils.Twice</c>）→ 返回成员符号；
+        /// 实例接收者/嵌套命名空间（如 System.Math.Max）暂不支持。</summary>
+        private Symbol? ResolveMemberAccess(ExpressionSyntax receiver, string memberName)
+        {
+            if (ResolveReceiverType(receiver) is not NamedTypeSymbol receiverType)
+            {
+                return null;
+            }
+
+            return receiverType.GetMethod(memberName)
+                ?? (Symbol?)receiverType.GetField(memberName)
+                ?? receiverType.GetProperty(memberName);
+        }
+
+        private TypeSymbol? ResolveReceiverType(ExpressionSyntax receiver)
+        {
+            return receiver switch
+            {
+                NameExpressionSyntax name => ResolveName(name.IdentifierToken.Text) as TypeSymbol,
+                MemberAccessExpressionSyntax nested => ResolveReceiverType(nested.Expression) is NamedTypeSymbol parent
+                    ? parent.GetMethod(nested.IdentifierToken.Text)?.ReturnType
+                    : null,
+                _ => null,
+            };
+        }
 
         protected NamespaceSymbol GlobalNamespace => _compilation.GlobalNamespace;
 

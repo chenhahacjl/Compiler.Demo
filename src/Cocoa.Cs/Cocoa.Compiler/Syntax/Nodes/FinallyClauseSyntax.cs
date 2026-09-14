@@ -2,7 +2,7 @@ using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
-    public sealed partial class FinallyClauseSyntax : CocoaSyntaxNode
+    public sealed partial class FinallyClauseSyntax : SyntaxNode
     {
         internal FinallyClauseSyntax(SyntaxTree syntaxTree, SyntaxToken finallyKeyword, BlockStatementSyntax body)
             : base(syntaxTree)

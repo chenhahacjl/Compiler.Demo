@@ -4,7 +4,7 @@ using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
-    public sealed partial class ParameterSyntax : CocoaSyntaxNode
+    public sealed partial class ParameterSyntax : SyntaxNode
     {
         internal ParameterSyntax(SyntaxTree syntaxTree, SyntaxToken identifier, TypeClauseSyntax type)
             : this(syntaxTree, modifier: null, identifier, type)

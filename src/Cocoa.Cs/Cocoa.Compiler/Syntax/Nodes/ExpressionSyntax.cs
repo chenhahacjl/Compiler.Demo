@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// <summary>
     /// 表达式语法
     /// </summary>
-    public abstract class ExpressionSyntax : CocoaSyntaxNode
+    public abstract class ExpressionSyntax : SyntaxNode
     {
         private protected ExpressionSyntax(SyntaxTree syntaxTree)
             : base(syntaxTree)

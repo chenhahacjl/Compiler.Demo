@@ -10,7 +10,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// 实参为字符串字面量 token 列表（逗号分隔 token 一同入列，消费方按 Kind 过滤）。
     /// Tier-1 仅编译器识别 `Facade`；通用属性类解析为 Tier-2。
     /// </summary>
-    public sealed partial class AttributeSyntax : CocoaSyntaxNode
+    public sealed partial class AttributeSyntax : SyntaxNode
     {
         internal AttributeSyntax(SyntaxTree syntaxTree, SyntaxToken openBracketToken, SyntaxToken name, SyntaxToken? openParenthesisToken, ImmutableArray<SyntaxToken> arguments, SyntaxToken? closeParenthesisToken, SyntaxToken closeBracketToken)
             : base(syntaxTree)

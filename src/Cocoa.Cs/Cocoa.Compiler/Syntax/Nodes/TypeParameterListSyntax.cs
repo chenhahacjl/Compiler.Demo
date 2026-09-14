@@ -7,7 +7,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// <summary>
     /// 泛型类型参数列表（6e-M20）：`&lt;T, U&gt;`；delegate 处支持型变 `&lt;in T, out U&gt;`。
     /// </summary>
-    public sealed partial class TypeParameterListSyntax : CocoaSyntaxNode
+    public sealed partial class TypeParameterListSyntax : SyntaxNode
     {
         internal TypeParameterListSyntax(SyntaxTree syntaxTree, SyntaxToken lessThanToken, ImmutableArray<TypeParameterSyntax> parameters, SyntaxToken greaterThanToken)
             : base(syntaxTree)

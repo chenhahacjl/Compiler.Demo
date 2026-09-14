@@ -4,7 +4,7 @@ using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
-    public abstract class MemberSyntax : CocoaSyntaxNode
+    public abstract class MemberSyntax : SyntaxNode
     {
         private protected MemberSyntax(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> modifiers)
             : base(syntaxTree)

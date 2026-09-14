@@ -9,7 +9,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// </summary>
     public sealed partial class LambdaExpressionSyntax : ExpressionSyntax
     {
-        internal LambdaExpressionSyntax(SyntaxTree syntaxTree, SyntaxToken? openParenthesisToken, SeparatedSyntaxList<ParameterSyntax> parameters, SyntaxToken? closeParenthesisToken, bool hasExplicitParameterTypes, SyntaxToken arrowToken, CocoaSyntaxNode body)
+        internal LambdaExpressionSyntax(SyntaxTree syntaxTree, SyntaxToken? openParenthesisToken, SeparatedSyntaxList<ParameterSyntax> parameters, SyntaxToken? closeParenthesisToken, bool hasExplicitParameterTypes, SyntaxToken arrowToken, SyntaxNode body)
             : base(syntaxTree)
         {
             OpenParenthesisToken = openParenthesisToken;
@@ -36,7 +36,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         /// <summary>lambda 浣擄細琛ㄨ揪寮忔垨鍧楄鍙ャ€?/summary>
         /// <summary>lambda 体：表达式或块语句（语言根类型，Kind 返回 <see cref="SyntaxKind"/>）。</summary>
-        public CocoaSyntaxNode Body { get; }
+        public SyntaxNode Body { get; }
 
         public override IEnumerable<SyntaxNode> GetChildren()
         {

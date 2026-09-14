@@ -1679,7 +1679,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             var arrowToken = (SyntaxToken)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
             position += _green.GetSlot(slot)!.Width;
             slot++;
-            var body = (CocoaSyntaxNode)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            var body = (SyntaxNode)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
             var parameters = new SeparatedSyntaxList<ParameterSyntax>(parametersBuilder.ToImmutable());
             var hasExplicitParameterTypes = parameters.Count > 0 && parameters[0].Type != null;
             return new LambdaExpressionSyntax(syntaxTree, openParenthesis, parameters, closeParenthesis, hasExplicitParameterTypes, arrowToken, body);

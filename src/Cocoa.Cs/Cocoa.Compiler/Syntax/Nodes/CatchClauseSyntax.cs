@@ -2,7 +2,7 @@ using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
-    public sealed partial class CatchClauseSyntax : CocoaSyntaxNode
+    public sealed partial class CatchClauseSyntax : SyntaxNode
     {
         internal CatchClauseSyntax(SyntaxTree syntaxTree, SyntaxToken catchKeyword, SyntaxToken identifier, TypeClauseSyntax type, BlockStatementSyntax body)
             : base(syntaxTree)

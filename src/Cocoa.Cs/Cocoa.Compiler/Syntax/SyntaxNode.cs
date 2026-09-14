@@ -17,15 +17,11 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         public SyntaxNode? Parent => SyntaxTree.GetParent(this);
 
-        /// <summary>
-        /// 共享联合视图（S-1 复制分家：语言库根类 <c>CocoaSyntaxNode</c>/<c>CSharpSyntaxNode</c> 用
-        /// <c>new abstract</c> 隐藏并以语言枚举接管；本属性为共享枚举视图，经 <see cref="RawKind"/> 具名，
-        /// 语言节点值域对齐故取值正确）。
-        /// </summary>
+        /// <summary>节点 kind（具体节点 override；<see cref="RawKind"/> 为其 int 视图，供绿/红桥接）。</summary>
         public virtual SyntaxKind Kind => (SyntaxKind)RawKind;
 
-        /// <summary>语言无关的原始 kind（绿/红桥接与共享视图统一读取；语言根类 override 返回语言枚举 int 值，与共享值域对齐）。</summary>
-        public abstract int RawKind { get; }
+        /// <summary>kind 的原始 int 视图（默认由 <see cref="Kind"/> 派生；绿节点直存的 <see cref="RedNode"/> 覆写）。</summary>
+        public virtual int RawKind => (int)Kind;
 
         public virtual TextSpan Span
         {

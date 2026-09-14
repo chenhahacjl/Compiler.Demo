@@ -7,7 +7,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// <summary>
     /// 灞炴€ц闂櫒锛歚get { ... }` / `set { ... }`锛坄;` = 鑷姩锛夛紝鍙甫鍙鎬т慨楗扮锛坄private set;`锛夈€?
     /// </summary>
-    public sealed partial class PropertyAccessorSyntax : CocoaSyntaxNode
+    public sealed partial class PropertyAccessorSyntax : SyntaxNode
     {
         internal PropertyAccessorSyntax(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> modifiers, SyntaxToken keyword, BlockStatementSyntax? body, SyntaxToken? semicolonToken)
             : base(syntaxTree)

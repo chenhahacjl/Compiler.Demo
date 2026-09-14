@@ -2,7 +2,7 @@ using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
-    public partial class TypeClauseSyntax : CocoaSyntaxNode
+    public partial class TypeClauseSyntax : SyntaxNode
     {
         internal TypeClauseSyntax(SyntaxTree syntaxTree, SyntaxToken? colonToken, SyntaxToken identifier)
             : base(syntaxTree)

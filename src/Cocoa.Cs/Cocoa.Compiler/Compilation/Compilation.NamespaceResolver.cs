@@ -11,7 +11,7 @@ namespace Cocoa.CodeAnalysis
     /// <summary>
     /// 命名空间与类型解析（4.2 自 Compilation.cs 拆出，partial 分文件）：全局命名空间树构建、GetTypeByMetadataName/GetNamespace 等查询。
     /// </summary>
-    public abstract partial class Compilation
+    public partial class Compilation
     {
         /// <summary>按名称枚举符号（对齐 Roslyn <c>Compilation.GetSymbolsWithName</c>）：
         /// 命名类型 + 顶层函数（经全局命名空间树）+ 全局变量；去重。</summary>

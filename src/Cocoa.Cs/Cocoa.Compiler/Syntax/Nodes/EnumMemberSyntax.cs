@@ -2,7 +2,7 @@ using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
-    public sealed partial class EnumMemberSyntax : CocoaSyntaxNode
+    public sealed partial class EnumMemberSyntax : SyntaxNode
     {
         internal EnumMemberSyntax(SyntaxTree syntaxTree, SyntaxToken identifier, SyntaxToken? equalsToken, ExpressionSyntax? value)
             : base(syntaxTree)

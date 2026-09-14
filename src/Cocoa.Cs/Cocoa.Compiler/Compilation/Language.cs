@@ -25,8 +25,6 @@ namespace Cocoa.CodeAnalysis
         /// <summary>Cocoa 宿主语言（默认，`.co`；等价 <see cref="Instance"/>）。</summary>
         public static Language Cocoa => Instance;
 
-        public string Name => "cocoa";
-
         /// <summary>内建类型名（any/bool/char/string/void 共享 + CO 简写词汇）。</summary>
         public TypeSymbol? LookupBuiltinType(string name) => name switch
         {
@@ -64,26 +62,22 @@ namespace Cocoa.CodeAnalysis
             return SyntaxFacts.GetKeywordKind(text);
         }
 
-        /// <summary>按本语言创建解析器（完整树）。</summary>
-        public IParser CreateParser(SyntaxTree syntaxTree) => new CocoaParser(syntaxTree);
+        /// <summary>创建解析器（完整树）。</summary>
+        internal CocoaParser CreateParser(SyntaxTree syntaxTree) => new CocoaParser(syntaxTree);
 
-        /// <summary>按本语言创建解析器（预词法 token，插值洞子解析用）。</summary>
-        public IParser CreateParser(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> tokens)
+        /// <summary>创建解析器（预词法 token，插值洞子解析用）。</summary>
+        internal CocoaParser CreateParser(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> tokens)
             => new CocoaParser(syntaxTree, tokens);
 
-        /// <summary>CO 词法分析器。</summary>
-        public ILexer CreateLexer(SyntaxTree syntaxTree)
+        /// <summary>词法分析器。</summary>
+        internal LexerBase CreateLexer(SyntaxTree syntaxTree)
             => new CocoaLexer(syntaxTree);
 
         /// <summary>从指定位置开始词法（插值洞子解析，位置须指向洞首）。</summary>
-        public ILexer CreateLexer(SyntaxTree syntaxTree, int start)
+        internal LexerBase CreateLexer(SyntaxTree syntaxTree, int start)
             => new CocoaLexer(syntaxTree, start);
 
-        /// <summary>CO 编译对象。<see cref="Compilation.Create"/> 经此工厂创建。</summary>
-        public Compilation CreateCompilation(bool isScript, Compilation? previous, string entryPointName, string[]? references, bool linkCodDynamically, SyntaxTree[] syntaxTrees)
-            => new CocoaCompilation(isScript, previous, entryPointName, references, linkCodDynamically, syntaxTrees);
-
-        /// <summary>CO 绑定器。<see cref="BindGlobalScope"/> 经此创建局部绑定器。</summary>
+        /// <summary>绑定器工厂（Monomorphizer 经此创建绑定器）。</summary>
         public IBinder CreateBinder(bool isScript, Binding.BoundScope? parent, Symbols.FunctionSymbol? function, ImmutableArray<string> references, ImmutableArray<string> usingNamespaces, Func<string, Symbols.TypeSymbol?> builtinTypeResolver, ImmutableArray<string> usingStatics = default, ImmutableDictionary<string, string> usingAliases = null!, ImmutableArray<Serialization.CoaProgram> codLibraries = default, Symbols.NamespaceSymbol? globalNamespace = null)
             => new CocoaBinder(isScript, parent, function, references, usingNamespaces, builtinTypeResolver, usingStatics, usingAliases, codLibraries, globalNamespace);
 
@@ -140,12 +134,12 @@ namespace Cocoa.CodeAnalysis
 
         /// <summary>语义模型。</summary>
         public SemanticModel CreateSemanticModel(Compilation compilation, SyntaxTree syntaxTree)
-            => new CocoaSemanticModel(compilation, syntaxTree);
+            => new SemanticModel(compilation, syntaxTree);
 
         /// <summary>不可达代码位置解析。</summary>
         public TextLocation? GetUnreachableCodeLocation(SyntaxNode node)
         {
-            var kind = (node as CocoaSyntaxNode)?.Kind;
+            var kind = (node as SyntaxNode)?.Kind;
             switch (kind)
             {
                 case SyntaxKind.BlockStatement:

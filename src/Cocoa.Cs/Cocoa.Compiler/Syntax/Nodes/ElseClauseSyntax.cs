@@ -2,7 +2,7 @@ using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
-    public sealed partial class ElseClauseSyntax : CocoaSyntaxNode
+    public sealed partial class ElseClauseSyntax : SyntaxNode
     {
         internal ElseClauseSyntax(SyntaxTree syntaxTree, SyntaxToken elseKeyword, StatementSyntax elseStatement)
             : base(syntaxTree)

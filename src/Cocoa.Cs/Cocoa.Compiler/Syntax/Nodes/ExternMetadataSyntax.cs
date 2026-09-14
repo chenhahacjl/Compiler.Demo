@@ -8,7 +8,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// extern 鍏冩暟鎹瓙鍙ワ細`extern(entry = MessageBoxA, charset = ansi)`锛堟嫭鍙峰彲閫夛紝鍛藉悕閿€硷紝閫楀彿鍒嗛殧锛夈€?
     /// 6e-M17 Step 5：DLL 导出名别名（entry）、编码格式（charset）。
     /// </summary>
-    public sealed partial class ExternMetadataSyntax : CocoaSyntaxNode
+    public sealed partial class ExternMetadataSyntax : SyntaxNode
     {
         internal ExternMetadataSyntax(SyntaxTree syntaxTree, SyntaxToken externKeyword, SyntaxToken? openParenthesisToken, ImmutableArray<ExternMetadataArgumentSyntax> arguments, SyntaxToken? closeParenthesisToken)
             : base(syntaxTree)
@@ -48,7 +48,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     }
 
     /// <summary>extern 鍏冩暟鎹敭鍊煎锛歚key = value`锛堝 `entry = MessageBoxA` / `charset = ansi`锛夈€?/summary>
-    public sealed partial class ExternMetadataArgumentSyntax : CocoaSyntaxNode
+    public sealed partial class ExternMetadataArgumentSyntax : SyntaxNode
     {
         internal ExternMetadataArgumentSyntax(SyntaxTree syntaxTree, SyntaxToken key, SyntaxToken equalsToken, SyntaxToken value)
             : base(syntaxTree)

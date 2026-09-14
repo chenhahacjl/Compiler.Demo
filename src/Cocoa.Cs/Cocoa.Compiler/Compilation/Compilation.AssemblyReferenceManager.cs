@@ -11,7 +11,7 @@ namespace Cocoa.CodeAnalysis
     /// <summary>
     /// 程序集与 .coa 库引用管理（4.2 自 Compilation.cs 拆出，partial 分文件）：LoadCodLibraries、SourceAssembly/ReferencedAssemblies、cod 序列化门禁。
     /// </summary>
-    public abstract partial class Compilation
+    public partial class Compilation
     {
         private static (ImmutableArray<CoaProgram> Libraries, ImmutableArray<string> AmbiguousTypeNames) LoadCodLibraries(string[]? references)
         {
