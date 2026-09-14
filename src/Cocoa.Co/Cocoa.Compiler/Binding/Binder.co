@@ -100,9 +100,11 @@ namespace MiniBinder
                 i = i + 1
             }
 
-            // M9-a2：main 函数与全局语句互斥（对齐 C# 端规则，声明序无关）
+            // M9-a2：main 函数与全局语句互斥（对齐 C# 端规则，声明序无关；
+            // C# 在 GlobalScope 与 Program 两阶段各报一次，条数对齐）
             if _variableCount > 0 && _mainName != "<none>"
             {
+                ReportError("Cannot declare main function when global statements are used.")
                 ReportError("Cannot declare main function when global statements are used.")
             }
         }
@@ -815,6 +817,48 @@ namespace MiniBinder
                     }
 
                     i = i + 1
+                }
+
+                return
+            }
+
+            if k == "ExpressionStatement"
+            {
+                // M9-a4：对齐 C# 语句校验——赋值目标未定义时追加 statement 消息（先下钻报 Variable 错，再补报）
+                var stmt: Node = null
+                var s = 0
+                while s < node.ChildCount()
+                {
+                    let child = node.Child(s)
+                    if !child.IsToken()
+                    {
+                        stmt = child
+                    }
+
+                    s = s + 1
+                }
+
+                CheckNode(stmt)
+                if stmt.Kind() == "AssignmentExpression"
+                {
+                    var left: Node = null
+                    var a = 0
+                    while a < stmt.ChildCount()
+                    {
+                        let child = stmt.Child(a)
+                        if !child.IsToken()
+                        {
+                            left = child
+                            break
+                        }
+
+                        a = a + 1
+                    }
+
+                    if left.Kind() == "NameExpression" && !IsKnownName(left.Child(0).Text())
+                    {
+                        ReportError("Only assignment and call expressions can be used as a statement.")
+                    }
                 }
 
                 return

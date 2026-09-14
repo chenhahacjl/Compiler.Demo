@@ -161,6 +161,33 @@ namespace Cocoa.Tests.CodeAnalysis
         }
 
         [Fact]
+        public void SelfBinder_Diagnostics_Match_CSharp_ForInvalidCorpus()
+        {
+            // M9-a4：诊断消息逐字节对齐（排序消除顺序差异；条数+文本完全一致）
+            var failures = new List<string>();
+            foreach (var source in InvalidCorpus())
+            {
+                var compilation = Compilation.Create(SyntaxTree.Parse(source));
+                var csharp = compilation.GetDiagnostics()
+                    .Select(d => d.Message)
+                    .OrderBy(m => m, StringComparer.Ordinal)
+                    .ToList();
+                var self = SelfBinderDiagnostics(source)
+                    .OrderBy(m => m, StringComparer.Ordinal)
+                    .ToList();
+                var csharpText = string.Join(" || ", csharp);
+                var selfText = string.Join(" || ", self);
+
+                if (csharpText != selfText)
+                {
+                    failures.Add($"SOURCE: {source.Replace("\n", "\\n")}\nC#  : {csharpText}\nself: {selfText}\n-----");
+                }
+            }
+
+            Assert.True(failures.Count == 0, "\n" + string.Join("\n", failures));
+        }
+
+        [Fact]
         public void DumpObservation_Symbols()
         {
             var sb = new StringBuilder();
@@ -194,7 +221,12 @@ namespace Cocoa.Tests.CodeAnalysis
             return RunSelfBinder(source).DiagCount;
         }
 
-        private static (string Output, int DiagCount) RunSelfBinder(string source)
+        private static IReadOnlyList<string> SelfBinderDiagnostics(string source)
+        {
+            return RunSelfBinder(source).Diags;
+        }
+
+        private static (string Output, int DiagCount, IReadOnlyList<string> Diags) RunSelfBinder(string source)
         {
             var embedded = source.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n");
             var root = RepoRoot();
@@ -229,17 +261,19 @@ namespace Cocoa.Tests.CodeAnalysis
                 if (result.Diagnostics.HasErrors())
                 {
                     var message = "COCOMPILE-ERROR: " + string.Join(" | ", result.Diagnostics.Select(d => d.Message));
-                    return (message, 0);
+                    return (message, 0, Array.Empty<string>());
                 }
 
                 var output = writer.ToString().Replace("\r\n", "\n").TrimEnd('\n');
                 var diagCount = 0;
+                var diags = new List<string>();
                 var symbolLines = new List<string>();
                 foreach (var line in output.Split('\n'))
                 {
                     if (line.StartsWith("error:", StringComparison.Ordinal))
                     {
                         diagCount = diagCount + 1;
+                        diags.Add(line.Substring("error:".Length).Trim());
                     }
                     else
                     {
@@ -247,7 +281,7 @@ namespace Cocoa.Tests.CodeAnalysis
                     }
                 }
 
-                return (string.Join("\n", symbolLines).TrimEnd('\n'), diagCount);
+                return (string.Join("\n", symbolLines).TrimEnd('\n'), diagCount, diags);
             }
             finally
             {
