@@ -125,6 +125,7 @@ namespace MiniParser
         private field _cur: Token
         private field _look: Token
         private field _look2: Token
+        private field _look3: Token
 
         public static function Create(source: string): Parser
         {
@@ -133,15 +134,17 @@ namespace MiniParser
             p._cur = p._lex.Next()
             p._look = p._lex.Next()
             p._look2 = p._lex.Next()
+            p._look3 = p._lex.Next()
             return p
         }
 
-        /// <summary>推进一个 token（_cur 取 _look，_look 取 _look2，_look2 取新 token）。</summary>
+        /// <summary>推进一个 token（_cur 取 _look，_look 取 _look2，_look2 取 _look3，_look3 取新 token）。</summary>
         private function Advance(): void
         {
             _cur = _look
             _look = _look2
-            _look2 = _lex.Next()
+            _look2 = _look3
+            _look3 = _lex.Next()
         }
 
         /// <summary>当前 token 的 SyntaxKind 名（对齐 C# SyntaxKind 配置名）。</summary>
@@ -158,6 +161,11 @@ namespace MiniParser
         private function Look2KindName(): string
         {
             return TokenKindName(_look2)
+        }
+
+        private function Look3KindName(): string
+        {
+            return TokenKindName(_look3)
         }
 
         private function Text(): string
@@ -1106,11 +1114,41 @@ namespace MiniParser
                 return ParseLambda()
             }
 
+            // cast 判别：`( 类型 )` 后跟表达式起始 token
+            if IsCastStart()
+            {
+                return ParseCastExpression()
+            }
+
             let paren = Node.MakeCompound("ParenthesizedExpression")
             paren.Add(Match("OpenParenthesisToken"))
             paren.Add(ParseExpression())
             paren.Add(Match("CloseParenthesisToken"))
             return paren
+        }
+
+        private function IsCastStart(): bool
+        {
+            if LookKindName() != "IdentifierToken" || Look2KindName() != "CloseParenthesisToken"
+            {
+                return false
+            }
+
+            let k = Look3KindName()
+            return k == "IdentifierToken" || k == "NumberToken" || k == "StringToken" ||
+                   k == "OpenParenthesisToken" || k == "NewKeyword" || k == "TrueKeyword" ||
+                   k == "FalseKeyword" || k == "NullKeyword" || k == "BangToken" ||
+                   k == "MinusToken" || k == "PlusToken"
+        }
+
+        private function ParseCastExpression(): Node
+        {
+            let cast = Node.MakeCompound("CastExpression")
+            cast.Add(Match("OpenParenthesisToken"))
+            cast.Add(Match("IdentifierToken"))
+            cast.Add(Match("CloseParenthesisToken"))
+            cast.Add(ParseExpression())
+            return cast
         }
 
         private function ParseLambda(): Node

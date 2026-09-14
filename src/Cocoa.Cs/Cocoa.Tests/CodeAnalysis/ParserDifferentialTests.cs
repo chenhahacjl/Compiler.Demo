@@ -118,6 +118,8 @@ namespace Cocoa.Tests.CodeAnalysis
                 "function Main()\n{\n    var total = 0\n    for var i = 1 to 5\n    {\n        if i == 3\n        {\n            continue\n        }\n        total = total + i\n    }\n}\n",
             "using System\nfunction Main()\n{\n    var buf: u8[] = new u8[3]\n    buf[0] = 200\n    buf[1] = 0xFF\n    Console.WriteLine(0xFF)\n}\n",
             "using System\nfunction Main()\n{\n    var b1: u8 = 65\n    var buf: u8[] = new u8[3]\n    buf[0] = 200\n    Console.WriteLine(buf[0])\n    Console.WriteLine(Wrap(200) == Wrap(200))\n}\n",
+            "function Wrap(value: i32): u8\n{\n    return (u8)value\n}\n\nfunction AsInt(b: u8): i32\n{\n    return i32(b)\n}\n\nfunction LastElement(buf: u8[]): u8\n{\n    return buf[buf.Length - 1]\n}\n",
+            "function Wrap(value: i32): u8\n{\n    return (u8)value\n}\n\nfunction AsInt(b: u8): i32\n{\n    return i32(b)\n}\n\nfunction FirstElement(buf: u8[]): u8\n{\n    return buf[0]\n}\n\nfunction LastElement(buf: u8[]): u8\n{\n    return buf[buf.Length - 1]\n}\n",
         };
 
             var sb = new StringBuilder();
@@ -172,6 +174,21 @@ namespace Cocoa.Tests.CodeAnalysis
             var summary = $"samples: {files.Length}, pass: {pass}, fail: {fail.Count}\n" + string.Join("\n", fail);
             File.WriteAllText(Path.Combine(Path.GetTempPath(), "cocoa-parser-sample-sweep.txt"), summary);
             _output.WriteLine(summary);
+            Assert.True(true);
+        }
+
+        [Fact]
+        public void Debug_FileDiff()
+        {
+            var path = Path.Combine(RepoRoot(), "samples", "Tutorial", "Data", "ByteArrays", "lib.co");
+            var source = File.ReadAllText(path).Replace("\r\n", "\n");
+            var reference = TreeDump(SyntaxTree.Parse(source).Root);
+            var self = SelfDump(source);
+            var sb = new StringBuilder();
+            sb.AppendLine("C#  : " + reference);
+            sb.AppendLine("self: " + self);
+            File.WriteAllText(Path.Combine(Path.GetTempPath(), "cocoa-parser-filediff.txt"), sb.ToString());
+            _output.WriteLine("match=" + (reference == self));
             Assert.True(true);
         }
 
