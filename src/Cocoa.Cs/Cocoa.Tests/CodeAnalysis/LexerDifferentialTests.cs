@@ -110,8 +110,8 @@ namespace Cocoa.Tests.CodeAnalysis
             {
                 case SyntaxKind.EndOfFileToken: return "EOF";
                 case SyntaxKind.IdentifierToken: return "Identifier";
-                case SyntaxKind.NumberToken:
-                case SyntaxKind.DoubleToken: return "Number";
+                case SyntaxKind.NumberToken: return "Number";
+                case SyntaxKind.DoubleToken: return "Double";
                 case SyntaxKind.StringToken: return "String";
                 case SyntaxKind.VerbatimStringToken: return "VerbatimString";
                 case SyntaxKind.RawStringToken: return "RawString";

@@ -73,6 +73,14 @@ namespace Cocoa.Tests.CodeAnalysis
             "using System\nfunction Main()\n{\n    var total = 0\n    for var i = 1 to 5\n    {\n        if i == 3\n        {\n            continue\n        }\n        total = total + i\n    }\n}\n",
             "function DoOnce(): i32\n{\n    var i = 0\n    do\n    {\n        i = i + 1\n    } while i < 0\n    return i\n}\n",
             "using System\nfunction Run(args: string[])\n{\n    Console.WriteLine(Add(20, 22))\n    Console.WriteLine(args.Length)\n    if args.Length > 0\n    {\n        Console.WriteLine(args[0])\n    }\n}\n",
+            "public class Person\n{\n    private field _name: string\n}\n",
+            "public enum Color { Red, Green, Blue }\n\npublic enum HttpStatus { OK = 200, NotFound = 404, InternalServerError = 500 }\n",
+            "namespace MyLib\n{\n    public class Point\n    {\n        private field _x: i32\n    }\n}\n",
+            "class Kernel32\n{\n    import kernel32.dll\n    {\n        static stdcall function GetTickCount(): i32\n    }\n}\n",
+            "let a = obj.b.c\nlet d = x.y.z.W()\n",
+            "let d: f64 = 3.14\nlet g = f32(0.016)\n",
+            "Ui.VStack(gui, () => {\n    gui.Label(\"hi\")\n    Ui.HStack(gui, () => {\n        gui.Button(\"ok\")\n    })\n})\n",
+            "function Describe(name: string, age: i32): string\n{\n    var years = age * 1\n    return name + \" (\" + (string)years + \")\"\n}\n",
         };
 
         [Fact]
@@ -180,15 +188,43 @@ namespace Cocoa.Tests.CodeAnalysis
         [Fact]
         public void Debug_FileDiff()
         {
-            var path = Path.Combine(RepoRoot(), "samples", "Tutorial", "Data", "ByteArrays", "lib.co");
-            var source = File.ReadAllText(path).Replace("\r\n", "\n");
-            var reference = TreeDump(SyntaxTree.Parse(source).Root);
-            var self = SelfDump(source);
+            var files = new[]
+            {
+                "Tutorial/Basics/Types/main.co",
+                "Tutorial/Data/Doubles/main.co",
+                "Tutorial/Dialects/CsStyle/lib.co",
+                "Samples/UI/BasicUI/main.co",
+                "Samples/UI/NativeUI/main.co",
+                "Samples/UI/AdvancedUI/main.co",
+                "Samples/UI/DeclarativeUI/main.co",
+            };
+
             var sb = new StringBuilder();
-            sb.AppendLine("C#  : " + reference);
-            sb.AppendLine("self: " + self);
+            foreach (var rel in files)
+            {
+                var path = Path.Combine(RepoRoot(), "samples", rel.Replace('/', Path.DirectorySeparatorChar));
+                var source = File.ReadAllText(path).Replace("\r\n", "\n");
+                var reference = TreeDump(SyntaxTree.Parse(source).Root);
+                var self = SelfDump(source);
+
+                sb.AppendLine("===== " + rel + " =====");
+                if (reference == self)
+                {
+                    sb.AppendLine("MATCH");
+                    continue;
+                }
+
+                var i = 0;
+                while (i < reference.Length && i < self.Length && reference[i] == self[i]) i++;
+                var start = Math.Max(0, i - 120);
+                var len = Math.Min(240, Math.Min(reference.Length, self.Length) - start);
+                sb.AppendLine($"first diff @ {i}");
+                sb.AppendLine("C#  …" + reference.Substring(start, Math.Max(0, len)) + "…");
+                sb.AppendLine("self…" + self.Substring(start, Math.Max(0, len)) + "…");
+            }
+
             File.WriteAllText(Path.Combine(Path.GetTempPath(), "cocoa-parser-filediff.txt"), sb.ToString());
-            _output.WriteLine("match=" + (reference == self));
+            _output.WriteLine(sb.ToString());
             Assert.True(true);
         }
 

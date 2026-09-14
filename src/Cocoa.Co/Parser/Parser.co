@@ -200,19 +200,14 @@ namespace MiniParser
 
         private function ParseMember(): Node
         {
-            if IsKeywordText("class") || IsKeywordText("struct")
-            {
-                return ParseClassDeclaration()
-            }
-
-            if IsKeywordText("interface")
-            {
-                return ParseInterfaceDeclaration()
-            }
-
             if IsKeywordText("using")
             {
                 return ParseUsingDirective()
+            }
+
+            if IsKeywordText("namespace")
+            {
+                return ParseNamespaceDeclaration()
             }
 
             let mods = new Node[8]
@@ -221,6 +216,21 @@ namespace MiniParser
             {
                 mods[modCount] = Match(KindName())
                 modCount = modCount + 1
+            }
+
+            if IsKeywordText("class") || IsKeywordText("struct")
+            {
+                return ParseClassDeclaration(mods, modCount)
+            }
+
+            if IsKeywordText("interface")
+            {
+                return ParseInterfaceDeclaration(mods, modCount)
+            }
+
+            if IsKeywordText("enum")
+            {
+                return ParseEnumDeclaration(mods, modCount)
             }
 
             if IsKeywordText("function")
@@ -244,12 +254,82 @@ namespace MiniParser
             let k = KindName()
             return k == "PublicKeyword" || k == "PrivateKeyword" || k == "InternalKeyword" ||
                 k == "ProtectedKeyword" || k == "StaticKeyword" || k == "ReadonlyKeyword" ||
-                k == "SealedKeyword" || k == "VirtualKeyword" || k == "OverrideKeyword"
+                k == "SealedKeyword" || k == "VirtualKeyword" || k == "OverrideKeyword" ||
+                k == "AbstractKeyword" || k == "PartialKeyword" || k == "FacadeKeyword" ||
+                k == "CdeclKeyword" || k == "StdcallKeyword" || k == "SyscallKeyword"
         }
 
-        private function ParseClassDeclaration(): Node
+        /// <summary>命名空间声明：`namespace A.B { members }`（名 token 含点号，成员递归 ParseMember）。</summary>
+        private function ParseNamespaceDeclaration(): Node
+        {
+            let node = Node.MakeCompound("NamespaceDeclaration")
+            node.Add(Match("NamespaceKeyword"))
+            node.Add(Match("IdentifierToken"))
+            while KindName() == "DotToken"
+            {
+                node.Add(Match("DotToken"))
+                node.Add(Match("IdentifierToken"))
+            }
+
+            node.Add(Match("OpenBraceToken"))
+            while KindName() != "CloseBraceToken" && _cur.Kind() != "EOF"
+            {
+                node.Add(ParseMember())
+            }
+
+            node.Add(Match("CloseBraceToken"))
+            return node
+        }
+
+        /// <summary>枚举声明：`enum E { A, B = 5 }`（成员以逗号分隔，逗号入 dump）。</summary>
+        private function ParseEnumDeclaration(mods: Node[], modCount: i32): Node
+        {
+            let node = Node.MakeCompound("EnumDeclaration")
+            var i = 0
+            while i < modCount
+            {
+                node.Add(mods[i])
+                i = i + 1
+            }
+
+            node.Add(Match("EnumKeyword"))
+            node.Add(Match("IdentifierToken"))
+            node.Add(Match("OpenBraceToken"))
+            while KindName() != "CloseBraceToken" && _cur.Kind() != "EOF"
+            {
+                let member = Node.MakeCompound("EnumMember")
+                member.Add(Match("IdentifierToken"))
+                if KindName() == "EqualsToken"
+                {
+                    member.Add(Match("EqualsToken"))
+                    member.Add(ParseExpression())
+                }
+
+                node.Add(member)
+                if KindName() == "CommaToken"
+                {
+                    node.Add(Match("CommaToken"))
+                }
+                else
+                {
+                    break
+                }
+            }
+
+            node.Add(Match("CloseBraceToken"))
+            return node
+        }
+
+        private function ParseClassDeclaration(mods: Node[], modCount: i32): Node
         {
             let cls = Node.MakeCompound("ClassDeclaration")
+            var mi = 0
+            while mi < modCount
+            {
+                cls.Add(mods[mi])
+                mi = mi + 1
+            }
+
             if IsKeywordText("class")
             {
                 cls.Add(Match("ClassKeyword"))
@@ -288,9 +368,16 @@ namespace MiniParser
             return cls
         }
 
-        private function ParseInterfaceDeclaration(): Node
+        private function ParseInterfaceDeclaration(mods: Node[], modCount: i32): Node
         {
             let iface = Node.MakeCompound("InterfaceDeclaration")
+            var mi = 0
+            while mi < modCount
+            {
+                iface.Add(mods[mi])
+                mi = mi + 1
+            }
+
             iface.Add(Match("InterfaceKeyword"))
             iface.Add(Match("IdentifierToken"))
             iface.Add(Match("OpenBraceToken"))
@@ -319,6 +406,11 @@ namespace MiniParser
 
         private function ParseClassMember(): Node
         {
+            if IsKeywordText("import")
+            {
+                return ParseImportBlock()
+            }
+
             let mods = new Node[8]
             var modCount = 0
             while IsModifier()
@@ -333,6 +425,28 @@ namespace MiniParser
             }
 
             return ParseClassMemberCore(mods, modCount)
+        }
+
+        /// <summary>类内 import 块：`import kernel32.dll { static stdcall function ... }`（DLL 名 token 含点号）。</summary>
+        private function ParseImportBlock(): Node
+        {
+            let node = Node.MakeCompound("ImportBlock")
+            node.Add(Match("ImportKeyword"))
+            node.Add(Match("IdentifierToken"))
+            while KindName() == "DotToken"
+            {
+                node.Add(Match("DotToken"))
+                node.Add(Match("IdentifierToken"))
+            }
+
+            node.Add(Match("OpenBraceToken"))
+            while KindName() != "CloseBraceToken" && _cur.Kind() != "EOF"
+            {
+                node.Add(ParseClassMember())
+            }
+
+            node.Add(Match("CloseBraceToken"))
+            return node
         }
 
         private function ParseClassMemberCore(mods: Node[], modCount: i32): Node
@@ -898,7 +1012,7 @@ namespace MiniParser
         private function ParsePrimary(): Node
         {
             let k = KindName()
-            if k == "NumberToken" || k == "StringToken" || k == "VerbatimStringToken" ||
+            if k == "NumberToken" || k == "DoubleToken" || k == "StringToken" || k == "VerbatimStringToken" ||
                 k == "RawStringToken" || k == "InterpolatedStringToken" || k == "CharToken"
             {
                 let lit = Node.MakeCompound("LiteralExpression")
@@ -1004,9 +1118,10 @@ namespace MiniParser
         private function ParseIdentifierPostfix(): Node
         {
             let ident = Match("IdentifierToken")
-            var result = Node.MakeCompound("NameExpression")
+            var result: Node
             if KindName() == "OpenParenthesisToken"
             {
+                // 基调用：CallExpression 首子为 IdentifierToken（C# 语义）
                 let call = Node.MakeCompound("CallExpression")
                 call.Add(ident)
                 call.Add(Match("OpenParenthesisToken"))
@@ -1023,69 +1138,71 @@ namespace MiniParser
                 call.Add(Match("CloseParenthesisToken"))
                 result = call
             }
-            else if KindName() == "DotToken"
-            {
-                let dot = Match("DotToken")                let member = Match("IdentifierToken")
-                if KindName() == "OpenParenthesisToken"
-                {
-                    // 成员调用：receiver 包 NameExpression
-                    let mcall = Node.MakeCompound("MemberCallExpression")
-                    let recv = Node.MakeCompound("NameExpression")
-                    recv.Add(ident)
-                    mcall.Add(recv)
-                    mcall.Add(dot)
-                    mcall.Add(member)
-                    mcall.Add(Match("OpenParenthesisToken"))
-                    if KindName() != "CloseParenthesisToken"
-                    {
-                        mcall.Add(ParseExpression())
-                        while KindName() == "CommaToken"
-                        {
-                            mcall.Add(Match("CommaToken"))
-                            mcall.Add(ParseExpression())
-                        }
-                    }
-
-                    mcall.Add(Match("CloseParenthesisToken"))
-                    result = mcall
-                }
-                else
-                {
-                    let ma = Node.MakeCompound("MemberAccessExpression")
-                    let recv2 = Node.MakeCompound("NameExpression")
-                    recv2.Add(ident)
-                    ma.Add(recv2)
-                    ma.Add(dot)
-                    ma.Add(member)
-                    result = ma
-                }
-            }
-            else if KindName() == "OpenBracketToken"
-            {
-                // 元素访问：receiver 包 NameExpression
-                let ea = Node.MakeCompound("ElementAccessExpression")
-                let recv3 = Node.MakeCompound("NameExpression")
-                recv3.Add(ident)
-                ea.Add(recv3)
-                ea.Add(Match("OpenBracketToken"))
-                if KindName() != "CloseBracketToken"
-                {
-                    ea.Add(ParseExpression())
-                    while KindName() == "CommaToken"
-                    {
-                        ea.Add(Match("CommaToken"))
-                        ea.Add(ParseExpression())
-                    }
-                }
-
-                ea.Add(Match("CloseBracketToken"))
-                result = ea
-            }
             else
             {
                 let name = Node.MakeCompound("NameExpression")
                 name.Add(ident)
                 result = name
+            }
+
+            // 后缀链（左结合）：`.成员` / `.成员(...)` / `[...]`，receiver 即累积结果
+            while true
+            {
+                if KindName() == "DotToken"
+                {
+                    let dot = Match("DotToken")
+                    let member = Match("IdentifierToken")
+                    if KindName() == "OpenParenthesisToken"
+                    {
+                        let mcall = Node.MakeCompound("MemberCallExpression")
+                        mcall.Add(result)
+                        mcall.Add(dot)
+                        mcall.Add(member)
+                        mcall.Add(Match("OpenParenthesisToken"))
+                        if KindName() != "CloseParenthesisToken"
+                        {
+                            mcall.Add(ParseExpression())
+                            while KindName() == "CommaToken"
+                            {
+                                mcall.Add(Match("CommaToken"))
+                                mcall.Add(ParseExpression())
+                            }
+                        }
+
+                        mcall.Add(Match("CloseParenthesisToken"))
+                        result = mcall
+                    }
+                    else
+                    {
+                        let ma = Node.MakeCompound("MemberAccessExpression")
+                        ma.Add(result)
+                        ma.Add(dot)
+                        ma.Add(member)
+                        result = ma
+                    }
+                }
+                else if KindName() == "OpenBracketToken"
+                {
+                    let ea = Node.MakeCompound("ElementAccessExpression")
+                    ea.Add(result)
+                    ea.Add(Match("OpenBracketToken"))
+                    if KindName() != "CloseBracketToken"
+                    {
+                        ea.Add(ParseExpression())
+                        while KindName() == "CommaToken"
+                        {
+                            ea.Add(Match("CommaToken"))
+                            ea.Add(ParseExpression())
+                        }
+                    }
+
+                    ea.Add(Match("CloseBracketToken"))
+                    result = ea
+                }
+                else
+                {
+                    break
+                }
             }
 
             if KindName() == "PlusPlusToken" || KindName() == "MinusMinusToken"
@@ -1135,10 +1252,12 @@ namespace MiniParser
             }
 
             let k = Look3KindName()
-            return k == "IdentifierToken" || k == "NumberToken" || k == "StringToken" ||
+            return k == "IdentifierToken" || k == "NumberToken" || k == "DoubleToken" ||
+                   k == "StringToken" || k == "VerbatimStringToken" || k == "RawStringToken" ||
+                   k == "InterpolatedStringToken" || k == "CharToken" ||
                    k == "OpenParenthesisToken" || k == "NewKeyword" || k == "TrueKeyword" ||
                    k == "FalseKeyword" || k == "NullKeyword" || k == "BangToken" ||
-                   k == "MinusToken" || k == "PlusToken"
+                   k == "MinusToken" || k == "PlusToken" || k == "TildeToken"
         }
 
         private function ParseCastExpression(): Node
@@ -1147,7 +1266,8 @@ namespace MiniParser
             cast.Add(Match("OpenParenthesisToken"))
             cast.Add(Match("IdentifierToken"))
             cast.Add(Match("CloseParenthesisToken"))
-            cast.Add(ParseExpression())
+            // 操作数为 unary 级（对齐 C# ParseBinaryExpression(6)，`+` 等低优先级不吞入）
+            cast.Add(ParseBinary(6))
             return cast
         }
 
@@ -1167,7 +1287,16 @@ namespace MiniParser
 
             lambda.Add(Match("CloseParenthesisToken"))
             lambda.Add(Match("FatArrowToken"))
-            lambda.Add(ParseExpression())
+            if KindName() == "OpenBraceToken"
+            {
+                // 块体 lambda：`() => { statements }`（对齐 C# ParseLambdaExpression：`{` → ParseBlockStatement）
+                lambda.Add(ParseBlockStatement())
+            }
+            else
+            {
+                lambda.Add(ParseExpression())
+            }
+
             return lambda
         }
 
@@ -1189,6 +1318,11 @@ namespace MiniParser
             if k == "Number"
             {
                 return "NumberToken"
+            }
+
+            if k == "Double"
+            {
+                return "DoubleToken"
             }
 
             if k == "String"

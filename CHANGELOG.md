@@ -8,6 +8,11 @@
 
 ## 未发布（2026-09-14）
 
+### 阶段 7 增量二 M8-a9/a10：自举 Parser 样例覆盖率 33/33 全绿（2026-09-14）
+- **M8-a9 声明面 + 链式后缀**：类型声明前置修饰符（`public class/struct/interface/enum`）、`enum`（逗号分隔成员 + `= 值`）、`namespace`（块式，名 token 含点号）、类内 `import <dll> { ... }` 块；标识符后缀链改左结合循环（`a.b.c` / `x.y.z.W()` / `a[i].b`）；`IsModifier` 对齐 C# 全集。样例覆盖率 21→26/33（差分语料 36）。
+- **M8-a10 数值/lambda/cast**：自举 Lexer 数字 kind 细分 `Number`/`Double`（f 后缀·小数点·指数 → Double，对齐 C# `DoubleToken`）；Parser 补 `DoubleToken` 字面量、**块体 lambda**（`() => { … }`）、cast 操作数降为 unary 级（对齐 `ParseBinaryExpression(6)`）、`IsCastStart` 前瞻补齐。样例覆盖率 26→**33/33 全绿**（差分语料 39，全部逐字节一致）。
+- 修复即捕获三处真实缺陷：自举 Lexer float 与 int 同 kind、块体 lambda 的 `{` 被兜底单 token 吞掉、cast 贪婪吞掉低优先级右操作数。
+
 ### 项目结构优化：清除 C# 语言残留 + 摊平方言层（2026-09-14）
 - **删除 C# 方言死代码**：`SyntaxKindLanguageOwnership`（零引用）、`Cli/Cocoa.Compiler.Cocoa`（`coc` 独立 exe，与 `cocoa` CLI 重复）及其 `Cocoa.Cli.Program.CompileForLanguage`；`Cocoa.Tests/LanguageSeeding.cs`（无注册表的空种子）。
 - **摊平方言层**：`Cocoa.Compiler/Cocoa/{Binder,Syntax,Compilation}` 并入核心目录，命名空间 `Cocoa.CodeAnalysis.Cocoa.*` → `Cocoa.CodeAnalysis.*`（去 C# 方言后单语言，无第二实现）。

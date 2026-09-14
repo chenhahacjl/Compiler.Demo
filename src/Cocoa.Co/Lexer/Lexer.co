@@ -396,7 +396,9 @@ namespace MiniLexer
             var isHex = false
             var isBin = false
             var hasExponent = false
-            var first = Current()
+            var hasDecimal = false
+            var hasFloatSuffix = false
+            let first = Current()
             if first == '0' && (Peek(1) == 'x' || Peek(1) == 'X')
             {
                 isHex = true
@@ -452,6 +454,7 @@ namespace MiniLexer
                 {
                     if Current() == '.' && Char.IsDigit(Peek(1))
                     {
+                        hasDecimal = true
                         Advance()
                         while !AtEnd()
                         {
@@ -535,12 +538,23 @@ namespace MiniLexer
                 }
                 else if (s == 'f' || s == 'F') && !IsAlphaNum(p1)
                 {
+                    hasFloatSuffix = true
                     Advance()
                 }
             }
 
+            var kind = "Number"
+            if hasFloatSuffix
+            {
+                kind = "Double"
+            }
+            else if !isHex && (hasDecimal || hasExponent)
+            {
+                kind = "Double"
+            }
+
             let text = _src.substring(start, _pos - start)
-            return Token.Create("Number", text, startLine, startCol, start)
+            return Token.Create(kind, text, startLine, startCol, start)
         }
 
         /// <summary>普通字符串 "…"：\ 转义 + "" 转义引号；未终止（换行/结尾）停止但不消费。</summary>

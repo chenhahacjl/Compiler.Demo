@@ -83,7 +83,7 @@ namespace Cocoa.Tests.CodeAnalysis
             "Keyword var 5:5\n" +
             "Identifier d 5:9\n" +
             "Symbol = 5:11\n" +
-            "Number 3.14e2 5:13\n" +
+            "Double 3.14e2 5:13\n" +
             "Keyword var 6:5\n" +
             "Identifier s 6:9\n" +
             "Symbol = 6:11\n" +
@@ -135,7 +135,7 @@ namespace Cocoa.Tests.CodeAnalysis
             "Keyword var 7:5\n" +
             "Identifier d 7:9\n" +
             "Symbol = 7:11\n" +
-            "Number 1_000.5 7:13\n" +
+            "Double 1_000.5 7:13\n" +
             "Keyword var 8:5\n" +
             "Identifier l 8:9\n" +
             "Symbol = 8:11\n" +
@@ -147,7 +147,7 @@ namespace Cocoa.Tests.CodeAnalysis
             "Keyword var 10:5\n" +
             "Identifier f 10:9\n" +
             "Symbol = 10:11\n" +
-            "Number 1.5f 10:13\n" +
+            "Double 1.5f 10:13\n" +
             "Identifier @ident 11:5\n" +
             "Symbol = 11:12\n" +
             "Identifier a 11:14\n" +
