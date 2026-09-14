@@ -515,7 +515,7 @@ public partial class MainWindow : Window
         var dir = ViewModel.SolutionTree.DirectoryFor(node);
         if (dir == null) return;
 
-        var name = await ShowTextInputAsync("新建文件", "文件名（.co / .cs）");
+        var name = await ShowTextInputAsync("新建文件", "文件名（.co）");
         if (string.IsNullOrWhiteSpace(name)) return;
 
         if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)

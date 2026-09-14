@@ -37,7 +37,6 @@
                     <SolidColorBrush x:Key="IconDefaultBrush" Color="#CCCCCC" />
                     <SolidColorBrush x:Key="IconFolderBrush" Color="#DCDCAA" />
                     <SolidColorBrush x:Key="IconDependencyBrush" Color="#AAAAAA" />
-                    <SolidColorBrush x:Key="IconCSharpBrush" Color="#9B4F96" />
                     <SolidColorBrush x:Key="IconCocoaBrush" Color="#E37933" />
                     <SolidColorBrush x:Key="IconReferenceBrush" Color="#4EC9B0" />
                 </ResourceDictionary>
@@ -74,7 +73,6 @@
                     <SolidColorBrush x:Key="IconDefaultBrush" Color="#555555" />
                     <SolidColorBrush x:Key="IconFolderBrush" Color="#8A6D1B" />
                     <SolidColorBrush x:Key="IconDependencyBrush" Color="#777777" />
-                    <SolidColorBrush x:Key="IconCSharpBrush" Color="#8B3A86" />
                     <SolidColorBrush x:Key="IconCocoaBrush" Color="#B85C00" />
                     <SolidColorBrush x:Key="IconReferenceBrush" Color="#267F99" />
                 </ResourceDictionary>

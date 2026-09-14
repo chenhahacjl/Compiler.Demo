@@ -18,7 +18,6 @@
   <Folder Name="/Cli/">
     <Project Path="Cli/Cocoa.Cli/Cocoa.Cli.csproj" />
     <Project Path="Cli/Cocoa.Cli.Repl/Cocoa.Cli.Repl.csproj" />
-    <Project Path="Cli/Cocoa.Compiler.Cocoa/Cocoa.Compiler.Cocoa.csproj" />
   </Folder>
   <Project Path="Cocoa.Build/Cocoa.Build.csproj" />
   <Project Path="Cocoa.Tests/Cocoa.Tests.csproj" />
