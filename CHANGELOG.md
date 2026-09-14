@@ -8,6 +8,12 @@
 
 ## 未发布（2026-09-14）
 
+### 阶段 7 增量三 M9-a2：自举 Binder 诊断面 + 函数体检查差分（2026-09-14）
+- **诊断面**：自举 Binder 新增 `ReportError`/`DiagnosticCount()`/`DiagnosticAt(i)`（`error: ` 前缀，消息句式对齐 C# `GetDiagnostics`）；7 类检查——未定义变量/函数、调用 arity、未知类型（签名/局部/全局）、重复声明（参数/全局/函数/局部）、main 与全局语句互斥。
+- **两遍式绑定**：第一遍声明全部顶层符号（前向可见，对齐 C# 全局作用域语义），第二遍函数体/初始化/类型检查；`MemberCall` receiver、Lambda、Foreach 宽松放行待 M9-a3 类型面收紧。
+- **差分演进**：`SelfBinder_ReportsErrors_ForInvalidCorpus` 9 组无效程序双方言同报错；有效语料 11 个符号 dump 逐字节一致且诊断"有/无"双方言一致；`BinderDifferentialTests` 输出剥离诊断行。
+- **B0 冒烟**：自足临时源断言符号行 + parser/binder 零诊断；样例 main.co（调用外部定义函数）确认双方言同报未定义。
+
 ### 阶段 7 增量三 M9-a0/a1：自举 Binder 符号声明面 + 差分基建（2026-09-14）
 - **差分基建**：自举 `Binder/Binder.co`（namespace `MiniBinder`）按 kind+子索引遍历自举 Parser 树（`Node` 补访问器）；`BinderDifferentialTests.SymbolDump(Compilation)` 为 C# 基准，自举 `DescribeSymbols()` 输出同构行（`CanonicalType` 规范名映射 + 字面量 var 推断 + `main: Main` 判定）。
 - **符号面差分 11 语料逐字节一致**（函数签名/全局变量/推断/规范名映射）；`SelfBinderDump` 走 Lexer/Parser/Binder 三源 + Evaluator 端到端（复用增量二模式）。
