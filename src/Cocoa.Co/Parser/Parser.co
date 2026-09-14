@@ -501,6 +501,17 @@ namespace MiniParser
             let tc = Node.MakeCompound("TypeClause")
             tc.Add(colon)
             tc.Add(name)
+            if KindName() == "OpenBracketToken"
+            {
+                let atc = Node.MakeCompound("ArrayTypeClause")
+                atc.Add(colon)
+                atc.Add(name)
+                atc.Add(tc)
+                atc.Add(Match("OpenBracketToken"))
+                atc.Add(Match("CloseBracketToken"))
+                return atc
+            }
+
             return tc
         }
 
@@ -1001,8 +1012,7 @@ namespace MiniParser
             }
             else if KindName() == "DotToken"
             {
-                let dot = Match("DotToken")
-                let member = Match("IdentifierToken")
+                let dot = Match("DotToken")                let member = Match("IdentifierToken")
                 if KindName() == "OpenParenthesisToken"
                 {
                     // 成员调用：receiver 包 NameExpression
@@ -1036,6 +1046,27 @@ namespace MiniParser
                     ma.Add(member)
                     result = ma
                 }
+            }
+            else if KindName() == "OpenBracketToken"
+            {
+                // 元素访问：receiver 包 NameExpression
+                let ea = Node.MakeCompound("ElementAccessExpression")
+                let recv3 = Node.MakeCompound("NameExpression")
+                recv3.Add(ident)
+                ea.Add(recv3)
+                ea.Add(Match("OpenBracketToken"))
+                if KindName() != "CloseBracketToken"
+                {
+                    ea.Add(ParseExpression())
+                    while KindName() == "CommaToken"
+                    {
+                        ea.Add(Match("CommaToken"))
+                        ea.Add(ParseExpression())
+                    }
+                }
+
+                ea.Add(Match("CloseBracketToken"))
+                result = ea
             }
             else
             {

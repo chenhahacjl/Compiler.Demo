@@ -72,6 +72,7 @@ namespace Cocoa.Tests.CodeAnalysis
             "using System\nfunction Main()\n{\n    Console.WriteLine(Greeting(\"Cocoa\"))\n    Console.WriteLine(Sum(20, 22))\n}\n",
             "using System\nfunction Main()\n{\n    var total = 0\n    for var i = 1 to 5\n    {\n        if i == 3\n        {\n            continue\n        }\n        total = total + i\n    }\n}\n",
             "function DoOnce(): i32\n{\n    var i = 0\n    do\n    {\n        i = i + 1\n    } while i < 0\n    return i\n}\n",
+            "using System\nfunction Run(args: string[])\n{\n    Console.WriteLine(Add(20, 22))\n    Console.WriteLine(args.Length)\n    if args.Length > 0\n    {\n        Console.WriteLine(args[0])\n    }\n}\n",
         };
 
         [Fact]
