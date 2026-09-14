@@ -933,11 +933,16 @@ namespace MiniParser
 
             if KindName() == "OpenBracketToken"
             {
-                // 数组创建 `new T[] {...}`
+                // 数组创建 `new T[...] {...}`
                 let node = Node.MakeCompound("ArrayCreationExpression")
                 node.Add(newTok)
                 node.Add(name)
                 node.Add(Match("OpenBracketToken"))
+                if KindName() != "CloseBracketToken"
+                {
+                    node.Add(ParseExpression())
+                }
+
                 node.Add(Match("CloseBracketToken"))
                 if KindName() == "OpenBraceToken"
                 {

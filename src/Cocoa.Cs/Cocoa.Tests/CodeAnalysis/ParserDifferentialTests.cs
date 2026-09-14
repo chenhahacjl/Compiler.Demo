@@ -116,7 +116,9 @@ namespace Cocoa.Tests.CodeAnalysis
                 "using System\nusing MiniLexer\n\nfunction Main()\n{\n    print(1)\n}\n",
                 "using System.Collections.Generic\n\nlet items = new List<i32>()\n",
                 "function Main()\n{\n    var total = 0\n    for var i = 1 to 5\n    {\n        if i == 3\n        {\n            continue\n        }\n        total = total + i\n    }\n}\n",
-            };
+            "using System\nfunction Main()\n{\n    var buf: u8[] = new u8[3]\n    buf[0] = 200\n    buf[1] = 0xFF\n    Console.WriteLine(0xFF)\n}\n",
+            "using System\nfunction Main()\n{\n    var b1: u8 = 65\n    var buf: u8[] = new u8[3]\n    buf[0] = 200\n    Console.WriteLine(buf[0])\n    Console.WriteLine(Wrap(200) == Wrap(200))\n}\n",
+        };
 
             var sb = new StringBuilder();
             foreach (var text in corpus)
