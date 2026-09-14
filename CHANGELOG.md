@@ -8,6 +8,11 @@
 
 ## 未发布（2026-09-14）
 
+### 阶段 7 增量三 M9-a3：自举 Binder 局部符号差分（2026-09-14）
+- **自举侧**：新增 `Binding/LocalSymbol.co`；`FunctionSymbol` 增局部数组与 `AddLocal/LocalCount/Local/LocalTypeOf/ParamType/ReturnType` 访问器；Binder 函数体声明序收集局部，类型解析=显式子句优先、否则值推断（字面量/一元/二元/名称/调用/括号）。
+- **C# 基准**：`SymbolDump` 经 `GetProgram()` 绑定树递归收集 `BoundVariableDeclaration`；局部行缩进 2 空格紧跟函数行，仅绑定无错时输出（双方言门控一致）。
+- **差分**：语料 11→15（简单局部/嵌套块/多类型推断+显式标注/跨函数与全局引用）逐字节一致；全量 53,362 通过 / 1 跳过。
+
 ### 阶段 7 结构重组定稿：程序集级拆分 + cosln 入口（2026-09-14）
 - **定稿**：位置保留 `src/Cocoa.Co`（顶层归位复议回退）；coproj 粒度对齐 C# 程序集边界（`Cocoa.Compiler.coproj` 管线库产 `.coa` + `Cli/Cocoa.Cli.coproj` B0 入口），`Cocoa.Co.cosln` 唯一构建入口；蓝图见 `src/Cocoa.Co/README.md`。
 - **Backend 项目级声明**：coproj 新增 `<Backend>` property（命令行 `-b` > 项目声明 > dotnet 缺省）；`Cli` 声明 native（自举终态自足）。
