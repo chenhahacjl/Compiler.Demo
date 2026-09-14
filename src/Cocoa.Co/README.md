@@ -1,31 +1,54 @@
 # Cocoa.Co — Cocoa 语言编写的编译器（自举目标）
 
-> 状态：🔄 阶段 7 已启动；**增量一（自举 Lexer）完成（2026-09-13）**；**增量二（自举 Syntax/Parser）完成（2026-09-14，样例 33/33 全绿 + 无效程序双方言同报错 + B0 打印树）**；**增量三（自举 Binder）进行中：M9-a0/a1 符号声明面 + M9-a2 诊断面完成（2026-09-14，11 语料逐字节一致 + 9 组无效程序双方言同报错 + B0 符号/零诊断断言）**。实施计划见 [`docs-dev/plan/自举实施计划.md`](../../docs-dev/plan/自举实施计划.md)。
+> 状态：🔄 阶段 7 已启动；**增量一（自举 Lexer）完成（2026-09-13）**；**增量二（自举 Syntax/Parser）完成（2026-09-14）**；**增量三（自举 Binder）进行中（M9-a0/a1 符号声明面 + M9-a2 诊断面已完，2026-09-14）**；**结构重组定稿（2026-09-14，本 README 即蓝图；目录迁移紧随执行）**。实施计划见 [`docs-dev/plan/自举实施计划.md`](../../docs-dev/plan/自举实施计划.md)。
 
-本目录容纳**用 Cocoa 语言重写的编译器源码**——阶段 7 自举的产物。只能使用阶段 6 冻结的语言能力（详见 `docs-dev/开发计划.md` §阶段 7）。
+本目录（归位到仓库顶层，与 `src/` 平级）容纳**用 Cocoa 语言重写的编译器源码**——阶段 7 自举的产物。只能使用阶段 6 冻结的语言能力（详见 `docs-dev/开发计划.md` §阶段 7）。
 
-## 计划（阶段 7 → 阶段 8）
+## 项目形态（2026-09-14 定稿）
 
-1. Stage 0：用 C# 编译器（`src/Cocoa.Cs`）编译本目录的 Cocoa 版编译器源码 → B0
-2. Stage 1：B0 编译同一源码 → B1
-3. Stage 2：B1 编译同一源码 → B2
-4. 验收：B1 ≡ B2 行为等价；B2 能编译真实项目
+**程序集级拆分**（coproj 粒度 ≅ C# 侧 csproj 边界，非目录级）：
 
-## 目录约定（2026-09-13 定稿）
+| 项目 | coproj | 输出 | ≅ C# 侧 |
+|------|--------|------|---------|
+| Cocoa.Compiler | `Cocoa.Compiler/Cocoa.Compiler.coproj` | `OutputType=Cocoa` → `.coa` | `Cocoa.Compiler` csproj（核心管线单程序集） |
+| Cocoa.Cli | `Cli/Cocoa.Cli.coproj` | Exe；`<Backend>native</Backend>`（项目级声明，`-b` 可覆盖）；`Reference ../Cocoa.Compiler/out/*.coa` | `Cocoa.Cli` csproj |
+| CodeGen（增量五） | `CodeGen/CodeGen.coproj` | Library | CodeGen 下 7 csproj 收敛为 1（Native/Il 子目录对称） |
 
-按编译器管线分目录：
+`Cocoa.Co.cosln` 为唯一构建入口（`cocoa build Cocoa.Co.cosln`），内部拓扑排序 + `.coa` 引用（CodLibrary 先例）。
+
+## 目录结构（终态蓝图）
 
 ```
-Lexer/   词法分析（增量一；含 Token 结构化模型）
-Syntax/  语法树（增量二）
-Parser/  解析器（增量二）
-Binder/  绑定（增量三）
-Lowerer/ 降级（增量四）
-IR/      HIR/MIR/LIR（增量四）
-Emit/    发射：Native 与 IL 两条路径对称组织（增量五）
+Cocoa.Co\
+├── Cocoa.Co.cosln
+├── Cocoa.Compiler\
+│   ├── Syntax\        Token / Lexer / Node / Parser（词法+语法全域）
+│   ├── Symbols\       符号全家
+│   ├── Binding\       Binder（M9-a3 起含绑定树节点）
+│   ├── Lowering\      （增量四建）降级
+│   └── 根级散文件      Compilation / Diagnostic / CoaWriter / CoaReader（≥3 文件才升目录）
+├── CodeGen\           （增量五建）Native\{Lir,Pe} + Il\
+└── Cli\               Main + 命令子文件；（阶段 8 并入 coproj/cosln 构建引擎）
 ```
 
-一类一文件、文件名==主类名（与 `src/Cocoa.Cs` 规范一致，2026-09-14 起）：`Token.co`/`Lexer.co`、`Node.co`/`Parser.co`、`FunctionSymbol.co`/`VariableSymbol.co`/`Binder.co` 各自独立成文件，同目录同命名空间。
+**精简原则**：自举侧用通用 `Node`（红绿合一）而非 C# 的每节点一类，终态 ≈30 文件，目录随文件数生长（>5 个文件的域才升目录）；C# 侧每个目录的映射：`Text`→Syntax、`Bound`→Binding、`Diagnostic/Compilation/Serialization`→根级散文件、`Evaluation` 砍（差分在 C# 侧）、`Authoring/Documentation` 不自举。
+
+## 目录约定
+
+- **一类一文件、文件名==主类名**（与 `src/Cocoa.Cs` 规范一致）：`Token.co`/`Lexer.co`/`Node.co`/`Parser.co`、`FunctionSymbol.co`/`VariableSymbol.co`/`Binder.co` 各自独立成文件，同目录同命名空间。
+- 命名空间现阶段 `MiniLexer`/`MiniParser`/`MiniBinder`；**阶段 8 收官转正**为 `Cocoa.CodeAnalysis.*`（与 C# 侧同名）。
+- 构建产物 `out/` 与缓存 `.cocoa/` 不入库（已 ignore）。
+
+## 自举链（阶段 7 → 阶段 8）
+
+1. Stage 0：用 C# 编译器（`src/Cocoa.Cs`）构建 `Cocoa.Co.cosln` → B0
+2. Stage 1：B0 构建同一源码 → B1
+3. Stage 2：B1 构建同一源码 → B2
+4. 验收：B1 ≡ B2 行为等价；B2（native 自足）编译真实项目（`samples.cosln`）
+
+## 差分护栏
+
+每个增量锁定一层，C# 实现为基准、逐字节一致：Lexer token 流（44 语料）→ Parser 树 dump（39 语料 + 样例 33/33 + 无效程序同报错）→ Binder 符号/诊断（11 语料 + 9 组无效程序同报错 + 诊断有/无布尔一致）→ Bound/Lowering dump → B1≡B2。
 
 ## 进度
 
@@ -33,6 +56,10 @@ Emit/    发射：Native 与 IL 两条路径对称组织（增量五）
 |------|------|------|
 | 增量一 | 自举 Lexer 对齐（M7-a0…a4：token 面 + 差分 + 三后端 + ≥1MB 护栏 + B0 骨架） | ✅ 完成（2026-09-13） |
 | 增量二 | 自举 Syntax/Parser（M8-a0…a12：递归下降 + 规范树 dump 差分；样例 33/33 全绿、语料 39、无效程序同报错、B0 打印树） | ✅ 完成（2026-09-14） |
-| 增量三 | 自举 Binder（M9-a0/a1 符号声明面 + M9-a2 诊断面已完：符号 dump 逐字节一致、9 组无效程序同报错、两遍式前向可见、B0 符号/零诊断；M9-a3 起局部符号/类型面） | 🔄 进行中（2026-09-14 起） |
+| 增量三 | 自举 Binder（M9-a0/a1 符号声明面 + M9-a2 诊断面：符号 dump 逐字节一致、9 组无效程序同报错、两遍式前向可见；M9-a3 起局部符号/绑定树） | 🔄 进行中（2026-09-14 起） |
+| 增量四 | Lowering 降级 | ⬜ |
+| 增量五 | CodeGen 发射（Native/Il 对称） | ⬜ |
+| 结构重组 | 顶层归位 + Compiler/Cli 拆分 + Backend 项目级声明 + cosln 入口 | 🔄 本 README 定稿，迁移紧随执行 |
+| 阶段 8 | B0→B1→B2 自举链 + 构建引擎自举 + 命名空间转正 | ⬜ |
 
 详见 [`docs-dev/plan/自举实施计划.md`](../../docs-dev/plan/自举实施计划.md)。

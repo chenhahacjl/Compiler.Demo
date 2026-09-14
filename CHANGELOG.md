@@ -8,6 +8,11 @@
 
 ## 未发布（2026-09-14）
 
+### 阶段 7 结构重组定稿：自举源码归位顶层 + 程序集级拆分（2026-09-14）
+- **定稿**：`src/Cocoa.Co` → 顶层 `Cocoa.Co/`；coproj 粒度对齐 C# 程序集边界（`Cocoa.Compiler.coproj` 管线库产 `.coa` + `Cli/Cocoa.Cli.coproj` B0 入口），`Cocoa.Co.cosln` 唯一构建入口；蓝图见 `Cocoa.Co/README.md`（目录迁移紧随执行）。
+- **Backend 项目级声明**：coproj 新增 `<Backend>` property（命令行 `-b` > 项目声明 > dotnet 缺省）；`Cli` 声明 native（自举终态自足）。
+- **目录精简**：自举侧通用 `Node` 使终态 ≈30 文件，Compiler 内收敛为 `Syntax/Symbols/Binding`（+增量四 `Lowering`、根级散文件）；`Evaluation` 砍、`Bound` 并入 Binding、7 个 CodeGen csproj 收敛为 1 coproj。
+
 ### 阶段 7 增量三 M9-a2：自举 Binder 诊断面 + 函数体检查差分（2026-09-14）
 - **诊断面**：自举 Binder 新增 `ReportError`/`DiagnosticCount()`/`DiagnosticAt(i)`（`error: ` 前缀，消息句式对齐 C# `GetDiagnostics`）；7 类检查——未定义变量/函数、调用 arity、未知类型（签名/局部/全局）、重复声明（参数/全局/函数/局部）、main 与全局语句互斥。
 - **两遍式绑定**：第一遍声明全部顶层符号（前向可见，对齐 C# 全局作用域语义），第二遍函数体/初始化/类型检查；`MemberCall` receiver、Lambda、Foreach 宽松放行待 M9-a3 类型面收紧。
