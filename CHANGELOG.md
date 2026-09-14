@@ -8,8 +8,8 @@
 
 ## 未发布（2026-09-14）
 
-### 阶段 7 结构重组定稿：自举源码归位顶层 + 程序集级拆分（2026-09-14）
-- **定稿**：`src/Cocoa.Co` → 顶层 `Cocoa.Co/`；coproj 粒度对齐 C# 程序集边界（`Cocoa.Compiler.coproj` 管线库产 `.coa` + `Cli/Cocoa.Cli.coproj` B0 入口），`Cocoa.Co.cosln` 唯一构建入口；蓝图见 `Cocoa.Co/README.md`（目录迁移紧随执行）。
+### 阶段 7 结构重组定稿：程序集级拆分 + cosln 入口（2026-09-14）
+- **定稿**：位置保留 `src/Cocoa.Co`（顶层归位复议回退）；coproj 粒度对齐 C# 程序集边界（`Cocoa.Compiler.coproj` 管线库产 `.coa` + `Cli/Cocoa.Cli.coproj` B0 入口），`Cocoa.Co.cosln` 唯一构建入口；蓝图见 `src/Cocoa.Co/README.md`。
 - **Backend 项目级声明**：coproj 新增 `<Backend>` property（命令行 `-b` > 项目声明 > dotnet 缺省）；`Cli` 声明 native（自举终态自足）。
 - **目录精简**：自举侧通用 `Node` 使终态 ≈30 文件，Compiler 内收敛为 `Syntax/Symbols/Binding`（+增量四 `Lowering`、根级散文件）；`Evaluation` 砍、`Bound` 并入 Binding、7 个 CodeGen csproj 收敛为 1 coproj。
 

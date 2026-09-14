@@ -162,13 +162,13 @@ namespace Cocoa.Tests.CodeAnalysis
         {
             var embedded = source.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n");
             var root = RepoRoot();
-            var lexerCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Lexer", "Lexer.co"));
-            var tokenCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Lexer", "Token.co"));
-            var parserCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Parser", "Parser.co"));
-            var nodeCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Parser", "Node.co"));
-            var functionSymbolCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Binder", "FunctionSymbol.co"));
-            var variableSymbolCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Binder", "VariableSymbol.co"));
-            var binderCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Binder", "Binder.co"));
+            var lexerCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Cocoa.Compiler", "Syntax", "Lexer.co"));
+            var tokenCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Cocoa.Compiler", "Syntax", "Token.co"));
+            var parserCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Cocoa.Compiler", "Syntax", "Parser.co"));
+            var nodeCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Cocoa.Compiler", "Syntax", "Node.co"));
+            var functionSymbolCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Cocoa.Compiler", "Symbols", "FunctionSymbol.co"));
+            var variableSymbolCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Cocoa.Compiler", "Symbols", "VariableSymbol.co"));
+            var binderCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Cocoa.Compiler", "Binding", "Binder.co"));
             var trees = ImmutableArray.Create(
                 SyntaxTree.Parse(lexerCo),
                 SyntaxTree.Parse(tokenCo),

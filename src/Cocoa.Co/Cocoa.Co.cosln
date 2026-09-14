@@ -1,0 +1,7 @@
+<Solution Version="1">
+  <!-- 自举编译器解决方案：唯一构建入口（cocoa build Cocoa.Co.cosln）。
+       拓扑：Cocoa.Compiler（管线库 → .coa）→ Cli（B0/B1/B2 入口，Backend=native）。
+       增量五追加 CodeGen/CodeGen.coproj（Native/Il 对称）。 -->
+  <Project Include="Cocoa.Compiler/Cocoa.Compiler.coproj" />
+  <Project Include="Cli/Cocoa.Cli.coproj" />
+</Solution>

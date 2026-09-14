@@ -7,9 +7,9 @@ using Xunit;
 namespace Cocoa.Tests.Compiler
 {
     /// <summary>
-    /// 阶段 7 增量一 M7-a4：B0 骨架冒烟——用 C# 编译器把 `src/Cocoa.Co/Cocoa.Co.coproj`
-    /// 构建为可运行的自举词法器（dotnet + native），读入示例文件并逐 token 输出。
-    /// 验证自举源码可被 C# 编译器独立构建为可运行二进制（增量一验收口径）。
+    /// 阶段 7 增量一 M7-a4：B0 骨架冒烟——用 C# 编译器把 `Cocoa.Co/Cocoa.Co.cosln`
+    /// 构建为可运行的自举编译器 CLI（dotnet + native 双后端），读入示例文件输出 token/树/符号。
+    /// 验证自举源码可被 C# 编译器独立构建为可运行二进制（增量一验收口径；M9 结构重组后走 cosln 入口）。
     /// </summary>
     public class BootstrapperSmokeTests
     {
@@ -65,15 +65,15 @@ namespace Cocoa.Tests.Compiler
         [InlineData("native", "")]
         public void B0_BuildsAndPrintsTokensAndTree(string backend, string runtimeArgs)
         {
-            var coproj = Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Cocoa.Co.coproj");
+            var solution = Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Cocoa.Co.cosln");
             var sample = Path.Combine(RepoRoot(), "samples", "Tutorial", "Basics", "HelloWorld", "main.co");
             Assert.True(File.Exists(sample), $"sample not found: {sample}");
 
-            var (exitCode, stdout, stderr) = InvokeCli($"build \"{coproj}\" --no-incremental -b {backend}{runtimeArgs}");
+            var (exitCode, stdout, stderr) = InvokeCli($"build \"{solution}\" --no-incremental -b {backend}{runtimeArgs}");
             Assert.True(exitCode == 0, $"build failed ({backend}). stdout=[{stdout}] stderr=[{stderr}]");
 
-            var outDir = Path.Combine(RepoRoot(), "src", "Cocoa.Co", "out");
-            var exe = Path.Combine(outDir, "Cocoa.Co.exe");
+            var outDir = Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Cli", "out");
+            var exe = Path.Combine(outDir, "Cocoa.Cli.exe");
             Assert.True(File.Exists(exe), $"B0 exe not produced at {exe}");
 
             var runExe = exe;
@@ -82,7 +82,7 @@ namespace Cocoa.Tests.Compiler
                 // native 产物在工作区目录被本机杀软拦截 → 复制到临时目录运行
                 var tempDir = Path.Combine(Path.GetTempPath(), "cocoa-b0-" + Guid.NewGuid().ToString("N"));
                 Directory.CreateDirectory(tempDir);
-                runExe = Path.Combine(tempDir, "Cocoa.Co.exe");
+                runExe = Path.Combine(tempDir, "Cocoa.Cli.exe");
                 File.Copy(exe, runExe, overwrite: true);
             }
 

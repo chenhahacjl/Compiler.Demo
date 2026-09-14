@@ -281,10 +281,10 @@ namespace Cocoa.Tests.CodeAnalysis
         private static string SelfDump(string source)
         {
             var embedded = source.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n");
-            var lexerCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Lexer", "Lexer.co"));
-            var tokenCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Lexer", "Token.co"));
-            var parserCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Parser", "Parser.co"));
-            var nodeCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Parser", "Node.co"));
+            var lexerCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Cocoa.Compiler", "Syntax", "Lexer.co"));
+            var tokenCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Cocoa.Compiler", "Syntax", "Token.co"));
+            var parserCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Cocoa.Compiler", "Syntax", "Parser.co"));
+            var nodeCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Cocoa.Compiler", "Syntax", "Node.co"));
             var trees = ImmutableArray.Create(
                 SyntaxTree.Parse(lexerCo),
                 SyntaxTree.Parse(tokenCo),

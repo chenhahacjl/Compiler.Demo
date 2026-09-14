@@ -95,8 +95,8 @@ namespace Cocoa.Tests.CodeAnalysis
         private static ImmutableArray<SyntaxTree> BuildTrees(string corpus)
         {
             var embedded = corpus.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n");
-            var lexerCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Lexer", "Lexer.co"));
-            var tokenCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Lexer", "Token.co"));
+            var lexerCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Cocoa.Compiler", "Syntax", "Lexer.co"));
+            var tokenCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Cocoa.Compiler", "Syntax", "Token.co"));
             return ImmutableArray.Create(SyntaxTree.Parse(lexerCo), SyntaxTree.Parse(tokenCo), SyntaxTree.Parse(MainSource(embedded)));
         }
     }

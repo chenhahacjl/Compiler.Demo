@@ -2,7 +2,7 @@
 
 > 状态：🔄 阶段 7 已启动；**增量一（自举 Lexer）完成（2026-09-13）**；**增量二（自举 Syntax/Parser）完成（2026-09-14）**；**增量三（自举 Binder）进行中（M9-a0/a1 符号声明面 + M9-a2 诊断面已完，2026-09-14）**；**结构重组定稿（2026-09-14，本 README 即蓝图；目录迁移紧随执行）**。实施计划见 [`docs-dev/plan/自举实施计划.md`](../../docs-dev/plan/自举实施计划.md)。
 
-本目录（归位到仓库顶层，与 `src/` 平级）容纳**用 Cocoa 语言重写的编译器源码**——阶段 7 自举的产物。只能使用阶段 6 冻结的语言能力（详见 `docs-dev/开发计划.md` §阶段 7）。
+本目录（`src/Cocoa.Co`，2026-09-14 复议保留现位置，结构重组其余照旧）容纳**用 Cocoa 语言重写的编译器源码**——阶段 7 自举的产物。只能使用阶段 6 冻结的语言能力（详见 `docs-dev/开发计划.md` §阶段 7）。
 
 ## 项目形态（2026-09-14 定稿）
 
@@ -11,15 +11,15 @@
 | 项目 | coproj | 输出 | ≅ C# 侧 |
 |------|--------|------|---------|
 | Cocoa.Compiler | `Cocoa.Compiler/Cocoa.Compiler.coproj` | `OutputType=Cocoa` → `.coa` | `Cocoa.Compiler` csproj（核心管线单程序集） |
-| Cocoa.Cli | `Cli/Cocoa.Cli.coproj` | Exe；`<Backend>native</Backend>`（项目级声明，`-b` 可覆盖）；`Reference ../Cocoa.Compiler/out/*.coa` | `Cocoa.Cli` csproj |
+| Cocoa.Cli | `src/Cocoa.Co/Cli/Cocoa.Cli.coproj` | Exe；`<Backend>native</Backend>`（项目级声明，`-b` 可覆盖）；`Reference ../Cocoa.Compiler/out/*.coa` | `Cocoa.Cli` csproj |
 | CodeGen（增量五） | `CodeGen/CodeGen.coproj` | Library | CodeGen 下 7 csproj 收敛为 1（Native/Il 子目录对称） |
 
-`Cocoa.Co.cosln` 为唯一构建入口（`cocoa build Cocoa.Co.cosln`），内部拓扑排序 + `.coa` 引用（CodLibrary 先例）。
+`src/Cocoa.Co/Cocoa.Co.cosln` 为唯一构建入口（`cocoa build src/Cocoa.Co/Cocoa.Co.cosln`），内部拓扑排序 + `.coa` 引用（CodLibrary 先例）。
 
 ## 目录结构（终态蓝图）
 
 ```
-Cocoa.Co\
+src\Cocoa.Co\
 ├── Cocoa.Co.cosln
 ├── Cocoa.Compiler\
 │   ├── Syntax\        Token / Lexer / Node / Parser（词法+语法全域）
@@ -59,7 +59,7 @@ Cocoa.Co\
 | 增量三 | 自举 Binder（M9-a0/a1 符号声明面 + M9-a2 诊断面：符号 dump 逐字节一致、9 组无效程序同报错、两遍式前向可见；M9-a3 起局部符号/绑定树） | 🔄 进行中（2026-09-14 起） |
 | 增量四 | Lowering 降级 | ⬜ |
 | 增量五 | CodeGen 发射（Native/Il 对称） | ⬜ |
-| 结构重组 | 顶层归位 + Compiler/Cli 拆分 + Backend 项目级声明 + cosln 入口 | 🔄 本 README 定稿，迁移紧随执行 |
+| 结构重组 | Compiler/Cli 程序集拆分 + Backend 项目级声明 + cosln 入口（位置保留 src/Cocoa.Co） | 🔄 本 README 定稿，迁移紧随执行 |
 | 阶段 8 | B0→B1→B2 自举链 + 构建引擎自举 + 命名空间转正 | ⬜ |
 
 详见 [`docs-dev/plan/自举实施计划.md`](../../docs-dev/plan/自举实施计划.md)。

@@ -1,0 +1,24 @@
+<Project Version="1">
+  <PropertyGroup Label="Language">
+    <Language>Cocoa</Language>
+  </PropertyGroup>
+  <PropertyGroup Label="Assembly">
+    <AssemblyName>Cocoa.Cli</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label="Target">
+    <Platform>x64</Platform>
+    <TargetFramework>net48</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup Label="Output">
+    <OutputType>Executable</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Label="Build">
+    <OutputPath>out</OutputPath>
+    <!-- 自举终态 = native 自足；命令行 -b 可覆盖（Backend 项目级声明，2026-09-14 定稿） -->
+    <Backend>native</Backend>
+  </PropertyGroup>
+  <ItemGroup>
+    <Source Include="*.co" />
+    <Reference Include="../Cocoa.Compiler/out/Cocoa.Compiler.coa" />
+  </ItemGroup>
+</Project>

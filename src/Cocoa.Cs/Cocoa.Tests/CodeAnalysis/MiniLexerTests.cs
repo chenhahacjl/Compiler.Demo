@@ -15,7 +15,7 @@ namespace Cocoa.Tests.CodeAnalysis
 {
     /// <summary>
     /// 自举第 ⑦ 步开工：mini-Lexer 三后端锁定（Evaluator/IL/native x64）。
-    /// 源码集成 `src/Cocoa.Co/Lexer/Lexer.co`（M7-a0 起结构化 Token + Describe() 输出）。
+    /// 源码集成 `src/Cocoa.Co/Cocoa.Compiler/Syntax/Lexer.co`（M7-a0 起结构化 Token + Describe() 输出）。
     /// M7-a1 起补 token 面测试（TokenSurfaceProgram）：verbatim/raw/插值字符串、@ident、
     /// 0b/_/数字后缀、/// 注释、三字符运算符（&lt;&lt;= &gt;&gt;= ??=）、?. ?? -&gt; .. 等、非法字符 Error token。
     /// </summary>
@@ -194,8 +194,8 @@ namespace Cocoa.Tests.CodeAnalysis
 
         private static ImmutableArray<SyntaxTree> BuildTrees(string program)
         {
-            var lexerCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Lexer", "Lexer.co"));
-            var tokenCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Lexer", "Token.co"));
+            var lexerCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Cocoa.Compiler", "Syntax", "Lexer.co"));
+            var tokenCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Cocoa.Compiler", "Syntax", "Token.co"));
             return ImmutableArray.Create(SyntaxTree.Parse(lexerCo), SyntaxTree.Parse(tokenCo), SyntaxTree.Parse(MainSource(program)));
         }
 

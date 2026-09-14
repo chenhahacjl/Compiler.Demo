@@ -3,26 +3,21 @@
     <Language>Cocoa</Language>
   </PropertyGroup>
   <PropertyGroup Label="Assembly">
-    <AssemblyName>Cocoa.Co</AssemblyName>
+    <AssemblyName>Cocoa.Compiler</AssemblyName>
   </PropertyGroup>
   <PropertyGroup Label="Target">
     <Platform>x64</Platform>
     <TargetFramework>net48</TargetFramework>
   </PropertyGroup>
   <PropertyGroup Label="Output">
-    <OutputType>Executable</OutputType>
+    <OutputType>Cocoa</OutputType>
   </PropertyGroup>
   <PropertyGroup Label="Build">
     <OutputPath>out</OutputPath>
   </PropertyGroup>
   <ItemGroup>
-    <Source Include="Main.co" />
-    <Source Include="Lexer\Token.co" />
-    <Source Include="Lexer\Lexer.co" />
-    <Source Include="Parser\Node.co" />
-    <Source Include="Parser\Parser.co" />
-    <Source Include="Binder\FunctionSymbol.co" />
-    <Source Include="Binder\VariableSymbol.co" />
-    <Source Include="Binder\Binder.co" />
+    <Source Include="Syntax\*.co" />
+    <Source Include="Symbols\*.co" />
+    <Source Include="Binding\*.co" />
   </ItemGroup>
 </Project>

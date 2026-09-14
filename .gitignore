@@ -52,4 +52,5 @@ TestResult.xml
 samples/**/out/
 /.zcode
 
-src/Cocoa.Co/out/
+# 自举源码各项目产物（Cocoa.Compiler/out、Cli/out 等）
+src/Cocoa.Co/**/out/
