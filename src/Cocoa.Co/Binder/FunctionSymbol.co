@@ -44,6 +44,18 @@ namespace MiniBinder
             _paramCount = _paramCount + 1
         }
 
+        // ── 访问器（M9-a2：Binder 调用点 arity 检查）──
+
+        public function ParamCount(): i32
+        {
+            return _paramCount
+        }
+
+        public function ParamName(index: i32): string
+        {
+            return _paramNames[index]
+        }
+
         public function Describe(): string
         {
             var sb = "function " + _name + "("

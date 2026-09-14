@@ -92,16 +92,34 @@ namespace Cocoa.Tests.Compiler
             Assert.Contains("String \"Cocoa\" 4:32", output);
             Assert.Contains("EOF  6:2", output);
 
-            // M8 扩展：B0 亦为自举 Parser 可执行（读文件 → 打印树 + 诊断）；有效样例零诊断
+            // M8 扩展：B0 亦为自举 Parser 可执行（读文件 → 打印树 + 诊断）
             Assert.Contains("--- tree ---", output);
             Assert.Contains("(CompilationUnit", output);
             Assert.Contains("(FunctionDeclaration", output);
-            Assert.DoesNotContain("error:", output);
 
-            // M9 扩展：B0 亦输出自举 Binder 符号表
-            Assert.Contains("--- symbols ---", output);
-            Assert.Contains("function Main(): void", output);
-            Assert.Contains("main: Main", output);
+            // M9 扩展：B0 亦输出自举 Binder 符号表与诊断。
+            // 用自足临时源（定义+调用齐全；样例 main.co 调用外部定义的函数，单文件绑定双方言同报未定义，
+            // 故不能作为零诊断断言语料）。
+            var selfSource = Path.Combine(Path.GetTempPath(), "cocoa-b0-self-" + Guid.NewGuid().ToString("N") + ".co");
+            File.WriteAllText(selfSource,
+                "using System\n\nfunction Greeting(): string\n{\n    return \"Cocoa\"\n}\n\n" +
+                "function Sum(a: i32, b: i32): i32\n{\n    return a + b\n}\n\n" +
+                "function Main()\n{\n    Console.WriteLine(Greeting())\n    Console.WriteLine(Sum(20, 22))\n}\n");
+            try
+            {
+                var selfOutput = RunAndCapture(runExe, $"\"{selfSource}\"", backend);
+                Assert.Contains("--- symbols ---", selfOutput);
+                Assert.Contains("function Greeting(): string", selfOutput);
+                Assert.Contains("function Sum(a: int, b: int): int", selfOutput);
+                Assert.Contains("function Main(): void", selfOutput);
+                Assert.Contains("main: Main", selfOutput);
+                // 自足有效程序：parser 与 binder 诊断均为零（样例 main.co 调用外部定义函数，双方言同报未定义，不作零诊断语料）
+                Assert.DoesNotContain("error:", selfOutput);
+            }
+            finally
+            {
+                File.Delete(selfSource);
+            }
         }
     }
 }
