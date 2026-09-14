@@ -97,6 +97,11 @@ namespace Cocoa.Tests.Compiler
             Assert.Contains("(CompilationUnit", output);
             Assert.Contains("(FunctionDeclaration", output);
             Assert.DoesNotContain("error:", output);
+
+            // M9 扩展：B0 亦输出自举 Binder 符号表
+            Assert.Contains("--- symbols ---", output);
+            Assert.Contains("function Main(): void", output);
+            Assert.Contains("main: Main", output);
         }
     }
 }

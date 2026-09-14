@@ -1,0 +1,24 @@
+// Cocoa 自举全局变量符号 —— 阶段 7 增量三（M9-a1）：名/类型；Describe() 与 C# SymbolDump 变量行同构。
+
+
+namespace MiniBinder
+{
+    class VariableSymbol
+    {
+        private field _name: string
+        private field _type: string
+
+        public static function Create(name: string, type: string): VariableSymbol
+        {
+            var v = new VariableSymbol()
+            v._name = name
+            v._type = type
+            return v
+        }
+
+        public function Describe(): string
+        {
+            return "var " + _name + ": " + _type
+        }
+    }
+}

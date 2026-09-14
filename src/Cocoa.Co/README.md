@@ -25,6 +25,8 @@ IR/      HIR/MIR/LIR（增量四）
 Emit/    发射：Native 与 IL 两条路径对称组织（增量五）
 ```
 
+一类一文件、文件名==主类名（与 `src/Cocoa.Cs` 规范一致，2026-09-14 起）：`Token.co`/`Lexer.co`、`Node.co`/`Parser.co`、`FunctionSymbol.co`/`VariableSymbol.co`/`Binder.co` 各自独立成文件，同目录同命名空间。
+
 ## 进度
 
 | 增量 | 内容 | 状态 |

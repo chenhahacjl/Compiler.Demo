@@ -1,0 +1,366 @@
+// Cocoa 自举 Binder —— 阶段 7 增量三（M9-a0 差分基建 + M9-a1 符号声明面骨架）：
+// 自举 Parser 的 Node 树 → 符号（顶层函数 / 全局变量），DescribeSymbols() 与 C# 端
+// BinderDifferentialTests.SymbolDump 逐字节一致（M9 差分口径）。
+// M9-a1 范围：函数符号（名/参数/返回类型）、全局变量（显式类型 + 字面量 var 推断）、main 判定；
+//   函数体绑定/局部符号/类与枚举为后续里程碑。
+// 依赖：MiniParser（Node/Parser，树结构已由增量二差分锁定）。
+
+using MiniParser
+
+namespace MiniBinder
+{
+    class Binder
+    {
+        private field _root: Node
+        private field _functions: FunctionSymbol[]
+        private field _functionCount: i32
+        private field _variables: VariableSymbol[]
+        private field _variableCount: i32
+        private field _mainName: string
+
+        public static function Create(source: string): Binder
+        {
+            var b = new Binder()
+            let parser = MiniParser.Parser.Create(source)
+            b._root = parser.ParseCompilationUnit()
+            b._functions = new FunctionSymbol[8]
+            b._functionCount = 0
+            b._variables = new VariableSymbol[8]
+            b._variableCount = 0
+            b._mainName = "<none>"
+            return b
+        }
+
+        /// <summary>遍历编译单元成员，声明函数与全局变量符号（声明序）。</summary>
+        public function BindCompilationUnit(): void
+        {
+            var i = 0
+            while i < _root.ChildCount()
+            {
+                let member = _root.Child(i)
+                let kind = member.Kind()
+                if kind == "FunctionDeclaration"
+                {
+                    BindFunction(member)
+                }
+                else if kind == "GlobalStatement"
+                {
+                    // GlobalStatement 包裹的顶层语句：仅 var/let 声明产生全局符号
+                    if member.ChildCount() == 1 && member.Child(0).Kind() == "VariableDeclaration"
+                    {
+                        BindGlobalVariable(member.Child(0))
+                    }
+                }
+
+                i = i + 1
+            }
+        }
+
+        private function BindFunction(node: Node): void
+        {
+            // 直接子：[mods...] FunctionKeyword IdentifierToken ( Parameter... ) (TypeClause)? (Block)?
+            var name = ""
+            var returnType = "void"
+            var paramNames = new string[8]
+            var paramTypes = new string[8]
+            var paramCount = 0
+
+            var i = 0
+            while i < node.ChildCount()
+            {
+                let child = node.Child(i)
+                let k = child.Kind()
+                if k == "IdentifierToken"
+                {
+                    name = child.Text()
+                }
+                else if k == "Parameter"
+                {
+                    if paramCount >= paramNames.Length
+                    {
+                        var bn = new string[paramNames.Length * 2]
+                        var bt = new string[paramTypes.Length * 2]
+                        var j = 0
+                        while j < paramCount
+                        {
+                            bn[j] = paramNames[j]
+                            bt[j] = paramTypes[j]
+                            j = j + 1
+                        }
+
+                        paramNames = bn
+                        paramTypes = bt
+                    }
+
+                    paramNames[paramCount] = ParameterName(child)
+                    paramTypes[paramCount] = ParameterType(child)
+                    paramCount = paramCount + 1
+                }
+                else if k == "TypeClause"
+                {
+                    returnType = TypeOfClause(child)
+                }
+
+                i = i + 1
+            }
+
+            let fn = FunctionSymbol.Create(name, returnType)
+            var pi = 0
+            while pi < paramCount
+            {
+                fn.AddParameter(paramNames[pi], paramTypes[pi])
+                pi = pi + 1
+            }
+
+            AddFunction(fn, name)
+        }
+
+        private function BindGlobalVariable(node: Node): void
+        {
+            // (VariableDeclaration (Var|LetKeyword) IdentifierToken (TypeClause)? (EqualsToken expr)?)
+            var name = ""
+            var type = ""
+
+            var i = 0
+            while i < node.ChildCount()
+            {
+                let child = node.Child(i)
+                let k = child.Kind()
+                if k == "IdentifierToken"
+                {
+                    name = child.Text()
+                }
+                else if k == "TypeClause"
+                {
+                    type = TypeOfClause(child)
+                }
+                else if k == "ArrayTypeClause"
+                {
+                    type = TypeOfClause(child)
+                }
+                else if k == "GenericTypeClause"
+                {
+                    type = TypeOfClause(child)
+                }
+                else if type == "" && (k == "LiteralExpression" || k == "UnaryExpression")
+                {
+                    type = InferTypeOfExpression(child)
+                }
+
+                i = i + 1
+            }
+
+            AddVariable(VariableSymbol.Create(name, type))
+        }
+
+        /// <summary>类型子句 → 规范类型名（对齐 C# TypeSymbol.Name：int/string/void、int[]）。</summary>
+        private function TypeOfClause(node: Node): string
+        {
+            let k = node.Kind()
+            if k == "ArrayTypeClause"
+            {
+                // (ArrayTypeClause colon name (TypeClause 元素) [ ])
+                var i = 0
+                while i < node.ChildCount()
+                {
+                    let child = node.Child(i)
+                    if child.Kind() == "TypeClause"
+                    {
+                        return TypeOfClause(child) + "[]"
+                    }
+
+                    i = i + 1
+                }
+
+                return CanonicalType(TypeOfIdentifier(node)) + "[]"
+            }
+
+            return CanonicalType(TypeOfIdentifier(node))
+        }
+
+        /// <summary>Cocoa 简写词汇 → C# 风格规范名（对齐 TypeSymbol 常量构造名）。</summary>
+        private function CanonicalType(name: string): string
+        {
+            if name == "i8" { return "sbyte" }
+            if name == "u8" { return "byte" }
+            if name == "i16" { return "short" }
+            if name == "u16" { return "ushort" }
+            if name == "i32" { return "int" }
+            if name == "u32" { return "uint" }
+            if name == "i64" { return "long" }
+            if name == "u64" { return "ulong" }
+            if name == "f32" { return "float" }
+            if name == "f64" { return "double" }
+            return name
+        }
+
+        private function TypeOfIdentifier(node: Node): string
+        {
+            var i = 0
+            while i < node.ChildCount()
+            {
+                let child = node.Child(i)
+                if child.Kind() == "IdentifierToken"
+                {
+                    return child.Text()
+                }
+
+                i = i + 1
+            }
+
+            return "?"
+        }
+
+        /// <summary>字面量/一元表达式 → 推断类型名（var 无类型标注时；对齐 C# 常量字面量推断）。</summary>
+        private function InferTypeOfExpression(node: Node): string
+        {
+            if node.Kind() == "UnaryExpression"
+            {
+                // (- expr)：取操作数推断
+                var u = 0
+                while u < node.ChildCount()
+                {
+                    let child = node.Child(u)
+                    if child.Kind() != "MinusToken" && child.Kind() != "PlusToken" &&
+                        child.Kind() != "BangToken" && child.Kind() != "TildeToken"
+                    {
+                        return InferTypeOfExpression(child)
+                    }
+
+                    u = u + 1
+                }
+
+                return "?"
+            }
+
+            // LiteralExpression：单子 token kind 决定（规范名对齐 C# TypeSymbol.Name）
+            if node.ChildCount() == 1
+            {
+                let t = node.Child(0).Kind()
+                if t == "NumberToken"
+                {
+                    return "int"
+                }
+
+                if t == "DoubleToken"
+                {
+                    return "double"
+                }
+
+                if t == "StringToken" || t == "VerbatimStringToken" || t == "RawStringToken"
+                {
+                    return "string"
+                }
+
+                if t == "CharToken"
+                {
+                    return "char"
+                }
+
+                if t == "TrueKeyword" || t == "FalseKeyword"
+                {
+                    return "bool"
+                }
+            }
+
+            return "?"
+        }
+
+        private function ParameterName(node: Node): string
+        {
+            var i = 0
+            while i < node.ChildCount()
+            {
+                let child = node.Child(i)
+                if child.Kind() == "IdentifierToken"
+                {
+                    return child.Text()
+                }
+
+                i = i + 1
+            }
+
+            return "?"
+        }
+
+        private function ParameterType(node: Node): string
+        {
+            var i = 0
+            while i < node.ChildCount()
+            {
+                let child = node.Child(i)
+                if child.Kind() == "TypeClause" || child.Kind() == "ArrayTypeClause"
+                {
+                    return TypeOfClause(child)
+                }
+
+                i = i + 1
+            }
+
+            return "?"
+        }
+
+        private function AddFunction(fn: FunctionSymbol, name: string): void
+        {
+            if _functionCount >= _functions.Length
+            {
+                var bigger = new FunctionSymbol[_functions.Length * 2]
+                var i = 0
+                while i < _functionCount
+                {
+                    bigger[i] = _functions[i]
+                    i = i + 1
+                }
+
+                _functions = bigger
+            }
+
+            _functions[_functionCount] = fn
+            _functionCount = _functionCount + 1
+            if name == "Main" && _mainName == "<none>"
+            {
+                _mainName = "Main"
+            }
+        }
+
+        private function AddVariable(v: VariableSymbol): void
+        {
+            if _variableCount >= _variables.Length
+            {
+                var bigger = new VariableSymbol[_variables.Length * 2]
+                var i = 0
+                while i < _variableCount
+                {
+                    bigger[i] = _variables[i]
+                    i = i + 1
+                }
+
+                _variables = bigger
+            }
+
+            _variables[_variableCount] = v
+            _variableCount = _variableCount + 1
+        }
+
+        /// <summary>符号表规范化输出（与 C# SymbolDump 同构）：函数行、变量行、main 行。</summary>
+        public function DescribeSymbols(): string
+        {
+            var sb = ""
+            var i = 0
+            while i < _functionCount
+            {
+                sb = sb + _functions[i].Describe() + "\n"
+                i = i + 1
+            }
+
+            i = 0
+            while i < _variableCount
+            {
+                sb = sb + _variables[i].Describe() + "\n"
+                i = i + 1
+            }
+
+            return sb + "main: " + _mainName + "\n"
+        }
+    }
+}

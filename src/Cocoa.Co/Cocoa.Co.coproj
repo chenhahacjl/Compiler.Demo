@@ -17,7 +17,12 @@
   </PropertyGroup>
   <ItemGroup>
     <Source Include="Main.co" />
+    <Source Include="Lexer\Token.co" />
     <Source Include="Lexer\Lexer.co" />
+    <Source Include="Parser\Node.co" />
     <Source Include="Parser\Parser.co" />
+    <Source Include="Binder\FunctionSymbol.co" />
+    <Source Include="Binder\VariableSymbol.co" />
+    <Source Include="Binder\Binder.co" />
   </ItemGroup>
 </Project>

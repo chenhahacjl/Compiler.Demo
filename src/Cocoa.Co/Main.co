@@ -39,5 +39,10 @@ function Main(args: string[]): i32
         i = i + 1
     }
 
+    let binder = MiniBinder.Binder.Create(source)
+    binder.BindCompilationUnit()
+    Console.WriteLine("--- symbols ---")
+    Console.WriteLine(binder.DescribeSymbols())
+
     return 0
 }

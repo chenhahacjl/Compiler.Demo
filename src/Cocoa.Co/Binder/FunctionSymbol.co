@@ -1,0 +1,65 @@
+// Cocoa 自举函数符号 —— 阶段 7 增量三（M9-a1）：名/参数/返回类型；Describe() 与 C# SymbolDump 函数行同构。
+
+namespace MiniBinder
+{
+    class FunctionSymbol
+    {
+        private field _name: string
+        private field _paramNames: string[]
+        private field _paramTypes: string[]
+        private field _paramCount: i32
+        private field _returnType: string
+
+        public static function Create(name: string, returnType: string): FunctionSymbol
+        {
+            var f = new FunctionSymbol()
+            f._name = name
+            f._returnType = returnType
+            f._paramNames = new string[8]
+            f._paramTypes = new string[8]
+            f._paramCount = 0
+            return f
+        }
+
+        public function AddParameter(name: string, type: string): void
+        {
+            if _paramCount >= _paramNames.Length
+            {
+                var biggerNames = new string[_paramNames.Length * 2]
+                var biggerTypes = new string[_paramTypes.Length * 2]
+                var i = 0
+                while i < _paramCount
+                {
+                    biggerNames[i] = _paramNames[i]
+                    biggerTypes[i] = _paramTypes[i]
+                    i = i + 1
+                }
+
+                _paramNames = biggerNames
+                _paramTypes = biggerTypes
+            }
+
+            _paramNames[_paramCount] = name
+            _paramTypes[_paramCount] = type
+            _paramCount = _paramCount + 1
+        }
+
+        public function Describe(): string
+        {
+            var sb = "function " + _name + "("
+            var i = 0
+            while i < _paramCount
+            {
+                if i > 0
+                {
+                    sb = sb + ", "
+                }
+
+                sb = sb + _paramNames[i] + ": " + _paramTypes[i]
+                i = i + 1
+            }
+
+            return sb + "): " + _returnType
+        }
+    }
+}

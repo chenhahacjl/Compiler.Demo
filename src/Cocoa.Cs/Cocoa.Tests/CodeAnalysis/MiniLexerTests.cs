@@ -195,7 +195,8 @@ namespace Cocoa.Tests.CodeAnalysis
         private static ImmutableArray<SyntaxTree> BuildTrees(string program)
         {
             var lexerCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Lexer", "Lexer.co"));
-            return ImmutableArray.Create(SyntaxTree.Parse(lexerCo), SyntaxTree.Parse(MainSource(program)));
+            var tokenCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Lexer", "Token.co"));
+            return ImmutableArray.Create(SyntaxTree.Parse(lexerCo), SyntaxTree.Parse(tokenCo), SyntaxTree.Parse(MainSource(program)));
         }
 
         private static string[] References() => new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location };

@@ -96,7 +96,8 @@ namespace Cocoa.Tests.CodeAnalysis
         {
             var embedded = corpus.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n");
             var lexerCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Lexer", "Lexer.co"));
-            return ImmutableArray.Create(SyntaxTree.Parse(lexerCo), SyntaxTree.Parse(MainSource(embedded)));
+            var tokenCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Lexer", "Token.co"));
+            return ImmutableArray.Create(SyntaxTree.Parse(lexerCo), SyntaxTree.Parse(tokenCo), SyntaxTree.Parse(MainSource(embedded)));
         }
     }
 }

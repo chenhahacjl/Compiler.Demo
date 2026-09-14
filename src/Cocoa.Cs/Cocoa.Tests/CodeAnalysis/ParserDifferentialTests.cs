@@ -282,10 +282,14 @@ namespace Cocoa.Tests.CodeAnalysis
         {
             var embedded = source.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n");
             var lexerCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Lexer", "Lexer.co"));
+            var tokenCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Lexer", "Token.co"));
             var parserCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Parser", "Parser.co"));
+            var nodeCo = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Parser", "Node.co"));
             var trees = ImmutableArray.Create(
                 SyntaxTree.Parse(lexerCo),
+                SyntaxTree.Parse(tokenCo),
                 SyntaxTree.Parse(parserCo),
+                SyntaxTree.Parse(nodeCo),
                 SyntaxTree.Parse(MainSource(embedded)));
 
             var original = Console.Out;
