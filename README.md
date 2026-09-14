@@ -2,8 +2,8 @@
 
 用 C# 编写的 C 系方言编译器，同时具备 **Native 代码生成**（x86 / x64，零依赖、纯自研 PE 输出）与 **IL 代码生成**（ECMA-335）两条后端路径，最终目标是用 Cocoa 语言自身重写编译器（自举）。
 
-> 当前阶段：阶段 6 — 语言扩展 + 互操作 + 输出格式 + 项目系统（见 [`docs-dev/开发计划.md`](docs-dev/开发计划.md)）
-> 最新：**delegate 真实类型化（6e-M22）已全部落地：IL 真 `MulticastDelegate` 子类 / Evaluator 调用列表 / native 委托对象 + 多播 Combine·Remove·列表相等 + 事件 C# 式 add/remove + 泛型 delegate in/out 型变；全量 41871 绿**。近期流水见 [CHANGELOG.md](CHANGELOG.md)。
+> 当前阶段：阶段 7 — 编译器自举（用 Cocoa 重写编译器）；增量一（自举 Lexer）完成，增量二（自举 Parser）进行中（见 [`docs-dev/plan/自举实施计划.md`](docs-dev/plan/自举实施计划.md)）
+> 最新：**阶段 7 增量二自举 Parser（M8-a0…a8）已落地：递归下降 + 规范树 dump 差分，差分语料 39 个逐字节一致、样例覆盖率 21/33**。近期流水见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 路线图（摘要）
 
@@ -34,12 +34,7 @@ cocoa hello.co
 # 交互式 REPL
 cocoa -i
 
-# C# 方言（.cs 严格子集）：扩展名即语言，.co 严格纯 Cocoa / .cs 严格 C#（详见 docs/语法手册.md §46）
-cocoa new csharp MyApp
-cocoa hello.cs
-cocoa hello.cs -b native
-
-# 构建仓库自带样例（18 项目聚合解决方案；分组结构与逐示例说明见 samples/README.md）
+# 构建仓库自带样例（21 项目聚合解决方案；分组结构与逐示例说明见 samples/README.md）
 cocoa build -p samples/samples.cosln
 ./samples/Tutorial/Basics/HelloWorld/out/HelloWorld.exe
 

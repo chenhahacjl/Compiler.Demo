@@ -1,128 +1,104 @@
 # CODING.md — Cocoa.Cs 开发规范
 
-> 本文档是阶段 5（规范文档化）的落地产物，描述重构收口后的现行结构、约定与流程。
-> 历史设计文档见 `docs/ARCHITECTURE.md`（已封存）；重构决策链见 `docs-dev/plan/重构执行计划.md`。
+> 本文档描述现行结构、约定与流程（去 C# 方言后单语言）。
+> 架构与设计背景见 `docs/ARCHITECTURE.md`；重构决策链见 `docs-dev/plan/重构执行计划.md`。
 
-## 1. 项目 ↔ 命名空间映射
+## 1. 定位
 
-解决方案 `src/Cocoa.Cs/Cocoa.slnx`，依赖方向严格单向（上层 → 下层）：
+`src/Cocoa.Cs/` 是用 C# 编写的 **Cocoa 编译器宿主实现**（阶段 7 起用 Cocoa 自身在 `src/Cocoa.Co/` 重写）。
+去 C# 方言（2026-09-13）后，前端只有 Cocoa（`.co`）单一语言。
+
+## 2. 工程 ↔ 命名空间映射
+
+解决方案 `src/Cocoa.Cs/Cocoa.slnx`：
 
 | 工程 | 根命名空间 | AssemblyName | 职责 |
 |---|---|---|---|
-| `Cocoa.CodeAnalysis` | `Cocoa.CodeAnalysis` | 同名 | **前端共享层**：Text/Syntax 基础设施（SyntaxKind、SyntaxFacts、LexerBase）、Symbols、Bound（Binder）、Compilation、SemanticModel、Serialization（CoaSerializer）、CFG、Monomorphizer、SystemLibrary |
-| `Cocoa.CodeAnalysis.Cocoa` | `Cocoa.CodeAnalysis.Cocoa` | 同名 | **CO 方言前端**（~94 文件）：CocoaLanguage、CocoaSyntaxKind/CocoaSyntaxFacts、CocoaParser、CocoaBinder、CocoaCompilation |
-| `Cocoa.CodeAnalysis.CSharp` | `Cocoa.CodeAnalysis.CSharp` | 同名 | **C# 方言前端**（~90 文件）：与 CO 同构（见 §2） |
-| `Cocoa.CodeGen.PE` | `Cocoa.CodeGen.PE` | 同名 | PE 基础设施：TargetPlatform/TargetOS/Architecture、PeFileWriter、ManagedPEWriter |
-| `Cocoa.CodeGen.IL` | `Cocoa.CodeGen.IL` | 同名 | IL 后端：IlEmitter、MetadataBuilder（写侧，`IIlRefIssuer` 解耦） |
-| `Cocoa.CodeGen.Native` | `Cocoa.CodeGen.Native` | 同名 | Native 后端：MIR/LIR、LirToAssembler、RuntimeEmitterLir（x86/x64 统一 IR 发射） |
-| `Cocoa.CodeGen.Interpreter` | `Cocoa.CodeGen.Interpreter` | 同名 | 解释执行后端：Evaluator |
-| `Cocoa.ProjectSystem` | `Cocoa.ProjectSystem` | 同名 | 构建：.coproj/.cosln 解析、ProjectBuilder/SolutionBuilder、CoaLibraryCompiler（.coa→DLL） |
-| `Cocoa.Compiler.Cocoa` | — | — | 单语言 CLI 入口（Program.cs） |
-| `Cocoa.Compiler.CSharp` | — | — | 单语言 CLI 入口（Program.cs） |
-| `Cocoa.CommandLine` | `Cocoa.Compiler`（**保留历史 ns**） | **`cocoa`**（**不变，IVT 依赖此名**） | 主 CLI |
-| `Cocoa.Tests` | 各测试 ns | — | 41,871 测试 |
+| `Cocoa.Targeting` | `Cocoa.Targeting` | 同名 | 目标常量：`TargetPlatform` / `IlTarget` |
+| `Cocoa.Compiler` | `Cocoa.CodeAnalysis` | 同名 | **编译器单装配件**（前端 + 绑定 + 降级 + 序列化）：Text / Syntax（SyntaxKind、SyntaxFacts、LexerBase、绿红树）/ Cocoa 前端（CocoaLexer、CocoaParser、CocoaBinder、CocoaCompilation、CocoaSemanticModel）/ Symbols / Bound / Compilation / Lowering / Serialization（CoaSerializer、SystemLibrary）/ Documentation / Authoring（Classifier）/ CFG / Monomorphizer |
+| `Cocoa.CodeGen.Managed.Structure` | 同名 | 同名 | IL 结构模型：IlOpCode / IlInstruction / IlMetadataModel / IlTypes |
+| `Cocoa.CodeGen.Managed.Reader` | 同名 | 同名 | IL 元数据读取：MetadataReader |
+| `Cocoa.CodeGen.Managed.Writer` | 同名 | 同名 | IL 后端：IlEmitter / MetadataBuilder / ManagedPEWriter / AppHostPatcher / CoaLibraryCompiler（`.coa`→DLL） |
+| `Cocoa.CodeGen.PE` | 同名 | 同名 | PE 基础设施：PE 表 / PeFileWriter |
+| `Cocoa.CodeGen.Native.Lir` | 同名 | 同名 | LIR：LirProgram / LirInstruction / LirPrinter |
+| `Cocoa.CodeGen.Native` | 同名 | 同名 | Native 后端：MIR→LIR、LirToAssembler、RuntimeEmitterLir（x86/x64 统一 IR 发射） |
+| `Cocoa.CodeGen.Interpreter` | 同名 | 同名 | 解释器后端：Evaluator / DebuggerSession |
+| `Cocoa.Build` | `Cocoa.Build` | 同名 | 项目系统：`.coproj`/`.cosln` 解析、ProjectBuilder/SolutionBuilder、BuildCache、Glob |
+| `Cocoa.Cli` | `Cocoa.Cli` | **`cocoa`** | 主 CLI（子命令 new/build/run/list/add/remove/clean/-i） |
+| `Cocoa.Cli.Repl` | `Cocoa.Cli.Repl` | 同名 | REPL：终端渲染、补全、元命令 |
+| `Cocoa.Tests` | 各测试 ns | — | 全量测试（基线见 §7） |
 
-依赖链：`CommandLine/Compiler.* → ProjectSystem → {CodeGen.IL, CodeGen.Native, CodeGen.Interpreter, CodeAnalysis.Cocoa/CSharp} → CodeAnalysis → CodeGen.PE`。
+## 3. 依赖方向
 
-**IL 模型分层**（4.3 定案）：`IlOpCode`/`IlInstruction`/`IlMethodBody`/`IlTypes` 与表行模型
-（`IlMetadataModel.cs`）留共享层——读侧（Binding）引用它们，下沉会造成反向依赖；
-`MetadataBuilder` 写侧在 `Cocoa.CodeGen.IL`，经 `IIlRefIssuer` 接口与 `MetadataReader` 解耦。
+```
+Cocoa.Cli ──→ Cocoa.Build, Cocoa.Cli.Repl, Cocoa.Compiler,
+              CodeGen.{PE, Managed.Writer, Native, Interpreter}, Cocoa.Targeting
+Cocoa.Build ──→ Cocoa.Compiler, CodeGen.Managed.Writer, Cocoa.Targeting
+CodeGen.Managed.Writer ──→ Cocoa.Compiler, CodeGen.{PE, Managed.Structure, Managed.Reader}
+CodeGen.Native ──→ Cocoa.Compiler, CodeGen.{PE, Native.Lir}
+CodeGen.Interpreter ──→ Cocoa.Compiler
+Cocoa.Compiler ──→ CodeGen.{Managed.Structure, Managed.Reader}, Cocoa.Targeting
+CodeGen.PE ──→ Cocoa.Targeting
+CodeGen.Managed.Reader ──→ CodeGen.Managed.Structure
+```
 
-## 2. 前端双份是刻意设计（Roslyn 式）
+- 后端（Managed.Writer / Native / Interpreter）**反向引用** `Cocoa.Compiler`，消费 `BoundProgram` 等绑定 IR；**Core 不引用任何后端**（见 §5）。
+- CLI/测试是唯一同时引用 Core 与全部后端的宿主。
 
-**原则**：本项目参照 Roslyn（CSharp/VisualBasic 各自独立）设计，**每个语言一个完整独立的前端**。
-不做 BinderBase/ParserBase 式共享基类提取（已两次决策否决）；不用源生成器（自举麻烦）、
-不用模板+脚本生成（维护性顾虑）。
+## 4. 单语言前端
 
-共享的只有**语言无关机械件**：SyntaxKind（共享枚举）、LexerBase（abstract partial，方言薄壳
-`sealed class XLexer : LexerBase` 保类型身份）、Green 节点工厂基建。语言个性（节点类、Binder、
-Parser、SyntaxFacts）一律双份手写，由**漂移检测测试**兜底：
+去 C# 方言后，前端为 **Cocoa 单一实现**：`CocoaLexer` / `CocoaParser` / `CocoaBinder` / `CocoaCompilation` / `CocoaSemanticModel`。
 
-| 护栏（`SyntaxDuplicationDriftTests`） | 防什么 |
-|---|---|
-| 节点类归一逐字节比对 | 两方言 Syntax 节点实现漂移（白名单放行蓄意分化，如 ForRange） |
-| Green 工厂 switch 入口集合等价 | 一方言能造、另一方言造不了的节点 |
-| 方言枚举 vs 共享 SyntaxKind 逐成员同值 | kind 编码漂移 |
-| Binder 五 partial + Compilation + SemanticModel 归一去注释比对 | 绑定逻辑意外分化 |
-| 方言 SyntaxFacts 与共享实现同步 | 词汇判定漂移 |
-
-**改前端流程**：改动共享件/某一方言后，先跑漂移测试；蓄意分化 → 加白名单并注明理由；
-意外漂移 → 双份同步。任何新护栏都要做一次负向验证（注入漂移→红，还原→绿）。
-
-## 3. 新语言接入流程
-
-1. 复制方言包（`Cocoa.CodeAnalysis.Cocoa`，~94 文件）→ `Cocoa.CodeAnalysis.<新语言>`，ns 同步改。
-2. 词汇层：方言 SyntaxKind（值域与共享枚举逐成员对齐）、SyntaxFacts、`<X>Language`（LookupBuiltinType / CreateLexer / IsType）。
-3. Parser/Binder/Compilation/SemanticModel 按语言分化（从最接近的方言复制后改造）。
-4. 挂接：`Cocoa.slnx`、csproj 引用、`InternalsVisibleTo`（见 §6）。
-5. 漂移测试注册新方言对；补语言快照测试。
-6. 后端注册：见 §5。
-
-## 4. Partial 拆分规则（阶段 4.2/4.5 定案）
-
-- 巨型文件（**>2,000 行**）按职责拆 `Type.Role.cs` partial：入口/核心留在主文件。
-- 现行范例：`Compilation.cs`（核心 279 + NamespaceResolver/AssemblyReferenceManager/EmitPipeline）、
-  `CocoaParser.cs`（925 + Types/Statements/Members）、`RuntimeEmitterLir`（.Strings/.System/.IO/.Arrays/.Numerics/.Int64）、
-  `CoaSerializer`（8 个 partial，写侧/读侧/符号/类型解析/编解码）。
-- 拆分纪律：**纯移动零逻辑**、独立 commit、`--no-incremental` 全量构建 + 测试。
-- 脚手架脚本教训：PS 脚本块传递用 `List[List[string]]`（`[string[]]` 参数会拍平数组）；
-  PS1 必须纯 ASCII（UTF-8 无 BOM 会被 GBK 误读）；脚本用完即删；先在副本上验证。
+- 共享机械件：`SyntaxKind`（共享枚举）、`SyntaxFacts`、`LexerBase`（abstract partial 词法骨架）、绿节点工厂基建。
+- 语言个性（节点类、Binder、Parser）为单份手写，无第二方言对照，故**不再需要漂移检测护栏**。
+- `CocoaSyntaxNode` 为语法根类（绿/红桥接经 `RawKind`）。
 
 ## 5. 后端注册模式
 
-Core（`Cocoa.CodeAnalysis`）不引用任何后端工程。后端能力经**静态委托注册**注入：
+Core（`Cocoa.Compiler`）不引用任何后端工程，后端能力经**静态委托注册**注入：
 
 ```csharp
 // Core 侧（Compilation 内）
 internal static volatile Func<...>? s_InterpreterEvaluator;   // 未注册时抛 InvalidOperationException / 报诊断
 // 后端工程侧（public static void Register()）
-// 宿主侧：Program.Main 调 Register()；测试用 [ModuleInitializer]（Cocoa.Tests/BackendRegistration.cs）
+// 宿主侧：Cocoa.Cli 启动时 Register()；测试用 [ModuleInitializer]（Cocoa.Tests/BackendRegistration.cs）
+ManagedBackend.Register(); NativeBackend.Register(); InterpreterBackend.Register();
 ```
 
 新后端照此模式：独立工程 → `Register()` → 宿主注册 → Emit/Evaluate 经注册表取用。
 
-## 6. InternalsVisibleTo 基线
+## 6. Partial 拆分规则
 
-现挂接关系（新增工程照抄；收窄见 `docs-dev/plan/重构执行计划.md` 5.5）：
+- 巨型文件（**>2,000 行**）按职责拆 `Type.Role.cs` partial：入口/核心留在主文件。
+- 现行范例：`CocoaParser`（主文件 + Types/Statements/Members）、`RuntimeEmitterLir`（.Strings/.System/.IO/.Arrays/.Numerics/.Int64）、`CoaSerializer`（8 个 partial）、`Compilation`（核心 + NamespaceResolver/AssemblyReferenceManager/EmitPipeline）。
+- 拆分纪律：**纯移动零逻辑**、独立 commit、`--no-incremental` 全量构建 + 测试。
 
-- `Cocoa.CodeAnalysis` → Tests、`cocoa`、四个 CodeGen.*、两个方言、ProjectSystem
-- 各 CodeGen.* → Tests、`cocoa`、（按需）Cocoa.CodeAnalysis、ProjectSystem
-- 方言工程 → Tests
+## 7. NoWarn 棘轮与测试基线
 
-**AssemblyName `cocoa` 不可改**（IVT 与 cocoa.cmd 按此名引用）；`Cocoa.CommandLine` 的
-RootNamespace 保留 `Cocoa.Compiler`（历史约定，避免全仓替换）。
-
-## 7. NoWarn 棘轮
-
-当前基线：**全仓 0 NoWarn、0 警告、0 错误**（SDK 10.0.400 构建）。
-
-- 禁止新增大范围 `<NoWarn>$(NoWarn);CSxxxx</NoWarn>`。
-- 确需抑制：单条目 + 行内注释说明原因 + 对应债务条目号（`docs-dev/plan/重构执行计划.md` §5.2/5.3），
-  并在债务清单登记清零计划（棘轮只进不退）。
-- Nullable 债务逐项目清零中（起点 `Cocoa.CodeGen.PE`，见计划 5.3）。
+- `Directory.Build.props`：`TreatWarningsAsErrors=true`，全局 `NoWarn = CS0108;CA1416;xUnit2013;xUnit1026`。
+  个别项目（`Cocoa.Cli` / `Cocoa.Build`）另有 nullable 债务压制组（CS8600..CS8625），清零后删除。
+- **棘轮只进不退**：禁止新增大范围 NoWarn；确需抑制 → 单条目 + 行内注释 + 登记债务清单。
+- 测试基线：全量 **53,358 通过 / 1 跳过**（2026-09-14；`docs-dev/plan/自举实施计划.md`）。
 
 ## 8. 验证与提交纪律
 
-- 验证：`dotnet build src/Cocoa.Cs/Cocoa.slnx --no-incremental`（增量构建在 stash/mtime 往返后
-  会用陈旧二进制骗人）+ `dotnet test src/Cocoa.Cs/Cocoa.Tests` 全量（基线 41871，见 §1）。
-- 全量回归推荐显式滚转：`DOTNET_ROLL_FORWARD=LatestMajor dotnet test src/Cocoa.Cs/Cocoa.slnx`。
-- 标准库重建：改 `src/Cocoa.SDK/` 后 `dotnet cocoa.dll build src/Cocoa.SDK/Cocoa.SDK.cosln`
-  并把产物复制回 `src/Cocoa.Cs/libs/`（或跑 `tools\build-stdlib.cmd`）。
-- 每步独立 commit，前缀 `refactor(plan)`（文档类用 `docs(fmt|org|merge|fix|new|manual)`）；
-  文档与进度日志随每步更新。
+- 验证：`dotnet build src/Cocoa.Cs/Cocoa.slnx --no-incremental`（增量构建在 stash/mtime 往返后会用陈旧二进制骗人）
+  + `dotnet test src/Cocoa.Cs/Cocoa.Tests` 全量。
+- 标准库重建：改 `src/Cocoa.SDK/` 后跑 `tools\build-stdlib.cmd`（产物收集到 `src/Cocoa.Cs/libs/` 并自动分发）。
+- 每步独立 commit；重构前缀 `refactor(...)`，文档类用 `docs(...)`；文档与进度日志随每步更新。
 - 源文件 UTF-8；测试期望字符串注意 `\r\n` 与 Unicode 控制台输出（native exe 输出为 UTF-16）。
 
 ## 9. 外部契约（不可破坏）
 
-- CLI 参数面（`cocoa` 命令）。
+- CLI 参数面（`cocoa` 命令，AssemblyName 固定 `cocoa`）。
 - `.coa` 文本格式：魔数 `COCOA`、symbols/bodies/manifest 三节、末行 `(checksum sha256:<hex>)`
   （`tools/udl/` 有 Notepad++ 高亮定义）。
-- `.coproj` / `.cosln` 项目格式（`docs/项目格式规范.md`）。
-- 方言公共 API 面（`<X>SyntaxFacts` 等，Roslyn 式公开类型）。
-- `libs/System.Core.coa` 等标准库与 Golden 快照（阶段 0 建立）。
+- `.coproj` / `.cosln` 项目格式（`docs/项目格式规范.md`；`<Language>` 仅 `Cocoa`）。
+- 编译器公开 API（`SyntaxTree` / `Compilation` / `SemanticModel` / `Symbol` 体系等，IDE 直接消费）。
+- `libs/System.Core.coa` 等标准库与 Golden 快照。
 
 ## 10. 已知债务索引（定夺类，非 bug）
 
 见 `docs-dev/plan/重构执行计划.md` §5.2-5.5：语义债务清单（重载计分、CFG 对 try 盲区、诊断无 ID、
-非虚方法 vtable 分派、BuiltinFunctions 三表人肉同步）、Nullable 866、Assembler 簿记下沉、
-IVT 收窄、A10 GBK 文档批次（`docs/` 下语言手册仍为 GBK，按 A10 流程统一转 UTF-8）。
+非虚方法 vtable 分派、BuiltinFunctions 三表人肉同步）、Nullable 逐项目清零、Assembler 簿记下沉、
+`docs/` 下语言手册编码统一（A10）。

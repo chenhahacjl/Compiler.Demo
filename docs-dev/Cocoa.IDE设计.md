@@ -1,7 +1,7 @@
 # Cocoa.IDE 设计 — 类 Visual Studio 桌面 IDE
 
 > 状态：🔧 实施中（M1~M6 已落地，2026-09-13 完成 M6 打磨：主题切换 + 语义着色 + 选项页 + 启动「最近/固定项目」弹窗；2026-09-12 完成**第二轮审计（§5.5，A1–A10）**并修订路线图：新增 **M2b VS2022 两步式新建项目向导（§8.1）**、**M5b 工程上下文语义（§7.5）**、**M6c VS 风格解决方案资源管理器（§6.4）**；实施顺序见 §12.2）
-> 目标：为 Cocoa 语言构建**类 Visual Studio 的桌面 IDE**——解决方案/项目管理 + 语法着色编辑器 + 实时诊断 + 补全/Hover/F12 + 构建运行 + （M7）解释器调试器，进程内直接复用编译器 `Cocoa.Compiler.Core` 完整编译管线。
+> 目标：为 Cocoa 语言构建**类 Visual Studio 的桌面 IDE**——解决方案/项目管理 + 语法着色编辑器 + 实时诊断 + 补全/Hover/F12 + 构建运行 + （M7）解释器调试器，进程内直接复用编译器 `Cocoa.Compiler` 完整编译管线。
 > 核心决策：**Avalonia 11 跨平台**；**直接消费既有 public API**（`Compilation.GetSemanticModel`/`SemanticModel`/`Classifier`/`BoundScope`/`Cocoa.Build` 全部已公开，零 `InternalsVisibleTo`，详见 §4）；**调试器基于解释器**（在 `Cocoa.CodeGen.Interpreter` 内新增 public `DebuggerSession`，见 §11）。
 > 相关文档：`docs/编译手册.md`（`cocoa` CLI 子命令）、`docs/项目格式规范.md`（`.coproj`/`.cosln`）、`docs-dev/实现目标.md`（编译器架构）
 > 最后更新：2026-09-12
@@ -58,7 +58,7 @@
 | 编辑器控件 | **AvaloniaEdit**（Avalonia.AvaloniaEdit） | 11.x | AvalonEdit 移植：高亮 Colorizer/行号/折叠/SearchPanel/自定义边距开箱即用，MIT |
 | MVVM | CommunityToolkit.Mvvm | 8.x | 源生成器式 `[ObservableProperty]`/`[RelayCommand]`，样板最少 |
 | 主题 | Avalonia.Themes.Fluent + 自定义暗色资源字典 | — | VS 深色风配色（§6.3） |
-| 运行时 | .NET 9（跟随 `Directory.Build.props`） | net9.0 | 与 `Cocoa.Compiler.Core` 一致 |
+| 运行时 | .NET 9（跟随 `Directory.Build.props`） | net9.0 | 与 `Cocoa.Compiler` 一致 |
 
 ### 2.2 备选对比（定稿依据）
 
@@ -100,7 +100,7 @@
 ┌───────────────────────────▼────────────────────────────────────┐
 │              编译器侧（已核实 public，§4 明细）                   │
 │                                                                │
-│  Cocoa.Compiler.Core                                            │
+│  Cocoa.Compiler                                                 │
 │   SyntaxTree / Parser / SourceText / TextSpan       ✅ public   │
 │   Compilation.GetSemanticModel / SemanticModel      ✅ public   │
 │   Symbol 体系（Function/Type/Variable/Parameter…）  ✅ public   │
@@ -151,16 +151,16 @@ MainWindow 启动
 
 ### 4.1 决策：直接消费既有 public API，不新增门面、不扩白名单
 
-> 修订记录（2026-09-08）：早期草案拟在 Core 内新增 `Cocoa.CodeAnalysis.Authoring.SemanticModel` 门面并把 `Classifier` 从 CLI 迁入 Core。**经逐一核实源码，这些能力已经以 public 形态存在**，故全部撤销——IDE 只需 ProjectReference `Cocoa.Build.csproj`（其传递引用即含 `Cocoa.Compiler.Core`），需要 REPL 侧 `Classifier` 时再补 `Cocoa.Cli.Repl.csproj` 引用。
+> 修订记录（2026-09-08）：早期草案拟在 Core 内新增 `Cocoa.CodeAnalysis.Authoring.SemanticModel` 门面并把 `Classifier` 从 CLI 迁入 Core。**经逐一核实源码，这些能力已经以 public 形态存在**，故全部撤销——IDE 只需 ProjectReference `Cocoa.Build.csproj`（其传递引用即含 `Cocoa.Compiler`），需要 REPL 侧 `Classifier` 时再补 `Cocoa.Cli.Repl.csproj` 引用。
 
 **现状核实表**（IDE 直接消费的 public API）：
 
 | 类型 / 成员 | 程序集 / 程序集命名空间 | 说明 | 复用目标 |
 |-------------|------------------------|------|---------|
-| `SemanticModel`（abstract） | `Cocoa.Compiler.Core`（`Cocoa.CodeAnalysis`） | `GetTypeInfo` / `GetDeclaredSymbol` / `GetSymbolInfo` / `GetDiagnostics` / `GetOperation` | F12、Hover、补全、诊断 |
+| `SemanticModel`（abstract） | `Cocoa.Compiler`（`Cocoa.CodeAnalysis`） | `GetTypeInfo` / `GetDeclaredSymbol` / `GetSymbolInfo` / `GetDiagnostics` / `GetOperation` | F12、Hover、补全、诊断 |
 | `Compilation.GetSemanticModel(tree)` | 同上 | 每棵树一个语义模型 | 语言服务入口 |
 | `Compilation.Create / CreateScript` | 同上 | 编译单元构造 | 诊断/构建共用 |
-| `SyntaxTree.Parse / Load / ParseCs` | 同上 | 按文件自动选方言（`.co`/`.cs`） | 打开/重解析 |
+| `SyntaxTree.Parse / Load` | 同上 | 解析 `.co` 源（去 C# 方言后单一方言） | 打开/重解析 |
 | `BoundScope`（public） | 同上 | `TryLookupSymbol` / `TryLookupFunctions` / `GetDeclared*` | F12/补全作用域查询 |
 | `BoundGlobalScope` / `BoundProgram` | 同上 | 绑定结果 | M7 断点定位（遍历语句树） |
 | Symbol 体系全量 | 同上 | Function/Type/Variable/Parameter/Property… | Hover/补全项 Detail |
@@ -175,7 +175,7 @@ MainWindow 启动
 |----|------|-----------|
 | 调试器入口 | `Cocoa.CodeGen.Interpreter` 内新增 public `DebuggerSession`，对 internal `Evaluator` 加显式帧栈 + 语句边界钩子（§11.2） | M7 |
 | 模板（可选） | 抽取 `NewCommand.BuildTemplate` 为 `Cocoa.Build.Projects.CocoaTemplates`（public）供「新建项目向导」程序化调用；**或**向导直接调用 `cocoa new` CLI 子进程，二选一 | M2 |
-| Classifier 迁移（可选） | 把 `Classifier` 从 `Cocoa.Cli.Repl` 物理移入 `Cocoa.Compiler.Core`，去除 IDE 对 REPL 程序集的依赖；纯物理移动 + CLI 回归 | M5 前置 |
+| Classifier 迁移（可选） | 把 `Classifier` 从 `Cocoa.Cli.Repl` 物理移入 `Cocoa.Compiler`，去除 IDE 对 REPL 程序集的依赖；纯物理移动 + CLI 回归 | M5 前置 |
 
 > 无需项（已核实不存在/不必要）：`InternalsVisibleTo` 扩白名单、Authoring 门面类、`BoundScope`/`BoundGlobalScope` 公开化——均已 public。
 
@@ -421,7 +421,7 @@ MainWindow 启动
 
 ### 7.1 语法着色（语义着色，M6a3 落地）
 
-M6a3 起改用编译器语义着色，弃用 `.xshd` 静态规则（两份 xshd 保留但不再加载）：`Classifier.Classify(SyntaxTree, TextSpan)`——**已由编译器侧迁入 `Cocoa.Compiler.Core`，命名空间 `Cocoa.CodeAnalysis.Authoring`**，IDE 直接复用具 Core 引用，不再依赖 `Cocoa.Cli.Repl` 程序集。
+M6a3 起改用编译器语义着色，弃用 `.xshd` 静态规则（两份 xshd 保留但不再加载）：`Classifier.Classify(SyntaxTree, TextSpan)`——**已由编译器侧迁入 `Cocoa.Compiler`，命名空间 `Cocoa.CodeAnalysis.Authoring`**，IDE 直接复用具 Core 引用，不再依赖 `Cocoa.Cli.Repl` 程序集。
 
 - `DiagnosticService` 后台重解析产出 `SyntaxTree`，随 `DiagnosticsReady(file, tree, diagnostics)` 下发；`EditorTabViewModel.SyntaxTree` 缓存，`EditorView` 设入 `SemanticColorizer`（复用解析，不二次解析）。
 - `SemanticColorizer : DocumentColorizingTransformer`：预分类整棵树（按 Start 升序），`ColorizeLine` 二分定位行内区间后着色；调色板按主题（Dark/Light）取自命名画刷 `Syntax*Brush`，`ActualThemeVariantChanged` 时失效并重绘。

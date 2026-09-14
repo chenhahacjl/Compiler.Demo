@@ -6,7 +6,18 @@
 
 ---
 
-## 未发布（2026-09-13）
+## 未发布（2026-09-14）
+
+### 项目结构优化：清除 C# 语言残留 + 摊平方言层（2026-09-14）
+- **删除 C# 方言死代码**：`SyntaxKindLanguageOwnership`（零引用）、`Cli/Cocoa.Compiler.Cocoa`（`coc` 独立 exe，与 `cocoa` CLI 重复）及其 `Cocoa.Cli.Program.CompileForLanguage`；`Cocoa.Tests/LanguageSeeding.cs`（无注册表的空种子）。
+- **摊平方言层**：`Cocoa.Compiler/Cocoa/{Binder,Syntax,Compilation}` 并入核心目录，命名空间 `Cocoa.CodeAnalysis.Cocoa.*` → `Cocoa.CodeAnalysis.*`（去 C# 方言后单语言，无第二实现）。
+- **塌缩单语言抽象**：`CocoaSyntaxNode` 并入 `SyntaxNode`；`CocoaCompilation`/`CocoaSemanticModel` 并入 `Compilation`/`SemanticModel`（具体类）；移除 `IParser`/`ILexer` 与 `Language` 的语言选择面。
+- **文档**：重写 [`CODING.md`](CODING.md) 为现行单语言结构与流程；[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) v3.0 删除早期双前端重构方案明细；IDE 去 `.cs` 残留（文件提示、`IconCSharpBrush`）。
+
+### 阶段 7 自举：自举 Lexer 完成 + 自举 Parser 进行中（2026-09-13/14）
+- **增量一（自举 Lexer）✅**：`src/Cocoa.Co/Lexer/Lexer.co` 结构化 Token（kind/text/行/列/offset）+ `Describe()`；token 面补齐字符串家族（verbatim/raw/插值）、二进制·下划线·后缀数字、`///` 与块注释、运算符/关键字全集；与 C# `CocoaLexer` **非 trivia 逐 token 差分一致（44 语料）**；native ≥1MB 秒级护栏；B0 骨架 `src/Cocoa.Co/{Cocoa.Co.coproj,Main.co}` 双后端（dotnet net9.0 / native x64）可运行冒烟。
+- **增量二（自举 Parser）🔄 进行中**：`src/Cocoa.Co/Parser/Parser.co` 递归下降 → 自举 `Node` 树，`Dump()` 与 C# 规范树 dump（`ParserDifferentialTests.TreeDump`）逐字节一致。M8-a0…a8 覆盖：函数/类/结构/接口/构造/属性/字段（含初始化器）、控制流（if/while/do/for/for-range/foreach/try）、`using`/`new`（对象·泛型·数组创建）、数组类型/元素访问/元素访问链、强制转换、`is`/`as`/`??`。**差分语料 39 个逐字节一致；samples 覆盖率 21/33**（扫描工具落盘 `%TEMP%\cocoa-parser-sample-sweep.txt`）。剩余缺口：`namespace`、`enum`（单行/`= 值`）、`import` 块、类型声明前置修饰符、多级链式访问、`switch`/`throw`、插值洞、`>>` 泛型收尾。
+- **架构重构（2026-09-14）**：`Cocoa.Compiler.Core` 上移一层并更名 **`Cocoa.Compiler`**（`src/Cocoa.Cs/Cocoa.Compiler`），同步 9 处 csproj 引用与 slnx；全量测试 **53358** 通过。
 
 ### 去 C# 方言（只留 .co）——架构塌缩（2026-09-13）
 - **C# 方言整体移除**：删除 `Cocoa.Dialects.CSharp`（104 源文件 ~920KB，整前端手写双份 + 逐字节镜像 CSharpBinder）+ `Cocoa.Compiler.CSharp`（csc）+ 6 个方言测试类；迁移/删除全部 `ParseCs` 测试（基线 53494 → 53354，删 ~140 个）。
