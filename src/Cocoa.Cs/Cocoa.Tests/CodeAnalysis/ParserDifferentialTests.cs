@@ -69,6 +69,9 @@ namespace Cocoa.Tests.CodeAnalysis
             "using System\nusing MiniLexer\n\nfunction Main()\n{\n    print(1)\n}\n",
             "using System.Collections.Generic\n\nlet items = new List<i32>()\n",
             "let p = new Point()\n",
+            "using System\nfunction Main()\n{\n    Console.WriteLine(Greeting(\"Cocoa\"))\n    Console.WriteLine(Sum(20, 22))\n}\n",
+            "using System\nfunction Main()\n{\n    var total = 0\n    for var i = 1 to 5\n    {\n        if i == 3\n        {\n            continue\n        }\n        total = total + i\n    }\n}\n",
+            "function DoOnce(): i32\n{\n    var i = 0\n    do\n    {\n        i = i + 1\n    } while i < 0\n    return i\n}\n",
         };
 
         [Fact]
@@ -111,6 +114,7 @@ namespace Cocoa.Tests.CodeAnalysis
                 "class Point\n{\n    public field X: i32\n    public field Y: i32\n    public function Distance(p: Point): f64\n    {\n        return 0\n    }\n}\n",
                 "using System\nusing MiniLexer\n\nfunction Main()\n{\n    print(1)\n}\n",
                 "using System.Collections.Generic\n\nlet items = new List<i32>()\n",
+                "function Main()\n{\n    var total = 0\n    for var i = 1 to 5\n    {\n        if i == 3\n        {\n            continue\n        }\n        total = total + i\n    }\n}\n",
             };
 
             var sb = new StringBuilder();
@@ -141,6 +145,7 @@ namespace Cocoa.Tests.CodeAnalysis
             {
                 var source = File.ReadAllText(file);
                 if (source.Length == 0) continue;
+                source = source.Replace("\r\n", "\n");
                 var name = Path.GetRelativePath(samplesDir, file).Replace('\\', '/');
                 try
                 {

@@ -551,6 +551,11 @@ namespace MiniParser
                 return ParseWhileStatement()
             }
 
+            if IsKeywordText("do")
+            {
+                return ParseDoWhileStatement()
+            }
+
             if IsKeywordText("for")
             {
                 if LookKindName() == "OpenParenthesisToken"
@@ -613,6 +618,16 @@ namespace MiniParser
             node.Add(Match("WhileKeyword"))
             node.Add(ParseExpression())
             node.Add(ParseStatement())
+            return node
+        }
+
+        private function ParseDoWhileStatement(): Node
+        {
+            let node = Node.MakeCompound("DoWhileStatement")
+            node.Add(Match("DoKeyword"))
+            node.Add(ParseStatement())
+            node.Add(Match("WhileKeyword"))
+            node.Add(ParseExpression())
             return node
         }
 
@@ -699,6 +714,15 @@ namespace MiniParser
         {
             let node = Node.MakeCompound("ForRangeStatement")
             node.Add(Match("ForKeyword"))
+            if IsKeywordText("var")
+            {
+                node.Add(Match("VarKeyword"))
+            }
+            else if IsKeywordText("let")
+            {
+                node.Add(Match("LetKeyword"))
+            }
+
             node.Add(Match("IdentifierToken"))
             node.Add(Match("EqualsToken"))
             node.Add(ParseExpression())
