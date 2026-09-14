@@ -14,7 +14,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// <summary>
     /// 绑定器
     /// </summary>
-    public sealed partial class CocoaBinder : IBinder
+    public sealed partial class CocoaBinder
     {
         private readonly DiagnosticBag _diagnostics = new DiagnosticBag();
         private readonly bool _isScript;

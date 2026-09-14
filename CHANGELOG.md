@@ -12,7 +12,7 @@
 - **删除 C# 方言死代码**：`SyntaxKindLanguageOwnership`（零引用）、`Cli/Cocoa.Compiler.Cocoa`（`coc` 独立 exe，与 `cocoa` CLI 重复）及其 `Cocoa.Cli.Program.CompileForLanguage`；`Cocoa.Tests/LanguageSeeding.cs`（无注册表的空种子）。
 - **摊平方言层**：`Cocoa.Compiler/Cocoa/{Binder,Syntax,Compilation}` 并入核心目录，命名空间 `Cocoa.CodeAnalysis.Cocoa.*` → `Cocoa.CodeAnalysis.*`（去 C# 方言后单语言，无第二实现）。
 - **塌缩单语言抽象**：`CocoaSyntaxNode` 并入 `SyntaxNode`；`CocoaCompilation`/`CocoaSemanticModel` 并入 `Compilation`/`SemanticModel`（具体类）；移除 `IParser`/`ILexer`。
-- **彻底移除 `Language` 门面**：内建类型解析移至 `BuiltinTypes.Lookup`；节点位置/根成员辅助归位 `SyntaxNode.GetUnreachableCodeLocation/GetDeclarationNameLocation/HasDeclaredFacadeModifier` 与 `SyntaxTree.GetRootMembers/GetDeclaredNamespaceNames`；泛型用法扫描归 `Monomorphizer.CollectGenericUsages`。删除 `SyntaxTree.Language`/`Parse(…, Language)`/`FromGreen(language)`、`Compilation.Language`、`BindProgram(dialect)` 等语言选择面（IDE/测试同步）。
+- **彻底移除 `Language` 门面**：内建类型解析移至 `BuiltinTypes.Lookup`；节点位置/根成员辅助归位 `SyntaxNode.GetUnreachableCodeLocation/GetDeclarationNameLocation/HasDeclaredFacadeModifier` 与 `SyntaxTree.GetRootMembers/GetDeclaredNamespaceNames`；泛型用法扫描归 `Monomorphizer.CollectGenericUsages`。删除 `SyntaxTree.Language`/`Parse(…, Language)`/`FromGreen(language)`、`Compilation.Language`、`BindProgram(dialect)` 等语言选择面（IDE/测试同步）；顺带移除仅由语言工厂使用的死接口 `IBinder`。
 - **文档**：重写 [`CODING.md`](CODING.md) 为现行单语言结构与流程；[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) v3.0 删除早期双前端重构方案明细；IDE 去 `.cs` 残留（文件提示、`IconCSharpBrush`）。
 
 ### 阶段 7 自举：自举 Lexer 完成 + 自举 Parser 进行中（2026-09-13/14）
