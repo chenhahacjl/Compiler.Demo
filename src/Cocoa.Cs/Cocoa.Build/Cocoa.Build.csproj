@@ -9,7 +9,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Compiler\Cocoa.Compiler.Core\Cocoa.Compiler.Core.csproj" />
+    <ProjectReference Include="..\Cocoa.Compiler\Cocoa.Compiler.csproj" />
     <ProjectReference Include="..\CodeGen\Cocoa.CodeGen.Managed.Writer\Cocoa.CodeGen.Managed.Writer.csproj" />
     <ProjectReference Include="..\Cocoa.Targeting\Cocoa.Targeting.csproj" />
   </ItemGroup>

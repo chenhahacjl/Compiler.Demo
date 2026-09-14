@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Compiler\Cocoa.Compiler.Core\Cocoa.Compiler.Core.csproj" />
+    <ProjectReference Include="..\..\Cocoa.Compiler\Cocoa.Compiler.csproj" />
     <ProjectReference Include="..\..\Cli\Cocoa.Cli\Cocoa.Cli.csproj" />
   </ItemGroup>
 
