@@ -22,9 +22,11 @@ namespace MiniBinder
         private field _variableCount: i32
         private field _globalNames: string[]
         private field _paramNames: string[]
+        private field _paramTypes: string[]
         private field _paramCount: i32
         private field _locals: string[]
         private field _localCount: i32
+        private field _currentFunction: FunctionSymbol
         private field _diags: string[]
         private field _diagCount: i32
         private field _mainName: string
@@ -41,6 +43,7 @@ namespace MiniBinder
             b._variableCount = 0
             b._globalNames = new string[8]
             b._paramNames = new string[8]
+            b._paramTypes = new string[8]
             b._paramCount = 0
             b._locals = new string[8]
             b._localCount = 0
@@ -260,18 +263,21 @@ namespace MiniBinder
             AddVariable(VariableSymbol.Create(name, type))
         }
 
-        /// <summary>第二遍：函数体检查（参数名集供体内名字解析；局部作用域清零）。</summary>
+        /// <summary>第二遍：函数体检查（参数名/类型集供体内解析；局部作用域清零）。</summary>
         private function CheckFunctionBody(node: Node, fn: FunctionSymbol): void
         {
             _paramNames = new string[fn.ParamCount() + 8]
+            _paramTypes = new string[fn.ParamCount() + 8]
             _paramCount = fn.ParamCount()
             var i = 0
             while i < fn.ParamCount()
             {
                 _paramNames[i] = fn.ParamName(i)
+                _paramTypes[i] = fn.ParamType(i)
                 i = i + 1
             }
 
+            _currentFunction = fn
             _localCount = 0
             i = 0
             while i < node.ChildCount()
@@ -367,10 +373,151 @@ namespace MiniBinder
             return "?"
         }
 
-        /// <summary>字面量/一元表达式 → 推断类型名（var 无类型标注时；对齐 C# 常量字面量推断）。</summary>
+        /// <summary>体内声明的局部类型：显式类型子句优先，否则值表达式推断（M9-a3）。</summary>
+        private function LocalTypeOfDeclaration(node: Node): string
+        {
+            var i = 0
+            while i < node.ChildCount()
+            {
+                let child = node.Child(i)
+                let k = child.Kind()
+                if k == "TypeClause" || k == "ArrayTypeClause" || k == "GenericTypeClause"
+                {
+                    return TypeOfClause(child)
+                }
+
+                i = i + 1
+            }
+
+            i = 0
+            while i < node.ChildCount()
+            {
+                let child = node.Child(i)
+                if !child.IsToken() && child.Kind() != "TypeClause" && child.Kind() != "ArrayTypeClause" && child.Kind() != "GenericTypeClause"
+                {
+                    return InferTypeOfExpression(child)
+                }
+
+                i = i + 1
+            }
+
+            return "?"
+        }
+
+        /// <summary>字面量/一元/二元/名称/调用表达式 → 推断类型名（var 无类型标注时；对齐 C# 绑定）。</summary>
         private function InferTypeOfExpression(node: Node): string
         {
-            if node.Kind() == "UnaryExpression"
+            let k = node.Kind()
+            if k == "ParenthesizedExpression"
+            {
+                var p = 0
+                while p < node.ChildCount()
+                {
+                    let child = node.Child(p)
+                    if !child.IsToken()
+                    {
+                        return InferTypeOfExpression(child)
+                    }
+
+                    p = p + 1
+                }
+
+                return "?"
+            }
+
+            if k == "BinaryExpression"
+            {
+                // [left, opToken, right]：关系/逻辑 → bool；字符串拼接 → string；数值 → double 参与即 double，否则 int
+                var left = "?"
+                var right = "?"
+                var op = ""
+                var b = 0
+                while b < node.ChildCount()
+                {
+                    let child = node.Child(b)
+                    if child.IsToken()
+                    {
+                        op = child.Kind()
+                    }
+                    else if left == "?"
+                    {
+                        left = InferTypeOfExpression(child)
+                    }
+                    else
+                    {
+                        right = InferTypeOfExpression(child)
+                    }
+
+                    b = b + 1
+                }
+
+                if op == "EqualsEqualsToken" || op == "BangEqualsToken" || op == "LessToken" || op == "GreaterToken" ||
+                    op == "LessEqualsToken" || op == "GreaterEqualsToken" || op == "AndKeyword" || op == "OrKeyword"
+                {
+                    return "bool"
+                }
+
+                if left == "string" && right == "string"
+                {
+                    return "string"
+                }
+
+                if left == "double" || right == "double"
+                {
+                    return "double"
+                }
+
+                return "int"
+            }
+
+            if k == "NameExpression"
+            {
+                // 已声明局部 → 参数 → 全局（推断只发生在函数体内，_currentFunction 已设）
+                let name = node.Child(0).Text()
+                let localType = _currentFunction.LocalTypeOf(name)
+                if localType != ""
+                {
+                    return localType
+                }
+
+                var i = 0
+                while i < _paramCount
+                {
+                    if _paramNames[i] == name
+                    {
+                        return _paramTypes[i]
+                    }
+
+                    i = i + 1
+                }
+
+                i = 0
+                while i < _variableCount
+                {
+                    if _variables[i].Name() == name
+                    {
+                        return _variables[i].Type()
+                    }
+
+                    i = i + 1
+                }
+
+                return "?"
+            }
+
+            if k == "CallExpression"
+            {
+                let callee = node.Child(0).Text()
+                let fi = IndexOfString(_functionNames, _functionCount, callee)
+                if fi >= 0
+                {
+                    return _functions[fi].ReturnType()
+                }
+
+                return "?"
+            }
+
+            if k == "UnaryExpression"
             {
                 // (- expr)：取操作数推断
                 var u = 0
@@ -502,7 +649,7 @@ namespace MiniBinder
             _variableCount = _variableCount + 1
         }
 
-        /// <summary>符号表规范化输出（与 C# SymbolDump 同构）：函数行、变量行、main 行。</summary>
+        /// <summary>符号表规范化输出（与 C# SymbolDump 同构）：函数行（+ 局部行缩进 2 空格，仅无诊断时）、变量行、main 行。</summary>
         public function DescribeSymbols(): string
         {
             var sb = ""
@@ -510,6 +657,16 @@ namespace MiniBinder
             while i < _functionCount
             {
                 sb = sb + _functions[i].Describe() + "\n"
+                if _diagCount == 0
+                {
+                    var li = 0
+                    while li < _functions[i].LocalCount()
+                    {
+                        sb = sb + "  " + _functions[i].Local(li).Describe() + "\n"
+                        li = li + 1
+                    }
+                }
+
                 i = i + 1
             }
 
@@ -616,7 +773,7 @@ namespace MiniBinder
 
             if k == "VariableDeclaration"
             {
-                // 体内声明：名入局部作用域（先查重）；类型子句检查；值表达式下钻
+                // 体内声明：名入局部作用域（先查重）；类型解析并入局部符号；值表达式下钻
                 var name = ""
                 var i = 0
                 while i < node.ChildCount()
@@ -639,6 +796,7 @@ namespace MiniBinder
                     else
                     {
                         AddLocal(name)
+                        _currentFunction.AddLocal(name, LocalTypeOfDeclaration(node))
                     }
                 }
 

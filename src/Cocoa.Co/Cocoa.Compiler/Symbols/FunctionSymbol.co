@@ -9,6 +9,8 @@ namespace MiniBinder
         private field _paramTypes: string[]
         private field _paramCount: i32
         private field _returnType: string
+        private field _locals: LocalSymbol[]
+        private field _localCount: i32
 
         public static function Create(name: string, returnType: string): FunctionSymbol
         {
@@ -18,6 +20,8 @@ namespace MiniBinder
             f._paramNames = new string[8]
             f._paramTypes = new string[8]
             f._paramCount = 0
+            f._locals = new LocalSymbol[8]
+            f._localCount = 0
             return f
         }
 
@@ -54,6 +58,63 @@ namespace MiniBinder
         public function ParamName(index: i32): string
         {
             return _paramNames[index]
+        }
+
+        public function ParamType(index: i32): string
+        {
+            return _paramTypes[index]
+        }
+
+        public function ReturnType(): string
+        {
+            return _returnType
+        }
+
+        /// <summary>局部符号（M9-a3）：声明序追加；查询与 dump 用。</summary>
+        public function AddLocal(name: string, type: string): void
+        {
+            if _localCount >= _locals.Length
+            {
+                var bigger = new LocalSymbol[_locals.Length * 2]
+                var j = 0
+                while j < _localCount
+                {
+                    bigger[j] = _locals[j]
+                    j = j + 1
+                }
+
+                _locals = bigger
+            }
+
+            _locals[_localCount] = LocalSymbol.Create(name, type)
+            _localCount = _localCount + 1
+        }
+
+        public function LocalCount(): i32
+        {
+            return _localCount
+        }
+
+        public function Local(index: i32): LocalSymbol
+        {
+            return _locals[index]
+        }
+
+        /// <summary>局部名 → 规范类型名（M9-a3 推断用）；未声明返回空串。</summary>
+        public function LocalTypeOf(name: string): string
+        {
+            var i = 0
+            while i < _localCount
+            {
+                if _locals[i].Name() == name
+                {
+                    return _locals[i].Type()
+                }
+
+                i = i + 1
+            }
+
+            return ""
         }
 
         public function Describe(): string

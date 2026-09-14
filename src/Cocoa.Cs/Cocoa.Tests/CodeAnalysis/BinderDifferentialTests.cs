@@ -25,14 +25,25 @@ namespace Cocoa.Tests.CodeAnalysis
 
         public BinderDifferentialTests(ITestOutputHelper output) => _output = output;
 
-        /// <summary>C# 基准：符号表规范化输出（声明序）。</summary>
+        /// <summary>C# 基准：符号表规范化输出（声明序；局部行缩进 2 空格，仅绑定无错时输出）。</summary>
         public static string SymbolDump(Compilation compilation)
         {
             var sb = new StringBuilder();
+            var program = compilation.GetProgram();
+            var hasErrors = compilation.GetDiagnostics().HasErrors();
             foreach (var function in compilation.Functions)
             {
                 var parameters = string.Join(", ", function.Parameters.Select(p => $"{p.Name}: {p.Type.Name}"));
                 sb.AppendLine($"function {function.Name}({parameters}): {function.ReturnType.Name}");
+
+                // M9-a3：局部符号（绑定树 BoundVariableDeclaration，语法声明序；有错时绑定不完整，双方言约定跳过）
+                if (!hasErrors && program.Functions.TryGetValue(function, out var body))
+                {
+                    foreach (var (name, type) in CollectLocals(body))
+                    {
+                        sb.AppendLine($"  local {name}: {type}");
+                    }
+                }
             }
 
             foreach (var variable in compilation.Variables)
@@ -42,6 +53,26 @@ namespace Cocoa.Tests.CodeAnalysis
 
             sb.AppendLine($"main: {compilation.MainFunction?.Name ?? "<none>"}");
             return sb.ToString();
+        }
+
+        private static List<(string Name, string Type)> CollectLocals(Cocoa.CodeAnalysis.Binding.BoundNode node)
+        {
+            var acc = new List<(string, string)>();
+            Collect(node, acc);
+            return acc;
+
+            static void Collect(Cocoa.CodeAnalysis.Binding.BoundNode current, List<(string, string)> sink)
+            {
+                if (current is Cocoa.CodeAnalysis.Binding.BoundVariableDeclaration declaration)
+                {
+                    sink.Add((declaration.Variable.Name, declaration.Variable.Type.Name));
+                }
+
+                foreach (var child in Compilation.BoundChildren(current))
+                {
+                    Collect(child, sink);
+                }
+            }
         }
 
         private static string[] Corpus() => new[]
@@ -57,6 +88,11 @@ namespace Cocoa.Tests.CodeAnalysis
             "var x = -1\nvar y = -2.5\n\nfunction Main(): i32\n{\n    return x\n}\n",
             "let flag = true\n\nfunction Main(): i32\n{\n    return 0\n}\n",
             "function F(v: u8, r: f32): u64\n{\n    return 0\n}\n\nfunction Main(): i32\n{\n    return 0\n}\n",
+            // M9-a3：局部符号
+            "function Main(): i32\n{\n    let x = 1\n    let y = x + 1\n    return y\n}\n",
+            "function F(): i32\n{\n    if true\n    {\n        let t = 2\n        return t\n    }\n\n    return 0\n}\n\nfunction Main(): i32\n{\n    return F()\n}\n",
+            "function Main(): i32\n{\n    let d = 1.5\n    let s = \"a\"\n    let c = 'c'\n    let b = true\n    var n: i32 = 3\n    return n\n}\n",
+            "var g: i32 = 5\n\nfunction Sum(a: i32, b: i32): i32\n{\n    let t = a + b\n    return t\n}\n\nfunction Main(): i32\n{\n    let r = Sum(g, 2)\n    return r\n}\n",
         };
 
         [Fact]
@@ -169,6 +205,7 @@ namespace Cocoa.Tests.CodeAnalysis
             var functionSymbolCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Cocoa.Compiler", "Symbols", "FunctionSymbol.co"));
             var variableSymbolCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Cocoa.Compiler", "Symbols", "VariableSymbol.co"));
             var binderCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Cocoa.Compiler", "Binding", "Binder.co"));
+            var localSymbolCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Cocoa.Compiler", "Binding", "LocalSymbol.co"));
             var trees = ImmutableArray.Create(
                 SyntaxTree.Parse(lexerCo),
                 SyntaxTree.Parse(tokenCo),
@@ -177,6 +214,7 @@ namespace Cocoa.Tests.CodeAnalysis
                 SyntaxTree.Parse(functionSymbolCo),
                 SyntaxTree.Parse(variableSymbolCo),
                 SyntaxTree.Parse(binderCo),
+                SyntaxTree.Parse(localSymbolCo),
                 SyntaxTree.Parse(BinderMainSource(embedded)));
 
             var original = Console.Out;

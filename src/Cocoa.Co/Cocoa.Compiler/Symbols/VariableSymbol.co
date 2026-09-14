@@ -16,6 +16,16 @@ namespace MiniBinder
             return v
         }
 
+        public function Name(): string
+        {
+            return _name
+        }
+
+        public function Type(): string
+        {
+            return _type
+        }
+
         public function Describe(): string
         {
             return "var " + _name + ": " + _type

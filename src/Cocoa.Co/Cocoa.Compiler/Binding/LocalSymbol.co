@@ -1,0 +1,33 @@
+// Cocoa 自举局部变量符号 —— 阶段 7 增量三（M9-a3）：名/类型；Describe() 与 C# SymbolDump 局部行同构（缩进由 Binder 组装）。
+
+namespace MiniBinder
+{
+    class LocalSymbol
+    {
+        private field _name: string
+        private field _type: string
+
+        public static function Create(name: string, type: string): LocalSymbol
+        {
+            var l = new LocalSymbol()
+            l._name = name
+            l._type = type
+            return l
+        }
+
+        public function Name(): string
+        {
+            return _name
+        }
+
+        public function Type(): string
+        {
+            return _type
+        }
+
+        public function Describe(): string
+        {
+            return "local " + _name + ": " + _type
+        }
+    }
+}
