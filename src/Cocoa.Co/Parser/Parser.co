@@ -327,6 +327,12 @@ namespace MiniParser
                     f.Add(ParseTypeClause())
                 }
 
+                if KindName() == "EqualsToken"
+                {
+                    f.Add(Match("EqualsToken"))
+                    f.Add(ParseExpression())
+                }
+
                 return f
             }
 
@@ -356,6 +362,12 @@ namespace MiniParser
                 }
 
                 p.Add(Match("CloseBraceToken"))
+                if KindName() == "EqualsToken"
+                {
+                    p.Add(Match("EqualsToken"))
+                    p.Add(ParseExpression())
+                }
+
                 return p
             }
 
@@ -774,12 +786,24 @@ namespace MiniParser
                 let opKind = KindName()
                 let op = Node.MakeToken(opKind, _cur.Text())
                 Advance()
-                let right = ParseBinary(prec)
-                let bin = Node.MakeCompound("BinaryExpression")
-                bin.Add(left)
-                bin.Add(op)
-                bin.Add(right)
-                left = bin
+                if opKind == "IsKeyword" || opKind == "AsKeyword"
+                {
+                    // is/as 右侧为裸类型标识符
+                    let typeNode = Node.MakeCompound(opKind == "IsKeyword" ? "IsExpression" : "AsExpression")
+                    typeNode.Add(left)
+                    typeNode.Add(op)
+                    typeNode.Add(Match("IdentifierToken"))
+                    left = typeNode
+                }
+                else
+                {
+                    let right = ParseBinary(prec)
+                    let bin = Node.MakeCompound("BinaryExpression")
+                    bin.Add(left)
+                    bin.Add(op)
+                    bin.Add(right)
+                    left = bin
+                }
             }
 
             return left
@@ -837,10 +861,41 @@ namespace MiniParser
                 return ParseParenthesizedOrLambda()
             }
 
+            if IsKeywordText("new")
+            {
+                return ParseArrayCreation()
+            }
+
             // 兜底：单 token 原样消费
             let any = Node.MakeToken(k, _cur.Text())
             Advance()
             return any
+        }
+
+        private function ParseArrayCreation(): Node
+        {
+            let node = Node.MakeCompound("ArrayCreationExpression")
+            node.Add(Match("NewKeyword"))
+            node.Add(Match("IdentifierToken"))
+            node.Add(Match("OpenBracketToken"))
+            node.Add(Match("CloseBracketToken"))
+            if KindName() == "OpenBraceToken"
+            {
+                node.Add(Match("OpenBraceToken"))
+                if KindName() != "CloseBraceToken"
+                {
+                    node.Add(ParseExpression())
+                    while KindName() == "CommaToken"
+                    {
+                        node.Add(Match("CommaToken"))
+                        node.Add(ParseExpression())
+                    }
+                }
+
+                node.Add(Match("CloseBraceToken"))
+            }
+
+            return node
         }
 
         private function ParseIdentifierPostfix(): Node

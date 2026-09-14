@@ -61,6 +61,11 @@ namespace Cocoa.Tests.CodeAnalysis
             "function Main()\n{\n    foreach (var item in list)\n    {\n        print(item)\n    }\n}\n",
             "function Main()\n{\n    for (var i = 0; i < 10; i++)\n    {\n        print(i)\n    }\n}\n",
             "let map: List<i32> = null\n",
+            "class Foo\n{\n    private field _x: i32 = 5\n    public property P: i32 { get set } = 42\n}\n",
+            "let a = new i32[] {1, 2, 3}\n",
+            "let b = x is T\nlet c = a as T\nlet d = e ?? f\n",
+            "let arr = new string[] {\"x\", \"y\"}\n",
+            "class Point\n{\n    public field X: i32\n    public field Y: i32\n    public function Distance(p: Point): f64\n    {\n        return 0\n    }\n}\n",
         };
 
         [Fact]
@@ -96,6 +101,11 @@ namespace Cocoa.Tests.CodeAnalysis
                 "let a: i32[] = new i32[] {1, 2, 3}\n",
                 "let map: List<i32> = null\n",
                 "function Main()\n{\n    for (var i = 0; i < 10; i++)\n    {\n        print(i)\n    }\n}\n",
+                "class Foo\n{\n    private field _x: i32 = 5\n    public property P: i32 { get set } = 42\n}\n",
+                "let a = new i32[] {1, 2, 3}\n",
+                "let b = x is T\nlet c = a as T\nlet d = e ?? f\n",
+                "let arr = new string[] {\"x\", \"y\"}\n",
+                "class Point\n{\n    public field X: i32\n    public field Y: i32\n    public function Distance(p: Point): f64\n    {\n        return 0\n    }\n}\n",
             };
 
             var sb = new StringBuilder();
