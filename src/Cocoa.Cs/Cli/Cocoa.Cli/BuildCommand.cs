@@ -171,14 +171,16 @@ namespace Cocoa.Cli
                 return 1;
             }
 
-            var backend = backendText switch
+            // 未指定 -b 时透传 null：ProjectBuilder 按「命令行 > 项目 <Backend> 声明 > dotnet 缺省」解析
+            // （项目级声明，2026-09-14 结构重组定稿；先例 --platform 默认取项目设置）
+            CodeBackend? backend = backendText switch
             {
-                null => CodeBackend.DotNet,
+                null => null,
                 "dotnet" => CodeBackend.DotNet,
                 "native" => CodeBackend.Native,
                 _ => (CodeBackend?)null,
             };
-            if (backend == null)
+            if (backendText != null && backend == null)
             {
                 Console.Error.WriteLine($"error: unknown backend '{backendText}'. Supported backends: dotnet, native");
                 return 1;
@@ -206,7 +208,7 @@ namespace Cocoa.Cli
                     : releaseRequested ? ProjectConfiguration.Release : null,
                 OutputFileOverride = outputFile,
                 ReferenceOverrides = referencePaths.ToImmutableArray(),
-                Backend = backend.Value,
+                Backend = backend,
                 DotnetRuntimeOverride = dotnetRuntimeText,
                 DocOutput = docRequested ? "generate" : null,
             };
@@ -275,7 +277,7 @@ else if (extension.Equals(".coproj", StringComparison.OrdinalIgnoreCase))
             Console.WriteLine("  --platform <arch>  The native target platform: x86 or x64 (default: project setting)");
             Console.WriteLine("  -o <path>          The output file path");
             Console.WriteLine("  -r <path>          The path of a reference to add (can be repeated)");
-            Console.WriteLine("  -b <name>          The code generation backend: dotnet (default) or native");
+            Console.WriteLine("  -b <name>          The code generation backend: dotnet or native (default: project <Backend> declaration, else dotnet)");
             Console.WriteLine("  --dotnet-runtime <tfm>  The .NET target framework: net40~net48 (netfx, default net48) or net8.0/net9.0 (netcore). Only used with -b dotnet");
             Console.WriteLine("  --no-incremental   Force a full rebuild");
             Console.WriteLine("  --debug / --release  Build mode (default: project setting / release)");
