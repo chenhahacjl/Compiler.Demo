@@ -1,0 +1,821 @@
+// Cocoa 自举 Parser —— 阶段 7 增量二（M8-a1）：
+// Token 流（复用 MiniLexer）→ 递归下降 → 自举 Node 树，Dump() 与 C# ParserDifferentialTests.TreeDump
+// 规范格式逐字节一致：token → `(Kind "text")`；复合 → `(Kind child1 child2 ...)`（trivia 不入 dump）。
+// M8-a1 语法子集：顶层 function 声明（参数/返回类型/块体）、var/let 声明、return、表达式语句、
+//   二元/一元/字面量/名字/调用/成员访问/lambda。
+// 依赖：MiniLexer（Token/Lexer）、string 成员、System.Console。
+
+using MiniLexer
+
+namespace MiniParser
+{
+    class Node
+    {
+        private field _kind: string
+        private field _text: string
+        private field _isToken: bool
+        private field _items: Node[]
+        private field _count: i32
+
+        public static function MakeToken(kind: string, text: string): Node
+        {
+            var n = new Node()
+            n._kind = kind
+            n._text = text
+            n._isToken = true
+            n._items = new Node[0]
+            n._count = 0
+            return n
+        }
+
+        public static function MakeCompound(kind: string): Node
+        {
+            var n = new Node()
+            n._kind = kind
+            n._text = ""
+            n._isToken = false
+            n._items = new Node[16]
+            n._count = 0
+            return n
+        }
+
+        public function Add(child: Node): void
+        {
+            if _count >= _items.Length
+            {
+                var bigger = new Node[_items.Length * 2]
+                var i = 0
+                while i < _count
+                {
+                    bigger[i] = _items[i]
+                    i = i + 1
+                }
+                _items = bigger
+            }
+
+            _items[_count] = child
+            _count = _count + 1
+        }
+
+        public function Dump(): string
+        {
+            var sb = "(" + _kind
+            if _isToken
+            {
+                return sb + " \"" + Escape(_text) + "\")"
+            }
+
+            if _count == 0
+            {
+                return sb + ")"
+            }
+
+            var i = 0
+            while i < _count
+            {
+                sb = sb + " " + _items[i].Dump()
+                i = i + 1
+            }
+
+            return sb + ")"
+        }
+
+        private static function Escape(text: string): string
+        {
+            var sb = ""
+            var i = 0
+            while i < text.Length
+            {
+                let c = text[i]
+                if c == '\\'
+                {
+                    sb = sb + "\\\\"
+                }
+                else if c == '"'
+                {
+                    sb = sb + "\\\""
+                }
+                else if c == '\n'
+                {
+                    sb = sb + "\\n"
+                }
+                else if c == '\r'
+                {
+                    sb = sb + "\\r"
+                }
+                else if c == '\t'
+                {
+                    sb = sb + "\\t"
+                }
+                else
+                {
+                    sb = sb + string(c)
+                }
+
+                i = i + 1
+            }
+
+            return sb
+        }
+    }
+
+    class Parser
+    {
+        private field _lex: Lexer
+        private field _cur: Token
+        private field _look: Token
+        private field _look2: Token
+
+        public static function Create(source: string): Parser
+        {
+            var p = new Parser()
+            p._lex = Lexer.Create(source)
+            p._cur = p._lex.Next()
+            p._look = p._lex.Next()
+            p._look2 = p._lex.Next()
+            return p
+        }
+
+        /// <summary>推进一个 token（_cur 取 _look，_look 取 _look2，_look2 取新 token）。</summary>
+        private function Advance(): void
+        {
+            _cur = _look
+            _look = _look2
+            _look2 = _lex.Next()
+        }
+
+        /// <summary>当前 token 的 SyntaxKind 名（对齐 C# SyntaxKind 配置名）。</summary>
+        private function KindName(): string
+        {
+            return TokenKindName(_cur)
+        }
+
+        private function LookKindName(): string
+        {
+            return TokenKindName(_look)
+        }
+
+        private function Look2KindName(): string
+        {
+            return TokenKindName(_look2)
+        }
+
+        private function Text(): string
+        {
+            return _cur.Text()
+        }
+
+        private function Match(kind: string): Node
+        {
+            let node = Node.MakeToken(kind, _cur.Text())
+            Advance()
+            return node
+        }
+
+        /// <summary>当前是否关键字 kind（仅用于语句/成员分派）。</summary>
+        private function IsKeywordText(text: string): bool
+        {
+            return _cur.Kind() == "Keyword" && _cur.Text() == text
+        }
+
+        public function ParseCompilationUnit(): Node
+        {
+            let root = Node.MakeCompound("CompilationUnit")
+            while _cur.Kind() != "EOF"
+            {
+                root.Add(ParseMember())
+            }
+
+            root.Add(Node.MakeToken("EndOfFileToken", ""))
+            return root
+        }
+
+        private function ParseMember(): Node
+        {
+            if IsKeywordText("function")
+            {
+                return ParseFunctionDeclaration()
+            }
+
+            let stmt = ParseStatement()
+            let gs = Node.MakeCompound("GlobalStatement")
+            gs.Add(stmt)
+            return gs
+        }
+
+        private function ParseFunctionDeclaration(): Node
+        {
+            let fn = Node.MakeCompound("FunctionDeclaration")
+            fn.Add(Match("FunctionKeyword"))
+            fn.Add(Match("IdentifierToken"))
+            fn.Add(Match("OpenParenthesisToken"))
+
+            if KindName() != "CloseParenthesisToken"
+            {
+                fn.Add(ParseParameter())
+                while KindName() == "CommaToken"
+                {
+                    fn.Add(Match("CommaToken"))
+                    fn.Add(ParseParameter())
+                }
+            }
+
+            fn.Add(Match("CloseParenthesisToken"))
+
+            if KindName() == "ColonToken"
+            {
+                fn.Add(ParseTypeClause())
+            }
+
+            if KindName() == "OpenBraceToken"
+            {
+                fn.Add(ParseBlockStatement())
+            }
+
+            return fn
+        }
+
+        private function ParseParameter(): Node
+        {
+            let p = Node.MakeCompound("Parameter")
+            if KindName() == "OutKeyword" || KindName() == "RefKeyword"
+            {
+                p.Add(Match(KindName()))
+            }
+
+            p.Add(Match("IdentifierToken"))
+            if KindName() == "ColonToken"
+            {
+                p.Add(ParseTypeClause())
+            }
+
+            return p
+        }
+
+        private function ParseTypeClause(): Node
+        {
+            let tc = Node.MakeCompound("TypeClause")
+            tc.Add(Match("ColonToken"))
+            tc.Add(Match("IdentifierToken"))
+            return tc
+        }
+
+        private function ParseBlockStatement(): Node
+        {
+            let block = Node.MakeCompound("BlockStatement")
+            block.Add(Match("OpenBraceToken"))
+            while KindName() != "CloseBraceToken" && _cur.Kind() != "EOF"
+            {
+                block.Add(ParseStatement())
+            }
+
+            block.Add(Match("CloseBraceToken"))
+            return block
+        }
+
+        private function ParseStatement(): Node
+        {
+            if KindName() == "OpenBraceToken"
+            {
+                return ParseBlockStatement()
+            }
+
+            if IsKeywordText("var") || IsKeywordText("let")
+            {
+                return ParseVariableDeclaration()
+            }
+
+            if IsKeywordText("return")
+            {
+                let ret = Node.MakeCompound("ReturnStatement")
+                ret.Add(Match("ReturnKeyword"))
+                if KindName() != "CloseBraceToken" && _cur.Kind() != "EOF"
+                {
+                    ret.Add(ParseExpression())
+                }
+
+                return ret
+            }
+
+            if IsKeywordText("if")
+            {
+                return ParseIfStatement()
+            }
+
+            if IsKeywordText("while")
+            {
+                return ParseWhileStatement()
+            }
+
+            if IsKeywordText("for")
+            {
+                return ParseForRangeStatement()
+            }
+
+            let es = Node.MakeCompound("ExpressionStatement")
+            es.Add(ParseExpression())
+            return es
+        }
+
+        private function ParseIfStatement(): Node
+        {
+            let node = Node.MakeCompound("IfStatement")
+            node.Add(Match("IfKeyword"))
+            node.Add(ParseExpression())
+            node.Add(ParseStatement())
+            if IsKeywordText("else")
+            {
+                let ec = Node.MakeCompound("ElseClause")
+                ec.Add(Match("ElseKeyword"))
+                ec.Add(ParseStatement())
+                node.Add(ec)
+            }
+
+            return node
+        }
+
+        private function ParseWhileStatement(): Node
+        {
+            let node = Node.MakeCompound("WhileStatement")
+            node.Add(Match("WhileKeyword"))
+            node.Add(ParseExpression())
+            node.Add(ParseStatement())
+            return node
+        }
+
+        private function ParseForRangeStatement(): Node
+        {
+            let node = Node.MakeCompound("ForRangeStatement")
+            node.Add(Match("ForKeyword"))
+            node.Add(Match("IdentifierToken"))
+            node.Add(Match("EqualsToken"))
+            node.Add(ParseExpression())
+            node.Add(Match("ToKeyword"))
+            node.Add(ParseExpression())
+            if IsKeywordText("step")
+            {
+                node.Add(Match("StepKeyword"))
+                node.Add(ParseExpression())
+            }
+
+            node.Add(ParseStatement())
+            return node
+        }
+
+        private function ParseVariableDeclaration(): Node
+        {
+            let vd = Node.MakeCompound("VariableDeclaration")
+            if IsKeywordText("var")
+            {
+                vd.Add(Match("VarKeyword"))
+            }
+            else
+            {
+                vd.Add(Match("LetKeyword"))
+            }
+
+            vd.Add(Match("IdentifierToken"))
+            if KindName() == "ColonToken"
+            {
+                vd.Add(ParseTypeClause())
+            }
+
+            if KindName() == "EqualsToken"
+            {
+                vd.Add(Match("EqualsToken"))
+                vd.Add(ParseExpression())
+            }
+
+            return vd
+        }
+
+        // ────────── 表达式（precedence climbing）──────────
+
+        private function ParseExpression(): Node
+        {
+            let left = ParseBinary(0)
+            if KindName() == "EqualsToken"
+            {
+                let asgn = Node.MakeCompound("AssignmentExpression")
+                asgn.Add(left)
+                asgn.Add(Match("EqualsToken"))
+                asgn.Add(ParseExpression())
+                return asgn
+            }
+
+            return left
+        }
+
+        private function BinaryPrecedence(): i32
+        {
+            let k = KindName()
+            if k == "StarToken" || k == "SlashToken" || k == "PercentToken"
+            {
+                return 5
+            }
+
+            if k == "PlusToken" || k == "MinusToken" || k == "ShiftLeftToken" || k == "ShiftRightToken"
+            {
+                return 4
+            }
+
+            if k == "EqualsEqualsToken" || k == "BangEqualsToken" || k == "LessToken" ||
+                k == "LessOrEqualsToken" || k == "GreaterToken" || k == "GreaterOrEqualsToken" ||
+                k == "IsKeyword" || k == "AsKeyword"
+            {
+                return 3
+            }
+
+            if k == "AmpersandToken" || k == "AmpersandAmpersandToken" || k == "QuestionQuestionToken"
+            {
+                return 2
+            }
+
+            if k == "PipeToken" || k == "PipePipeToken" || k == "HatToken"
+            {
+                return 1
+            }
+
+            return 0
+        }
+
+        private function ParseBinary(parentPrec: i32): Node
+        {
+            var left = ParseUnary()
+            while true
+            {
+                let prec = BinaryPrecedence()
+                if prec <= parentPrec
+                {
+                    break
+                }
+
+                let opKind = KindName()
+                let op = Node.MakeToken(opKind, _cur.Text())
+                Advance()
+                let right = ParseBinary(prec)
+                let bin = Node.MakeCompound("BinaryExpression")
+                bin.Add(left)
+                bin.Add(op)
+                bin.Add(right)
+                left = bin
+            }
+
+            return left
+        }
+
+        private function IsUnaryOperator(): bool
+        {
+            let k = KindName()
+            return k == "PlusToken" || k == "MinusToken" || k == "BangToken" ||
+                k == "TildeToken" || k == "HatToken" || k == "PlusPlusToken" || k == "MinusMinusToken"
+        }
+
+        private function ParseUnary(): Node
+        {
+            if IsUnaryOperator()
+            {
+                let opKind = KindName()
+                let op = Node.MakeToken(opKind, _cur.Text())
+                Advance()
+                let operand = ParseUnary()
+                let un = Node.MakeCompound("UnaryExpression")
+                un.Add(op)
+                un.Add(operand)
+                return un
+            }
+
+            return ParsePrimary()
+        }
+
+        private function ParsePrimary(): Node
+        {
+            let k = KindName()
+            if k == "NumberToken" || k == "StringToken" || k == "VerbatimStringToken" ||
+                k == "RawStringToken" || k == "InterpolatedStringToken" || k == "CharToken"
+            {
+                let lit = Node.MakeCompound("LiteralExpression")
+                lit.Add(Match(k))
+                return lit
+            }
+
+            if IsKeywordText("true") || IsKeywordText("false") || IsKeywordText("null")
+            {
+                let lit = Node.MakeCompound("LiteralExpression")
+                lit.Add(Match(KindName()))
+                return lit
+            }
+
+            if KindName() == "IdentifierToken"
+            {
+                return ParseIdentifierPostfix()
+            }
+
+            if KindName() == "OpenParenthesisToken"
+            {
+                return ParseParenthesizedOrLambda()
+            }
+
+            // 兜底：单 token 原样消费
+            let any = Node.MakeToken(k, _cur.Text())
+            Advance()
+            return any
+        }
+
+        private function ParseIdentifierPostfix(): Node
+        {
+            let ident = Match("IdentifierToken")
+            if KindName() == "OpenParenthesisToken"
+            {
+                let call = Node.MakeCompound("CallExpression")
+                call.Add(ident)
+                call.Add(Match("OpenParenthesisToken"))
+                if KindName() != "CloseParenthesisToken"
+                {
+                    call.Add(ParseExpression())
+                    while KindName() == "CommaToken"
+                    {
+                        call.Add(Match("CommaToken"))
+                        call.Add(ParseExpression())
+                    }
+                }
+
+                call.Add(Match("CloseParenthesisToken"))
+                return call
+            }
+
+            if KindName() == "DotToken"
+            {
+                let dot = Match("DotToken")
+                let member = Match("IdentifierToken")
+                if KindName() == "OpenParenthesisToken"
+                {
+                    // 成员调用：receiver 包 NameExpression
+                    let mcall = Node.MakeCompound("MemberCallExpression")
+                    let recv = Node.MakeCompound("NameExpression")
+                    recv.Add(ident)
+                    mcall.Add(recv)
+                    mcall.Add(dot)
+                    mcall.Add(member)
+                    mcall.Add(Match("OpenParenthesisToken"))
+                    if KindName() != "CloseParenthesisToken"
+                    {
+                        mcall.Add(ParseExpression())
+                        while KindName() == "CommaToken"
+                        {
+                            mcall.Add(Match("CommaToken"))
+                            mcall.Add(ParseExpression())
+                        }
+                    }
+
+                    mcall.Add(Match("CloseParenthesisToken"))
+                    return mcall
+                }
+
+                let ma = Node.MakeCompound("MemberAccessExpression")
+                ma.Add(ident)
+                ma.Add(dot)
+                ma.Add(member)
+                return ma
+            }
+
+            let name = Node.MakeCompound("NameExpression")
+            name.Add(ident)
+            return name
+        }
+
+        private function ParseParenthesizedOrLambda(): Node
+        {
+            // lambda 判别（三 token 前瞻）：`(` 后为 `)`（空参）或 `标识符 :`（类型标注参数）
+            var isLambda = LookKindName() == "CloseParenthesisToken"
+            if LookKindName() == "IdentifierToken" && Look2KindName() == "ColonToken"
+            {
+                isLambda = true
+            }
+
+            if isLambda
+            {
+                return ParseLambda()
+            }
+
+            let paren = Node.MakeCompound("ParenthesizedExpression")
+            paren.Add(Match("OpenParenthesisToken"))
+            paren.Add(ParseExpression())
+            paren.Add(Match("CloseParenthesisToken"))
+            return paren
+        }
+
+        private function ParseLambda(): Node
+        {
+            let lambda = Node.MakeCompound("LambdaExpression")
+            lambda.Add(Match("OpenParenthesisToken"))
+            if KindName() != "CloseParenthesisToken"
+            {
+                lambda.Add(ParseParameter())
+                while KindName() == "CommaToken"
+                {
+                    lambda.Add(Match("CommaToken"))
+                    lambda.Add(ParseParameter())
+                }
+            }
+
+            lambda.Add(Match("CloseParenthesisToken"))
+            lambda.Add(Match("FatArrowToken"))
+            lambda.Add(ParseExpression())
+            return lambda
+        }
+
+        // ────────── token kind → C# SyntaxKind 名 ──────────
+
+        private static function TokenKindName(t: Token): string
+        {
+            let k = t.Kind()
+            if k == "Keyword"
+            {
+                return KeywordKindName(t.Text())
+            }
+
+            if k == "Identifier"
+            {
+                return "IdentifierToken"
+            }
+
+            if k == "Number"
+            {
+                return "NumberToken"
+            }
+
+            if k == "String"
+            {
+                return "StringToken"
+            }
+
+            if k == "VerbatimString"
+            {
+                return "VerbatimStringToken"
+            }
+
+            if k == "RawString"
+            {
+                return "RawStringToken"
+            }
+
+            if k == "InterpolatedString"
+            {
+                return "InterpolatedStringToken"
+            }
+
+            if k == "Char"
+            {
+                return "CharToken"
+            }
+
+            if k == "EOF"
+            {
+                return "EndOfFileToken"
+            }
+
+            if k == "Error"
+            {
+                return "BadToken"
+            }
+
+            return SymbolKindName(t.Text())
+        }
+
+        private static function KeywordKindName(text: string): string
+        {
+            if text == "abstract" { return "AbstractKeyword" }
+            if text == "as" { return "AsKeyword" }
+            if text == "base" { return "BaseKeyword" }
+            if text == "break" { return "BreakKeyword" }
+            if text == "case" { return "CaseKeyword" }
+            if text == "cdecl" { return "CdeclKeyword" }
+            if text == "continue" { return "ContinueKeyword" }
+            if text == "default" { return "DefaultKeyword" }
+            if text == "else" { return "ElseKeyword" }
+            if text == "false" { return "FalseKeyword" }
+            if text == "for" { return "ForKeyword" }
+            if text == "foreach" { return "ForeachKeyword" }
+            if text == "get" { return "GetKeyword" }
+            if text == "set" { return "SetKeyword" }
+            if text == "property" { return "PropertyKeyword" }
+            if text == "class" { return "ClassKeyword" }
+            if text == "struct" { return "StructKeyword" }
+            if text == "event" { return "EventKeyword" }
+            if text == "delegate" { return "DelegateKeyword" }
+            if text == "const" { return "ConstKeyword" }
+            if text == "constructor" { return "ConstructorKeyword" }
+            if text == "function" { return "FunctionKeyword" }
+            if text == "if" { return "IfKeyword" }
+            if text == "import" { return "ImportKeyword" }
+            if text == "in" { return "InKeyword" }
+            if text == "interface" { return "InterfaceKeyword" }
+            if text == "is" { return "IsKeyword" }
+            if text == "internal" { return "InternalKeyword" }
+            if text == "new" { return "NewKeyword" }
+            if text == "null" { return "NullKeyword" }
+            if text == "nameof" { return "NameofKeyword" }
+            if text == "out" { return "OutKeyword" }
+            if text == "namespace" { return "NamespaceKeyword" }
+            if text == "override" { return "OverrideKeyword" }
+            if text == "partial" { return "PartialKeyword" }
+            if text == "params" { return "ParamsKeyword" }
+            if text == "protected" { return "ProtectedKeyword" }
+            if text == "readonly" { return "ReadonlyKeyword" }
+            if text == "ref" { return "RefKeyword" }
+            if text == "sealed" { return "SealedKeyword" }
+            if text == "static" { return "StaticKeyword" }
+            if text == "step" { return "StepKeyword" }
+            if text == "switch" { return "SwitchKeyword" }
+            if text == "this" { return "ThisKeyword" }
+            if text == "using" { return "UsingKeyword" }
+            if text == "virtual" { return "VirtualKeyword" }
+            if text == "when" { return "WhenKeyword" }
+            if text == "while" { return "WhileKeyword" }
+            if text == "let" { return "LetKeyword" }
+            if text == "return" { return "ReturnKeyword" }
+            if text == "stdcall" { return "StdcallKeyword" }
+            if text == "syscall" { return "SyscallKeyword" }
+            if text == "to" { return "ToKeyword" }
+            if text == "true" { return "TrueKeyword" }
+            if text == "var" { return "VarKeyword" }
+            if text == "do" { return "DoKeyword" }
+            if text == "enum" { return "EnumKeyword" }
+            if text == "extends" { return "ExtendsKeyword" }
+            if text == "extern" { return "ExternKeyword" }
+            if text == "public" { return "PublicKeyword" }
+            if text == "private" { return "PrivateKeyword" }
+            if text == "where" { return "WhereKeyword" }
+            if text == "facade" { return "FacadeKeyword" }
+            if text == "throw" { return "ThrowKeyword" }
+            if text == "try" { return "TryKeyword" }
+            if text == "catch" { return "CatchKeyword" }
+            if text == "finally" { return "FinallyKeyword" }
+            if text == "and" { return "AndKeyword" }
+            if text == "or" { return "OrKeyword" }
+            if text == "not" { return "NotKeyword" }
+            if text == "lock" { return "LockKeyword" }
+            if text == "checked" { return "CheckedKeyword" }
+            if text == "unchecked" { return "UncheckedKeyword" }
+            if text == "yield" { return "YieldKeyword" }
+            if text == "field" { return "FieldKeyword" }
+            return "IdentifierToken"
+        }
+
+        private static function SymbolKindName(text: string): string
+        {
+            if text == "(" { return "OpenParenthesisToken" }
+            if text == ")" { return "CloseParenthesisToken" }
+            if text == "[" { return "OpenBracketToken" }
+            if text == "]" { return "CloseBracketToken" }
+            if text == "{" { return "OpenBraceToken" }
+            if text == "}" { return "CloseBraceToken" }
+            if text == ":" { return "ColonToken" }
+            if text == "," { return "CommaToken" }
+            if text == "." { return "DotToken" }
+            if text == ".." { return "DotDotToken" }
+            if text == ";" { return "SemicolonToken" }
+            if text == "~" { return "TildeToken" }
+            if text == "^" { return "HatToken" }
+            if text == "^=" { return "HatEqualsToken" }
+            if text == "&" { return "AmpersandToken" }
+            if text == "&&" { return "AmpersandAmpersandToken" }
+            if text == "&=" { return "AmpersandEqualsToken" }
+            if text == "|" { return "PipeToken" }
+            if text == "||" { return "PipePipeToken" }
+            if text == "|=" { return "PipeEqualsToken" }
+            if text == "=" { return "EqualsToken" }
+            if text == "==" { return "EqualsEqualsToken" }
+            if text == "=>" { return "FatArrowToken" }
+            if text == "!" { return "BangToken" }
+            if text == "!=" { return "BangEqualsToken" }
+            if text == "<" { return "LessToken" }
+            if text == "<=" { return "LessOrEqualsToken" }
+            if text == "<<" { return "ShiftLeftToken" }
+            if text == "<<=" { return "ShiftLeftEqualsToken" }
+            if text == ">" { return "GreaterToken" }
+            if text == ">=" { return "GreaterOrEqualsToken" }
+            if text == ">>" { return "ShiftRightToken" }
+            if text == ">>=" { return "ShiftRightEqualsToken" }
+            if text == "%" { return "PercentToken" }
+            if text == "%=" { return "PercentEqualsToken" }
+            if text == "?" { return "QuestionToken" }
+            if text == "??" { return "QuestionQuestionToken" }
+            if text == "??=" { return "QuestionQuestionEqualsToken" }
+            if text == "?." { return "QuestionDotToken" }
+            if text == "+" { return "PlusToken" }
+            if text == "++" { return "PlusPlusToken" }
+            if text == "+=" { return "PlusEqualsToken" }
+            if text == "-" { return "MinusToken" }
+            if text == "--" { return "MinusMinusToken" }
+            if text == "-=" { return "MinusEqualsToken" }
+            if text == "->" { return "ArrowToken" }
+            if text == "*" { return "StarToken" }
+            if text == "*=" { return "StarEqualsToken" }
+            if text == "/" { return "SlashToken" }
+            if text == "/=" { return "SlashEqualsToken" }
+            return "BadToken"
+        }
+    }
+}
