@@ -15,7 +15,7 @@
 | 工程 | 根命名空间 | AssemblyName | 职责 |
 |---|---|---|---|
 | `Cocoa.Targeting` | `Cocoa.Targeting` | 同名 | 目标常量：`TargetPlatform` / `IlTarget` |
-| `Cocoa.Compiler` | `Cocoa.CodeAnalysis` | 同名 | **编译器单装配件**（前端 + 绑定 + 降级 + 序列化）：Text / Syntax（SyntaxKind、SyntaxFacts、LexerBase、绿红树）/ Cocoa 前端（CocoaLexer、CocoaParser、CocoaBinder、CocoaCompilation、CocoaSemanticModel）/ Symbols / Bound / Compilation / Lowering / Serialization（CoaSerializer、SystemLibrary）/ Documentation / Authoring（Classifier）/ CFG / Monomorphizer |
+| `Cocoa.Compiler` | `Cocoa.CodeAnalysis` | 同名 | **编译器单装配件**（前端 + 绑定 + 降级 + 序列化）：Text / Syntax（SyntaxKind、SyntaxFacts、LexerBase、绿红树）/ Cocoa 前端（CocoaLexer、CocoaParser、CocoaBinder）/ Symbols / Bound / Compilation（`Compilation`/`SemanticModel` 具体类）/ Lowering / Serialization（CoaSerializer、SystemLibrary）/ Documentation / Authoring（Classifier）/ CFG / Monomorphizer |
 | `Cocoa.CodeGen.Managed.Structure` | 同名 | 同名 | IL 结构模型：IlOpCode / IlInstruction / IlMetadataModel / IlTypes |
 | `Cocoa.CodeGen.Managed.Reader` | 同名 | 同名 | IL 元数据读取：MetadataReader |
 | `Cocoa.CodeGen.Managed.Writer` | 同名 | 同名 | IL 后端：IlEmitter / MetadataBuilder / ManagedPEWriter / AppHostPatcher / CoaLibraryCompiler（`.coa`→DLL） |
@@ -47,11 +47,11 @@ CodeGen.Managed.Reader ──→ CodeGen.Managed.Structure
 
 ## 4. 单语言前端
 
-去 C# 方言后，前端为 **Cocoa 单一实现**：`CocoaLexer` / `CocoaParser` / `CocoaBinder` / `CocoaCompilation` / `CocoaSemanticModel`。
+去 C# 方言后，前端为 **Cocoa 单一实现**：`CocoaLexer` / `CocoaParser` / `CocoaBinder`，`Compilation`/`SemanticModel` 已塌缩为具体类。
 
 - 共享机械件：`SyntaxKind`（共享枚举）、`SyntaxFacts`、`LexerBase`（abstract partial 词法骨架）、绿节点工厂基建。
 - 语言个性（节点类、Binder、Parser）为单份手写，无第二方言对照，故**不再需要漂移检测护栏**。
-- `CocoaSyntaxNode` 为语法根类（绿/红桥接经 `RawKind`）。
+- 语法节点直接继承 `SyntaxNode`（绿/红桥接经 `RawKind`，默认由 `Kind` 派生）。
 
 ## 5. 后端注册模式
 
