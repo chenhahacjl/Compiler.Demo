@@ -126,6 +126,8 @@ namespace MiniParser
         private field _look: Token
         private field _look2: Token
         private field _look3: Token
+        private field _diags: string[]
+        private field _diagCount: i32
 
         public static function Create(source: string): Parser
         {
@@ -135,6 +137,8 @@ namespace MiniParser
             p._look = p._lex.Next()
             p._look2 = p._lex.Next()
             p._look3 = p._lex.Next()
+            p._diags = new string[16]
+            p._diagCount = 0
             return p
         }
 
@@ -175,9 +179,46 @@ namespace MiniParser
 
         private function Match(kind: string): Node
         {
+            if KindName() != kind
+            {
+                ReportError("error: L" + string(_cur.Line()) + ":C" + string(_cur.Column()) +
+                    " expected " + kind + ", found " + KindName() + " \"" + _cur.Text() + "\"")
+            }
+
             let node = Node.MakeToken(kind, _cur.Text())
             Advance()
             return node
+        }
+
+        /// <summary>记录语法错误（自举侧诊断面：消息文本不与 C# 逐字对齐，仅要求无效程序非空可报告）。</summary>
+        private function ReportError(message: string): void
+        {
+            if _diagCount >= _diags.Length
+            {
+                var bigger = new string[_diags.Length * 2]
+                var i = 0
+                while i < _diagCount
+                {
+                    bigger[i] = _diags[i]
+                    i = i + 1
+                }
+
+                _diags = bigger
+            }
+
+            _diags[_diagCount] = message
+            _diagCount = _diagCount + 1
+        }
+
+        /// <summary>诊断条数（差分测试经此断言无效程序双方言同报错；有效程序必须为 0）。</summary>
+        public function DiagnosticCount(): i32
+        {
+            return _diagCount
+        }
+
+        public function DiagnosticAt(index: i32): string
+        {
+            return _diags[index]
         }
 
         /// <summary>当前是否关键字 kind（仅用于语句/成员分派）。</summary>
@@ -1042,7 +1083,9 @@ namespace MiniParser
                 return ParseNewExpression()
             }
 
-            // 兜底：单 token 原样消费
+            // 兜底：单 token 原样消费（非表达式起始 token → 报告后继续错误恢复）
+            ReportError("error: L" + string(_cur.Line()) + ":C" + string(_cur.Column()) +
+                " unexpected token " + k + " \"" + _cur.Text() + "\"")
             let any = Node.MakeToken(k, _cur.Text())
             Advance()
             return any

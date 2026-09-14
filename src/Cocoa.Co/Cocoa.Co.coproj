@@ -18,5 +18,6 @@
   <ItemGroup>
     <Source Include="Main.co" />
     <Source Include="Lexer\Lexer.co" />
+    <Source Include="Parser\Parser.co" />
   </ItemGroup>
 </Project>

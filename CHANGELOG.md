@@ -8,6 +8,11 @@
 
 ## 未发布（2026-09-14）
 
+### 阶段 7 增量二 M8-a11/a12 收官：自举 Syntax/Parser 完成（2026-09-14）
+- **M8-a11 B0 扩展**：`Cocoa.Co.coproj` 纳入 `Parser\Parser.co`，`Main.co` 读文件 → token 输出 → `--- tree ---` 规范树 dump + 诊断行；`BootstrapperSmokeTests` ×双后端（dotnet net9.0 / native x64）断言树与零诊断。
+- **M8-a12 错误恢复与诊断差分**：自举 Parser 新增诊断面（`Match` 失配/兜底 token 报告，含行列与期望/实际 kind）；`SelfParser_ReportsErrors_ForInvalidCorpus` 6 组无效程序（缺括号/缺表达式/缺名字/枚举缺逗号/括号未闭合等）**双方言同报错**；有效程序零诊断由 39 语料 + 33 样例的逐字节树比较隐式锁定。
+- **增量二验收达成**：样例 33/33、差分语料 39 逐字节一致、无效程序同报错、B0 双后端打印树。下一里程碑：增量三（自举 Binder）。
+
 ### 阶段 7 增量二 M8-a9/a10：自举 Parser 样例覆盖率 33/33 全绿（2026-09-14）
 - **M8-a9 声明面 + 链式后缀**：类型声明前置修饰符（`public class/struct/interface/enum`）、`enum`（逗号分隔成员 + `= 值`）、`namespace`（块式，名 token 含点号）、类内 `import <dll> { ... }` 块；标识符后缀链改左结合循环（`a.b.c` / `x.y.z.W()` / `a[i].b`）；`IsModifier` 对齐 C# 全集。样例覆盖率 21→26/33（差分语料 36）。
 - **M8-a10 数值/lambda/cast**：自举 Lexer 数字 kind 细分 `Number`/`Double`（f 后缀·小数点·指数 → Double，对齐 C# `DoubleToken`）；Parser 补 `DoubleToken` 字面量、**块体 lambda**（`() => { … }`）、cast 操作数降为 unary 级（对齐 `ParseBinaryExpression(6)`）、`IsCastStart` 前瞻补齐。样例覆盖率 26→**33/33 全绿**（差分语料 39，全部逐字节一致）。

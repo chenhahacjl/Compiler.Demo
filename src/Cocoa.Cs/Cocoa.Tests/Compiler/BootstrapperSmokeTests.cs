@@ -63,7 +63,7 @@ namespace Cocoa.Tests.Compiler
         [Theory]
         [InlineData("dotnet", " --dotnet-runtime net9.0")]
         [InlineData("native", "")]
-        public void B0_BuildsAndPrintsTokens(string backend, string runtimeArgs)
+        public void B0_BuildsAndPrintsTokensAndTree(string backend, string runtimeArgs)
         {
             var coproj = Path.Combine(RepoRoot(), "src", "Cocoa.Co", "Cocoa.Co.coproj");
             var sample = Path.Combine(RepoRoot(), "samples", "Tutorial", "Basics", "HelloWorld", "main.co");
@@ -91,6 +91,12 @@ namespace Cocoa.Tests.Compiler
             Assert.Contains("Identifier Main 2:10", output);
             Assert.Contains("String \"Cocoa\" 4:32", output);
             Assert.Contains("EOF  6:2", output);
+
+            // M8 扩展：B0 亦为自举 Parser 可执行（读文件 → 打印树 + 诊断）；有效样例零诊断
+            Assert.Contains("--- tree ---", output);
+            Assert.Contains("(CompilationUnit", output);
+            Assert.Contains("(FunctionDeclaration", output);
+            Assert.DoesNotContain("error:", output);
         }
     }
 }

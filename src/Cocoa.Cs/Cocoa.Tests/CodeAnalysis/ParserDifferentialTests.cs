@@ -101,6 +101,37 @@ namespace Cocoa.Tests.CodeAnalysis
             Assert.True(failures.Count == 0, "\n" + string.Join("\n", failures));
         }
 
+        /// <summary>无效程序语料（M8 错误恢复差分）：C# 与自举 Parser 必须**双方言同报错**；
+        /// 自举侧消息文本不与 C# 逐字对齐，仅要求非空可报告（`error:` 前缀）。</summary>
+        private static string[] InvalidCorpus() => new[]
+        {
+            "function Main(\n{\n}\n",
+            "let x =\n",
+            "function Main()\n{\n    var = 5\n}\n",
+            "class Foo extends\n{\n}\n",
+            "enum E { A B }\n",
+            "function Main()\n{\n    return 1\n",
+        };
+
+        [Fact]
+        public void SelfParser_ReportsErrors_ForInvalidCorpus()
+        {
+            var failures = new List<string>();
+            foreach (var source in InvalidCorpus())
+            {
+                var csharpHasErrors = SyntaxTree.Parse(source).Diagnostics.HasErrors();
+                var self = SelfDump(source);
+                var selfHasErrors = self.Contains("error:");
+
+                if (!csharpHasErrors || !selfHasErrors)
+                {
+                    failures.Add($"SOURCE: {source.Replace("\n", "\\n")}\nC# HasErrors: {csharpHasErrors}\nself: {self}\n-----");
+                }
+            }
+
+            Assert.True(failures.Count == 0, "\n" + string.Join("\n", failures));
+        }
+
         [Fact]
         public void DumpObservation_Examples()
         {
@@ -242,7 +273,7 @@ namespace Cocoa.Tests.CodeAnalysis
 
         private static string MainSource(string embedded)
         {
-            return "using MiniParser\nusing System\n\nfunction Main(): i32\n{\n    let p = MiniParser.Parser.Create(\"" + embedded + "\")\n    let root = p.ParseCompilationUnit()\n    System.Console.WriteLine(root.Dump())\n    return 0\n}";
+            return "using MiniParser\nusing System\n\nfunction Main(): i32\n{\n    let p = MiniParser.Parser.Create(\"" + embedded + "\")\n    let root = p.ParseCompilationUnit()\n    System.Console.WriteLine(root.Dump())\n    var i = 0\n    while i < p.DiagnosticCount()\n    {\n        System.Console.WriteLine(p.DiagnosticAt(i))\n        i = i + 1\n    }\n\n    return 0\n}";
         }
 
         private static string[] References() => new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location };
