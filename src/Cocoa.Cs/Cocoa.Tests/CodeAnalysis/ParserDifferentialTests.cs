@@ -54,6 +54,13 @@ namespace Cocoa.Tests.CodeAnalysis
             "let r = obj.Get(x) + -1\n",
             "let s = \"hi\" + c\n",
             "function Main()\n{\n    let ok = a && b || !c\n    print(ok)\n}\n",
+            "class Foo extends Bar, IA\n{\n    private field _x: i32\n    public property P: i32 { get set }\n    public function Get(): i32\n    {\n        return _x\n    }\n    public constructor(x: i32)\n    {\n        _x = x\n    }\n}\n",
+            "struct Point\n{\n    public field X: i32\n    public field Y: i32\n}\n",
+            "interface IFoo\n{\n    function Get(): i32\n    property P: i32 { get }\n}\n",
+            "function Main()\n{\n    try\n    {\n        run()\n    }\n    catch e: Exception\n    {\n        print(e.Message)\n    }\n    finally\n    {\n        cleanup()\n    }\n}\n",
+            "function Main()\n{\n    foreach (var item in list)\n    {\n        print(item)\n    }\n}\n",
+            "function Main()\n{\n    for (var i = 0; i < 10; i++)\n    {\n        print(i)\n    }\n}\n",
+            "let map: List<i32> = null\n",
         };
 
         [Fact]
@@ -79,11 +86,16 @@ namespace Cocoa.Tests.CodeAnalysis
         {
             string[] corpus =
             {
-                "function Main(): i32\n{\n    return 1\n}\n",
-                "function Main()\n{\n    if x > 10\n    {\n        print(x)\n    }\n    else\n    {\n        print(0)\n    }\n}\n",
-                "function Main()\n{\n    while i < 10\n    {\n        i = i + 1\n    }\n}\n",
-                "function Main()\n{\n    for i = 0 to 10 step 2\n    {\n        print(i)\n    }\n}\n",
-                "class Foo extends Bar, IA\n{\n    private field _x: i32\n    public property P: i32 { get set }\n    public function Get(): i32\n    {\n        return _x\n    }\n}\n",
+                "class Foo extends Bar, IA\n{\n    private field _x: i32\n    public property P: i32 { get set }\n    public function Get(): i32\n    {\n        return _x\n    }\n    public constructor(x: i32)\n    {\n        _x = x\n    }\n}\n",
+                "struct Point\n{\n    public field X: i32\n    public field Y: i32\n}\n",
+                "interface IFoo\n{\n    function Get(): i32\n    property P: i32 { get }\n}\n",
+                "enum Color\n{\n    Red\n    Green = 5\n    Blue\n}\n",
+                "function Main()\n{\n    switch x\n    {\n        case 1:\n            print(1)\n            break\n        default:\n            print(0)\n    }\n}\n",
+                "function Main()\n{\n    try\n    {\n        run()\n    }\n    catch e: Exception\n    {\n        print(e.Message)\n    }\n    finally\n    {\n        cleanup()\n    }\n}\n",
+                "function Main()\n{\n    foreach (var item in list)\n    {\n        print(item)\n    }\n}\n",
+                "let a: i32[] = new i32[] {1, 2, 3}\n",
+                "let map: List<i32> = null\n",
+                "function Main()\n{\n    for (var i = 0; i < 10; i++)\n    {\n        print(i)\n    }\n}\n",
             };
 
             var sb = new StringBuilder();

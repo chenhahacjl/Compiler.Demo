@@ -192,9 +192,32 @@ namespace MiniParser
 
         private function ParseMember(): Node
         {
+            if IsKeywordText("class") || IsKeywordText("struct")
+            {
+                return ParseClassDeclaration()
+            }
+
+            if IsKeywordText("interface")
+            {
+                return ParseInterfaceDeclaration()
+            }
+
+            let mods = new Node[8]
+            var modCount = 0
+            while IsModifier()
+            {
+                mods[modCount] = Match(KindName())
+                modCount = modCount + 1
+            }
+
             if IsKeywordText("function")
             {
-                return ParseFunctionDeclaration()
+                return ParseFunctionDeclaration(mods, modCount)
+            }
+
+            if IsKeywordText("field") || IsKeywordText("property") || IsKeywordText("constructor")
+            {
+                return ParseClassMemberCore(mods, modCount)
             }
 
             let stmt = ParseStatement()
@@ -203,9 +226,184 @@ namespace MiniParser
             return gs
         }
 
-        private function ParseFunctionDeclaration(): Node
+        private function IsModifier(): bool
+        {
+            let k = KindName()
+            return k == "PublicKeyword" || k == "PrivateKeyword" || k == "InternalKeyword" ||
+                k == "ProtectedKeyword" || k == "StaticKeyword" || k == "ReadonlyKeyword" ||
+                k == "SealedKeyword" || k == "VirtualKeyword" || k == "OverrideKeyword"
+        }
+
+        private function ParseClassDeclaration(): Node
+        {
+            let cls = Node.MakeCompound("ClassDeclaration")
+            if IsKeywordText("class")
+            {
+                cls.Add(Match("ClassKeyword"))
+            }
+            else
+            {
+                cls.Add(Match("StructKeyword"))
+            }
+
+            cls.Add(Match("IdentifierToken"))
+
+            if KindName() == "ExtendsKeyword"
+            {
+                let first = Node.MakeCompound("TypeClause")
+                first.Add(Match("ExtendsKeyword"))
+                first.Add(Match("IdentifierToken"))
+                cls.Add(first)
+
+                while KindName() == "CommaToken"
+                {
+                    Advance() // 消费逗号（C# 侧合成空文本 ColonToken）
+                    let next = Node.MakeCompound("TypeClause")
+                    next.Add(Node.MakeToken("ColonToken", ""))
+                    next.Add(Match("IdentifierToken"))
+                    cls.Add(next)
+                }
+            }
+
+            cls.Add(Match("OpenBraceToken"))
+            while KindName() != "CloseBraceToken" && _cur.Kind() != "EOF"
+            {
+                cls.Add(ParseClassMember())
+            }
+
+            cls.Add(Match("CloseBraceToken"))
+            return cls
+        }
+
+        private function ParseInterfaceDeclaration(): Node
+        {
+            let iface = Node.MakeCompound("InterfaceDeclaration")
+            iface.Add(Match("InterfaceKeyword"))
+            iface.Add(Match("IdentifierToken"))
+            iface.Add(Match("OpenBraceToken"))
+            while KindName() != "CloseBraceToken" && _cur.Kind() != "EOF"
+            {
+                iface.Add(ParseClassMember())
+            }
+
+            iface.Add(Match("CloseBraceToken"))
+            return iface
+        }
+
+        private function ParseClassMember(): Node
+        {
+            let mods = new Node[8]
+            var modCount = 0
+            while IsModifier()
+            {
+                mods[modCount] = Match(KindName())
+                modCount = modCount + 1
+            }
+
+            if IsKeywordText("function")
+            {
+                return ParseFunctionDeclaration(mods, modCount)
+            }
+
+            return ParseClassMemberCore(mods, modCount)
+        }
+
+        private function ParseClassMemberCore(mods: Node[], modCount: i32): Node
+        {
+            if IsKeywordText("field")
+            {
+                Advance() // field 关键字不入节点（C# 侧）
+                let f = Node.MakeCompound("ClassFieldDeclaration")
+                var i = 0
+                while i < modCount
+                {
+                    f.Add(mods[i])
+                    i = i + 1
+                }
+
+                f.Add(Match("IdentifierToken"))
+                if KindName() == "ColonToken"
+                {
+                    f.Add(ParseTypeClause())
+                }
+
+                return f
+            }
+
+            if IsKeywordText("property")
+            {
+                let p = Node.MakeCompound("PropertyDeclaration")
+                var i = 0
+                while i < modCount
+                {
+                    p.Add(mods[i])
+                    i = i + 1
+                }
+
+                p.Add(Match("PropertyKeyword"))
+                p.Add(Match("IdentifierToken"))
+                if KindName() == "ColonToken"
+                {
+                    p.Add(ParseTypeClause())
+                }
+
+                p.Add(Match("OpenBraceToken"))
+                while KindName() == "GetKeyword" || KindName() == "SetKeyword"
+                {
+                    let acc = Node.MakeCompound("PropertyAccessor")
+                    acc.Add(Match(KindName()))
+                    p.Add(acc)
+                }
+
+                p.Add(Match("CloseBraceToken"))
+                return p
+            }
+
+            if IsKeywordText("constructor")
+            {
+                let c = Node.MakeCompound("ConstructorDeclaration")
+                var i = 0
+                while i < modCount
+                {
+                    c.Add(mods[i])
+                    i = i + 1
+                }
+
+                c.Add(Match("ConstructorKeyword"))
+                c.Add(Match("OpenParenthesisToken"))
+                if KindName() != "CloseParenthesisToken"
+                {
+                    c.Add(ParseParameter())
+                    while KindName() == "CommaToken"
+                    {
+                        c.Add(Match("CommaToken"))
+                        c.Add(ParseParameter())
+                    }
+                }
+
+                c.Add(Match("CloseParenthesisToken"))
+                if KindName() == "OpenBraceToken"
+                {
+                    c.Add(ParseBlockStatement())
+                }
+
+                return c
+            }
+
+            // 兜底：按语句解析（GlobalStatement 由调用方决定）
+            return ParseStatement()
+        }
+
+        private function ParseFunctionDeclaration(mods: Node[], modCount: i32): Node
         {
             let fn = Node.MakeCompound("FunctionDeclaration")
+            var mi = 0
+            while mi < modCount
+            {
+                fn.Add(mods[mi])
+                mi = mi + 1
+            }
+
             fn.Add(Match("FunctionKeyword"))
             fn.Add(Match("IdentifierToken"))
             fn.Add(Match("OpenParenthesisToken"))
@@ -254,9 +452,24 @@ namespace MiniParser
 
         private function ParseTypeClause(): Node
         {
+            let colon = Match("ColonToken")
+            let name = Match("IdentifierToken")
+            if KindName() == "LessToken"
+            {
+                let gt = Node.MakeCompound("GenericTypeClause")
+                gt.Add(colon)
+                gt.Add(name)
+                gt.Add(Match("LessToken"))
+                let arg = Node.MakeCompound("TypeClause")
+                arg.Add(Match("IdentifierToken"))
+                gt.Add(arg)
+                gt.Add(Match("GreaterToken"))
+                return gt
+            }
+
             let tc = Node.MakeCompound("TypeClause")
-            tc.Add(Match("ColonToken"))
-            tc.Add(Match("IdentifierToken"))
+            tc.Add(colon)
+            tc.Add(name)
             return tc
         }
 
@@ -309,7 +522,36 @@ namespace MiniParser
 
             if IsKeywordText("for")
             {
+                if LookKindName() == "OpenParenthesisToken"
+                {
+                    return ParseForStatement()
+                }
+
                 return ParseForRangeStatement()
+            }
+
+            if IsKeywordText("try")
+            {
+                return ParseTryStatement()
+            }
+
+            if IsKeywordText("foreach")
+            {
+                return ParseForeachStatement()
+            }
+
+            if IsKeywordText("break")
+            {
+                let b = Node.MakeCompound("BreakStatement")
+                b.Add(Match("BreakKeyword"))
+                return b
+            }
+
+            if IsKeywordText("continue")
+            {
+                let c = Node.MakeCompound("ContinueStatement")
+                c.Add(Match("ContinueKeyword"))
+                return c
             }
 
             let es = Node.MakeCompound("ExpressionStatement")
@@ -339,6 +581,85 @@ namespace MiniParser
             let node = Node.MakeCompound("WhileStatement")
             node.Add(Match("WhileKeyword"))
             node.Add(ParseExpression())
+            node.Add(ParseStatement())
+            return node
+        }
+
+        private function ParseTryStatement(): Node
+        {
+            let node = Node.MakeCompound("TryStatement")
+            node.Add(Match("TryKeyword"))
+            node.Add(ParseBlockStatement())
+            while IsKeywordText("catch")
+            {
+                let cc = Node.MakeCompound("CatchClause")
+                cc.Add(Match("CatchKeyword"))
+                cc.Add(Match("IdentifierToken"))
+                if KindName() == "ColonToken"
+                {
+                    cc.Add(ParseTypeClause())
+                }
+
+                cc.Add(ParseBlockStatement())
+                node.Add(cc)
+            }
+
+            if IsKeywordText("finally")
+            {
+                let fc = Node.MakeCompound("FinallyClause")
+                fc.Add(Match("FinallyKeyword"))
+                fc.Add(ParseBlockStatement())
+                node.Add(fc)
+            }
+
+            return node
+        }
+
+        private function ParseForeachStatement(): Node
+        {
+            let node = Node.MakeCompound("ForeachStatement")
+            node.Add(Match("ForeachKeyword"))
+            node.Add(Match("OpenParenthesisToken"))
+            if IsKeywordText("var")
+            {
+                node.Add(Match("VarKeyword"))
+            }
+            else
+            {
+                node.Add(Match("LetKeyword"))
+            }
+
+            node.Add(Match("IdentifierToken"))
+            node.Add(Match("InKeyword"))
+            node.Add(ParseExpression())
+            node.Add(Match("CloseParenthesisToken"))
+            node.Add(ParseStatement())
+            return node
+        }
+
+        private function ParseForStatement(): Node
+        {
+            let node = Node.MakeCompound("ForStatement")
+            node.Add(Match("ForKeyword"))
+            node.Add(Match("OpenParenthesisToken"))
+            if KindName() != "SemicolonToken"
+            {
+                node.Add(ParseStatement())
+            }
+
+            node.Add(Match("SemicolonToken"))
+            if KindName() != "SemicolonToken"
+            {
+                node.Add(ParseExpression())
+            }
+
+            node.Add(Match("SemicolonToken"))
+            if KindName() != "CloseParenthesisToken"
+            {
+                node.Add(ParseExpression())
+            }
+
+            node.Add(Match("CloseParenthesisToken"))
             node.Add(ParseStatement())
             return node
         }
@@ -525,6 +846,7 @@ namespace MiniParser
         private function ParseIdentifierPostfix(): Node
         {
             let ident = Match("IdentifierToken")
+            var result = Node.MakeCompound("NameExpression")
             if KindName() == "OpenParenthesisToken"
             {
                 let call = Node.MakeCompound("CallExpression")
@@ -541,10 +863,9 @@ namespace MiniParser
                 }
 
                 call.Add(Match("CloseParenthesisToken"))
-                return call
+                result = call
             }
-
-            if KindName() == "DotToken"
+            else if KindName() == "DotToken"
             {
                 let dot = Match("DotToken")
                 let member = Match("IdentifierToken")
@@ -569,19 +890,36 @@ namespace MiniParser
                     }
 
                     mcall.Add(Match("CloseParenthesisToken"))
-                    return mcall
+                    result = mcall
                 }
-
-                let ma = Node.MakeCompound("MemberAccessExpression")
-                ma.Add(ident)
-                ma.Add(dot)
-                ma.Add(member)
-                return ma
+                else
+                {
+                    let ma = Node.MakeCompound("MemberAccessExpression")
+                    let recv2 = Node.MakeCompound("NameExpression")
+                    recv2.Add(ident)
+                    ma.Add(recv2)
+                    ma.Add(dot)
+                    ma.Add(member)
+                    result = ma
+                }
+            }
+            else
+            {
+                let name = Node.MakeCompound("NameExpression")
+                name.Add(ident)
+                result = name
             }
 
-            let name = Node.MakeCompound("NameExpression")
-            name.Add(ident)
-            return name
+            if KindName() == "PlusPlusToken" || KindName() == "MinusMinusToken"
+            {
+                let isPlus = KindName() == "PlusPlusToken"
+                let post = Node.MakeCompound(isPlus ? "PostfixIncrementExpression" : "PostfixDecrementExpression")
+                post.Add(result)
+                post.Add(Match(KindName()))
+                return post
+            }
+
+            return result
         }
 
         private function ParseParenthesizedOrLambda(): Node
