@@ -27,6 +27,7 @@ namespace MiniBinder
         private field _locals: string[]
         private field _localCount: i32
         private field _currentFunction: FunctionSymbol
+        private field _boundRoots: Node[]
         private field _diags: string[]
         private field _diagCount: i32
         private field _mainName: string
@@ -49,6 +50,7 @@ namespace MiniBinder
             b._localCount = 0
             b._diags = new string[8]
             b._diagCount = 0
+            b._boundRoots = new Node[8]
             b._mainName = "<none>"
             return b
         }
@@ -86,7 +88,7 @@ namespace MiniBinder
                 let kind = member.Kind()
                 if kind == "FunctionDeclaration"
                 {
-                    CheckFunctionBody(member, _functions[fi])
+                    CheckFunctionBody(member, _functions[fi], fi)
                     fi = fi + 1
                 }
                 else if kind == "GlobalStatement"
@@ -265,8 +267,8 @@ namespace MiniBinder
             AddVariable(VariableSymbol.Create(name, type))
         }
 
-        /// <summary>第二遍：函数体检查（参数名/类型集供体内解析；局部作用域清零）。</summary>
-        private function CheckFunctionBody(node: Node, fn: FunctionSymbol): void
+        /// <summary>第二遍：函数体检查（参数名/类型集供体内解析；局部作用域清零；同步构建绑定树）。</summary>
+        private function CheckFunctionBody(node: Node, fn: FunctionSymbol, index: i32): void
         {
             _paramNames = new string[fn.ParamCount() + 8]
             _paramTypes = new string[fn.ParamCount() + 8]
@@ -288,6 +290,20 @@ namespace MiniBinder
                 if child.Kind() == "BlockStatement"
                 {
                     CheckNode(child)
+                    if index >= _boundRoots.Length
+                    {
+                        var bigger = new Node[_boundRoots.Length * 2]
+                        var j = 0
+                        while j < _boundRoots.Length
+                        {
+                            bigger[j] = _boundRoots[j]
+                            j = j + 1
+                        }
+
+                        _boundRoots = bigger
+                    }
+
+                    _boundRoots[index] = BuildBound(child)
                 }
 
                 i = i + 1
@@ -693,6 +709,348 @@ namespace MiniBinder
         public function DiagnosticAt(index: i32): string
         {
             return _diags[index]
+        }
+
+        // ── M9-a5：绑定树构建与规范化 dump（复用 MiniParser.Node：kind=绑定节点名、text=载荷、token 子=载荷）──
+
+        /// <summary>绑定树规范化 dump：(Kind 载荷 子...) 单行空格分隔；token 子只出 text；无优先级括号。</summary>
+        public function DescribeBoundTrees(): string
+        {
+            var sb = ""
+            var i = 0
+            while i < _functionCount
+            {
+                if _boundRoots[i] != null
+                {
+                    sb = sb + _functionNames[i] + ": " + BindDump(_boundRoots[i]) + "\n"
+                }
+
+                i = i + 1
+            }
+
+            return sb
+        }
+
+        private function BindDump(node: Node): string
+        {
+            if node.IsToken()
+            {
+                return node.Text()
+            }
+
+            var sb = "(" + node.Kind()
+            if node.Text() != ""
+            {
+                sb = sb + " " + node.Text()
+            }
+
+            var i = 0
+            while i < node.ChildCount()
+            {
+                sb = sb + " " + BindDump(node.Child(i))
+                i = i + 1
+            }
+
+            return sb + ")"
+        }
+
+        /// <summary>语法 → 绑定树（首片节点集；不支持类型返回 null——语料与节点集同步扩展）。</summary>
+        private function BuildBound(node: Node): Node
+        {
+            let k = node.Kind()
+            if k == "BlockStatement"
+            {
+                let b = Node.MakeCompound("BlockStatement")
+                var i = 0
+                while i < node.ChildCount()
+                {
+                    let child = node.Child(i)
+                    if !child.IsToken()
+                    {
+                        let built = BuildBound(child)
+                        if built != null
+                        {
+                            b.Add(built)
+                        }
+                    }
+
+                    i = i + 1
+                }
+
+                return b
+            }
+
+            if k == "ReturnStatement"
+            {
+                let r = Node.MakeCompound("ReturnStatement")
+                var i = 0
+                while i < node.ChildCount()
+                {
+                    let child = node.Child(i)
+                    if !child.IsToken()
+                    {
+                        r.Add(BuildBound(child))
+                    }
+
+                    i = i + 1
+                }
+
+                return r
+            }
+
+            if k == "ExpressionStatement"
+            {
+                let e = Node.MakeCompound("ExpressionStatement")
+                var i = 0
+                while i < node.ChildCount()
+                {
+                    let child = node.Child(i)
+                    if !child.IsToken()
+                    {
+                        e.Add(BuildBound(child))
+                    }
+
+                    i = i + 1
+                }
+
+                return e
+            }
+
+            if k == "VariableDeclaration"
+            {
+                let d = Node.MakeCompound("VariableDeclaration")
+                d.Add(Node.MakeToken("decl", DeclWordOf(node)))
+                var i = 0
+                while i < node.ChildCount()
+                {
+                    let child = node.Child(i)
+                    let ck = child.Kind()
+                    if ck == "IdentifierToken"
+                    {
+                        d.Add(Node.MakeToken("name", child.Text()))
+                    }
+                    else if !child.IsToken() && ck != "TypeClause" && ck != "ArrayTypeClause" && ck != "GenericTypeClause"
+                    {
+                        let built = BuildBound(child)
+                        if built != null
+                        {
+                            d.Add(built)
+                        }
+                    }
+
+                    i = i + 1
+                }
+
+                return d
+            }
+
+            if k == "IfStatement"
+            {
+                let f = Node.MakeCompound("IfStatement")
+                var i = 0
+                while i < node.ChildCount()
+                {
+                    let child = node.Child(i)
+                    if child.IsToken() || child.Kind() == "IfKeyword"
+                    {
+                        i = i + 1
+                        continue
+                    }
+
+                    if child.Kind() == "ElseClause"
+                    {
+                        var j = 0
+                        while j < child.ChildCount()
+                        {
+                            let inner = child.Child(j)
+                            if !inner.IsToken()
+                            {
+                                f.Add(BuildBound(inner))
+                            }
+
+                            j = j + 1
+                        }
+                    }
+                    else
+                    {
+                        f.Add(BuildBound(child))
+                    }
+
+                    i = i + 1
+                }
+
+                return f
+            }
+
+            if k == "WhileStatement"
+            {
+                let w = Node.MakeCompound("WhileStatement")
+                var i = 0
+                while i < node.ChildCount()
+                {
+                    let child = node.Child(i)
+                    if !child.IsToken()
+                    {
+                        w.Add(BuildBound(child))
+                    }
+
+                    i = i + 1
+                }
+
+                return w
+            }
+
+            if k == "AssignmentExpression"
+            {
+                let a = Node.MakeCompound("AssignmentExpression")
+                let target = node.Child(0)
+                a.Add(Node.MakeToken("name", target.Child(0).Text()))
+                a.Add(BuildBound(node.Child(2)))
+                return a
+            }
+
+            if k == "BinaryExpression"
+            {
+                let b = Node.MakeCompound("BinaryExpression")
+                b.Add(Node.MakeToken("op", BinaryGlyphOf(node)))
+                b.Add(BuildBound(node.Child(0)))
+                b.Add(BuildBound(node.Child(2)))
+                return b
+            }
+
+            if k == "UnaryExpression"
+            {
+                let u = Node.MakeCompound("UnaryExpression")
+                u.Add(Node.MakeToken("op", UnaryGlyphOf(node)))
+                var i = 0
+                while i < node.ChildCount()
+                {
+                    let child = node.Child(i)
+                    if !child.IsToken()
+                    {
+                        u.Add(BuildBound(child))
+                    }
+
+                    i = i + 1
+                }
+
+                return u
+            }
+
+            if k == "NameExpression"
+            {
+                let v = Node.MakeCompound("VariableExpression")
+                v.Add(Node.MakeToken("name", node.Child(0).Text()))
+                return v
+            }
+
+            if k == "CallExpression"
+            {
+                let c = Node.MakeCompound("CallExpression")
+                c.Add(Node.MakeToken("name", node.Child(0).Text()))
+                var i = 1
+                while i < node.ChildCount()
+                {
+                    let child = node.Child(i)
+                    if !child.IsToken()
+                    {
+                        c.Add(BuildBound(child))
+                    }
+
+                    i = i + 1
+                }
+
+                return c
+            }
+
+            if k == "LiteralExpression"
+            {
+                let l = Node.MakeCompound("LiteralExpression")
+                l.Add(node.Child(0))
+                return l
+            }
+
+            if k == "ParenthesizedExpression"
+            {
+                var i = 0
+                while i < node.ChildCount()
+                {
+                    let child = node.Child(i)
+                    if !child.IsToken()
+                    {
+                        return BuildBound(child)
+                    }
+
+                    i = i + 1
+                }
+
+                return null
+            }
+
+            return null
+        }
+
+        private function DeclWordOf(node: Node): string
+        {
+            var i = 0
+            while i < node.ChildCount()
+            {
+                let k = node.Child(i).Kind()
+                if k == "LetKeyword"
+                {
+                    return "let"
+                }
+
+                if k == "VarKeyword"
+                {
+                    return "var"
+                }
+
+                i = i + 1
+            }
+
+            return "var"
+        }
+
+        private function BinaryGlyphOf(node: Node): string
+        {
+            var i = 0
+            while i < node.ChildCount()
+            {
+                let k = node.Child(i).Kind()
+                if k == "PlusToken" { return "+" }
+                if k == "MinusToken" { return "-" }
+                if k == "StarToken" { return "*" }
+                if k == "SlashToken" { return "/" }
+                if k == "PercentToken" { return "%" }
+                if k == "EqualsEqualsToken" { return "==" }
+                if k == "BangEqualsToken" { return "!=" }
+                if k == "LessToken" { return "<" }
+                if k == "LessEqualsToken" { return "<=" }
+                if k == "GreaterToken" { return ">" }
+                if k == "GreaterEqualsToken" { return ">=" }
+                if k == "AndKeyword" || k == "AmpersandAmpersandToken" { return "&&" }
+                if k == "OrKeyword" || k == "PipePipeToken" { return "||" }
+                i = i + 1
+            }
+
+            return "?"
+        }
+
+        private function UnaryGlyphOf(node: Node): string
+        {
+            var i = 0
+            while i < node.ChildCount()
+            {
+                let k = node.Child(i).Kind()
+                if k == "PlusToken" { return "+" }
+                if k == "MinusToken" { return "-" }
+                if k == "BangToken" { return "!" }
+                if k == "TildeToken" { return "~" }
+                i = i + 1
+            }
+
+            return "?"
         }
 
         private function ReportError(message: string): void

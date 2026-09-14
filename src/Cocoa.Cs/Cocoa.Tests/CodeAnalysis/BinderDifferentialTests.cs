@@ -187,6 +187,213 @@ namespace Cocoa.Tests.CodeAnalysis
             Assert.True(failures.Count == 0, "\n" + string.Join("\n", failures));
         }
 
+        private static string[] BoundCorpus() => new[]
+        {
+            "function Main(): i32\n{\n    let x = 1\n    let y = x + 2 * 3\n    return y\n}\n",
+            "function Main(): i32\n{\n    let a = -5\n    let b = !(1 == 2)\n    return a\n}\n",
+            "function Add(a: i32, b: i32): i32\n{\n    return a + b\n}\n\nfunction Main(): i32\n{\n    return Add(1, 2)\n}\n",
+            // 控制流（if/while）在 C# 绑定器已降级为 label/goto/conditionalgoto——与 Lowering dump 一并随增量四差分
+        };
+
+        [Fact]
+        public void SelfBinder_BoundTree_Match_CSharp_ForCorpus()
+        {
+            // M9-a5（增量四前哨）：绑定树规范化 dump 差分（(Kind ...) 单行树形，无优先级括号；
+            // 语料限首片节点集：块/return/表达式语句/局部声明/if/while/赋值/字面量/变量/一元/二元/调用）
+            var failures = new List<string>();
+            foreach (var source in BoundCorpus())
+            {
+                var compilation = Compilation.Create(SyntaxTree.Parse(source));
+                var program = compilation.GetProgram();
+                var csharpParts = new List<string>();
+                foreach (var function in compilation.Functions)
+                {
+                    if (program.Functions.TryGetValue(function, out var body))
+                    {
+                        csharpParts.Add(function.Name + ": " + BoundTreeDump(body));
+                    }
+                }
+
+                var reference = string.Join("\n", csharpParts);
+                var self = SelfBinderBoundDump(source);
+
+                if (self != reference)
+                {
+                    failures.Add($"SOURCE: {source.Replace("\n", "\\n")}\nC#  : {reference.Replace("\n", "\\n")}\nself: {self.Replace("\n", "\\n")}\n-----");
+                }
+            }
+
+            Assert.True(failures.Count == 0, "\n" + string.Join("\n", failures));
+        }
+
+        /// <summary>绑定树规范化 dump（首片）：(Kind ...) 单行空格分隔；载荷内嵌；无优先级括号。</summary>
+        private static string BoundTreeDump(Cocoa.CodeAnalysis.Binding.BoundNode node)
+        {
+            var sb = new StringBuilder();
+            DumpBound(node, sb);
+            return sb.ToString();
+        }
+
+        private static void DumpBound(Cocoa.CodeAnalysis.Binding.BoundNode node, StringBuilder sb)
+        {
+            switch (node.Kind)
+            {
+                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.SequencePointStatement:
+                    // 调试序列点为绑定器实现细节（语句+源位置包装），不属语义树形 → 透传
+                    DumpBound(((Cocoa.CodeAnalysis.Binding.BoundSequencePointStatement)node).Statement, sb);
+                    break;
+                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.BlockStatement:
+                {
+                    sb.Append("(BlockStatement");
+                    foreach (var statement in ((Cocoa.CodeAnalysis.Binding.BoundBlockStatement)node).Statements)
+                    {
+                        sb.Append(' ');
+                        DumpBound(statement, sb);
+                    }
+
+                    sb.Append(')');
+                    break;
+                }
+                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.ReturnStatement:
+                {
+                    var r = (Cocoa.CodeAnalysis.Binding.BoundReturnStatement)node;
+                    sb.Append("(ReturnStatement");
+                    if (r.Expression != null)
+                    {
+                        sb.Append(' ');
+                        DumpBound(r.Expression, sb);
+                    }
+
+                    sb.Append(')');
+                    break;
+                }
+                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.ExpressionStatement:
+                {
+                    sb.Append("(ExpressionStatement ");
+                    DumpBound(((Cocoa.CodeAnalysis.Binding.BoundExpressionStatement)node).Expression, sb);
+                    sb.Append(')');
+                    break;
+                }
+                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.VariableDeclaration:
+                {
+                    var d = (Cocoa.CodeAnalysis.Binding.BoundVariableDeclaration)node;
+                    sb.Append("(VariableDeclaration ").Append(d.Variable.IsReadOnly ? "let" : "var").Append(' ').Append(d.Variable.Name).Append(' ');
+                    DumpBound(d.Initializer, sb);
+                    sb.Append(')');
+                    break;
+                }
+                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.IfStatement:
+                {
+                    var i = (Cocoa.CodeAnalysis.Binding.BoundIfStatement)node;
+                    sb.Append("(IfStatement ");
+                    DumpBound(i.Condition, sb);
+                    sb.Append(' ');
+                    DumpBound(i.ThenStatement, sb);
+                    if (i.ElseStatement != null)
+                    {
+                        sb.Append(' ');
+                        DumpBound(i.ElseStatement, sb);
+                    }
+
+                    sb.Append(')');
+                    break;
+                }
+                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.WhileStatement:
+                {
+                    var w = (Cocoa.CodeAnalysis.Binding.BoundWhileStatement)node;
+                    sb.Append("(WhileStatement ");
+                    DumpBound(w.Condition, sb);
+                    sb.Append(' ');
+                    DumpBound(w.Body, sb);
+                    sb.Append(')');
+                    break;
+                }
+                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.LiteralExpression:
+                {
+                    var l = (Cocoa.CodeAnalysis.Binding.BoundLiteralExpression)node;
+                    sb.Append("(LiteralExpression ").Append(FormatLiteral(l)).Append(')');
+                    break;
+                }
+                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.VariableExpression:
+                {
+                    sb.Append("(VariableExpression ").Append(((Cocoa.CodeAnalysis.Binding.BoundVariableExpression)node).Variable.Name).Append(')');
+                    break;
+                }
+                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.AssignmentExpression:
+                {
+                    var a = (Cocoa.CodeAnalysis.Binding.BoundAssignmentExpression)node;
+                    sb.Append("(AssignmentExpression ").Append(a.Variable.Name).Append(' ');
+                    DumpBound(a.Expression, sb);
+                    sb.Append(')');
+                    break;
+                }
+                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.UnaryExpression:
+                {
+                    var u = (Cocoa.CodeAnalysis.Binding.BoundUnaryExpression)node;
+                    sb.Append("(UnaryExpression ").Append(Cocoa.CodeAnalysis.Binding.BoundOperatorText.UnaryGlyph(u.Op.Kind)).Append(' ');
+                    DumpBound(u.Operand, sb);
+                    sb.Append(')');
+                    break;
+                }
+                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.BinaryExpression:
+                {
+                    var b = (Cocoa.CodeAnalysis.Binding.BoundBinaryExpression)node;
+                    sb.Append("(BinaryExpression ").Append(Cocoa.CodeAnalysis.Binding.BoundOperatorText.BinaryGlyph(b.Op.Kind)).Append(' ');
+                    DumpBound(b.Left, sb);
+                    sb.Append(' ');
+                    DumpBound(b.Right, sb);
+                    sb.Append(')');
+                    break;
+                }
+                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.CallExpression:
+                {
+                    var c = (Cocoa.CodeAnalysis.Binding.BoundCallExpression)node;
+                    sb.Append("(CallExpression ").Append(c.Function.Name);
+                    foreach (var argument in c.Arguments)
+                    {
+                        sb.Append(' ');
+                        DumpBound(argument, sb);
+                    }
+
+                    sb.Append(')');
+                    break;
+                }
+                default:
+                    throw new Exception($"Bound dump: unsupported node kind '{node.Kind}' (extend BoundCorpus/printer together)");
+            }
+        }
+
+        private static string FormatLiteral(Cocoa.CodeAnalysis.Binding.BoundLiteralExpression node)
+        {
+            if (node.Value == null)
+            {
+                return "null";
+            }
+
+            if (node.Type == Cocoa.CodeAnalysis.Symbols.TypeSymbol.Boolean)
+            {
+                return (bool)node.Value ? "true" : "false";
+            }
+
+            if (node.Type == Cocoa.CodeAnalysis.Symbols.TypeSymbol.Double)
+            {
+                return ((double)node.Value).ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            if (node.Type == Cocoa.CodeAnalysis.Symbols.TypeSymbol.String)
+            {
+                return "\"" + node.Value.ToString()!.Replace("\"", "\"\"") + "\"";
+            }
+
+            if (node.Type == Cocoa.CodeAnalysis.Symbols.TypeSymbol.Char)
+            {
+                var text = ((char)node.Value).ToString().Replace("\\", "\\\\").Replace("\n", "\\n").Replace("\t", "\\t").Replace("'", "\\'");
+                return "'" + text + "'";
+            }
+
+            return node.Value.ToString()!;
+        }
+
         [Fact]
         public void DumpObservation_Symbols()
         {
@@ -206,7 +413,7 @@ namespace Cocoa.Tests.CodeAnalysis
 
         private static string BinderMainSource(string embedded)
         {
-            return "using MiniBinder\nusing System\n\nfunction Main(): i32\n{\n    let b = MiniBinder.Binder.Create(\"" + embedded + "\")\n    b.BindCompilationUnit()\n    System.Console.WriteLine(b.DescribeSymbols())\n    var i = 0\n    while i < b.DiagnosticCount()\n    {\n        System.Console.WriteLine(b.DiagnosticAt(i))\n        i = i + 1\n    }\n\n    return 0\n}";
+            return "using MiniBinder\nusing System\n\nfunction Main(): i32\n{\n    let b = MiniBinder.Binder.Create(\"" + embedded + "\")\n    b.BindCompilationUnit()\n    System.Console.WriteLine(b.DescribeSymbols())\n    var i = 0\n    while i < b.DiagnosticCount()\n    {\n        System.Console.WriteLine(b.DiagnosticAt(i))\n        i = i + 1\n    }\n\n    System.Console.WriteLine(\"#BOUND\")\n    System.Console.WriteLine(b.DescribeBoundTrees())\n    return 0\n}";
         }
 
         private static string[] References() => new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location };
@@ -226,7 +433,12 @@ namespace Cocoa.Tests.CodeAnalysis
             return RunSelfBinder(source).Diags;
         }
 
-        private static (string Output, int DiagCount, IReadOnlyList<string> Diags) RunSelfBinder(string source)
+        private static string SelfBinderBoundDump(string source)
+        {
+            return RunSelfBinder(source).Bound;
+        }
+
+        private static (string Output, int DiagCount, IReadOnlyList<string> Diags, string Bound) RunSelfBinder(string source)
         {
             var embedded = source.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n");
             var root = RepoRoot();
@@ -261,16 +473,26 @@ namespace Cocoa.Tests.CodeAnalysis
                 if (result.Diagnostics.HasErrors())
                 {
                     var message = "COCOMPILE-ERROR: " + string.Join(" | ", result.Diagnostics.Select(d => d.Message));
-                    return (message, 0, Array.Empty<string>());
+                    return (message, 0, Array.Empty<string>(), "");
                 }
 
                 var output = writer.ToString().Replace("\r\n", "\n").TrimEnd('\n');
                 var diagCount = 0;
                 var diags = new List<string>();
                 var symbolLines = new List<string>();
+                var boundLines = new List<string>();
+                var inBound = false;
                 foreach (var line in output.Split('\n'))
                 {
-                    if (line.StartsWith("error:", StringComparison.Ordinal))
+                    if (line == "#BOUND")
+                    {
+                        inBound = true;
+                    }
+                    else if (inBound)
+                    {
+                        boundLines.Add(line);
+                    }
+                    else if (line.StartsWith("error:", StringComparison.Ordinal))
                     {
                         diagCount = diagCount + 1;
                         diags.Add(line.Substring("error:".Length).Trim());
@@ -281,7 +503,7 @@ namespace Cocoa.Tests.CodeAnalysis
                     }
                 }
 
-                return (string.Join("\n", symbolLines).TrimEnd('\n'), diagCount, diags);
+                return (string.Join("\n", symbolLines).TrimEnd('\n'), diagCount, diags, string.Join("\n", boundLines).TrimEnd('\n'));
             }
             finally
             {
