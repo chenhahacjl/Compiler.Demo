@@ -8,6 +8,12 @@
 
 ## 未发布（2026-09-14）
 
+### 阶段 7 增量三 M9-a0/a1：自举 Binder 符号声明面 + 差分基建（2026-09-14）
+- **差分基建**：自举 `Binder/Binder.co`（namespace `MiniBinder`）按 kind+子索引遍历自举 Parser 树（`Node` 补访问器）；`BinderDifferentialTests.SymbolDump(Compilation)` 为 C# 基准，自举 `DescribeSymbols()` 输出同构行（`CanonicalType` 规范名映射 + 字面量 var 推断 + `main: Main` 判定）。
+- **符号面差分 11 语料逐字节一致**（函数签名/全局变量/推断/规范名映射）；`SelfBinderDump` 走 Lexer/Parser/Binder 三源 + Evaluator 端到端（复用增量二模式）。
+- **B0 扩展**：`Main.co` 输出 `--- symbols ---` 段；`BootstrapperSmokeTests` ×双后端断言 `function Main(): void`/`main: Main`。
+- **结构规范统一**：自举源码一类一文件（`Token.co`/`Node.co`/`FunctionSymbol.co`/`VariableSymbol.co` 独立成文件，文件名==主类名），coproj 与 5 处测试源码加载点同步。
+
 ### 阶段 7 增量二 M8-a11/a12 收官：自举 Syntax/Parser 完成（2026-09-14）
 - **M8-a11 B0 扩展**：`Cocoa.Co.coproj` 纳入 `Parser\Parser.co`，`Main.co` 读文件 → token 输出 → `--- tree ---` 规范树 dump + 诊断行；`BootstrapperSmokeTests` ×双后端（dotnet net9.0 / native x64）断言树与零诊断。
 - **M8-a12 错误恢复与诊断差分**：自举 Parser 新增诊断面（`Match` 失配/兜底 token 报告，含行列与期望/实际 kind）；`SelfParser_ReportsErrors_ForInvalidCorpus` 6 组无效程序（缺括号/缺表达式/缺名字/枚举缺逗号/括号未闭合等）**双方言同报错**；有效程序零诊断由 39 语料 + 33 样例的逐字节树比较隐式锁定。
