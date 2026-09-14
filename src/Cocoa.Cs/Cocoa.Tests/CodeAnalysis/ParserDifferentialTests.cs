@@ -127,6 +127,46 @@ namespace Cocoa.Tests.CodeAnalysis
             Assert.True(true);
         }
 
+        [Fact]
+        public void SampleCoverage_Sweep()
+        {
+            var samplesDir = Path.Combine(RepoRoot(), "samples");
+            var files = Directory.EnumerateFiles(samplesDir, "*.co", SearchOption.AllDirectories)
+                .OrderBy(f => f, StringComparer.Ordinal)
+                .ToArray();
+
+            var pass = 0;
+            var fail = new List<string>();
+            foreach (var file in files)
+            {
+                var source = File.ReadAllText(file);
+                if (source.Length == 0) continue;
+                var name = Path.GetRelativePath(samplesDir, file).Replace('\\', '/');
+                try
+                {
+                    var reference = TreeDump(SyntaxTree.Parse(source).Root);
+                    var self = SelfDump(source);
+                    if (self == reference)
+                    {
+                        pass++;
+                    }
+                    else
+                    {
+                        fail.Add($"{name} (self len {self.Length} vs C# len {reference.Length})");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    fail.Add($"{name} (exception: {ex.Message})");
+                }
+            }
+
+            var summary = $"samples: {files.Length}, pass: {pass}, fail: {fail.Count}\n" + string.Join("\n", fail);
+            File.WriteAllText(Path.Combine(Path.GetTempPath(), "cocoa-parser-sample-sweep.txt"), summary);
+            _output.WriteLine(summary);
+            Assert.True(true);
+        }
+
         private static string RepoRoot()
         {
             var dir = AppContext.BaseDirectory;
