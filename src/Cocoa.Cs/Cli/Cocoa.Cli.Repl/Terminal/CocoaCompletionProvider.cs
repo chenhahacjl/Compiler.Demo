@@ -4,7 +4,7 @@ using System.Linq;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Symbols;
-using CocoaUsingSyntax = Cocoa.CodeAnalysis.Cocoa.Syntax.UsingDirectiveSyntax;
+using CocoaUsingSyntax = Cocoa.CodeAnalysis.Syntax.UsingDirectiveSyntax;
 
 namespace Cocoa.Cli.Repl;
 

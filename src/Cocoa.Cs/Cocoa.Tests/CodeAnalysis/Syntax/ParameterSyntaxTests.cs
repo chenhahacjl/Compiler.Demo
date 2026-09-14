@@ -1,6 +1,5 @@
 using System.Linq;
 using Cocoa.CodeAnalysis;
-using Cocoa.CodeAnalysis.Cocoa.Syntax;
 using Cocoa.CodeAnalysis.Syntax;
 using Xunit;
 

@@ -6,7 +6,7 @@ using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
-using CocoaUsing = Cocoa.CodeAnalysis.Cocoa.Syntax.UsingDirectiveSyntax;
+using CocoaUsing = Cocoa.CodeAnalysis.Syntax.UsingDirectiveSyntax;
 
 namespace Cocoa.IDE.LanguageServices;
 

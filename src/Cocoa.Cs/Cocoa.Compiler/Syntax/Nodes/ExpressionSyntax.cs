@@ -1,0 +1,16 @@
+using Cocoa.CodeAnalysis.Syntax;
+
+namespace Cocoa.CodeAnalysis.Syntax
+{
+    /// <summary>
+    /// 表达式语法
+    /// </summary>
+    public abstract class ExpressionSyntax : CocoaSyntaxNode
+    {
+        private protected ExpressionSyntax(SyntaxTree syntaxTree)
+            : base(syntaxTree)
+        {
+        }
+    }
+}
+

@@ -1,4 +1,3 @@
-using Cocoa.CodeAnalysis.Cocoa.Syntax;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Linq;
 using Xunit;
