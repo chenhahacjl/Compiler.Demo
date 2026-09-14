@@ -328,7 +328,7 @@ namespace Cocoa.CodeAnalysis
         private bool DeclaredFacade(NamedTypeSymbol classType)
         {
             // 部分类任一部分声明含 facade 关键字即算；Declaration 为 null（纯 cod 重建/外部类）按 IsFacadeClass 判定
-            return Language.HasDeclaredFacadeModifier(classType.Declaration);
+            return classType.Declaration?.HasDeclaredFacadeModifier() ?? false;
         }
 
         private bool IsPureContainerClass(NamedTypeSymbol classType)

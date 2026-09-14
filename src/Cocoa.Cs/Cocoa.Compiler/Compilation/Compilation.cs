@@ -52,16 +52,13 @@ namespace Cocoa.CodeAnalysis
         public static void RegisterInterpreterEvaluator(Func<BoundProgram, string[]?, Dictionary<VariableSymbol, object>, object?> evaluator)
             => _interpreterEvaluator = evaluator;
 
-        /// <summary>编译语言（去 C# 方言后恒为 Cocoa）。</summary>
-        public Language Language => Language.Cocoa;
-
         /// <summary>绑定全局作用域（经 <see cref="CocoaBinder"/>.BindGlobalScope 静态编排）。</summary>
         public BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<SyntaxTree> syntaxTrees, string entryPointName, string[]? references, ImmutableArray<CoaProgram> codLibraries)
             => CocoaBinder.BindGlobalScope(isScript, previous, syntaxTrees, entryPointName, references, codLibraries);
 
         /// <summary>绑定程序（含单态化/降级；见 <see cref="BindGlobalScope"/>）。</summary>
-        public BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> codLibraries, Language dialect, bool linkCodDynamically, NamespaceSymbol? globalNamespace)
-            => CocoaBinder.BindProgram(isScript, previous, globalScope, codLibraries, dialect, linkCodDynamically, globalNamespace);
+        public BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> codLibraries, bool linkCodDynamically, NamespaceSymbol? globalNamespace)
+            => CocoaBinder.BindProgram(isScript, previous, globalScope, codLibraries, linkCodDynamically, globalNamespace);
 
         protected Compilation(bool isScript, Compilation? previous, string entryPointName, string[]? references, bool linkCodDynamically = false, params SyntaxTree[] syntaxTrees)
         {
@@ -196,11 +193,10 @@ namespace Cocoa.CodeAnalysis
         }
 
 
-        /// <summary>为指定语法树获取语义模型（对齐 Roslyn <c>Compilation.GetSemanticModel</c>；
-        /// P1-5 经 <see cref="Language.CreateSemanticModel"/> 分派语言专属语义模型）。</summary>
+        /// <summary>为指定语法树获取语义模型（对齐 Roslyn <c>Compilation.GetSemanticModel</c>）。</summary>
         public SemanticModel GetSemanticModel(SyntaxTree syntaxTree)
         {
-            return Language.CreateSemanticModel(this, syntaxTree);
+            return new SemanticModel(this, syntaxTree);
         }
 
 
@@ -212,7 +208,7 @@ namespace Cocoa.CodeAnalysis
         {
             var previous = Previous == null ? null : Previous.GetProgram();
 
-            var program = BindProgram(IsScript, previous, GlobalScope, _codLibraries, SyntaxTrees.IsDefaultOrEmpty ? Language.Cocoa : SyntaxTrees[0].Language, _linkCodDynamically, GlobalNamespace);
+            var program = BindProgram(IsScript, previous, GlobalScope, _codLibraries, _linkCodDynamically, GlobalNamespace);
 
             // Y A2-F1：规范 IR 契约（DEBUG）——消费边界不得有高 Bound 节点泄漏
             Lowering.CanonicalIr.Verify(program);

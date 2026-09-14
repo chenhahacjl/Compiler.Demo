@@ -30,7 +30,7 @@ namespace Cocoa.CodeGen.Native
         private static TextLocation? DeclarationNameLocation(Symbols.FunctionSymbol function)
         {
             var declaration = function.Declaration;
-            return declaration?.SyntaxTree?.Language.GetDeclarationNameLocation(declaration);
+            return declaration?.GetDeclarationNameLocation();
         }
 
         public static ImmutableArray<Diagnostic> Validate(BoundProgram program, Architecture architecture)

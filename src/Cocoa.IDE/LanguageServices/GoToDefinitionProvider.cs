@@ -21,11 +21,10 @@ public static class GoToDefinitionProvider
         var compilation = host.Compilation;
         if (tree == null || compilation == null) return null;
 
-        var language = tree.Language;
         var declaration = FindDeclaration(symbol, host.Model, tree);
         if (declaration == null) return null;
 
-        return TargetFrom(declaration, language, symbol.Name);
+        return TargetFrom(declaration, symbol.Name);
     }
 
     /// <summary>找到符号的声明语法节点（函数/类型自带 Declaration；参数扫函数表；局部变量扫绑定树；类成员回落父类型）。</summary>
@@ -69,11 +68,11 @@ public static class GoToDefinitionProvider
         };
     }
 
-    private static GoToTarget? TargetFrom(SyntaxNode declaration, Language language, string name)
+    private static GoToTarget? TargetFrom(SyntaxNode declaration, string name)
     {
         // 优先：声明节点内与符号同名的标识符 token（精确列）
         var location = FindIdentifier(declaration, name)
-            ?? language.GetDeclarationNameLocation(declaration)
+            ?? declaration.GetDeclarationNameLocation()
             ?? declaration.Location;
 
         var text = location.Text;

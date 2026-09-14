@@ -229,5 +229,64 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return writer.ToString();
             }
         }
+
+        /// <summary>不可达代码位置解析（DiagnosticBag 经此获取；去 Language 门面后为节点实例方法）。</summary>
+        public TextLocation? GetUnreachableCodeLocation()
+        {
+            switch (Kind)
+            {
+                case SyntaxKind.BlockStatement:
+                {
+                    var firstStatement = ((BlockStatementSyntax)this).Statements.FirstOrDefault();
+                    return firstStatement?.GetUnreachableCodeLocation();
+                }
+                case SyntaxKind.VariableDeclaration:
+                {
+                    var variableDeclaration = (VariableDeclarationSyntax)this;
+                    return variableDeclaration.Keyword?.Location ?? variableDeclaration.Location;
+                }
+                case SyntaxKind.IfStatement:
+                    return ((IfStatementSyntax)this).Keyword.Location;
+                case SyntaxKind.WhileStatement:
+                    return ((WhileStatementSyntax)this).Keyword.Location;
+                case SyntaxKind.DoWhileStatement:
+                    return ((DoWhileStatementSyntax)this).DoKeyword.Location;
+                case SyntaxKind.ForStatement:
+                    return ((ForStatementSyntax)this).Keyword.Location;
+                case SyntaxKind.ForeachStatement:
+                    return ((ForeachStatementSyntax)this).Keyword.Location;
+                case SyntaxKind.SwitchStatement:
+                    return ((SwitchStatementSyntax)this).Keyword.Location;
+                case SyntaxKind.BreakStatement:
+                    return ((BreakStatementSyntax)this).Keyword.Location;
+                case SyntaxKind.ContinueStatement:
+                    return ((ContinueStatementSyntax)this).Keyword.Location;
+                case SyntaxKind.ReturnStatement:
+                    return ((ReturnStatementSyntax)this).Keyword.Location;
+                case SyntaxKind.ExpressionStatement:
+                    return ((ExpressionStatementSyntax)this).Expression.GetUnreachableCodeLocation();
+                case SyntaxKind.CallExpression:
+                    return ((CallExpressionSyntax)this).Identifier.Location;
+                case SyntaxKind.MemberCallExpression:
+                    return ((MemberCallExpressionSyntax)this).IdentifierToken.Location;
+                default:
+                    throw new Exception($"Unexpected syntax {Kind}");
+            }
+        }
+
+        /// <summary>声明名 token 位置（Compilation/NativeImportValidator/IDE 经此获取）。</summary>
+        public TextLocation? GetDeclarationNameLocation()
+        {
+            if (this is FunctionDeclarationSyntax fn)
+                return fn.Identifier.Location;
+            if (this is ClassDeclarationSyntax cls)
+                return cls.Identifier.Location;
+            return Location;
+        }
+
+        /// <summary>类声明是否带 facade 修饰符。</summary>
+        public bool HasDeclaredFacadeModifier()
+            => this is ClassDeclarationSyntax cls
+                && cls.Modifiers.Any(m => m.Kind == SyntaxKind.FacadeKeyword);
     }
 }

@@ -47,12 +47,11 @@ namespace Cocoa.CodeAnalysis.Syntax
         }
 
 
-        /// <summary>绿→类型化红节点（S-5 P2-4 随迁语言库）：按 <see cref="Kind"/> 派发到具体类型；
-        /// 语言库各自持有一份构建器（<c>CocoaGreenNodeFactory</c>/<c>CSharpGreenNodeFactory</c>），此处经 
-        /// <see cref="Cocoa.CodeAnalysis.Language.CreateTypedRed"/> 分派；未覆盖的 Kind 回落通用 <see cref="RedNode"/>。</summary>
+        /// <summary>绿→类型化红节点：按 <see cref="Kind"/> 经 <see cref="CocoaGreenNodeFactory"/> 派发到具体类型；
+        /// 未覆盖的 Kind 回落通用 <see cref="RedNode"/>。</summary>
         public SyntaxNode CreateTypedRed(SyntaxTree syntaxTree, int position = 0)
         {
-            return syntaxTree.Language.CreateTypedRed(this, syntaxTree, position);
+            return new CocoaGreenNodeFactory(this).CreateTypedRed(syntaxTree, position);
         }
     }
 }

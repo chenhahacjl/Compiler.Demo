@@ -211,7 +211,7 @@ namespace Cocoa.CodeAnalysis
             var names = new List<string>();
             foreach (var tree in SyntaxTrees)
             {
-                names.AddRange(tree.Language.GetDeclaredNamespaceNames(tree));
+                names.AddRange(tree.GetDeclaredNamespaceNames());
             }
 
             return names.Distinct(StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal).ToImmutableArray();

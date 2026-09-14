@@ -14,10 +14,9 @@ namespace Cocoa.CodeAnalysis.Syntax
                                             out SyntaxNode root,
                                             out ImmutableArray<Diagnostic> diagnostics);
 
-        private SyntaxTree(SourceText text, ParseHandler handler, Language? language = null)
+        private SyntaxTree(SourceText text, ParseHandler handler)
         {
             Text = text;
-            Language = language ?? Language.Cocoa;
 
             handler(this, out var root, out var diagnostics);
 
@@ -36,19 +35,40 @@ namespace Cocoa.CodeAnalysis.Syntax
         /// <summary>红树的不可变绿形式（Phase 4 桥接：经 <see cref="SyntaxNode.ToGreen"/> 惰性转换，可跨树共享）。</summary>
         public GreenNode GreenRoot => _greenRoot ??= Root.ToGreen();
 
-        /// <summary>解析本语法树所用的语言（M2 设计 X：解析前端与类型词汇/拼写分流依据；CO 默认，`.cs` 需装载 CSharp 程序集）。</summary>
-        public Language Language { get; }
+        /// <summary>根成员集合（去 Language 门面后归属语法树）。</summary>
+        public ImmutableArray<SyntaxNode> GetRootMembers()
+            => ((CompilationUnitSyntax)Root).Members.Cast<SyntaxNode>().ToImmutableArray();
+
+        /// <summary>声明的命名空间名集合（递归 namespace 声明）。</summary>
+        public ImmutableArray<string> GetDeclaredNamespaceNames()
+        {
+            var names = new List<string>();
+            CollectNamespaceNames(((CompilationUnitSyntax)Root).Members, names);
+            return names.ToImmutableArray();
+        }
+
+        private static void CollectNamespaceNames(ImmutableArray<MemberSyntax> members, List<string> names)
+        {
+            foreach (var member in members)
+            {
+                if (member is NamespaceDeclarationSyntax ns)
+                {
+                    names.Add(ns.Name);
+                    CollectNamespaceNames(ns.Members, names);
+                }
+            }
+        }
 
         public static SyntaxTree Load(string fileName)
         {
             var text = File.ReadAllText(fileName);
             var sourceText = SourceText.From(text, fileName);
-            return Parse(sourceText, Language.Cocoa);
+            return Parse(sourceText);
         }
 
         private static void Parse(SyntaxTree syntaxTree, out SyntaxNode root, out ImmutableArray<Diagnostic> diagnostics)
         {
-            var parser = syntaxTree.Language.CreateParser(syntaxTree);
+            var parser = new CocoaParser(syntaxTree);
             root = parser.ParseCompilationUnit();
             diagnostics = parser.Diagnostics.ToImmutableArray();
         }
@@ -56,30 +76,19 @@ namespace Cocoa.CodeAnalysis.Syntax
         public static SyntaxTree Parse(string text)
         {
             var sourceText = SourceText.From(text);
-            return Parse(sourceText, Language.Cocoa);
-        }
-
-        public static SyntaxTree Parse(string text, Language language)
-        {
-            var sourceText = SourceText.From(text);
-            return Parse(sourceText, language);
+            return Parse(sourceText);
         }
 
         public static SyntaxTree Parse(SourceText text)
         {
-            return Parse(text, Language.Cocoa);
-        }
-
-        public static SyntaxTree Parse(SourceText text, Language language)
-        {
-            return new SyntaxTree(text, (SyntaxTree syntaxTree, out SyntaxNode root, out ImmutableArray<Diagnostic> diagnostics) => Parse(syntaxTree, out root, out diagnostics), language);
+            return new SyntaxTree(text, (SyntaxTree syntaxTree, out SyntaxNode root, out ImmutableArray<Diagnostic> diagnostics) => Parse(syntaxTree, out root, out diagnostics));
         }
 
         /// <summary>绿→红（Phase 4 桥接 1b 第一步）：由不可变绿树重新物化红树。绿树自描述（文本/trivia 完整），
         /// 经文本重新解析重建；真·惰性红视图（绿槽直构红节点）为后续子步。</summary>
-        public static SyntaxTree FromGreen(GreenNode greenRoot, Language? language = null)
+        public static SyntaxTree FromGreen(GreenNode greenRoot)
         {
-            return Parse(greenRoot.ToString(), language ?? Language.Cocoa);
+            return Parse(greenRoot.ToString());
         }
 
         public static ImmutableArray<SyntaxToken> ParseTokens(string text, bool includeEndOfFile = false)
@@ -105,7 +114,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             void ParseTokens(SyntaxTree syntaxTree, out SyntaxNode root, out ImmutableArray<Diagnostic> d)
             {
-                var lexer = syntaxTree.Language.CreateLexer(syntaxTree);
+                var lexer = new CocoaLexer(syntaxTree);
 
                 while (true)
                 {
@@ -121,7 +130,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                         // P2-7：共享节点类已删，根构建经语言工厂（空成员 + EOF token 的绿节点）。
                         var greenRoot = new GreenNodeWithChildren(SyntaxKind.CompilationUnit,
                             ImmutableArray.Create<GreenNode?>((GreenNode)token.ToGreen()));
-                        root = syntaxTree.Language.CreateTypedRed(greenRoot, syntaxTree, 0);
+                        root = new CocoaGreenNodeFactory(greenRoot).CreateTypedRed(syntaxTree, 0);
 
                         break;
                     }

@@ -50,7 +50,7 @@ namespace Cocoa.CodeGen.Native
                 var interfaceClass = program.Classes.FirstOrDefault(c => c.IsInterface);
                 if (interfaceClass != null)
                 {
-                    var location = compilation.Language.GetDeclarationNameLocation(interfaceClass.Declaration)
+                    var location = interfaceClass.Declaration?.GetDeclarationNameLocation()
                                    ?? new TextLocation(compilation.SyntaxTrees[0].Text, new TextSpan(0, 0));
                     return ImmutableArray.Create(Diagnostic.Error(location, $"interface '{interfaceClass.Name}' 暂不支持 native 后端（接口分派随后续里程碑落地，见 docs-dev/对象模型设计.md）"));
                 }
@@ -58,7 +58,7 @@ namespace Cocoa.CodeGen.Native
                 var staticInitClass = program.Classes.FirstOrDefault(Compilation.HasStaticInitializer);
                 if (staticInitClass != null)
                 {
-                    var location = compilation.Language.GetDeclarationNameLocation(staticInitClass.Declaration)
+                    var location = staticInitClass.Declaration?.GetDeclarationNameLocation()
                                    ?? new TextLocation(compilation.SyntaxTrees[0].Text, new TextSpan(0, 0));
                     return ImmutableArray.Create(Diagnostic.Error(location, $"class '{staticInitClass.Name}' 含静态构造函数或静态字段初始化器，native 后端暂不支持静态初始化触发（字段可声明但保持零值；请改在显式代码中赋值）"));
                 }

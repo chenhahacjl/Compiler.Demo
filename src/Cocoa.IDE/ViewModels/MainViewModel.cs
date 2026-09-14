@@ -141,7 +141,7 @@ public partial class MainViewModel : ObservableObject
     private void Reanalyze(EditorTabViewModel tab)
     {
         var context = SolutionTree.GetContext(tab.FilePath);
-        DiagnosticService.TextChanged(tab.FilePath, tab.Content, tab.Dialect, context);
+            DiagnosticService.TextChanged(tab.FilePath, tab.Content, context);
     }
 
     private void OnActiveTabChanged()
@@ -694,8 +694,7 @@ public partial class MainViewModel : ObservableObject
         {
             if (activeTab != null && string.Equals(activeTab.FilePath, file, StringComparison.OrdinalIgnoreCase))
             {
-                var language = Language.Cocoa;
-                trees.Add(SyntaxTree.Parse(SourceText.From(activeTab.Content, file), language));
+                trees.Add(SyntaxTree.Parse(SourceText.From(activeTab.Content, file)));
             }
             else
             {

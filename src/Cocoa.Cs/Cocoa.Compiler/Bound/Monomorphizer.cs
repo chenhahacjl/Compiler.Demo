@@ -20,17 +20,35 @@ namespace Cocoa.CodeAnalysis.Binding
     /// </summary>
     public static class Monomorphizer
     {
+        /// <summary>泛型用法扫描（返回语言中性的 (类型名, 实参列表) 对）：泛型类型子句 + 显式泛型对象创建。</summary>
+        public static IEnumerable<(SyntaxToken Identifier, ImmutableArray<SyntaxNode> Arguments)> CollectGenericUsages(BoundGlobalScope globalScope)
+        {
+            foreach (var root in CollectDeclarationRoots(globalScope))
+            {
+                foreach (var node in Walk(root))
+                {
+                    if (node is GenericTypeClauseSyntax genericClause)
+                    {
+                        yield return (genericClause.Identifier, genericClause.TypeArguments.Cast<SyntaxNode>().ToImmutableArray());
+                    }
+                    else if (node is ObjectCreationExpressionSyntax creation && creation.TypeArguments != null)
+                    {
+                        yield return (creation.Identifier, creation.TypeArguments.Arguments.Cast<SyntaxNode>().ToImmutableArray());
+                    }
+                }
+            }
+        }
+
         public static (ImmutableArray<NamedTypeSymbol> Classes, ImmutableArray<NamedTypeSymbol> GenericDefinitions) Expand(
             BoundGlobalScope globalScope,
             BoundScope parentScope,
             bool isScript,
             ImmutableArray<CoaProgram> codLibraries,
-            Language dialect,
             ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Builder functionBodies,
             ImmutableArray<Diagnostic>.Builder diagnostics)
         {
             // 1. 活实例化种子：语法扫描泛型类型子句 + new/调用站点的显式实参
-            var helperBinder = dialect.CreateBinder(isScript, parentScope, null, globalScope.References, globalScope.UsingNamespaces, dialect.LookupBuiltinType, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries);
+            var helperBinder = new CocoaBinder(isScript, parentScope, null, globalScope.References, globalScope.UsingNamespaces, BuiltinTypes.Lookup, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries);
             // 6e 跨库里程碑：源码泛型定义先注册（同名占位，cod 后注册静默跳过）——保证源内联集合类
             // 优先于 System.Collections.coa 同名 gcls。
             helperBinder.RegisterSourceGenericDefinitionsForSeed(globalScope);
@@ -39,7 +57,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var methodSeeds = new List<(FunctionSymbol Instantiated, FunctionSymbol Definition, ImmutableArray<TypeSymbol> Arguments)>();
             var seenMethods = new HashSet<FunctionSymbol>();
 
-            foreach (var (identifier, argumentClauses) in dialect.CollectGenericUsages(globalScope))
+            foreach (var (identifier, argumentClauses) in CollectGenericUsages(globalScope))
             {
                 var result = helperBinder.BindGenericTypeNameForExpansion(identifier, argumentClauses);
                 if (result is InstantiatedTypeSymbol instantiated)
@@ -107,7 +125,7 @@ namespace Cocoa.CodeAnalysis.Binding
                         continue;
                     }
 
-                    var (methodBody, methodBodyDiagnostics) = dialect.BuildFunctionBodyForMonomorphization(
+                    var (methodBody, methodBodyDiagnostics) = CocoaBinder.BuildFunctionBodyForMonomorphization(
                         isScript, parentScope, instantiatedMethod, globalScope, codLibraries, typeArgumentsByName);
 
                     functionBodies[instantiatedMethod] = methodBody;
@@ -208,7 +226,7 @@ namespace Cocoa.CodeAnalysis.Binding
                         }
                     }
 
-                    var (body, bodyDiagnostics) = dialect.BuildFunctionBodyForMonomorphization(
+                    var (body, bodyDiagnostics) = CocoaBinder.BuildFunctionBodyForMonomorphization(
                         isScript, parentScope, instantiatedMethod, globalScope, codLibraries, typeArgumentsByName);
 
                     functionBodies[instantiatedMethod] = body;
@@ -234,7 +252,7 @@ namespace Cocoa.CodeAnalysis.Binding
                         }
                         else
                         {
-                            var (getterBody, getterDiagnostics) = dialect.BuildFunctionBodyForMonomorphization(
+                            var (getterBody, getterDiagnostics) = CocoaBinder.BuildFunctionBodyForMonomorphization(
                                 isScript, parentScope, instantiatedProperty.Getter, globalScope, codLibraries, typeArgumentsByName);
                             functionBodies[instantiatedProperty.Getter] = getterBody;
                             diagnostics.AddRange(getterDiagnostics);
@@ -253,7 +271,7 @@ namespace Cocoa.CodeAnalysis.Binding
                         }
                         else
                         {
-                            var (setterBody, setterDiagnostics) = dialect.BuildFunctionBodyForMonomorphization(
+                            var (setterBody, setterDiagnostics) = CocoaBinder.BuildFunctionBodyForMonomorphization(
                                 isScript, parentScope, instantiatedProperty.Setter, globalScope, codLibraries, typeArgumentsByName);
                             functionBodies[instantiatedProperty.Setter] = setterBody;
                             diagnostics.AddRange(setterDiagnostics);

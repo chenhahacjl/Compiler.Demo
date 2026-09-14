@@ -4,7 +4,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
     /// Cocoa Lexer（S-2 Lexer 分家薄壳：词法逻辑全部在共享 <see cref="LexerBase"/>，
-    /// 本类只保留语言类型身份，供 <c>Language.CreateLexer</c> 注册与类型断言使用）。
+    /// 本类只保留语言类型身份，供 <c>new CocoaLexer(...)</c> 构造与类型断言使用）。
     /// <br/>
     /// 字符 => Token
     /// </summary>

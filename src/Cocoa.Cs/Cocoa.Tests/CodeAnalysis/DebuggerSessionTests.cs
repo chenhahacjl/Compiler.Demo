@@ -13,7 +13,7 @@ namespace Cocoa.Tests.CodeAnalysis
     {
         private static Compilation Compile(string text, string fileName)
         {
-            var tree = SyntaxTree.Parse(SourceText.From(text, fileName), Language.Cocoa);
+            var tree = SyntaxTree.Parse(SourceText.From(text, fileName));
             return Compilation.CreateScript(null, tree);
         }
 
@@ -98,7 +98,7 @@ namespace Cocoa.Tests.CodeAnalysis
                 "        }\n" +
                 "    }\n" +
                 "}";
-            var tree = SyntaxTree.Parse(SourceText.From(text, "prog.co"), Language.Cocoa);
+            var tree = SyntaxTree.Parse(SourceText.From(text, "prog.co"));
             var compilation = Compilation.Create(Array.Empty<string>(), tree);
 
             var session = DebuggerSession.Create(compilation);

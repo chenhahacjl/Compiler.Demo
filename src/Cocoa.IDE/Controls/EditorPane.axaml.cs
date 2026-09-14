@@ -191,9 +191,8 @@ public partial class EditorPane : UserControl
         if (_hostFile == tab.FilePath && _hostText == tab.Content)
             return _semanticHost;
 
-        var language = Language.Cocoa;
         var context = MainViewModel.Shared?.SolutionTree.GetContext(tab.FilePath);
-        _semanticHost.Update(tab.Content, tab.FilePath, language, context);
+        _semanticHost.Update(tab.Content, tab.FilePath, context);
         _hostFile = tab.FilePath;
         _hostText = tab.Content;
         return _semanticHost;

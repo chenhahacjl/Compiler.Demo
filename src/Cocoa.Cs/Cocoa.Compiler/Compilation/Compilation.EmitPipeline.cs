@@ -162,7 +162,7 @@ namespace Cocoa.CodeAnalysis
                 var offendingClass = program.Classes.FirstOrDefault(c => !IsCodSerializableClass(c));
                 if (offendingClass != null)
                 {
-                    var location = Language.GetDeclarationNameLocation(offendingClass.Declaration) ?? ZeroLocation;
+                    var location = offendingClass.Declaration?.GetDeclarationNameLocation() ?? ZeroLocation;
                     return ImmutableArray.Create(Diagnostic.Error(location, $"库含不可序列化类 '{offendingClass.Name}'（基类不可序列化/接口等），.coa 暂不支持（纯容器/facade/真体实例类/同库可序列化基类链已支持）"));
                 }
             }

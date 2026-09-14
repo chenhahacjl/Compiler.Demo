@@ -419,7 +419,7 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>
-        /// 按语言解析内建类型名（M2 收敛至 <see cref="Language.LookupBuiltinType"/>）：
+        /// 按语言解析内建类型名（收敛至 <see cref="Symbols.BuiltinTypes.Lookup"/>）：
         /// 共享 any/bool/char/string/void；CO 简写 i8/u8/.../f32/f64（+128 占位），
         /// C# 原名 sbyte/byte/short/.../float/double——词汇表各由语言实现承载。
         /// </summary>

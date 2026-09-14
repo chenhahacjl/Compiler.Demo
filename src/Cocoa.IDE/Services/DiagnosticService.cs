@@ -34,7 +34,7 @@ public sealed class DiagnosticService
 
     /// <summary>文档内容变化 → 防抖后触发重解析。已在 UI 线程调用。
     /// 传入 <paramref name="context"/> 时做多文件 + 引用编译（跨文件符号可解析，避免误报）。</summary>
-    public void TextChanged(string filePath, string text, string? dialect, ProjectContext? context = null)
+    public void TextChanged(string filePath, string text, ProjectContext? context = null)
     {
         CancellationTokenSource? existing;
         lock (_sync)
@@ -58,7 +58,7 @@ public sealed class DiagnosticService
                 await Task.Delay(DebounceMilliseconds, token);
                 if (token.IsCancellationRequested) return;
 
-                var tree = SyntaxTree.Parse(SourceText.From(text, filePath), LanguageFor(dialect));
+                var tree = SyntaxTree.Parse(SourceText.From(text, filePath));
                 var diagnostics = tree.Diagnostics;
 
                 // 多文件（含工程引用）语义编译：让跨文件/引用符号可解析
@@ -107,8 +107,4 @@ public sealed class DiagnosticService
         }, token);
     }
 
-    private static Language LanguageFor(string? dialect)
-    {
-        return Language.Cocoa;
-    }
 }
