@@ -192,7 +192,8 @@ namespace Cocoa.Tests.CodeAnalysis
             "function Main(): i32\n{\n    let x = 1\n    let y = x + 2 * 3\n    return y\n}\n",
             "function Main(): i32\n{\n    let a = -5\n    let b = !(1 == 2)\n    return a\n}\n",
             "function Add(a: i32, b: i32): i32\n{\n    return a + b\n}\n\nfunction Main(): i32\n{\n    return Add(1, 2)\n}\n",
-            // 控制流（if/while）在 C# 绑定器已降级为 label/goto/conditionalgoto——与 Lowering dump 一并随增量四差分
+            "function Main(): i32\n{\n    var n = 10\n    if n > 0\n    {\n        return 1\n    }\n\n    return 0\n}\n",
+            "function Main(): i32\n{\n    var t = 0\n    var i = 3\n    while i > 0\n    {\n        t = t + i\n        i = i - 1\n    }\n\n    return t\n}\n",
         };
 
         [Fact]
@@ -355,6 +356,24 @@ namespace Cocoa.Tests.CodeAnalysis
                         DumpBound(argument, sb);
                     }
 
+                    sb.Append(')');
+                    break;
+                }
+                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.LabelStatement:
+                {
+                    sb.Append("(LabelStatement ").Append(((Cocoa.CodeAnalysis.Binding.BoundLabelStatement)node).Label.Name).Append(')');
+                    break;
+                }
+                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.GotoStatement:
+                {
+                    sb.Append("(GotoStatement ").Append(((Cocoa.CodeAnalysis.Binding.BoundGotoStatement)node).Label.Name).Append(')');
+                    break;
+                }
+                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.ConditionalGotoStatement:
+                {
+                    var cg = (Cocoa.CodeAnalysis.Binding.BoundConditionalGotoStatement)node;
+                    sb.Append("(ConditionalGotoStatement ").Append(cg.Label.Name).Append(' ').Append(cg.JumpIfTrue ? "True" : "False").Append(' ');
+                    DumpBound(cg.Condition, sb);
                     sb.Append(')');
                     break;
                 }

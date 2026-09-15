@@ -31,6 +31,8 @@ namespace MiniBinder
         private field _diags: string[]
         private field _diagCount: i32
         private field _mainName: string
+        private field _labelCount: i32
+        private field _loopLabelCount: i32
 
         public static function Create(source: string): Binder
         {
@@ -283,6 +285,7 @@ namespace MiniBinder
 
             _currentFunction = fn
             _localCount = 0
+            _labelCount = 0
             i = 0
             while i < node.ChildCount()
             {
@@ -303,7 +306,7 @@ namespace MiniBinder
                         _boundRoots = bigger
                     }
 
-                    _boundRoots[index] = BuildBound(child)
+                    _boundRoots[index] = LowerBound(BuildBound(child))
                 }
 
                 i = i + 1
@@ -729,6 +732,201 @@ namespace MiniBinder
             }
 
             return sb
+        }
+
+        // --- lowering：if/while → label/goto/conditionalgoto（对齐 C# Lowerer 输出） ---
+
+        private function MakeLabel(): string
+        {
+            _labelCount = _labelCount + 1
+            return "Label" + _labelCount.ToString()
+        }
+
+        private function MakeLoopLabel(): string
+        {
+            _loopLabelCount = _loopLabelCount + 1
+            return _loopLabelCount.ToString()
+        }
+
+        private function LowerBound(node: Node): Node
+        {
+            if node.IsToken()
+            {
+                return node
+            }
+
+            return LowerStatement(node)
+        }
+
+        private function LowerStatement(node: Node): Node
+        {
+            if node.IsToken()
+            {
+                return node
+            }
+
+            let k = node.Kind()
+            if k == "IfStatement"
+            {
+                let condition = node.Child(0)
+                let thenBlock = node.Child(1)
+                let hasElse = node.ChildCount() > 2
+
+                if !hasElse
+                {
+                    let endLabel = MakeLabel()
+                    let result = Node.MakeCompound("BlockStatement")
+                    let cg = Node.MakeCompound("ConditionalGotoStatement")
+                    cg.Add(MakeToken(endLabel))
+                    cg.Add(MakeToken("False"))
+                    cg.Add(condition)
+                    result.Add(cg)
+                    let thenStmts = LowerBlockStmts(thenBlock)
+                    var ti = 0
+                    while ti < thenStmts.ChildCount()
+                    {
+                        result.Add(thenStmts.Child(ti))
+                        ti = ti + 1
+                    }
+
+                    let lb = Node.MakeCompound("LabelStatement")
+                    lb.Add(MakeToken(endLabel))
+                    result.Add(lb)
+                    return result
+                }
+                else
+                {
+                    let elseLabel = MakeLabel()
+                    let endLabel = MakeLabel()
+                    let result = Node.MakeCompound("BlockStatement")
+                    let cg = Node.MakeCompound("ConditionalGotoStatement")
+                    cg.Add(MakeToken(elseLabel))
+                    cg.Add(MakeToken("False"))
+                    cg.Add(condition)
+                    result.Add(cg)
+                    let thenStmts = LowerBlockStmts(thenBlock)
+                    var ti = 0
+                    while ti < thenStmts.ChildCount()
+                    {
+                        result.Add(thenStmts.Child(ti))
+                        ti = ti + 1
+                    }
+
+                    let gt = Node.MakeCompound("GotoStatement")
+                    gt.Add(MakeToken(endLabel))
+                    result.Add(gt)
+                    let lb1 = Node.MakeCompound("LabelStatement")
+                    lb1.Add(MakeToken(elseLabel))
+                    result.Add(lb1)
+                    let elseStmts = LowerBlockStmts(node.Child(2))
+                    var ei = 0
+                    while ei < elseStmts.ChildCount()
+                    {
+                        result.Add(elseStmts.Child(ei))
+                        ei = ei + 1
+                    }
+
+                    let lb2 = Node.MakeCompound("LabelStatement")
+                    lb2.Add(MakeToken(endLabel))
+                    result.Add(lb2)
+                    return result
+                }
+            }
+
+            if k == "WhileStatement"
+            {
+                let condition = node.Child(0)
+                let body = node.Child(1)
+                let bodyLabel = MakeLabel()
+                let loopId = MakeLoopLabel()
+                let continueLabel = "continue" + loopId
+                let breakLabel = "break" + loopId
+                let result = Node.MakeCompound("BlockStatement")
+                let gt = Node.MakeCompound("GotoStatement")
+                gt.Add(MakeToken(continueLabel))
+                result.Add(gt)
+                let lb1 = Node.MakeCompound("LabelStatement")
+                lb1.Add(MakeToken(bodyLabel))
+                result.Add(lb1)
+                let bodyStmts = LowerBlockStmts(body)
+                var bi = 0
+                while bi < bodyStmts.ChildCount()
+                {
+                    result.Add(bodyStmts.Child(bi))
+                    bi = bi + 1
+                }
+
+                let lb2 = Node.MakeCompound("LabelStatement")
+                lb2.Add(MakeToken(continueLabel))
+                result.Add(lb2)
+                let cg = Node.MakeCompound("ConditionalGotoStatement")
+                cg.Add(MakeToken(bodyLabel))
+                cg.Add(MakeToken("True"))
+                cg.Add(condition)
+                result.Add(cg)
+                let lb3 = Node.MakeCompound("LabelStatement")
+                lb3.Add(MakeToken(breakLabel))
+                result.Add(lb3)
+                return result
+            }
+
+            if k == "BlockStatement"
+            {
+                let result = Node.MakeCompound("BlockStatement")
+                var bi = 0
+                while bi < node.ChildCount()
+                {
+                    let lowered = LowerStatement(node.Child(bi))
+                    if lowered.Kind() == "BlockStatement" && !lowered.IsToken()
+                    {
+                        var ci = 0
+                        while ci < lowered.ChildCount()
+                        {
+                            result.Add(lowered.Child(ci))
+                            ci = ci + 1
+                        }
+                    }
+                    else
+                    {
+                        result.Add(lowered)
+                    }
+
+                    bi = bi + 1
+                }
+
+                return result
+            }
+
+            return node
+        }
+
+        private function LowerBlockStmts(node: Node): Node
+        {
+            if node.IsToken()
+            {
+                return node
+            }
+
+            let k = node.Kind()
+            if k == "BlockStatement"
+            {
+                let result = Node.MakeCompound("BlockStatement")
+                var i = 0
+                while i < node.ChildCount()
+                {
+                    result.Add(LowerStatement(node.Child(i)))
+                    i = i + 1
+                }
+
+                return result
+            }
+
+            return LowerStatement(node)
+        }
+
+        private function MakeToken(text: string): Node
+        {
+            return Node.MakeToken("IdentifierToken", text)
         }
 
         private function BindDump(node: Node): string
