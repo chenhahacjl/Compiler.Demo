@@ -54,3 +54,6 @@ samples/**/out/
 
 # 自举源码各项目产物（Cocoa.Compiler/out、Cli/out 等）
 src/Cocoa.Co/**/out/
+
+# tools 最新可运行版本快照（cocoa-co/cocoa-cs/cocoa-sdk/cocoa-ui/cocoa-ide）
+tools/cocoa-*/
