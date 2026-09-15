@@ -8,6 +8,13 @@
 
 ## 未发布（2026-09-14）
 
+### 阶段 7 增量四 M9-a5 前哨：自举绑定树首片差分（2026-09-14）
+- 自举 Binder 新增绑定树构建（复用 MiniParser.Node 通用节点，kind=绑定节点名/token 子=载荷）与 `DescribeBoundTrees()` 规范化 dump；C# 基准递归绑定树（SequencePoint 透传）；3 组直线语料逐字节一致；控制流降级（if/while→label/goto）随增量四正式差分。
+
+### 阶段 7 增量三 M9-a4 收官：诊断消息逐字节对齐（2026-09-14）
+- **C# 基准对齐**：语句验证（仅赋值/调用可作表达式语句）；`cannot-declare` 两次重复输出（绑定器两遍各报一次）；`Function 'X' doesn't exist.`/`Variable 'X' doesn't exist.`/`'x' is already declared.`/`Only assignment and call expressions can be used as a statement.` 等消息句式逐字节对齐。
+- **差分**：9 组无效程序 C# 诊断输出 `SequenceEqual`；`SelfBinder_Diagnostics_Match_CSharp_ForInvalidCorpus` 测试全绿；全量 53,364 通过 / 1 跳过。
+
 ### 阶段 7 增量三 M9-a3：自举 Binder 局部符号差分（2026-09-14）
 - **自举侧**：新增 `Binding/LocalSymbol.co`；`FunctionSymbol` 增局部数组与 `AddLocal/LocalCount/Local/LocalTypeOf/ParamType/ReturnType` 访问器；Binder 函数体声明序收集局部，类型解析=显式子句优先、否则值推断（字面量/一元/二元/名称/调用/括号）。
 - **C# 基准**：`SymbolDump` 经 `GetProgram()` 绑定树递归收集 `BoundVariableDeclaration`；局部行缩进 2 空格紧跟函数行，仅绑定无错时输出（双方言门控一致）。
