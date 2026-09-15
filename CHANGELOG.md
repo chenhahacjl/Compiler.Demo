@@ -8,8 +8,11 @@
 
 ## 未发布（2026-09-14）
 
-### 阶段 7 增量四 M9-a5 前哨：自举绑定树首片差分（2026-09-14）
-- 自举 Binder 新增绑定树构建（复用 MiniParser.Node 通用节点，kind=绑定节点名/token 子=载荷）与 `DescribeBoundTrees()` 规范化 dump；C# 基准递归绑定树（SequencePoint 透传）；3 组直线语料逐字节一致；控制流降级（if/while→label/goto）随增量四正式差分。
+### 阶段 7 增量四 M9-a5：自举绑定树差分——控制流降级（2026-09-14）
+- 自举 Binder 新增 lowering：`IfStatement` → `ConditionalGoto`+`Label`（无else/有else），`WhileStatement` → `Goto`+`Label`+`Body`+`ConditionalGoto`（双计数器对齐 C# Binder break/continue + Lowerer body 标签命名）。
+- C# 基准 `DumpBound` 扩展 `LabelStatement`/`GotoStatement`/`ConditionalGotoStatement`；`SequencePointStatement` 透传。
+- `BoundCorpus` 5 组（直线代码 + if + while）逐字节一致；全量 53,364 通过 / 1 跳过。
+- 修复：`MakeLeaf` → `Node.MakeToken`；BlockStatement 嵌套扁平化；`_labelCount` 按函数重置 + `_loopLabelCount` 跨函数共享。
 
 ### 阶段 7 增量三 M9-a4 收官：诊断消息逐字节对齐（2026-09-14）
 - **C# 基准对齐**：语句验证（仅赋值/调用可作表达式语句）；`cannot-declare` 两次重复输出（绑定器两遍各报一次）；`Function 'X' doesn't exist.`/`Variable 'X' doesn't exist.`/`'x' is already declared.`/`Only assignment and call expressions can be used as a statement.` 等消息句式逐字节对齐。
