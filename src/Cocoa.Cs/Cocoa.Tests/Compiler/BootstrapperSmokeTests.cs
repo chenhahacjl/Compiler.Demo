@@ -113,6 +113,12 @@ namespace Cocoa.Tests.Compiler
                 Assert.Contains("function Sum(a: int, b: int): int", selfOutput);
                 Assert.Contains("function Main(): void", selfOutput);
                 Assert.Contains("main: Main", selfOutput);
+                // M9 增量四：B0 输出自举绑定树段（含 lowering 后的 label/goto 形态）
+                Assert.Contains("--- bound ---", selfOutput);
+                Assert.Contains("Greeting:", selfOutput);
+                Assert.Contains("Sum:", selfOutput);
+                Assert.Contains("Main:", selfOutput);
+                Assert.Contains("ReturnStatement", selfOutput);
                 // 自足有效程序：parser 与 binder 诊断均为零（样例 main.co 调用外部定义函数，双方言同报未定义，不作零诊断语料）
                 Assert.DoesNotContain("error:", selfOutput);
             }

@@ -50,5 +50,8 @@ function Main(args: string[]): i32
         d = d + 1
     }
 
+    Console.WriteLine("--- bound ---")
+    Console.WriteLine(binder.DescribeBoundTrees())
+
     return 0
 }

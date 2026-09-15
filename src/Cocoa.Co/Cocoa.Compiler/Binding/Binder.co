@@ -1185,6 +1185,36 @@ namespace MiniBinder
                 return null
             }
 
+            if k == "MemberCallExpression" || k == "MemberAccessExpression"
+            {
+                let m = Node.MakeCompound(k)
+                var i = 0
+                while i < node.ChildCount()
+                {
+                    let child = node.Child(i)
+                    if child.IsToken()
+                    {
+                        m.Add(child)
+                    }
+                    else
+                    {
+                        let built = BuildBound(child)
+                        if built != null
+                        {
+                            m.Add(built)
+                        }
+                        else
+                        {
+                            m.Add(child)
+                        }
+                    }
+
+                    i = i + 1
+                }
+
+                return m
+            }
+
             return null
         }
 
