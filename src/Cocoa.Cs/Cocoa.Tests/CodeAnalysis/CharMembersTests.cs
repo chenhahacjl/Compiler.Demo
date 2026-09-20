@@ -28,10 +28,24 @@ namespace Cocoa.Tests.CodeAnalysis
         [InlineData("Char.IsControl('A')", false)]
         public void Evaluator_CharMember(string expr, bool expected)
         {
-            var tree = SyntaxTree.Parse($"System.Console.WriteLine({expr})");
-            var compilation = Compilation.Create(tree);
-            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
-            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
+            for (var i = 0; i < 2; i++)
+            {
+                var original = Console.Out;
+                using var writer = new System.IO.StringWriter();
+                try
+                {
+                    Console.SetOut(writer);
+                    var tree = SyntaxTree.Parse($"System.Console.WriteLine({expr})");
+                    var compilation = Compilation.Create(tree);
+                    var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+                    Assert.Empty(result.Diagnostics.Where(d => d.IsError));
+                    Assert.Equal(expected.ToString() + Environment.NewLine, writer.ToString());
+                }
+                finally
+                {
+                    Console.SetOut(original);
+                }
+            }
         }
     }
 }

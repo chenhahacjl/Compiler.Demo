@@ -1,0 +1,18 @@
+namespace Cocoa.CodeAnalysis.Binding
+{
+    class BoundReturnStatement
+    {
+        private field _inner: BoundStatement
+        private field _expression: BoundExpression
+
+        public constructor(expression: BoundExpression)
+        {
+            _inner = new BoundStatement(BoundNodeKind.ReturnStatement())
+            _expression = expression
+        }
+
+        public function Kind(): i32 { return _inner.Kind() }
+        public function Expression(): BoundExpression { return _expression }
+        public function HasExpression(): bool { return _expression != null }
+    }
+}

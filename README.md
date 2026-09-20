@@ -22,7 +22,7 @@
 
 ```bash
 # 构建（编译器 + 标准库：cod 产物收集至 src\Cocoa.Cs\libs\，构建时自动分发到各 bin）
-dotnet build src\Cocoa.Cs\Cocoa.Compiler
+dotnet build src\Cocoa.Cs\Cocoa.CodeAnalysis
 tools\build-stdlib.cmd
 
 # 创建新项目（模板 + 名称，仿 dotnet new）：console / library / cocoa / solution

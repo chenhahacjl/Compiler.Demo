@@ -1,10 +1,11 @@
-// Cocoa 系统标准库 · System.Core 基元 facade（namespace System，6e-M19 M2-b）
+﻿// Cocoa 系统标准库 · System.Core 基元 facade（namespace System，6e-M19 M2-b）
 
 using System.Syscall
 
 namespace System
 {
-    public facade class Single
+    [Facade("System.Single")]
+    public class Single
     {
         public function ToString(): string
         {

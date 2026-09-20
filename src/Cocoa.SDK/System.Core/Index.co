@@ -1,9 +1,10 @@
-// Cocoa 系统标准库 · System.Index（索引从末尾）
+﻿// Cocoa 系统标准库 · System.Index（索引从末尾）
 // 编码规则：_value >= 0 表示从开头，_value < 0 表示从末尾（存储 ~value）
 
 namespace System
 {
-    public facade struct Index
+    [Facade("System.Index")]
+    public struct Index
     {
         public field _value: i32
 

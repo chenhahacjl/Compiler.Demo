@@ -24,6 +24,9 @@ namespace Cocoa.CodeGen.Native.Assembler
 
         public System.Collections.Generic.IReadOnlyList<int> DataAbsoluteFixups => _dataAbsoluteFixups;
 
+        /// <summary>rel32 标签 fixup 列表（Offset=当前 Position，Label=目标汇编标签号）——符号化 dump 导出。</summary>
+        public System.Collections.Generic.IReadOnlyList<(int Offset, int Label)> LabelFixups => _labelFixups;
+
         public int Position => _bytes.Count;
         public int DataPosition => _data.Count;
         public int DataLength => _data.Count;

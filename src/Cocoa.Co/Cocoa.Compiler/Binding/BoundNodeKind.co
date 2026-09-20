@@ -1,0 +1,52 @@
+namespace Cocoa.CodeAnalysis.Binding
+{
+    class BoundNodeKind
+    {
+        // ── Statements: 0-49 ──
+        public static function BlockStatement(): i32 { return 0 }
+        public static function NopStatement(): i32 { return 1 }
+        public static function VariableDeclaration(): i32 { return 2 }
+        public static function IfStatement(): i32 { return 3 }
+        public static function WhileStatement(): i32 { return 4 }
+        public static function DoWhileStatement(): i32 { return 5 }
+        public static function ForRangeStatement(): i32 { return 6 }
+        public static function LabelStatement(): i32 { return 7 }
+        public static function GotoStatement(): i32 { return 8 }
+        public static function ConditionalGotoStatement(): i32 { return 9 }
+        public static function ReturnStatement(): i32 { return 10 }
+        public static function ExpressionStatement(): i32 { return 11 }
+        public static function SequencePointStatement(): i32 { return 12 }
+
+        // ── Expressions: 50-99 ──
+        public static function LiteralExpression(): i32 { return 50 }
+        public static function VariableExpression(): i32 { return 51 }
+        public static function AssignmentExpression(): i32 { return 52 }
+        public static function UnaryExpression(): i32 { return 53 }
+        public static function BinaryExpression(): i32 { return 54 }
+        public static function CallExpression(): i32 { return 55 }
+
+        public static function Name(kind: i32): string
+        {
+            if kind == 0 { return "BlockStatement" }
+            if kind == 1 { return "NopStatement" }
+            if kind == 2 { return "VariableDeclaration" }
+            if kind == 3 { return "IfStatement" }
+            if kind == 4 { return "WhileStatement" }
+            if kind == 5 { return "DoWhileStatement" }
+            if kind == 6 { return "ForRangeStatement" }
+            if kind == 7 { return "LabelStatement" }
+            if kind == 8 { return "GotoStatement" }
+            if kind == 9 { return "ConditionalGotoStatement" }
+            if kind == 10 { return "ReturnStatement" }
+            if kind == 11 { return "ExpressionStatement" }
+            if kind == 12 { return "SequencePointStatement" }
+            if kind == 50 { return "LiteralExpression" }
+            if kind == 51 { return "VariableExpression" }
+            if kind == 52 { return "AssignmentExpression" }
+            if kind == 53 { return "UnaryExpression" }
+            if kind == 54 { return "BinaryExpression" }
+            if kind == 55 { return "CallExpression" }
+            return "Unknown(" + string(kind) + ")"
+        }
+    }
+}

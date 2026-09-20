@@ -102,11 +102,22 @@ namespace Cocoa.CodeGen.Native
             Add(instructions, new LirInstruction(LirOpCode.Load, curVt, LirOperand.Reg(obj), LirOperand.None, 0, ps));
 
             var candidate = AllocateRegister(_isX64 ? LirType.Addr : LirType.I32);
-            foreach (var key in EnumerateDescendantVTableKeys((NamedTypeSymbol)targetType))
+            if (IsBoxableValueType(targetType))
             {
-                Add(instructions, new LirInstruction(LirOpCode.LeaData, candidate, LirOperand.Data(key)));
+                // object 多态：值类型 is/as → 比对 box 伪 vtable（唯一 key）。
+                EnsurePseudoVTable(BoxVTableName(targetType));
+                Add(instructions, new LirInstruction(LirOpCode.LeaData, candidate, LirOperand.Data(NativeObjectModel.PseudoVTableKey(BoxVTableName(targetType)))));
                 Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(curVt), LirOperand.Reg(candidate)));
                 Add(instructions, new LirInstruction(LirOpCode.Jcc, LirOperand.Constant((int)LirCond.Equal), LirOperand.Label(found)));
+            }
+            else
+            {
+                foreach (var key in EnumerateDescendantVTableKeys((NamedTypeSymbol)targetType))
+                {
+                    Add(instructions, new LirInstruction(LirOpCode.LeaData, candidate, LirOperand.Data(key)));
+                    Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(curVt), LirOperand.Reg(candidate)));
+                    Add(instructions, new LirInstruction(LirOpCode.Jcc, LirOperand.Constant((int)LirCond.Equal), LirOperand.Label(found)));
+                }
             }
 
             Add(instructions, new LirInstruction(LirOpCode.Jmp, LirOperand.Label(notFound)));
@@ -797,6 +808,18 @@ var wide = AllocateRegister(LirType.I64);
                 return value;
             }
 
+            // object 多态：值类型 → System.Object 装箱；System.Object → 值类型 拆箱；
+            // string/类/接口（引用型）→ object 引用直通（本身即对象引用）。
+            if (to == NamedTypeSymbol.SystemObject)
+            {
+                return IsBoxableValueType(from) ? EmitBoxValue(value, from) : value;
+            }
+
+            if (from == NamedTypeSymbol.SystemObject)
+            {
+                return IsBoxableValueType(to) ? EmitUnboxValue(value, to) : value;
+            }
+
         // 函数调用
             if (from is NamedTypeSymbol { IsValueType: false } && to is NamedTypeSymbol { IsValueType: false })
             {
@@ -1022,6 +1045,59 @@ var wide = AllocateRegister(LirType.I64);
             }
 
             throw new Exception($"Unexpected conversion from {from} to {to}");
+        }
+
+        // ------------------------------------------------------------------
+        // object 多态：值类型装箱/拆箱（box 对象 = 头[vtablePtr] + 偏移 HeaderBytes 的值字段）
+        // ------------------------------------------------------------------
+
+        private static bool IsBoxableValueType(TypeSymbol type)
+            => type == TypeSymbol.Int32 || type == TypeSymbol.Double || type == TypeSymbol.Boolean ||
+               type == TypeSymbol.Char || type == TypeSymbol.Int64 || type == TypeSymbol.UInt8 ||
+               type == TypeSymbol.Int8 || type == TypeSymbol.Int16 || type == TypeSymbol.UInt16 ||
+               type == TypeSymbol.UInt32 || type == TypeSymbol.UInt64 || type == TypeSymbol.Float;
+
+        /// <summary>装箱伪 vtable 全名（isinst/box 共用）：`Boxed.System.Int32` 等。</summary>
+        private static string BoxVTableName(TypeSymbol type)
+            => "Boxed." + (type == TypeSymbol.Boolean ? "System.Boolean"
+                : type == TypeSymbol.Int32 ? "System.Int32"
+                : type == TypeSymbol.Int64 ? "System.Int64"
+                : type == TypeSymbol.Char ? "System.Char"
+                : type == TypeSymbol.UInt8 ? "System.Byte"
+                : type == TypeSymbol.Int8 ? "System.SByte"
+                : type == TypeSymbol.Int16 ? "System.Int16"
+                : type == TypeSymbol.UInt16 ? "System.UInt16"
+                : type == TypeSymbol.UInt32 ? "System.UInt32"
+                : type == TypeSymbol.UInt64 ? "System.UInt64"
+                : type == TypeSymbol.Float ? "System.Single"
+                : "System.Double");
+
+        /// <summary>值类型 → object 装箱：分配 头+值 对象（8 对齐，native 对象模型假设），写 box vtable 头 + 值字段。</summary>
+        private LirVirtualRegister EmitBoxValue(LirVirtualRegister value, TypeSymbol type)
+        {
+            var instructions = _currentFunction.Instructions;
+            var pointerSize = _isX64 ? 8 : 4;
+            var valueSize = NativeObjectModel.FieldSize(type);
+            var total = (NativeObjectModel.HeaderBytes + valueSize + 7) / 8 * 8;
+            var sizeReg = EmitConst(total);
+            var box = AllocateRegister(LirType.Addr);
+            Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(sizeReg)));
+            Add(instructions, new LirInstruction(LirOpCode.Call, box, LirOperand.Runtime("Alloc"), LirOperand.Constant(0)));
+
+            var vtable = EmitPseudoVTable(BoxVTableName(type));
+            Add(instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(box), LirOperand.Reg(vtable), 0, pointerSize));
+            Add(instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(box), LirOperand.Reg(value), NativeObjectModel.HeaderBytes, valueSize));
+            return box;
+        }
+
+        /// <summary>object → 值类型 拆箱：读偏移 HeaderBytes 的值字段。</summary>
+        private LirVirtualRegister EmitUnboxValue(LirVirtualRegister obj, TypeSymbol type)
+        {
+            var instructions = _currentFunction.Instructions;
+            var valueSize = NativeObjectModel.FieldSize(type);
+            var result = AllocateRegister(TypeOf(type));
+            Add(instructions, new LirInstruction(LirOpCode.Load, result, LirOperand.Reg(obj), LirOperand.None, NativeObjectModel.HeaderBytes, valueSize));
+            return result;
         }
 
         /// <summary>nint/nuint（原生整型）native 转换：Addr 表示层级——整型源按符号/零扩展到平台宽（x64 8 字节）；

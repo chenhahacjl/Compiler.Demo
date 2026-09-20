@@ -1,0 +1,21 @@
+namespace Cocoa.CodeAnalysis.Binding
+{
+    class BoundUnaryExpression
+    {
+        private field _inner: BoundExpression
+        private field _opKind: i32
+        private field _operand: BoundExpression
+
+        public constructor(opKind: i32, operand: BoundExpression, type: string)
+        {
+            _inner = new BoundExpression(BoundNodeKind.UnaryExpression(), type)
+            _opKind = opKind
+            _operand = operand
+        }
+
+        public function Kind(): i32 { return _inner.Kind() }
+        public function Type(): string { return _inner.Type() }
+        public function OpKind(): i32 { return _opKind }
+        public function Operand(): BoundExpression { return _operand }
+    }
+}

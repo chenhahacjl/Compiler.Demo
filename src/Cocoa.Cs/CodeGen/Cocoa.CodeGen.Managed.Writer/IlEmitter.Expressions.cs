@@ -523,9 +523,10 @@ namespace Cocoa.CodeGen.Managed.Writer
 
             EmitBoxIfValueType(il, node.Expression.Type);
 
-            if (node.Type == TypeSymbol.Any)
+            if (node.Type == TypeSymbol.Any || node.Type == NamedTypeSymbol.SystemObject)
             {
-                // Done
+                // Done：EmitBoxIfValueType 已对值类型 box；引用类型（string/类）已是引用（object）。
+                // object 多态装箱目标——栈上已是 object，无需附加指令。
             }
             else if (node.Type == TypeSymbol.Boolean)
             {
@@ -627,28 +628,32 @@ namespace Cocoa.CodeGen.Managed.Writer
         /// <summary>值类型（bool/int/long/char/byte/double/短整型/浮点/枚举）→ 装箱为 System.Object 参数。</summary>
         private void EmitBoxIfValueType(IlAssembler il, TypeSymbol type)
         {
-            if (type != TypeSymbol.Boolean && type != TypeSymbol.Int32 && type != TypeSymbol.Int64 && type != TypeSymbol.Char &&
-                type != TypeSymbol.UInt8 && type != TypeSymbol.Double && type is not NamedTypeSymbol { TypeKind: TypeKind.Enum } &&
-                type != TypeSymbol.Int8 && type != TypeSymbol.Int16 && type != TypeSymbol.UInt16 &&
-                type != TypeSymbol.UInt32 && type != TypeSymbol.UInt64 && type != TypeSymbol.Float)
+            var boxed = BoxedTypeName(type);
+            if (boxed == null)
             {
                 return;
             }
 
-            var boxed = type == TypeSymbol.Boolean ? "System.Boolean"
-                : type == TypeSymbol.Int32 ? "System.Int32"
-                : type == TypeSymbol.Int64 ? "System.Int64"
-                : type == TypeSymbol.Char ? "System.Char"
-                : type == TypeSymbol.UInt8 ? "System.Byte"
-                : type == TypeSymbol.Int8 ? "System.SByte"
-                : type == TypeSymbol.Int16 ? "System.Int16"
-                : type == TypeSymbol.UInt16 ? "System.UInt16"
-                : type == TypeSymbol.UInt32 ? "System.UInt32"
-                : type == TypeSymbol.UInt64 ? "System.UInt64"
-                : type == TypeSymbol.Float ? "System.Single"
-                : type == TypeSymbol.Double ? "System.Double"
-                : "System.Int32"; // 枚举底层 int
             il.Emit(IlOpCodeTable.Get("Box"), _framework.RequireType(boxed));
+        }
+
+        /// <summary>值类型装箱用 corlib 类型全名（isinst/box 需要 TypeRef；基元 ToIlType 返回内联元素类型不可作 token）。</summary>
+        private static string? BoxedTypeName(TypeSymbol type)
+        {
+            if (type == TypeSymbol.Boolean) return "System.Boolean";
+            if (type == TypeSymbol.Int32) return "System.Int32";
+            if (type == TypeSymbol.Int64) return "System.Int64";
+            if (type == TypeSymbol.Char) return "System.Char";
+            if (type == TypeSymbol.UInt8) return "System.Byte";
+            if (type == TypeSymbol.Int8) return "System.SByte";
+            if (type == TypeSymbol.Int16) return "System.Int16";
+            if (type == TypeSymbol.UInt16) return "System.UInt16";
+            if (type == TypeSymbol.UInt32) return "System.UInt32";
+            if (type == TypeSymbol.UInt64) return "System.UInt64";
+            if (type == TypeSymbol.Float) return "System.Single";
+            if (type == TypeSymbol.Double) return "System.Double";
+            if (type is NamedTypeSymbol { TypeKind: TypeKind.Enum }) return "System.Int32";
+            return null;
         }
 
         private void EmitFormatExpression(IlAssembler il, BoundFormatExpression node)

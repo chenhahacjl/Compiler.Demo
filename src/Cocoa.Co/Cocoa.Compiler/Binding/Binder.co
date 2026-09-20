@@ -8,9 +8,10 @@
 //   Lambda/泛型/Foreach 循环变量收集为宽松处理（M9-a3 起收紧）。
 // 依赖：MiniParser（Node/Parser，树结构已由增量二差分锁定）。
 
-using MiniParser
+using Cocoa.CodeAnalysis.Syntax
+using Cocoa.CodeAnalysis.Symbols
 
-namespace MiniBinder
+namespace Cocoa.CodeAnalysis.Binding
 {
     class Binder
     {
@@ -33,11 +34,14 @@ namespace MiniBinder
         private field _mainName: string
         private field _labelCount: i32
         private field _loopLabelCount: i32
+        private field _loopBreakLabels: string[]
+        private field _loopContinueLabels: string[]
+        private field _loopDepth: i32
 
         public static function Create(source: string): Binder
         {
             var b = new Binder()
-            let parser = MiniParser.Parser.Create(source)
+            let parser = Parser.Create(source)
             b._root = parser.ParseCompilationUnit()
             b._functions = new FunctionSymbol[8]
             b._functionCount = 0
@@ -54,6 +58,9 @@ namespace MiniBinder
             b._diagCount = 0
             b._boundRoots = new Node[8]
             b._mainName = "<none>"
+            b._loopBreakLabels = new string[8]
+            b._loopContinueLabels = new string[8]
+            b._loopDepth = 0
             return b
         }
 
@@ -198,6 +205,7 @@ namespace MiniBinder
             }
 
             let fn = FunctionSymbol.Create(name, returnType)
+            CollectFunctionAttributes(node, fn)
             i = 0
             while i < node.ChildCount()
             {
@@ -211,6 +219,59 @@ namespace MiniBinder
             }
 
             AddFunction(fn, name)
+        }
+
+        /// <summary>收集函数级 attribute（`(AttributeList (Attribute name (arg...)) ...)`）→ FunctionSymbol。</summary>
+        /// <summary>字面量 token 原样文本（实参信息用途；框架只依赖属性名）。</summary>
+        private function LiteralText(t: Node): string
+        {
+            return t.Text()
+        }
+
+        private function CollectFunctionAttributes(node: Node, fn: FunctionSymbol): void
+        {
+            var i = 0
+            while i < node.ChildCount()
+            {
+                let child = node.Child(i)
+                if child.Kind() == "AttributeList"
+                {
+                    var j = 0
+                    while j < child.ChildCount()
+                    {
+                        let attr = child.Child(j)
+                        if attr.Kind() == "Attribute"
+                        {
+                            var name = attr.Child(0).Text()
+                            var args = ""
+                            var first = true
+                            var k = 1
+                            while k < attr.ChildCount()
+                            {
+                                let t = attr.Child(k)
+                                if t.Kind() != "CommaToken"
+                                {
+                                    if !first
+                                    {
+                                        args = args + ","
+                                    }
+
+                                    args = args + LiteralText(t)
+                                    first = false
+                                }
+
+                                k = k + 1
+                            }
+
+                            fn.AddAttribute(name, args)
+                        }
+
+                        j = j + 1
+                    }
+                }
+
+                i = i + 1
+            }
         }
 
         private function BindGlobalVariable(node: Node): void
@@ -734,6 +795,58 @@ namespace MiniBinder
             return sb
         }
 
+        // --- 结构化绑定树访问器（增量五 M5-a0） ---
+
+        public function GetFunctionCount(): i32
+        {
+            return _functionCount
+        }
+
+        public function GetFunctionName(index: i32): string
+        {
+            return _functionNames[index]
+        }
+
+        public function GetFunctionBody(index: i32): Node
+        {
+            return _boundRoots[index]
+        }
+
+        public function GetFunctionParamCount(index: i32): i32
+        {
+            return _functions[index].ParamCount()
+        }
+
+        public function GetFunctionParamName(index: i32, paramIndex: i32): string
+        {
+            return _functions[index].ParamName(paramIndex)
+        }
+
+        public function GetFunctionParamType(index: i32, paramIndex: i32): string
+        {
+            return _functions[index].ParamType(paramIndex)
+        }
+
+        public function GetFunctionReturnType(index: i32): string
+        {
+            return _functions[index].ReturnType()
+        }
+
+        public function GetFunctionAttributeCount(index: i32): i32
+        {
+            return _functions[index].AttributeCount()
+        }
+
+        public function GetFunctionAttributeName(index: i32, attrIndex: i32): string
+        {
+            return _functions[index].AttributeName(attrIndex)
+        }
+
+        public function GetFunctionAttributeArgText(index: i32, attrIndex: i32): string
+        {
+            return _functions[index].AttributeArgText(attrIndex)
+        }
+
         // --- lowering：if/while → label/goto/conditionalgoto（对齐 C# Lowerer 输出） ---
 
         private function MakeLabel(): string
@@ -746,6 +859,34 @@ namespace MiniBinder
         {
             _loopLabelCount = _loopLabelCount + 1
             return _loopLabelCount.ToString()
+        }
+
+        private function PushLoopLabels(breakLabel: string, continueLabel: string): void
+        {
+            if _loopDepth >= _loopBreakLabels.Length
+            {
+                var nb = new string[_loopBreakLabels.Length * 2]
+                var nc = new string[_loopContinueLabels.Length * 2]
+                var i = 0
+                while i < _loopDepth
+                {
+                    nb[i] = _loopBreakLabels[i]
+                    nc[i] = _loopContinueLabels[i]
+                    i = i + 1
+                }
+
+                _loopBreakLabels = nb
+                _loopContinueLabels = nc
+            }
+
+            _loopBreakLabels[_loopDepth] = breakLabel
+            _loopContinueLabels[_loopDepth] = continueLabel
+            _loopDepth = _loopDepth + 1
+        }
+
+        private function PopLoopLabels(): void
+        {
+            _loopDepth = _loopDepth - 1
         }
 
         private function LowerBound(node: Node): Node
@@ -848,7 +989,9 @@ namespace MiniBinder
                 let lb1 = Node.MakeCompound("LabelStatement")
                 lb1.Add(MakeToken(bodyLabel))
                 result.Add(lb1)
+                PushLoopLabels(breakLabel, continueLabel)
                 let bodyStmts = LowerBlockStmts(body)
+                PopLoopLabels()
                 var bi = 0
                 while bi < bodyStmts.ChildCount()
                 {
@@ -868,6 +1011,150 @@ namespace MiniBinder
                 lb3.Add(MakeToken(breakLabel))
                 result.Add(lb3)
                 return result
+            }
+
+            if k == "DoWhileStatement"
+            {
+                let body = node.Child(0)
+                let condition = node.Child(1)
+                let bodyLabel = MakeLabel()
+                let loopId = MakeLoopLabel()
+                let continueLabel = "continue" + loopId
+                let breakLabel = "break" + loopId
+                let result = Node.MakeCompound("BlockStatement")
+                let lb1 = Node.MakeCompound("LabelStatement")
+                lb1.Add(MakeToken(bodyLabel))
+                result.Add(lb1)
+                PushLoopLabels(breakLabel, continueLabel)
+                let bodyStmts = LowerBlockStmts(body)
+                PopLoopLabels()
+                var bi = 0
+                while bi < bodyStmts.ChildCount()
+                {
+                    result.Add(bodyStmts.Child(bi))
+                    bi = bi + 1
+                }
+
+                let lb2 = Node.MakeCompound("LabelStatement")
+                lb2.Add(MakeToken(continueLabel))
+                result.Add(lb2)
+                let cg = Node.MakeCompound("ConditionalGotoStatement")
+                cg.Add(MakeToken(bodyLabel))
+                cg.Add(MakeToken("True"))
+                cg.Add(condition)
+                result.Add(cg)
+                let lb3 = Node.MakeCompound("LabelStatement")
+                lb3.Add(MakeToken(breakLabel))
+                result.Add(lb3)
+                return result
+            }
+
+            if k == "ForRangeStatement"
+            {
+                // for var i = <lower> to <upper> { <body> }
+                // → { var i = <lower>; let upperBound = <upper>; goto condLabel; bodyLabel: <body>; continueLabel: i = i + 1; condLabel: gotoTrue bodyLabel i <= upperBound; breakLabel: }
+                let varName = node.Child(0).Text()
+                let lowerExpr = node.Child(1)
+                let upperExpr = node.Child(2)
+                let hasStep = node.ChildCount() > 4
+                let body = node.Child(node.ChildCount() - 1)
+                let loopId = MakeLoopLabel()
+                let continueLabel = "continue" + loopId
+                let breakLabel = "break" + loopId
+                let condLabel = MakeLabel()
+                let bodyLabel = MakeLabel()
+                let result = Node.MakeCompound("BlockStatement")
+                let varDecl = Node.MakeCompound("VariableDeclaration")
+                varDecl.Add(Node.MakeToken("decl", "var"))
+                varDecl.Add(Node.MakeToken("name", varName))
+                varDecl.Add(lowerExpr)
+                result.Add(varDecl)
+                let upperDecl = Node.MakeCompound("VariableDeclaration")
+                upperDecl.Add(Node.MakeToken("decl", "let"))
+                upperDecl.Add(Node.MakeToken("name", "upperBound"))
+                upperDecl.Add(upperExpr)
+                result.Add(upperDecl)
+                let gt = Node.MakeCompound("GotoStatement")
+                gt.Add(MakeToken(condLabel))
+                result.Add(gt)
+                let lb1 = Node.MakeCompound("LabelStatement")
+                lb1.Add(MakeToken(bodyLabel))
+                result.Add(lb1)
+                PushLoopLabels(breakLabel, continueLabel)
+                let bodyStmts = LowerBlockStmts(body)
+                PopLoopLabels()
+                var bi = 0
+                while bi < bodyStmts.ChildCount()
+                {
+                    result.Add(bodyStmts.Child(bi))
+                    bi = bi + 1
+                }
+
+                let lb2 = Node.MakeCompound("LabelStatement")
+                lb2.Add(MakeToken(continueLabel))
+                result.Add(lb2)
+                let incr = Node.MakeCompound("ExpressionStatement")
+                let assign = Node.MakeCompound("AssignmentExpression")
+                assign.Add(Node.MakeToken("name", varName))
+                let addExpr = Node.MakeCompound("BinaryExpression")
+                addExpr.Add(Node.MakeToken("op", "+"))
+                let varRef = Node.MakeCompound("VariableExpression")
+                varRef.Add(Node.MakeToken("name", varName))
+                addExpr.Add(varRef)
+                if hasStep
+                {
+                    addExpr.Add(node.Child(3))
+                }
+                else
+                {
+                    let oneLit = Node.MakeCompound("LiteralExpression")
+                    oneLit.Add(Node.MakeToken("Number", "1"))
+                    addExpr.Add(oneLit)
+                }
+
+                assign.Add(addExpr)
+                incr.Add(assign)
+                result.Add(incr)
+                let lb3 = Node.MakeCompound("LabelStatement")
+                lb3.Add(MakeToken(condLabel))
+                result.Add(lb3)
+                let cg = Node.MakeCompound("ConditionalGotoStatement")
+                cg.Add(MakeToken(bodyLabel))
+                cg.Add(MakeToken("True"))
+                let condExpr = Node.MakeCompound("BinaryExpression")
+                condExpr.Add(Node.MakeToken("op", "<="))
+                let condVarRef = Node.MakeCompound("VariableExpression")
+                condVarRef.Add(Node.MakeToken("name", varName))
+                condExpr.Add(condVarRef)
+                let condUpperRef = Node.MakeCompound("VariableExpression")
+                condUpperRef.Add(Node.MakeToken("name", "upperBound"))
+                condExpr.Add(condUpperRef)
+                cg.Add(condExpr)
+                result.Add(cg)
+                let lb4 = Node.MakeCompound("LabelStatement")
+                lb4.Add(MakeToken(breakLabel))
+                result.Add(lb4)
+                return result
+            }
+
+            if k == "BreakStatement"
+            {
+                if _loopDepth > 0
+                {
+                    let result = Node.MakeCompound("GotoStatement")
+                    result.Add(MakeToken(_loopBreakLabels[_loopDepth - 1]))
+                    return result
+                }
+            }
+
+            if k == "ContinueStatement"
+            {
+                if _loopDepth > 0
+                {
+                    let result = Node.MakeCompound("GotoStatement")
+                    result.Add(MakeToken(_loopContinueLabels[_loopDepth - 1]))
+                    return result
+                }
             }
 
             if k == "BlockStatement"
@@ -914,7 +1201,21 @@ namespace MiniBinder
                 var i = 0
                 while i < node.ChildCount()
                 {
-                    result.Add(LowerStatement(node.Child(i)))
+                    let lowered = LowerStatement(node.Child(i))
+                    if lowered.Kind() == "BlockStatement" && !lowered.IsToken()
+                    {
+                        var ci = 0
+                        while ci < lowered.ChildCount()
+                        {
+                            result.Add(lowered.Child(ci))
+                            ci = ci + 1
+                        }
+                    }
+                    else
+                    {
+                        result.Add(lowered)
+                    }
+
                     i = i + 1
                 }
 
@@ -1098,6 +1399,61 @@ namespace MiniBinder
                 return w
             }
 
+            if k == "DoWhileStatement"
+            {
+                let d = Node.MakeCompound("DoWhileStatement")
+                var i = 0
+                while i < node.ChildCount()
+                {
+                    let child = node.Child(i)
+                    if !child.IsToken()
+                    {
+                        d.Add(BuildBound(child))
+                    }
+
+                    i = i + 1
+                }
+
+                return d
+            }
+
+            if k == "ForRangeStatement"
+            {
+                let f = Node.MakeCompound("ForRangeStatement")
+                var i = 0
+                while i < node.ChildCount()
+                {
+                    let child = node.Child(i)
+                    let ck = child.Kind()
+                    if ck == "IdentifierToken"
+                    {
+                        f.Add(Node.MakeToken("name", child.Text()))
+                    }
+                    else if !child.IsToken()
+                    {
+                        f.Add(BuildBound(child))
+                    }
+
+                    i = i + 1
+                }
+
+                return f
+            }
+
+            if k == "BreakStatement"
+            {
+                let b = Node.MakeCompound("BreakStatement")
+                b.Add(Node.MakeToken("BreakKeyword", "break"))
+                return b
+            }
+
+            if k == "ContinueStatement"
+            {
+                let c = Node.MakeCompound("ContinueStatement")
+                c.Add(Node.MakeToken("ContinueKeyword", "continue"))
+                return c
+            }
+
             if k == "AssignmentExpression"
             {
                 let a = Node.MakeCompound("AssignmentExpression")
@@ -1254,9 +1610,9 @@ namespace MiniBinder
                 if k == "EqualsEqualsToken" { return "==" }
                 if k == "BangEqualsToken" { return "!=" }
                 if k == "LessToken" { return "<" }
-                if k == "LessEqualsToken" { return "<=" }
+                if k == "LessOrEqualsToken" || k == "LessEqualsToken" { return "<=" }
                 if k == "GreaterToken" { return ">" }
-                if k == "GreaterEqualsToken" { return ">=" }
+                if k == "GreaterOrEqualsToken" || k == "GreaterEqualsToken" { return ">=" }
                 if k == "AndKeyword" || k == "AmpersandAmpersandToken" { return "&&" }
                 if k == "OrKeyword" || k == "PipePipeToken" { return "||" }
                 i = i + 1

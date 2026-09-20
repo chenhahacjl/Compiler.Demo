@@ -112,21 +112,12 @@ namespace Cocoa.CodeGen.PE
                 relocBlob = Array.Empty<byte>();
             }
 
-            // 才会被替换为解析后的真实函数地址，故槽不能留空。
             // 各节虚拟末端（对齐后）必须恰好落在下一节起点（Windows 加载器按相邻节连续校验）。
-            var sections = new List<PeSectionSpec>();
-            var codeOffset = 0;
-            var codeSectionIndex = 0;
-            while (codeOffset < code.Length)
+            // .text 单一节（不做 4KB 分页）：分页会让节表随 code 增长而膨胀（>92 节将溢出固定头区且部分加载器拒载）。
+            var sections = new List<PeSectionSpec>
             {
-                var chunkLength = Math.Min(SectionAlignment, code.Length - codeOffset);
-                var chunk = new byte[chunkLength];
-                Array.Copy(code, codeOffset, chunk, 0, chunkLength);
-                var name = codeSectionIndex == 0 ? ".text" : ".text" + codeSectionIndex.ToString();
-                sections.Add(new PeSectionSpec(name, chunk, (uint)(TextRva + codeOffset), PeSectionCharacteristics.Text));
-                codeOffset += chunkLength;
-                codeSectionIndex++;
-            }
+                new(".text", code, TextRva, PeSectionCharacteristics.Text),
+            };
 
             sections.Add(new(".data", slotData, (uint)dataRva, PeSectionCharacteristics.Data));
             sections.Add(new(".idata", importLayout.Blob, (uint)idataRva, PeSectionCharacteristics.Data));
@@ -134,6 +125,14 @@ namespace Cocoa.CodeGen.PE
             {
                 sections.Add(new(".reloc", relocBlob, relocRva, PeSectionCharacteristics.Data | PeSectionCharacteristics.MemDiscardable));
             }
+
+            // 原生镜像：.text 按 4KB 页分页成多个节（.text/.textN），节表须容纳全部节头（每节 40 字节）。
+            // 固定 0x1000 在 code 跨页多节（>92 节）时越界——按节数动态抬升，仍保证 ≥ 节对齐。
+            var sectionTableOffset = PeConstants.DosHeaderSize + PeImageBuilder.DosStubSize + 4 + ImageFileHeader.Size;
+            var optionalHeaderSize = pe32 ? ImageOptionalHeader32.Size : ImageOptionalHeader64.Size;
+            var minHeaders = Align(sectionTableOffset + optionalHeaderSize + sections.Count * ImageSectionHeader.Size, 0x200);
+            // SizeOfHeaders 须同时 ≥ 节表、(建议)节对齐倍数，否则加载器可能拒载。
+            var headersSize = Math.Max(SizeOfHeaders, Align(minHeaders, SectionAlignment));
 
             var config = new PeImageConfig(
                 pe32 ? PeMachine.I386 : PeMachine.AMD64,
@@ -143,7 +142,7 @@ namespace Cocoa.CodeGen.PE
                      : (ushort)(PeDllCharacteristics.CurrentImage | PeDllCharacteristics.TerminalServerAware),
                 (uint)entryPointRva)
             {
-                SizeOfHeaders = (uint)SizeOfHeaders,
+                SizeOfHeaders = (uint)headersSize,
             };
 
             // 有重定位节时不再声明 RelocsStripped（x86 历史行为保留：无重定位时仍声明剥离）

@@ -1,0 +1,696 @@
+// Cocoa 自举 CodeGen · X64 汇编器编码内核（阶段 7 增量五 M5-a4 续作切片 1）——
+// 指令 → 字节流（对齐 C# X64Assembler/X64Assembler.EmitHelpers/AssemblerBase 逐字节）。
+// 范围：整数指令（REX + ModRM + SIB + 立即数）+ 标签 fixup（rel32 占位）。
+// 差分基准：C# X64AssemblerEncodingTests 同构金签（hex 逐字节）。
+
+using Cocoa.CodeAnalysis.Syntax
+using Cocoa.CodeAnalysis.Binding
+
+namespace Cocoa.CodeGen
+{
+    class X64Assembler
+    {
+        private field _bytes: i32[]
+        private field _count: i32
+        private field _labels: i32[]      // label id → 偏移
+        private field _labelCount: i32
+        private field _fixupOffsets: i32[]
+        private field _fixupLabels: i32[]
+        private field _fixupCount: i32
+
+        public constructor()
+        {
+            _bytes = new i32[256]
+            _count = 0
+            _labels = new i32[16]
+            _labelCount = 0
+            _fixupOffsets = new i32[32]
+            _fixupLabels = new i32[32]
+            _fixupCount = 0
+        }
+
+        public function Position(): i32
+        {
+            return _count
+        }
+
+        public function Length(): i32
+        {
+            return _count
+        }
+
+        public function CreateLabel(): i32
+        {
+            let id = _labelCount
+            _labelCount = _labelCount + 1
+            return id
+        }
+
+        public function MarkLabel(id: i32): void
+        {
+            _labels[id] = _count
+        }
+
+        public function GetLabelOffset(id: i32): i32
+        {
+            return _labels[id]
+        }
+
+        /// <summary>字节序列 hex（小写，无分隔）——差分输出面。</summary>
+        public function Hex(): string
+        {
+            var sb = ""
+            var i = 0
+            while i < _count
+            {
+                sb = sb + HexCodec.HexByte(_bytes[i])
+                i = i + 1
+            }
+
+            return sb
+        }
+
+        // ---- 字节/立即数 ----
+
+        private function EmitByte(v: i32): void
+        {
+            if _count >= _bytes.Length
+            {
+                var b = new i32[_bytes.Length * 2]
+                var i = 0
+                while i < _count
+                {
+                    b[i] = _bytes[i]
+                    i = i + 1
+                }
+
+                _bytes = b
+            }
+
+            _bytes[_count] = v & 0xff
+            _count = _count + 1
+        }
+
+        private function EmitInt32(v: i32): void
+        {
+            EmitByte(v)
+            EmitByte(v >> 8)
+            EmitByte(v >> 16)
+            EmitByte(v >> 24)
+        }
+
+        private function EmitInt64(v: i64): void
+        {
+            EmitByte(i32(v & 0xff))
+            EmitByte(i32((v >> 8) & 0xff))
+            EmitByte(i32((v >> 16) & 0xff))
+            EmitByte(i32((v >> 24) & 0xff))
+            EmitByte(i32((v >> 32) & 0xff))
+            EmitByte(i32((v >> 40) & 0xff))
+            EmitByte(i32((v >> 48) & 0xff))
+            EmitByte(i32((v >> 56) & 0xff))
+        }
+
+        private function EmitRex(rex: i32): void
+        {
+            if rex != 0x40
+            {
+                EmitByte(rex)
+            }
+        }
+
+        private function EmitModRMByte(mod: i32, reg: i32, rm: i32): void
+        {
+            EmitByte((mod << 6) | ((reg & 7) << 3) | (rm & 7))
+        }
+
+        private function EncodeMemoryMod(baseReg: i32, displacement: i32): i32
+        {
+            if (baseReg & 7) == 5 || displacement != 0
+            {
+                if displacement >= -128 && displacement <= 127
+                {
+                    return 1
+                }
+
+                return 2
+            }
+
+            return 0
+        }
+
+        private function MemoryRm(baseReg: i32): i32
+        {
+            if baseReg == 4 || baseReg == 12
+            {
+                return 4
+            }
+
+            return baseReg & 7
+        }
+
+        private function MemoryRexB(baseReg: i32): i32
+        {
+            if baseReg >= 8
+            {
+                return 1
+            }
+
+            return 0
+        }
+
+        private function EmitMemoryRest(baseReg: i32, displacement: i32, mod: i32): void
+        {
+            let rm = MemoryRm(baseReg)
+            if rm == 4
+            {
+                EmitByte((4 << 3) | (baseReg & 7))
+            }
+
+            if mod == 1
+            {
+                EmitByte(displacement & 0xff)
+            }
+            else if mod == 2
+            {
+                EmitInt32(displacement)
+            }
+        }
+
+        private function AddFixup(label: i32): void
+        {
+            _fixupOffsets[_fixupCount] = _count
+            _fixupLabels[_fixupCount] = label
+            _fixupCount = _fixupCount + 1
+        }
+
+        // ---- REX 位辅助 ----
+
+        private function RexW(size: i32): i32
+        {
+            if size == 2
+            {
+                return 0x08
+            }
+
+            return 0
+        }
+
+        private function RexB(reg: i32): i32
+        {
+            if reg >= 8
+            {
+                return 1
+            }
+
+            return 0
+        }
+
+        private function RexX(reg: i32): i32
+        {
+            if reg >= 8
+            {
+                return 4
+            }
+
+            return 0
+        }
+
+        // ---- 公共指令（对齐 C# X64Assembler 名字）----
+        // size 编码：0=byte 1=dword 2=qword 3=word
+
+        public function Push(reg: i32): void
+        {
+            if reg >= 8
+            {
+                EmitByte(0x41)
+            }
+
+            EmitByte(0x50 + (reg & 7))
+        }
+
+        public function Pop(reg: i32): void
+        {
+            if reg >= 8
+            {
+                EmitByte(0x41)
+            }
+
+            EmitByte(0x58 + (reg & 7))
+        }
+
+        public function Ret(): void
+        {
+            EmitByte(0xC3)
+        }
+
+        public function MovRegReg(size: i32, dst: i32, src: i32): void
+        {
+            var opcode: i32 = 0x8B
+            if size == 0
+            {
+                opcode = 0x8A
+            }
+
+            EmitRegReg(opcode, size, dst, src)
+        }
+
+        public function MovRegMem(size: i32, dst: i32, baseReg: i32, displacement: i32): void
+        {
+            var opcode: i32 = 0x8B
+            if size == 0
+            {
+                opcode = 0x8A
+            }
+
+            if size == 3
+            {
+                EmitByte(0x66)
+            }
+
+            EmitRegMem(opcode, size, dst, baseReg, displacement)
+        }
+
+        public function MovMemReg(size: i32, baseReg: i32, displacement: i32, src: i32): void
+        {
+            var opcode: i32 = 0x89
+            if size == 0
+            {
+                opcode = 0x88
+            }
+
+            if size == 3
+            {
+                EmitByte(0x66)
+            }
+
+            EmitMemReg(opcode, size, baseReg, displacement, src)
+        }
+
+        public function MovRegImm(size: i32, dst: i32, imm: i32): void
+        {
+            if size == 1
+            {
+                EmitRex(0x40 | RexB(dst))
+                EmitByte(0xB8 + (dst & 7))
+                EmitInt32(imm)
+            }
+            else
+            {
+                if imm >= -2147483648 && imm <= 2147483647
+                {
+                    EmitRex(0x48 | RexB(dst))
+                    EmitByte(0xC7)
+                    EmitModRMByte(3, 0, dst & 7)
+                    EmitInt32(imm)
+                }
+                else
+                {
+                    MovRegImm64(dst, imm)
+                }
+            }
+        }
+
+        public function MovRegImm64(dst: i32, imm: i64): void
+        {
+            EmitRex(0x48 | RexB(dst))
+            EmitByte(0xB8 + (dst & 7))
+            EmitInt64(imm)
+        }
+
+        public function MovMemImm(size: i32, baseReg: i32, displacement: i32, imm: i32): void
+        {
+            let memoryMod = EncodeMemoryMod(baseReg, displacement)
+            let rexB = MemoryRexB(baseReg)
+            EmitRex(0x40 | RexW(size) | rexB)
+            EmitByte(0xC7)
+            EmitModRMByte(memoryMod, 0, MemoryRm(baseReg))
+            EmitMemoryRest(baseReg, displacement, memoryMod)
+            EmitInt32(imm)
+        }
+
+        public function AddRegImm(size: i32, dst: i32, imm: i32): void
+        {
+            EmitRegImm(0, size, dst, imm)
+        }
+
+        public function SubRegImm(size: i32, dst: i32, imm: i32): void
+        {
+            EmitRegImm(5, size, dst, imm)
+        }
+
+        public function AndRegImm(size: i32, dst: i32, imm: i32): void
+        {
+            EmitRegImm(4, size, dst, imm)
+        }
+
+        public function OrRegImm(size: i32, dst: i32, imm: i32): void
+        {
+            EmitRegImm(1, size, dst, imm)
+        }
+
+        public function XorRegImm(size: i32, dst: i32, imm: i32): void
+        {
+            EmitRegImm(6, size, dst, imm)
+        }
+
+        public function AddRegReg(size: i32, dst: i32, src: i32): void
+        {
+            EmitRmReg(0x01, size, dst, src)
+        }
+
+        public function SubRegReg(size: i32, dst: i32, src: i32): void
+        {
+            EmitRmReg(0x29, size, dst, src)
+        }
+
+        public function AndRegReg(size: i32, dst: i32, src: i32): void
+        {
+            EmitRmReg(0x21, size, dst, src)
+        }
+
+        public function OrRegReg(size: i32, dst: i32, src: i32): void
+        {
+            EmitRmReg(0x09, size, dst, src)
+        }
+
+        public function XorRegReg(size: i32, dst: i32, src: i32): void
+        {
+            EmitRmReg(0x31, size, dst, src)
+        }
+
+        public function CmpRegReg(size: i32, dst: i32, src: i32): void
+        {
+            EmitRmReg(0x39, size, dst, src)
+        }
+
+        /// <summary>cmp reg, [mem]（0x3B 方向：reg=目标，mem=源）。</summary>
+        public function CmpRegMem(size: i32, dst: i32, baseReg: i32, displacement: i32): void
+        {
+            EmitRegMem(0x3B, size, dst, baseReg, displacement)
+        }
+
+        public function CmpRegImm(size: i32, dst: i32, imm: i32): void
+        {
+            EmitRegImm(7, size, dst, imm)
+        }
+
+        public function CmpMemReg(size: i32, baseReg: i32, displacement: i32, src: i32): void
+        {
+            EmitMemReg(0x39, size, baseReg, displacement, src)
+        }
+
+        public function TestRegReg(size: i32, r1: i32, r2: i32): void
+        {
+            EmitRex(0x40 | RexW(size) | RexX(r2) | RexB(r1))
+            EmitByte(0x85)
+            EmitModRMByte(3, r2 & 7, r1 & 7)
+        }
+
+        public function ImulRegReg(size: i32, dst: i32, src: i32): void
+        {
+            var rex = 0x40 | RexW(size) | RexX(dst) | RexB(src)
+            EmitRex(rex)
+            EmitByte(0x0F)
+            EmitByte(0xAF)
+            EmitModRMByte(3, dst & 7, src & 7)
+        }
+
+        public function IdivReg(size: i32, reg: i32): void
+        {
+            EmitF7Grp(7, size, reg)
+        }
+
+        public function DivReg(size: i32, reg: i32): void
+        {
+            EmitF7Grp(6, size, reg)
+        }
+
+        public function MulReg(size: i32, reg: i32): void
+        {
+            EmitF7Grp(4, size, reg)
+        }
+
+        public function NotReg(size: i32, reg: i32): void
+        {
+            EmitF7Grp(2, size, reg)
+        }
+
+        public function NegReg(size: i32, reg: i32): void
+        {
+            EmitF7Grp(3, size, reg)
+        }
+
+        public function ShlRegImm(size: i32, reg: i32, count: i32): void
+        {
+            EmitShiftImm(4, size, reg, count)
+        }
+
+        public function ShrRegImm(size: i32, reg: i32, count: i32): void
+        {
+            EmitShiftImm(5, size, reg, count)
+        }
+
+        public function SarRegImm(size: i32, reg: i32, count: i32): void
+        {
+            EmitShiftImm(7, size, reg, count)
+        }
+
+        public function Cqo(): void
+        {
+            EmitRex(0x48)
+            EmitByte(0x99)
+        }
+
+        public function MovzxRegReg(dstSize: i32, dst: i32, src: i32): void
+        {
+            var rex = 0x40 | RexW(dstSize) | RexX(dst) | RexB(src)
+            EmitRex(rex)
+            EmitByte(0x0F)
+
+            if dstSize == 0
+            {
+                EmitByte(0xB6)
+            }
+            else
+            {
+                EmitByte(0xB7)
+            }
+
+            EmitModRMByte(3, dst & 7, src & 7)
+        }
+
+        public function MovzxRegMem(dstSize: i32, dst: i32, baseReg: i32, displacement: i32): void
+        {
+            let m = EncodeMemoryMod(baseReg, displacement)
+            var rex = 0x40 | RexW(dstSize) | RexX(dst) | MemoryRexB(baseReg)
+            EmitRex(rex)
+            EmitByte(0x0F)
+
+            if dstSize == 0
+            {
+                EmitByte(0xB6)
+            }
+            else
+            {
+                EmitByte(0xB7)
+            }
+
+            EmitModRMByte(m, dst & 7, MemoryRm(baseReg))
+            EmitMemoryRest(baseReg, displacement, m)
+        }
+
+        public function Movsxd(dst: i32, src: i32): void
+        {
+            EmitRex(0x48 | RexX(dst) | RexB(src))
+            EmitByte(0x63)
+            EmitModRMByte(3, dst & 7, src & 7)
+        }
+
+        public function Lea(dst: i32, baseReg: i32, displacement: i32): void
+        {
+            let m = EncodeMemoryMod(baseReg, displacement)
+            EmitRex(0x48 | RexX(dst) | MemoryRexB(baseReg))
+            EmitByte(0x8D)
+            EmitModRMByte(m, dst & 7, MemoryRm(baseReg))
+            EmitMemoryRest(baseReg, displacement, m)
+        }
+
+        public function Setcc(cond: i32, dst: i32): void
+        {
+            EmitRex(0x40 | RexB(dst))
+            EmitByte(0x0F)
+            EmitByte(0x90 + SetccOpcode(cond))
+            EmitModRMByte(3, 0, dst & 7)
+        }
+
+        public function Jmp(label: i32): void
+        {
+            EmitByte(0xE9)
+            AddFixup(label)
+            EmitInt32(0)
+        }
+
+        public function Jcc(cond: i32, label: i32): void
+        {
+            EmitByte(0x0F)
+            EmitByte(0x80 + JccOpcode(cond))
+            AddFixup(label)
+            EmitInt32(0)
+        }
+
+        public function Call(label: i32): void
+        {
+            EmitByte(0xE8)
+            AddFixup(label)
+            EmitInt32(0)
+        }
+
+        public function CallReg(reg: i32): void
+        {
+            EmitRex(0x40 | RexB(reg))
+            EmitByte(0xFF)
+            EmitModRMByte(3, 2, reg & 7)
+        }
+
+        /// <summary>call [rip + rel32]（IAT 间接调用，rel32 占位）——对齐 C# CallRip。</summary>
+        public function CallRip(): void
+        {
+            EmitByte(0xFF)
+            EmitByte(0x15)
+            EmitInt32(0)
+        }
+
+        /// <summary>lea rax, [rip + rel32]（数据段符号，占位）——对齐 C# LeaRip。</summary>
+        public function LeaRip(dst: i32): void
+        {
+            EmitRex(0x48 | RexX(dst))
+            EmitByte(0x8D)
+            EmitModRMByte(0, dst & 7, 5)
+            EmitInt32(0)
+        }
+
+        public function MovGs(dst: i32, displacement: i32): void
+        {
+            EmitByte(0x65)
+            EmitRex(0x48 | RexX(dst))
+            EmitByte(0x8B)
+            EmitModRMByte(0, dst & 7, 4)
+            EmitByte(0x25)
+            EmitInt32(displacement)
+        }
+
+        // ---- 编码辅助 ----
+
+        private function EmitRegReg(opcode: i32, size: i32, reg: i32, rm: i32): void
+        {
+            EmitRex(0x40 | RexW(size) | RexX(reg) | RexB(rm))
+            EmitByte(opcode)
+            EmitModRMByte(3, reg & 7, rm & 7)
+        }
+
+        private function EmitRmReg(opcode: i32, size: i32, rm: i32, reg: i32): void
+        {
+            EmitRex(0x40 | RexW(size) | RexX(reg) | RexB(rm))
+            EmitByte(opcode)
+            EmitModRMByte(3, reg & 7, rm & 7)
+        }
+
+        private function EmitRegMem(opcode: i32, size: i32, reg: i32, baseReg: i32, displacement: i32): void
+        {
+            let m = EncodeMemoryMod(baseReg, displacement)
+            EmitRex(0x40 | RexW(size) | RexX(reg) | MemoryRexB(baseReg))
+            EmitByte(opcode)
+            EmitModRMByte(m, reg & 7, MemoryRm(baseReg))
+            EmitMemoryRest(baseReg, displacement, m)
+        }
+
+        private function EmitMemReg(opcode: i32, size: i32, baseReg: i32, displacement: i32, reg: i32): void
+        {
+            let m = EncodeMemoryMod(baseReg, displacement)
+            EmitRex(0x40 | RexW(size) | RexX(reg) | MemoryRexB(baseReg))
+            EmitByte(opcode)
+            EmitModRMByte(m, reg & 7, MemoryRm(baseReg))
+            EmitMemoryRest(baseReg, displacement, m)
+        }
+
+        private function EmitRegImm(digit: i32, size: i32, dst: i32, imm: i32): void
+        {
+            if imm >= -128 && imm <= 127
+            {
+                EmitRex(0x40 | RexW(size) | RexB(dst))
+                EmitByte(0x83)
+                EmitModRMByte(3, digit, dst & 7)
+                EmitByte(imm & 0xff)
+            }
+            else
+            {
+                EmitRex(0x40 | RexW(size) | RexB(dst))
+                EmitByte(0x81)
+                EmitModRMByte(3, digit, dst & 7)
+                EmitInt32(imm)
+            }
+        }
+
+        private function EmitF7Grp(digit: i32, size: i32, rm: i32): void
+        {
+            EmitRex(0x40 | RexW(size) | RexB(rm))
+            EmitByte(0xF7)
+            EmitModRMByte(3, digit, rm & 7)
+        }
+
+        private function EmitShiftImm(digit: i32, size: i32, dst: i32, count: i32): void
+        {
+            EmitRex(0x40 | RexW(size) | RexB(dst))
+            EmitByte(0xC1)
+            EmitModRMByte(3, digit, dst & 7)
+            EmitByte(count)
+        }
+
+        private static function SetccOpcode(cond: i32): i32
+        {
+            var table = new i32[12]
+            table[0] = 0x04 // Equal
+            table[1] = 0x05 // NotEqual
+            table[2] = 0x0C // Less
+            table[3] = 0x0E // LessOrEqual
+            table[4] = 0x0F // Greater
+            table[5] = 0x0D // GreaterOrEqual
+            table[6] = 0x02 // Below
+            table[7] = 0x06 // BelowOrEqual
+            table[8] = 0x07 // Above
+            table[9] = 0x03 // AboveOrEqual
+            table[10] = 0x0A // Parity
+            table[11] = 0x0B // NoParity
+            if cond >= 0 && cond < 12
+            {
+                return table[cond]
+            }
+
+            return 0
+        }
+
+        private static function JccOpcode(cond: i32): i32
+        {
+            var table = new i32[12]
+            table[0] = 0x04 // Equal
+            table[1] = 0x05 // NotEqual
+            table[2] = 0x0C // Less
+            table[3] = 0x0E // LessOrEqual
+            table[4] = 0x0F // Greater
+            table[5] = 0x0D // GreaterOrEqual
+            table[6] = 0x02 // Below
+            table[7] = 0x06 // BelowOrEqual
+            table[8] = 0x07 // Above
+            table[9] = 0x03 // AboveOrEqual
+            table[10] = 0x0A // Parity
+            table[11] = 0x0B // NoParity
+            if cond >= 0 && cond < 12
+            {
+                return table[cond]
+            }
+
+            return 0
+        }
+    }
+}

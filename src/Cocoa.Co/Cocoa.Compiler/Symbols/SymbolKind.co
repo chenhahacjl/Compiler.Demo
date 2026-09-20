@@ -1,0 +1,13 @@
+namespace Cocoa.CodeAnalysis.Symbols
+{
+    class SymbolKind
+    {
+        public static function Function(): i32 { return 0 }
+        public static function GlobalVariable(): i32 { return 1 }
+        public static function LocalVariable(): i32 { return 2 }
+        public static function Parameter(): i32 { return 3 }
+        public static function Type(): i32 { return 4 }
+        public static function NamedType(): i32 { return 5 }
+        public static function ArrayType(): i32 { return 6 }
+    }
+}

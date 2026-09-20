@@ -91,6 +91,8 @@ namespace Cocoa.CodeGen.Native
             {
                 label = _a.CreateLabel();
                 _asmLabelCache.Add(irLabelId, label);
+                // LirFunction 内标签号每函数重置 → 符号须带函数名（布局无关：跨函数相同 irLabelId 不同符号）
+                _labelSymbols[label] = (_currentFunction?.Name ?? "?") + ":L" + irLabelId;
             }
 
             return label;

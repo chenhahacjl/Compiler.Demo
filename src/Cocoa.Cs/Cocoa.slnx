@@ -4,7 +4,7 @@
   </Folder>
   <Project Path="Cocoa.Targeting/Cocoa.Targeting.csproj" />
   <Folder Name="/Compiler/">
-    <Project Path="Cocoa.Compiler/Cocoa.Compiler.csproj" />
+    <Project Path="Cocoa.CodeAnalysis/Cocoa.CodeAnalysis.csproj" />
   </Folder>
   <Folder Name="/CodeGen/">
     <Project Path="CodeGen/Cocoa.CodeGen.Managed.Structure/Cocoa.CodeGen.Managed.Structure.csproj" />

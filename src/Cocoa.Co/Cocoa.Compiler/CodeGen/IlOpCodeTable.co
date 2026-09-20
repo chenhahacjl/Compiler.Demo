@@ -1,0 +1,224 @@
+// Cocoa 自举 CodeGen · IL 操作码表（阶段 7 增量五 M5-a3 地基）——
+// 镜像 C# Cocoa.CodeGen.Managed.Structure.IlOpCodeTable：name → (value, operandType)。
+// 差分测试逐条目核对 value / 两字节前缀 / 操作数尺寸；尺寸按 OperandType 派生（对齐 C# OperandSize）。
+// OperandType 数值码对齐 C# IlOperandType 枚举序。
+
+namespace Cocoa.CodeGen
+{
+    class IlOpCodeTable
+    {
+        public static function OpCodeValue(name: string): i32
+        {
+            if name == "Nop" { return 0x00 }
+            if name == "Ret" { return 0x2A }
+            if name == "Dup" { return 0x25 }
+            if name == "Pop" { return 0x26 }
+            if name == "Ldnull" { return 0x14 }
+            if name == "Ldc_I4_M1" { return 0x15 }
+            if name == "Ldc_I4_0" { return 0x16 }
+            if name == "Ldc_I4_1" { return 0x17 }
+            if name == "Ldc_I4_2" { return 0x18 }
+            if name == "Ldc_I4_3" { return 0x19 }
+            if name == "Ldc_I4_4" { return 0x1A }
+            if name == "Ldc_I4_5" { return 0x1B }
+            if name == "Ldc_I4_6" { return 0x1C }
+            if name == "Ldc_I4_7" { return 0x1D }
+            if name == "Ldc_I4_8" { return 0x1E }
+            if name == "Ldc_I4_S" { return 0x1F }
+            if name == "Ldc_I4" { return 0x20 }
+            if name == "Ldc_I8" { return 0x21 }
+            if name == "Ldc_R4" { return 0x22 }
+            if name == "Ldc_R8" { return 0x23 }
+            if name == "Ldarg_0" { return 0x02 }
+            if name == "Ldarg_1" { return 0x03 }
+            if name == "Ldarg_2" { return 0x04 }
+            if name == "Ldarg_3" { return 0x05 }
+            if name == "Ldarg_S" { return 0x0E }
+            if name == "Ldloc_S" { return 0x11 }
+            if name == "Stloc_S" { return 0x13 }
+            if name == "Ldloc_0" { return 0x06 }
+            if name == "Ldloc_1" { return 0x07 }
+            if name == "Ldloc_2" { return 0x08 }
+            if name == "Ldloc_3" { return 0x09 }
+            if name == "Stloc_0" { return 0x0A }
+            if name == "Stloc_1" { return 0x0B }
+            if name == "Stloc_2" { return 0x0C }
+            if name == "Stloc_3" { return 0x0D }
+            if name == "Add" { return 0x58 }
+            if name == "Sub" { return 0x59 }
+            if name == "Mul" { return 0x5A }
+            if name == "Div" { return 0x5B }
+            if name == "Div_Un" { return 0x5C }
+            if name == "Rem" { return 0x5D }
+            if name == "Rem_Un" { return 0x5E }
+            if name == "And" { return 0x5F }
+            if name == "Or" { return 0x60 }
+            if name == "Xor" { return 0x61 }
+            if name == "Shl" { return 0x62 }
+            if name == "Shr" { return 0x63 }
+            if name == "Shr_Un" { return 0x64 }
+            if name == "Neg" { return 0x65 }
+            if name == "Not" { return 0x66 }
+            if name == "Conv_I1" { return 0x67 }
+            if name == "Conv_I2" { return 0x68 }
+            if name == "Conv_I4" { return 0x69 }
+            if name == "Conv_U1" { return 0xD2 }
+            if name == "Conv_U2" { return 0xD1 }
+            if name == "Conv_I8" { return 0x6A }
+            if name == "Conv_R4" { return 0x6B }
+            if name == "Conv_R8" { return 0x6C }
+            if name == "Conv_U4" { return 0x6D }
+            if name == "Conv_U8" { return 0x6E }
+            if name == "Conv_I" { return 0xD3 }
+            if name == "Conv_U" { return 0xE0 }
+            if name == "Ceq" { return 0xFE01 }
+            if name == "Cgt" { return 0xFE02 }
+            if name == "Cgt_Un" { return 0xFE03 }
+            if name == "Clt" { return 0xFE04 }
+            if name == "Clt_Un" { return 0xFE05 }
+            if name == "Br_S" { return 0x2B }
+            if name == "Brfalse_S" { return 0x2C }
+            if name == "Brtrue_S" { return 0x2D }
+            if name == "Br" { return 0x38 }
+            if name == "Brfalse" { return 0x39 }
+            if name == "Brtrue" { return 0x3A }
+            if name == "Switch" { return 0x45 }
+            if name == "Leave" { return 0xDD }
+            if name == "Leave_S" { return 0xDE }
+            if name == "Endfinally" { return 0xDC }
+            if name == "Throw" { return 0x7A }
+            if name == "Rethrow" { return 0xFE1A }
+            if name == "Call" { return 0x28 }
+            if name == "Callvirt" { return 0x6F }
+            if name == "Newobj" { return 0x73 }
+            if name == "Ldftn" { return 0xFE06 }
+            if name == "Box" { return 0x8C }
+            if name == "Newarr" { return 0x8D }
+            if name == "Castclass" { return 0x74 }
+            if name == "Isinst" { return 0x75 }
+            if name == "Unbox_Any" { return 0xA5 }
+            if name == "Initobj" { return 0xFE15 }
+            if name == "Constrained" { return 0xFE16 }
+            if name == "Ldsfld" { return 0x7E }
+            if name == "Ldfld" { return 0x7B }
+            if name == "Stsfld" { return 0x80 }
+            if name == "Stfld" { return 0x7D }
+            if name == "Ldsflda" { return 0x7F }
+            if name == "Ldflda" { return 0x7C }
+            if name == "Ldlen" { return 0x8E }
+            if name == "Ldelem_I1" { return 0x90 }
+            if name == "Ldelem_U1" { return 0x91 }
+            if name == "Ldelem_I4" { return 0x94 }
+            if name == "Ldelem_I2" { return 0x92 }
+            if name == "Ldelem_U2" { return 0x93 }
+            if name == "Ldelem_I8" { return 0x97 }
+            if name == "Ldelem_R4" { return 0x98 }
+            if name == "Ldelem_R8" { return 0x99 }
+            if name == "Ldelem_Ref" { return 0x9A }
+            if name == "Stelem_I1" { return 0x9C }
+            if name == "Stelem_I2" { return 0x9D }
+            if name == "Stelem_I4" { return 0x9E }
+            if name == "Stelem_I8" { return 0x9F }
+            if name == "Stelem_R4" { return 0xA0 }
+            if name == "Stelem_R8" { return 0xA1 }
+            if name == "Stelem_Ref" { return 0xA2 }
+            if name == "Ldind_I1" { return 0x46 }
+            if name == "Ldind_U1" { return 0x47 }
+            if name == "Ldind_I2" { return 0x48 }
+            if name == "Ldind_U2" { return 0x49 }
+            if name == "Ldind_I4" { return 0x4A }
+            if name == "Ldind_U4" { return 0x4B }
+            if name == "Ldind_I8" { return 0x4C }
+            if name == "Ldind_I" { return 0x4D }
+            if name == "Ldind_R4" { return 0x4E }
+            if name == "Ldind_R8" { return 0x4F }
+            if name == "Ldind_Ref" { return 0x50 }
+            if name == "Stind_Ref" { return 0x51 }
+            if name == "Stind_I1" { return 0x52 }
+            if name == "Stind_I2" { return 0x53 }
+            if name == "Stind_I4" { return 0x54 }
+            if name == "Stind_I8" { return 0x55 }
+            if name == "Stind_I" { return 0x5A }
+            if name == "Stind_R4" { return 0x56 }
+            if name == "Stind_R8" { return 0x57 }
+            if name == "Ldelema" { return 0x8F }
+            if name == "Ldstr" { return 0x72 }
+            if name == "Ldarg" { return 0xFE09 }
+            if name == "Ldarga" { return 0xFE0A }
+            if name == "Ldloc" { return 0xFE0C }
+            if name == "Ldloca" { return 0xFE0D }
+            if name == "Stloc" { return 0xFE0E }
+            return -1
+        }
+
+        // OperandType 数值码：对齐 C# IlOperandType 枚举序。
+        public static function OpCodeOperandType(name: string): i32
+        {
+            if name == "Nop" || name == "Ret" || name == "Dup" || name == "Pop" || name == "Ldnull" ||
+               name == "Ldc_I4_M1" || name == "Ldc_I4_0" || name == "Ldc_I4_1" || name == "Ldc_I4_2" ||
+               name == "Ldc_I4_3" || name == "Ldc_I4_4" || name == "Ldc_I4_5" || name == "Ldc_I4_6" ||
+               name == "Ldc_I4_7" || name == "Ldc_I4_8" ||
+               name == "Ldarg_0" || name == "Ldarg_1" || name == "Ldarg_2" || name == "Ldarg_3" ||
+               name == "Ldloc_0" || name == "Ldloc_1" || name == "Ldloc_2" || name == "Ldloc_3" ||
+               name == "Stloc_0" || name == "Stloc_1" || name == "Stloc_2" || name == "Stloc_3" ||
+               name == "Add" || name == "Sub" || name == "Mul" || name == "Div" || name == "Div_Un" ||
+               name == "Rem" || name == "Rem_Un" || name == "And" || name == "Or" || name == "Xor" ||
+               name == "Shl" || name == "Shr" || name == "Shr_Un" || name == "Neg" || name == "Not" ||
+               name == "Conv_I1" || name == "Conv_I2" || name == "Conv_I4" || name == "Conv_U1" ||
+               name == "Conv_U2" || name == "Conv_I8" || name == "Conv_R4" || name == "Conv_R8" ||
+               name == "Conv_U4" || name == "Conv_U8" || name == "Conv_I" || name == "Conv_U" ||
+               name == "Ceq" || name == "Cgt" || name == "Cgt_Un" || name == "Clt" || name == "Clt_Un" ||
+               name == "Endfinally" || name == "Throw" || name == "Rethrow" || name == "Ldlen" ||
+               name == "Ldelem_I1" || name == "Ldelem_U1" || name == "Ldelem_I4" || name == "Ldelem_I2" ||
+               name == "Ldelem_U2" || name == "Ldelem_I8" || name == "Ldelem_R4" || name == "Ldelem_R8" ||
+               name == "Ldelem_Ref" || name == "Stelem_I1" || name == "Stelem_I2" || name == "Stelem_I4" ||
+               name == "Stelem_I8" || name == "Stelem_R4" || name == "Stelem_R8" || name == "Stelem_Ref" ||
+               name == "Ldind_I1" || name == "Ldind_U1" || name == "Ldind_I2" || name == "Ldind_U2" ||
+               name == "Ldind_I4" || name == "Ldind_U4" || name == "Ldind_I8" || name == "Ldind_I" ||
+               name == "Ldind_R4" || name == "Ldind_R8" || name == "Ldind_Ref" || name == "Stind_Ref" ||
+               name == "Stind_I1" || name == "Stind_I2" || name == "Stind_I4" || name == "Stind_I8" ||
+               name == "Stind_I" || name == "Stind_R4" || name == "Stind_R8"
+            {
+                return 0
+            }
+
+            if name == "Ldc_I4" { return 1 }
+            if name == "Ldc_I8" { return 2 }
+            if name == "Ldc_R8" { return 3 }
+            if name == "Ldc_R4" { return 4 }
+            if name == "Ldc_I4_S" { return 5 }
+            if name == "Ldstr" { return 6 }
+            if name == "Call" || name == "Callvirt" || name == "Newobj" || name == "Ldftn" { return 7 }
+            if name == "Box" || name == "Newarr" || name == "Castclass" || name == "Isinst" ||
+               name == "Unbox_Any" || name == "Initobj" || name == "Constrained" || name == "Ldelema" { return 8 }
+            if name == "Ldsfld" || name == "Ldfld" || name == "Stsfld" || name == "Stfld" ||
+               name == "Ldsflda" || name == "Ldflda" { return 9 }
+            if name == "Ldarg" || name == "Ldarga" || name == "Ldloc" || name == "Ldloca" || name == "Stloc" { return 12 }
+            if name == "Ldarg_S" || name == "Ldloc_S" || name == "Stloc_S" { return 13 }
+            if name == "Br" || name == "Brfalse" || name == "Brtrue" || name == "Leave" { return 14 }
+            if name == "Br_S" || name == "Brfalse_S" || name == "Brtrue_S" || name == "Leave_S" { return 15 }
+            if name == "Switch" { return 16 }
+            return -1
+        }
+
+        public static function OpCodeIsTwoByte(name: string): bool
+        {
+            let v = OpCodeValue(name)
+            return v >= 0xFE00
+        }
+
+        /// <summary>操作数固定字节尺寸（对齐 C# OperandSize；InlineSwitch 需计数，返回 -1）。</summary>
+        public static function OpCodeOperandSize(name: string): i32
+        {
+            let t = OpCodeOperandType(name)
+            if t == 0 { return 0 }
+            if t == 1 || t == 6 || t == 7 || t == 8 || t == 9 || t == 14 { return 4 }
+            if t == 2 || t == 3 { return 8 }
+            if t == 12 { return 2 }
+            if t == 4 { return 4 }
+            if t == 5 || t == 13 || t == 15 { return 1 }
+            if t == 16 { return -1 }
+            return -1
+        }
+    }
+}

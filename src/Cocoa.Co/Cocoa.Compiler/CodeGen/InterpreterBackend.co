@@ -1,0 +1,28 @@
+﻿// Cocoa 鑷妇 CodeGen 路 Interpreter 鍚庣鍏ュ彛锛堥樁娈?7 澧為噺浜?M5-a1锛夆€斺€?// 鑷妇 Binder 鈫?Interpreter 瑁呴厤锛堝榻?C# InterpreterBackend.Register 妯″紡鐨勮嚜涓句晶褰㈡€侊級銆?
+using Cocoa.CodeAnalysis.Binding
+
+namespace Cocoa.CodeGen
+{
+    class InterpreterBackend
+    {
+        public static function FromBinder(binder: Binder): Interpreter
+        {
+            var interp = new Interpreter()
+            var i = 0
+            while i < binder.GetFunctionCount()
+            {
+                interp.BeginFunction(binder.GetFunctionName(i), binder.GetFunctionBody(i), binder.GetFunctionParamCount(i))
+                var j = 0
+                while j < binder.GetFunctionParamCount(i)
+                {
+                    interp.AddParamName(binder.GetFunctionParamName(i, j))
+                    j = j + 1
+                }
+
+                i = i + 1
+            }
+
+            return interp
+        }
+    }
+}

@@ -6,6 +6,27 @@
 
 ---
 
+## 未发布（2026-09-15）
+
+### 结构整理（2026-09）：CoaFormat 拆分 + 前端重命名
+- **`Cocoa.Compiler` 更名 `Cocoa.CodeAnalysis`**（文件夹 + csproj + 程序集名三位一体对齐命名空间）：更新 7 处 ProjectReference、`Cocoa.slnx`、README/快速上手路径；测试引用的自举目录 `src/Cocoa.Co/Cocoa.Compiler` 不受影响。
+- **CoaSerializer 拆分**：门面 `CoaSerializer` + 子命名空间 `Cocoa.CodeAnalysis.Serialization.CoaFormat`（`CoaFormatWriter`/`CoaFormatReader`/`CoaRegistry`/`CoaTypeResolver`/`CoaTextWriter`/`CoaTextReader`/`CoaReadContext`/`CoaText`/`CoaTypeText`），去 partial、实例化协调器。
+- **Syntax 目录归位**：`CocoaGreenNodeFactory` 拆 partial 并移入 `Syntax/Green/`，`RedNode` 移回 `Syntax/` 根。
+- **cl 目录合并**：`Evaluation/` 单文件目录并入 `Compilation/`（命名空间保持 `.Evaluation`，避免与 `Compilation` 类同名冲突）。
+- **nullable 清零**：`Cli/Cocoa.Cli.csproj` 移除 8 个压制编号（0 警告），更新 `Directory.Build.props` 棘轮注释。
+- **自举 hex 去重**：5 个 `.co` 的 `HexByte/HexU16/HexU32` 收敛到 `CodeGen/HexCodec.co`。
+- 全量回归：C# **2821 通过 / 0 失败**；自举 native **135 通过 / 0 失败**。
+
+### 阶段 7 增量五 M5-a0…a4 规划：自举 Emit 实施计划（2026-09-15）
+- **增量五计划定稿**：5 个子步（M5-a0 结构化输出 → M5-a1 Interpreter 后端 → M5-a2 B0 端到端 → M5-a3 IL 骨架 → M5-a4 Native 骨架）。
+- 架构决策：`CodeGen/CodeGen.coproj` 收敛 C# 7 个 CodeGen csproj 为 1，Native/IL 子目录对称；Interpreter 为首个实现目标（树遍历求值，差分验证）。
+- 计划文档：`docs-dev/plan/自举实施计划.md` §9。
+
+### 阶段 7 增量四续：break/continue/step + 嵌套控制流（2026-09-15）
+- **自举 Binder 新增**：循环栈（`PushLoopLabels`/`PopLoopLabels`）+ `BreakStatement`/`ContinueStatement` → `GotoStatement` 转换；`BuildBound` 补全 break/continue 节点透传（修复被静默丢弃的 bug）。
+- **ForRange step 修复**：`hasStep` 条件修正（BuildBound 后 child index 识别）；`LowerBlockStmts` 递归展平嵌套 BlockStatement。
+- **BoundCorpus 5→13 条**：新增 while+break（if 内）、while+continue（if 内）、for-range+step、嵌套 for+while；全量 53,364 通过 / 0 失败。
+
 ## 未发布（2026-09-14）
 
 ### 阶段 7 增量四 M9-a5：自举绑定树差分——控制流降级（2026-09-14）

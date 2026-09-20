@@ -1,0 +1,40 @@
+namespace Cocoa.CodeAnalysis.Binding
+{
+    class BoundBlockStatement
+    {
+        private field _inner: BoundStatement
+        private field _statements: BoundStatement[]
+        private field _statementCount: i32
+
+        public constructor()
+        {
+            _inner = new BoundStatement(BoundNodeKind.BlockStatement())
+            _statements = new BoundStatement[16]
+            _statementCount = 0
+        }
+
+        public function Kind(): i32 { return _inner.Kind() }
+
+        public function AddStatement(stmt: BoundStatement): void
+        {
+            if _statementCount >= _statements.Length
+            {
+                var bigger = new BoundStatement[_statements.Length * 2]
+                var i = 0
+                while i < _statementCount
+                {
+                    bigger[i] = _statements[i]
+                    i = i + 1
+                }
+
+                _statements = bigger
+            }
+
+            _statements[_statementCount] = stmt
+            _statementCount = _statementCount + 1
+        }
+
+        public function StatementCount(): i32 { return _statementCount }
+        public function Statement(index: i32): BoundStatement { return _statements[index] }
+    }
+}

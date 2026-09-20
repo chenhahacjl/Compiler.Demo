@@ -1,0 +1,254 @@
+namespace Cocoa.CodeAnalysis.Syntax
+{
+    /// <summary>
+    /// 语法类型
+    /// </summary>
+    public enum SyntaxKind
+    {
+        BadToken,
+
+        // Trivia
+        SkippedTextTrivia,            // 被跳过的文本
+        LineBreakTrivia,              // 换行符
+        WhitespaceTrivia,             // 空字符
+        SingleLineCommentTrivia,      // 单行注释
+        MultiLineCommentTrivia,       // 多行注释
+
+        // Tokens
+        EndOfFileToken,          // <EOF>
+        NumberToken,             // 数字
+        DoubleToken,             // 浮点数
+        StringToken,             // "
+        VerbatimStringToken,     // @"
+        RawStringToken,          // """
+        InterpolatedStringToken, // $"
+        CharToken,               // '
+        PlusToken,               // +
+        PlusEqualsToken,         // +=
+        MinusToken,              // -
+        MinusEqualsToken,        // -=
+        StarToken,               // *
+        StarEqualsToken,         // *=
+        SlashToken,              // /
+        SlashEqualsToken,        // /=
+        PercentToken,            // %
+        PercentEqualsToken,      // %=
+        ShiftLeftToken,          // <<
+        ShiftLeftEqualsToken,    // <<=
+        ShiftRightToken,         // >>
+        ShiftRightEqualsToken,   // >>=
+        BangToken,               // !
+        EqualsToken,             // =
+        TildeToken,              // ~
+        HatToken,                // ^
+        HatEqualsToken,          // ^=
+        AmpersandToken,          // &
+        AmpersandAmpersandToken, // &&
+        AmpersandEqualsToken,    // &=
+        PipeToken,               // |
+        PipePipeToken,           // ||
+        PipeEqualsToken,         // |=
+        EqualsEqualsToken,       // ==
+        BangEqualsToken,         // !=
+        LessToken,               // <
+        LessOrEqualsToken,       // <=
+        GreaterToken,            // >
+        GreaterOrEqualsToken,    // >=
+        OpenParenthesisToken,    // (
+        CloseParenthesisToken,   // )
+        OpenBraceToken,          // {
+        CloseBraceToken,         // }
+ColonToken,               // :
+        CommaToken,               // ,
+        DotToken,                 // .
+        OpenBracketToken,         // [
+        CloseBracketToken,        // ]
+        SemicolonToken,           // ;
+        PlusPlusToken,            // ++
+        MinusMinusToken,          // --
+        QuestionToken,            // ?
+        FatArrowToken,            // =>
+        ArrowToken,               // ->（6e-M22 C2 函数类型，仅 .co）
+        IdentifierToken,         // 标识符
+
+        // Keywords
+        AbstractKeyword,          // abstract
+        AsKeyword,                // as（6e-M19 M5-b）
+        BaseKeyword,              // base
+        BreakKeyword,             // break
+        CaseKeyword,              // case
+        CdeclKeyword,             // cdecl
+        ClassKeyword,             // class
+        StructKeyword,            // struct（6e-M26 值类型）
+        ConstKeyword,             // const
+        ConstructorKeyword,       // constructor
+        ContinueKeyword,          // continue
+        DefaultKeyword,           // default
+        DoKeyword,                // do
+        ElseKeyword,              // else
+        EnumKeyword,              // enum
+        ExtendsKeyword,           // extends
+        ExternKeyword,            // extern（extern 元数据子句，6e-M17 Step 5）
+        FalseKeyword,             // false
+        ForKeyword,               // for
+        ForeachKeyword,           // foreach
+        FunctionKeyword,          // function
+        GetKeyword,               // get
+        IfKeyword,                // if
+        ImportKeyword,            // import
+        InKeyword,                // in
+        InterfaceKeyword,         // interface
+        InternalKeyword,          // internal
+        IsKeyword,                // is（6e-M19 M5-b）
+        LetKeyword,               // let
+        NamespaceKeyword,         // namespace
+        NewKeyword,               // new
+        NullKeyword,              // null（6e-M19 M5-a）
+        OutKeyword,               // out（6e-M23 参数修饰符）
+        OverrideKeyword,          // override
+        PartialKeyword,           // partial
+        PrivateKeyword,           // private
+        PropertyKeyword,          // property
+        ProtectedKeyword,         // protected
+        PublicKeyword,            // public
+        ReadonlyKeyword,          // readonly
+        RefKeyword,               // ref（6e-M23 参数修饰符）
+        ReturnKeyword,            // return
+        SealedKeyword,            // sealed
+        SetKeyword,               // set
+        StaticKeyword,            // static
+        StdcallKeyword,           // stdcall
+        StepKeyword,              // step
+        SwitchKeyword,            // switch
+        ThisKeyword,              // this
+        ToKeyword,                // to
+        TrueKeyword,              // true
+        UsingKeyword,             // using
+        VarKeyword,               // var
+        VirtualKeyword,           // virtual
+        WhenKeyword,              // when
+        WhileKeyword,             // while
+        SyscallKeyword,           // syscall
+        WhereKeyword,             // where（6e-M20 泛型约束子句）
+        ThrowKeyword,             // throw
+        TryKeyword,               // try
+        CatchKeyword,             // catch
+        FinallyKeyword,           // finally
+
+        // Nodes
+        CompilationUnit,          // 编译单元
+        FunctionDeclaration,      // 函数定义
+        ClassDeclaration,         // 类定义
+        InterfaceDeclaration,     // 接口定义
+        ClassFieldDeclaration,    // 类字段
+        ConstructorDeclaration,   // 构造函数
+        PropertyDeclaration,      // 属性声明
+        PropertyAccessor,         // get/set 访问器
+        NamespaceDeclaration,     // 命名空间声明
+        UsingDirective,           // using 导入
+        ImportClause,             // import 声明（顶层位置式，6e-M17 Step 4 废弃）
+        ImportBlock,              // import 块（`import <dll> { static extern ... }`，类成员）
+        ExternMetadata,           // extern 元数据子句（`extern(entry=…, charset=…)`，6e-M17 Step 5）
+        ExternMetadataArgument,   // extern 元数据键值对（`key = value`）
+        GlobalStatement,          // 全局声明
+        Parameter,                // 参数
+        TypeClause,               // 类型 语句
+        ArrayTypeClause,          // 数组类型
+        GenericTypeClause,        // 泛型类型 List<int>（6e-M20）
+        FunctionType,             // 函数类型 (A,B) -> R（6e-M22 C2）
+        EventDeclaration,         // 事件声明 event Click: Handler（6e-M22 C5+）
+        EventKeyword,             // event 关键字
+        DelegateDeclaration,      // delegate 声明（6e-M22）
+        DelegateKeyword,          // delegate 关键字
+        TypeParameterList,        // 泛型类型参数列表 <T, U>（6e-M20）
+        TypeArgumentList,         // 泛型类型实参列表 <int, string>（6e-M20）
+        WhereClause,              // 泛型约束子句 where T: ...（6e-M20）
+        ElseClause,               // ELSE 子语句
+        EnumDeclaration,          // 枚举声明
+        EnumMember,               // 枚举成员
+
+        // Statements
+        BlockStatement,           // 块语句
+        VariableDeclaration,      // 变量定义
+        IfStatement,              // IF 判断语句
+        WhileStatement,           // WHILE 循环语句
+        DoWhileStatement,         // DO-WHILE 循环语句
+        ForStatement,             // FOR 循环语句（C 风格 for (init; cond; update)，CO/C# 共用）
+        ForeachStatement,         // FOREACH 循环语句
+        ForRangeStatement,        // CO 次数循环语句 for N to M [step k]（内部名 forrange）
+        BreakStatement,           // BREAK 语句
+        ContinueStatement,        // CONTINUE 语句
+        ReturnStatement,          // RETURN 语句
+        ExpressionStatement,      // 表达式语句
+        SwitchStatement,          // SWITCH 语句
+        CaseClause,               // SWITCH case 子句
+        DefaultClause,            // SWITCH default 子句
+        ThrowStatement,           // THROW 语句
+        TryStatement,             // TRY 语句
+        CatchClause,              // TRY catch 子句
+        FinallyClause,            // TRY finally 子句
+
+        // Expressions
+        LiteralExpression,        // 文字表达式
+        NameExpression,           // 名称表达式
+        UnaryExpression,          // 一元表达式
+        BinaryExpression,         // 二元表达式
+        CompoundAssignmentExpression, // 复合赋值表达式
+        ParenthesizedExpression,  // 括号表达式
+        LambdaExpression,         // lambda (x: int) => x * 2（6e-M22 C2）
+        ByRefArgument,            // byref 实参 out x / ref arr[i]（6e-M23 R1）
+        CastExpression,           // 类型转换表达式
+        AssignmentExpression,     // 赋值表达式
+        PostfixIncrementExpression, // 后缀自增/自减表达式 i++/i--
+        ConditionalExpression,    // 三元表达式 cond ? a : b
+        CallExpression,           // 函数调用表达式
+        ArrayCreationExpression,  // 数组创建表达式
+        ObjectCreationExpression, // 对象创建表达式 new Foo(...)
+        BaseExpression,           // base 表达式
+        ThisExpression,          // this 表达式
+        ElementAccessExpression,  // 数组索引表达式
+        MemberAccessExpression,   // 成员访问表达式
+        MemberCallExpression,     // 成员方法调用表达式
+        InterpolatedStringExpression, // 插值字符串 $"..."
+        InterpolatedStringText,   // 插值字符串字面量段
+        Interpolation,            // 插值洞 {expr}
+        IsExpression,             // is 类型测试表达式（6e-M19 M5-b）
+        AsExpression,             // as 类型转换表达式（6e-M19 M5-b）
+        NameofExpression,         // nameof(X) 编译期字符串常量
+        ConditionalAccessExpression, // expr?.Member 空条件访问
+        TypeParameter,            // 泛型类型参数个体 T / in T / out T（6e-M22 delegate 真实类型化）
+        DeclarationExpression = 201, // 声明表达式 var v（out var 内联声明用）——末尾追加且显式定值，避免中间值偏移（green RawKind 持久化）与方言枚举漂移
+        LocalFunctionDeclaration = 202, // 局部函数声明（函数体内 function Helper(...)，降级为具名函数值/闭包）
+        NamedArgument = 203, // 命名实参（实参位 `名: 值`，绑定按形参名重排，语言后置件）
+        ParamsKeyword = 204, // params 可变参数（尾参数组，语言后置件）
+        TupleExpression = 205, // 元组 `(a, b)`（合成值类型，语言后置件）
+        QuestionQuestionToken = 206, // ?? null 合并
+        QuestionQuestionEqualsToken = 207, // ??= null 合并赋值
+        QuestionDotToken = 208, // ?. 空条件成员访问
+        NameofKeyword = 209, // nameof(X) 编译期字符串常量
+        ConstantPattern = 210, // 常量模式：expr is null / expr is 0
+        DeclarationPattern = 211, // 模式匹配声明：expr is int n
+        RelationalPattern = 212, // 模式匹配关系：expr is > 0 / expr is <= 10
+        PropertyPattern = 213, // 模式匹配属性：expr is { Length: > 0 }
+        LogicalPattern = 214, // 模式匹配逻辑组合：expr is > 0 and < 10 / expr is not null
+        AndKeyword = 215, // and 模式组合关键字
+        OrKeyword = 216, // or 模式组合关键字
+        NotKeyword = 217, // not 模式取反关键字
+        PropertySubpattern = 218, // 属性子模式：Name: pattern
+        UsingStatement = 219, // using 语句：using (var x = expr) { body }
+        DotDotToken = 220, // .. 范围运算符
+        RangeExpression = 221, // 范围表达式：1..3 / 1.. / ..3 / ..
+        LockKeyword = 222, // lock 关键字
+        LockStatement = 223, // lock 语句：lock (obj) { body }
+        CheckedKeyword = 224, // checked 关键字
+        UncheckedKeyword = 225, // unchecked 关键字
+        CheckedStatement = 226, // checked 语句：checked { body }
+        UncheckedStatement = 227, // unchecked 语句：unchecked { body }
+        YieldKeyword = 228, // yield 关键字
+        YieldReturnStatement = 229, // yield return 语句
+        YieldBreakStatement = 230, // yield break 语句
+        FieldKeyword = 231, // field（6e-M31 类字段显式关键字，对齐 property；显式值避免移动隐式段成员）
+        Attribute = 232,    // attribute 声明（`[Name]` / `[Name("arg")]`，6e-M32 首例为 facade 属性；显式值避免偏移）
+        SingleLineDocCommentTrivia = 233, // 单行文档注释（6e-M24）——显式值避免插入 trivia 段导致隐式值漂移
+    }
+}

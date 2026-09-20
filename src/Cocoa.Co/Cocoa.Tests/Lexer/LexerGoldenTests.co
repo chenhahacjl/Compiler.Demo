@@ -1,0 +1,149 @@
+// 鑷妇娴嬭瘯锛氳瘝娉曞樊鍒嗛粍閲戜覆锛堥樁娈?7 澧為噺浜?M5-b0锛夆€斺€旂敱 GoldenGenerator 鎹曡幏鑷妇渚ц緭鍑虹敓鎴愶紝鍕挎墜鏀广€俓n// 10 缁?edge 璇枡 鈫?DescribeDetail 鏍煎紡 `KIND offset len line:col` 閫愯姣斿銆俓n
+using Cocoa.CodeAnalysis.Syntax
+
+namespace Cocoa.CodeAnalysis.Tests
+{
+    class LexerGoldenTests
+    {
+        public static function Run(r: TestRunner): void
+        {
+            RunCorpus(r, EdgeStringsCorpus(), EdgeStringsExpected(), "LexerGolden/edge-strings")
+            RunCorpus(r, EdgeVerbatimCorpus(), EdgeVerbatimExpected(), "LexerGolden/edge-verbatim")
+            RunCorpus(r, EdgeRawCorpus(), EdgeRawExpected(), "LexerGolden/edge-raw")
+            RunCorpus(r, EdgeInterpolatedCorpus(), EdgeInterpolatedExpected(), "LexerGolden/edge-interpolated")
+            RunCorpus(r, EdgeCharsCorpus(), EdgeCharsExpected(), "LexerGolden/edge-chars")
+            RunCorpus(r, EdgeNumbersCorpus(), EdgeNumbersExpected(), "LexerGolden/edge-numbers")
+            RunCorpus(r, EdgeOperatorsCorpus(), EdgeOperatorsExpected(), "LexerGolden/edge-operators")
+            RunCorpus(r, EdgeBadcharsCorpus(), EdgeBadcharsExpected(), "LexerGolden/edge-badchars")
+            RunCorpus(r, EdgeCommentsCorpus(), EdgeCommentsExpected(), "LexerGolden/edge-comments")
+            RunCorpus(r, EdgeKeywordsCorpus(), EdgeKeywordsExpected(), "LexerGolden/edge-keywords")
+        }
+
+        private static function RunCorpus(r: TestRunner, corpus: string, expected: string, label: string): void
+        {
+            let lex = Lexer.Create(corpus)
+            var sb = ""
+            var first = true
+            while true
+            {
+                let t = lex.Next()
+                if first
+                {
+                    sb = t.DescribeDetail()
+                    first = false
+                }
+                else
+                {
+                    sb = sb + "\n" + t.DescribeDetail()
+                }
+                if t.Kind() == "EOF"
+                {
+                    break
+                }
+            }
+
+            r.CheckEqual(expected, sb, label)
+        }
+
+        private static function EdgeStringsCorpus(): string
+        {
+            return "var a = \"plain\"\nvar b = \"esc \\n \\t \\\\ \\\" \\u0041 \\x42 \\U00000043\"\nvar c = \"unterminated\n"
+        }
+
+        private static function EdgeStringsExpected(): string
+        {
+            return "Keyword 0 3 1:1\nIdentifier 4 1 1:5\nSymbol 6 1 1:7\nString 8 7 1:9\nKeyword 16 3 2:1\nIdentifier 20 1 2:5\nSymbol 22 1 2:7\nString 24 40 2:9\nKeyword 65 3 3:1\nIdentifier 69 1 3:5\nSymbol 71 1 3:7\nString 73 13 3:9\nEOF 87 0 4:1"
+        }
+
+        private static function EdgeVerbatimCorpus(): string
+        {
+            return "var v = @\"verbatim \"\" quote\"\nsecond line\"\nvar w = @\"unterminated\n"
+        }
+
+        private static function EdgeVerbatimExpected(): string
+        {
+            return "Keyword 0 3 1:1\nIdentifier 4 1 1:5\nSymbol 6 1 1:7\nVerbatimString 8 20 1:9\nIdentifier 29 6 2:1\nIdentifier 36 4 2:8\nString 40 1 2:12\nKeyword 42 3 3:1\nIdentifier 46 1 3:5\nSymbol 48 1 3:7\nVerbatimString 50 15 3:9\nEOF 65 0 4:1"
+        }
+
+        private static function EdgeRawCorpus(): string
+        {
+            return "var r = \"\"\"raw\n    content\n    \"\"\"\nvar s = \"\"\"unterminated\nvar t = \"\"\"\"raw4\"\"\"\"\n"
+        }
+
+        private static function EdgeRawExpected(): string
+        {
+            return "Keyword 0 3 1:1\nIdentifier 4 1 1:5\nSymbol 6 1 1:7\nRawString 8 26 1:9\nKeyword 35 3 4:1\nIdentifier 39 1 4:5\nSymbol 41 1 4:7\nRawString 43 27 4:9\nString 70 9 5:12\nEOF 80 0 6:1"
+        }
+
+        private static function EdgeInterpolatedCorpus(): string
+        {
+            return "var i = $\"val={x} and {{brace}} and }}brace2}\"\nvar j = $\"hole string {\"a\"} done\"\nvar k = @$\"verb {y}\"\nvar m = $\"{'}'} char hole\"\n"
+        }
+
+        private static function EdgeInterpolatedExpected(): string
+        {
+            return "Keyword 0 3 1:1\nIdentifier 4 1 1:5\nSymbol 6 1 1:7\nInterpolatedString 8 38 1:9\nKeyword 47 3 2:1\nIdentifier 51 1 2:5\nSymbol 53 1 2:7\nInterpolatedString 55 25 2:9\nKeyword 81 3 3:1\nIdentifier 85 1 3:5\nSymbol 87 1 3:7\nInterpolatedString 89 12 3:9\nKeyword 102 3 4:1\nIdentifier 106 1 4:5\nSymbol 108 1 4:7\nInterpolatedString 110 18 4:9\nEOF 129 0 5:1"
+        }
+
+        private static function EdgeCharsCorpus(): string
+        {
+            return "var c1 = 'a'\nvar c2 = '\\n'\nvar c3 = '\\u0041'\nvar c4 = '\\x41'\nvar c5 = ''\nvar c6 = 'ab'\n"
+        }
+
+        private static function EdgeCharsExpected(): string
+        {
+            return "Keyword 0 3 1:1\nIdentifier 4 2 1:5\nSymbol 7 1 1:8\nChar 9 3 1:10\nKeyword 13 3 2:1\nIdentifier 17 2 2:5\nSymbol 20 1 2:8\nChar 22 4 2:10\nKeyword 27 3 3:1\nIdentifier 31 2 3:5\nSymbol 34 1 3:8\nChar 36 8 3:10\nKeyword 45 3 4:1\nIdentifier 49 2 4:5\nSymbol 52 1 4:8\nChar 54 6 4:10\nKeyword 61 3 5:1\nIdentifier 65 2 5:5\nSymbol 68 1 5:8\nError 70 1 5:10\nError 71 1 5:11\nKeyword 73 3 6:1\nIdentifier 77 2 6:5\nSymbol 80 1 6:8\nError 82 2 6:10\nIdentifier 84 1 6:12\nError 85 1 6:13\nEOF 87 0 7:1"
+        }
+
+        private static function EdgeNumbersCorpus(): string
+        {
+            return "var n1 = 0xFF\nvar n2 = 0x_FF\nvar n3 = 0b1010\nvar n4 = 0b1010_1\nvar n5 = 1_000_000\nvar n6 = 42L\nvar n7 = 42UL\nvar n8 = 42lu\nvar n9 = 1.5f\nvar n10 = 1e-5F\nvar n11 = 3.14\nvar n12 = 0xFFul\nvar n13 = 1u\nvar n14 = 1.5F\nvar n15 = 1234long\n"
+        }
+
+        private static function EdgeNumbersExpected(): string
+        {
+            return "Keyword 0 3 1:1\nIdentifier 4 2 1:5\nSymbol 7 1 1:8\nNumber 9 4 1:10\nKeyword 14 3 2:1\nIdentifier 18 2 2:5\nSymbol 21 1 2:8\nNumber 23 5 2:10\nKeyword 29 3 3:1\nIdentifier 33 2 3:5\nSymbol 36 1 3:8\nNumber 38 6 3:10\nKeyword 45 3 4:1\nIdentifier 49 2 4:5\nSymbol 52 1 4:8\nNumber 54 8 4:10\nKeyword 63 3 5:1\nIdentifier 67 2 5:5\nSymbol 70 1 5:8\nNumber 72 9 5:10\nKeyword 82 3 6:1\nIdentifier 86 2 6:5\nSymbol 89 1 6:8\nNumber 91 3 6:10\nKeyword 95 3 7:1\nIdentifier 99 2 7:5\nSymbol 102 1 7:8\nNumber 104 4 7:10\nKeyword 109 3 8:1\nIdentifier 113 2 8:5\nSymbol 116 1 8:8\nNumber 118 4 8:10\nKeyword 123 3 9:1\nIdentifier 127 2 9:5\nSymbol 130 1 9:8\nDouble 132 4 9:10\nKeyword 137 3 10:1\nIdentifier 141 3 10:5\nSymbol 145 1 10:9\nDouble 147 5 10:11\nKeyword 153 3 11:1\nIdentifier 157 3 11:5\nSymbol 161 1 11:9\nDouble 163 4 11:11\nKeyword 168 3 12:1\nIdentifier 172 3 12:5\nSymbol 176 1 12:9\nNumber 178 6 12:11\nKeyword 185 3 13:1\nIdentifier 189 3 13:5\nSymbol 193 1 13:9\nNumber 195 2 13:11\nKeyword 198 3 14:1\nIdentifier 202 3 14:5\nSymbol 206 1 14:9\nDouble 208 4 14:11\nKeyword 213 3 15:1\nIdentifier 217 3 15:5\nSymbol 221 1 15:9\nNumber 223 4 15:11\nIdentifier 227 4 15:15\nEOF 232 0 16:1"
+        }
+
+        private static function EdgeOperatorsCorpus(): string
+        {
+            return "a <<= b\nc >>= d\ne ??= f\ng?.h\ni ?? j\nk -> l\nm..n\no++\np--\nq += r\ns -= t\nu *= v\nw /= x\ny %= z\naa &= bb\ncc |= dd\nee ^= ff\ngg == hh\nii != jj\nkk << ll\nmm >> nn\n= => < <= > >= && || ! ? . ; , : ( ) [ ] { } ~ ^ & | % + - * /\n"
+        }
+
+        private static function EdgeOperatorsExpected(): string
+        {
+            return "Identifier 0 1 1:1\nSymbol 2 3 1:3\nIdentifier 6 1 1:7\nIdentifier 8 1 2:1\nSymbol 10 3 2:3\nIdentifier 14 1 2:7\nIdentifier 16 1 3:1\nSymbol 18 3 3:3\nIdentifier 22 1 3:7\nIdentifier 24 1 4:1\nSymbol 25 2 4:2\nIdentifier 27 1 4:4\nIdentifier 29 1 5:1\nSymbol 31 2 5:3\nIdentifier 34 1 5:6\nIdentifier 36 1 6:1\nSymbol 38 2 6:3\nIdentifier 41 1 6:6\nIdentifier 43 1 7:1\nSymbol 44 2 7:2\nIdentifier 46 1 7:4\nIdentifier 48 1 8:1\nSymbol 49 2 8:2\nIdentifier 52 1 9:1\nSymbol 53 2 9:2\nIdentifier 56 1 10:1\nSymbol 58 2 10:3\nIdentifier 61 1 10:6\nIdentifier 63 1 11:1\nSymbol 65 2 11:3\nIdentifier 68 1 11:6\nIdentifier 70 1 12:1\nSymbol 72 2 12:3\nIdentifier 75 1 12:6\nIdentifier 77 1 13:1\nSymbol 79 2 13:3\nIdentifier 82 1 13:6\nIdentifier 84 1 14:1\nSymbol 86 2 14:3\nIdentifier 89 1 14:6\nIdentifier 91 2 15:1\nSymbol 94 2 15:4\nIdentifier 97 2 15:7\nIdentifier 100 2 16:1\nSymbol 103 2 16:4\nIdentifier 106 2 16:7\nIdentifier 109 2 17:1\nSymbol 112 2 17:4\nIdentifier 115 2 17:7\nIdentifier 118 2 18:1\nSymbol 121 2 18:4\nIdentifier 124 2 18:7\nIdentifier 127 2 19:1\nSymbol 130 2 19:4\nIdentifier 133 2 19:7\nIdentifier 136 2 20:1\nSymbol 139 2 20:4\nIdentifier 142 2 20:7\nIdentifier 145 2 21:1\nSymbol 148 2 21:4\nIdentifier 151 2 21:7\nSymbol 154 1 22:1\nSymbol 156 2 22:3\nSymbol 159 1 22:6\nSymbol 161 2 22:8\nSymbol 164 1 22:11\nSymbol 166 2 22:13\nSymbol 169 2 22:16\nSymbol 172 2 22:19\nSymbol 175 1 22:22\nSymbol 177 1 22:24\nSymbol 179 1 22:26\nSymbol 181 1 22:28\nSymbol 183 1 22:30\nSymbol 185 1 22:32\nSymbol 187 1 22:34\nSymbol 189 1 22:36\nSymbol 191 1 22:38\nSymbol 193 1 22:40\nSymbol 195 1 22:42\nSymbol 197 1 22:44\nSymbol 199 1 22:46\nSymbol 201 1 22:48\nSymbol 203 1 22:50\nSymbol 205 1 22:52\nSymbol 207 1 22:54\nSymbol 209 1 22:56\nSymbol 211 1 22:58\nSymbol 213 1 22:60\nSymbol 215 1 22:62\nEOF 217 0 23:1"
+        }
+
+        private static function EdgeBadcharsCorpus(): string
+        {
+            return "# @ $ ` ^~`\n"
+        }
+
+        private static function EdgeBadcharsExpected(): string
+        {
+            return "Error 0 1 1:1\nError 2 1 1:3\nError 4 1 1:5\nError 6 1 1:7\nSymbol 8 1 1:9\nSymbol 9 1 1:10\nError 10 1 1:11\nEOF 12 0 2:1"
+        }
+
+        private static function EdgeCommentsCorpus(): string
+        {
+            return "// line\n/* block */\n/// doc\n/* unterminated\n"
+        }
+
+        private static function EdgeCommentsExpected(): string
+        {
+            return "EOF 44 0 5:1"
+        }
+
+        private static function EdgeKeywordsCorpus(): string
+        {
+            return "@ident @class @if _private public function class interface struct enum namespace using static var let const\nabstract as base break case cdecl continue default else false for foreach get set property event delegate\nconstructor import in is internal new null nameof out override partial params protected readonly ref sealed\nstep switch this virtual when while return stdcall syscall to true do extends extern where facade throw try\ncatch finally and or not lock checked unchecked yield field\n"
+        }
+
+        private static function EdgeKeywordsExpected(): string
+        {
+            return "Identifier 0 6 1:1\nIdentifier 7 6 1:8\nIdentifier 14 3 1:15\nIdentifier 18 8 1:19\nKeyword 27 6 1:28\nKeyword 34 8 1:35\nKeyword 43 5 1:44\nKeyword 49 9 1:50\nKeyword 59 6 1:60\nKeyword 66 4 1:67\nKeyword 71 9 1:72\nKeyword 81 5 1:82\nKeyword 87 6 1:88\nKeyword 94 3 1:95\nKeyword 98 3 1:99\nKeyword 102 5 1:103\nKeyword 108 8 2:1\nKeyword 117 2 2:10\nKeyword 120 4 2:13\nKeyword 125 5 2:18\nKeyword 131 4 2:24\nKeyword 136 5 2:29\nKeyword 142 8 2:35\nKeyword 151 7 2:44\nKeyword 159 4 2:52\nKeyword 164 5 2:57\nKeyword 170 3 2:63\nKeyword 174 7 2:67\nKeyword 182 3 2:75\nKeyword 186 3 2:79\nKeyword 190 8 2:83\nKeyword 199 5 2:92\nKeyword 205 8 2:98\nKeyword 214 11 3:1\nKeyword 226 6 3:13\nKeyword 233 2 3:20\nKeyword 236 2 3:23\nKeyword 239 8 3:26\nKeyword 248 3 3:35\nKeyword 252 4 3:39\nKeyword 257 6 3:44\nKeyword 264 3 3:51\nKeyword 268 8 3:55\nKeyword 277 7 3:64\nKeyword 285 6 3:72\nKeyword 292 9 3:79\nKeyword 302 8 3:89\nKeyword 311 3 3:98\nKeyword 315 6 3:102\nKeyword 322 4 4:1\nKeyword 327 6 4:6\nKeyword 334 4 4:13\nKeyword 339 7 4:18\nKeyword 347 4 4:26\nKeyword 352 5 4:31\nKeyword 358 6 4:37\nKeyword 365 7 4:44\nKeyword 373 7 4:52\nKeyword 381 2 4:60\nKeyword 384 4 4:63\nKeyword 389 2 4:68\nKeyword 392 7 4:71\nKeyword 400 6 4:79\nKeyword 407 5 4:86\nIdentifier 413 6 4:92\nKeyword 420 5 4:99\nKeyword 426 3 4:105\nKeyword 430 5 5:1\nKeyword 436 7 5:7\nKeyword 444 3 5:15\nKeyword 448 2 5:19\nKeyword 451 3 5:22\nKeyword 455 4 5:26\nKeyword 460 7 5:31\nKeyword 468 9 5:39\nKeyword 478 5 5:49\nKeyword 484 5 5:55\nEOF 490 0 6:1"
+        }
+
+    }
+}

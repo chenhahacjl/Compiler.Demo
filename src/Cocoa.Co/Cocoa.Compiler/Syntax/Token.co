@@ -1,9 +1,5 @@
-// Cocoa 自举 Token —— 阶段 7 增量一（M7-a0）：结构化 token 模型（kind/text/行/列/offset）。
-// Describe() 可读输出；DescribeDetail() 为差分协议 `KIND offset len line:col`（LexerDifferentialTests 消费）。
-
-namespace MiniLexer
+namespace Cocoa.CodeAnalysis.Syntax
 {
-    /// <summary>结构化 token：kind 为上档大写名，Describe() 输出 `KIND text line:col` 保持可读且稳定。</summary>
     class Token
     {
         private field _kind: string

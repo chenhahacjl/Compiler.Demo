@@ -1,0 +1,6 @@
+<Solution Version="1">
+  <!-- 自举测试解决方案：Cocoa.Compiler（库 → .coa）→ Cocoa.Tests（自举测试 exe）。
+       双轨：cocoa build/run 此 cosln 产出 native 测试门禁；C# 侧 CocoaCoSelfHostedTests 源级编译驱动。 -->
+  <Project Include="Cocoa.Compiler/Cocoa.Compiler.coproj" />
+  <Project Include="Cocoa.Tests/Cocoa.Tests.coproj" />
+</Solution>

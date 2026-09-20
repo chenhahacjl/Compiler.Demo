@@ -1,4 +1,4 @@
-using Cocoa.CodeAnalysis;
+﻿using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.Targeting;
 using Cocoa.CodeGen.Native;
@@ -23,8 +23,7 @@ namespace Cocoa.Tests.CodeAnalysis
         private static string[] References() => new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location };
 
         private const string Template = @"using System
-
-public facade interface IDisposable
+[Facade(""System.IDisposable"")] public interface IDisposable
 {
     public function Dispose(): void
 }

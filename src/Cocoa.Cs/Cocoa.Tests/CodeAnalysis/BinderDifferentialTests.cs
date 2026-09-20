@@ -193,7 +193,15 @@ namespace Cocoa.Tests.CodeAnalysis
             "function Main(): i32\n{\n    let a = -5\n    let b = !(1 == 2)\n    return a\n}\n",
             "function Add(a: i32, b: i32): i32\n{\n    return a + b\n}\n\nfunction Main(): i32\n{\n    return Add(1, 2)\n}\n",
             "function Main(): i32\n{\n    var n = 10\n    if n > 0\n    {\n        return 1\n    }\n\n    return 0\n}\n",
+            "function F(n: i32): i32\n{\n    var result = 0\n    if n > 0\n    {\n        result = 1\n    }\n    else\n    {\n        result = 2\n    }\n\n    return result\n}\n\nfunction Main(): i32\n{\n    return F(2)\n}\n",
             "function Main(): i32\n{\n    var t = 0\n    var i = 3\n    while i > 0\n    {\n        t = t + i\n        i = i - 1\n    }\n\n    return t\n}\n",
+            "function Main(): i32\n{\n    var t = 0\n    do\n    {\n        t = t + 5\n    }\n    while t < 10\n\n    return t\n}\n",
+            "function Main(): i32\n{\n    var sum = 0\n    for var i = 0 to 4\n    {\n        sum = sum + i\n    }\n\n    return sum\n}\n",
+            "function Main(): i32\n{\n    var result = 0\n    var i = 0\n    while i < 10\n    {\n        if i > 5\n        {\n            result = result + i\n        }\n\n        i = i + 1\n    }\n\n    return result\n}\n",
+            "function Main(): i32\n{\n    var sum = 0\n    var i = 0\n    while i < 10\n    {\n        if i == 5\n        {\n            break\n        }\n\n        sum = sum + i\n        i = i + 1\n    }\n\n    return sum\n}\n",
+            "function Main(): i32\n{\n    var sum = 0\n    var i = 0\n    while i < 10\n    {\n        i = i + 1\n        if i % 2 == 0\n        {\n            continue\n        }\n\n        sum = sum + i\n    }\n\n    return sum\n}\n",
+            "function Main(): i32\n{\n    var sum = 0\n    for var i = 0 to 10 step 2\n    {\n        sum = sum + i\n    }\n\n    return sum\n}\n",
+            "function Main(): i32\n{\n    var sum = 0\n    for var i = 0 to 3\n    {\n        var j = 0\n        while j < i\n        {\n            sum = sum + 1\n            j = j + 1\n        }\n    }\n\n    return sum\n}\n",
         };
 
         [Fact]
@@ -432,7 +440,7 @@ namespace Cocoa.Tests.CodeAnalysis
 
         private static string BinderMainSource(string embedded)
         {
-            return "using MiniBinder\nusing System\n\nfunction Main(): i32\n{\n    let b = MiniBinder.Binder.Create(\"" + embedded + "\")\n    b.BindCompilationUnit()\n    System.Console.WriteLine(b.DescribeSymbols())\n    var i = 0\n    while i < b.DiagnosticCount()\n    {\n        System.Console.WriteLine(b.DiagnosticAt(i))\n        i = i + 1\n    }\n\n    System.Console.WriteLine(\"#BOUND\")\n    System.Console.WriteLine(b.DescribeBoundTrees())\n    return 0\n}";
+            return "using Cocoa.CodeAnalysis.Binding\nusing System\n\nfunction Main(): i32\n{\n    let b = Cocoa.CodeAnalysis.Binding.Binder.Create(\"" + embedded + "\")\n    b.BindCompilationUnit()\n    System.Console.WriteLine(b.DescribeSymbols())\n    var i = 0\n    while i < b.DiagnosticCount()\n    {\n        System.Console.WriteLine(b.DiagnosticAt(i))\n        i = i + 1\n    }\n\n    System.Console.WriteLine(\"#BOUND\")\n    System.Console.WriteLine(b.DescribeBoundTrees())\n    return 0\n}";
         }
 
         private static string[] References() => new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location };
@@ -461,24 +469,14 @@ namespace Cocoa.Tests.CodeAnalysis
         {
             var embedded = source.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n");
             var root = RepoRoot();
-            var lexerCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Cocoa.Compiler", "Syntax", "Lexer.co"));
-            var tokenCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Cocoa.Compiler", "Syntax", "Token.co"));
-            var parserCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Cocoa.Compiler", "Syntax", "Parser.co"));
-            var nodeCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Cocoa.Compiler", "Syntax", "Node.co"));
-            var functionSymbolCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Cocoa.Compiler", "Symbols", "FunctionSymbol.co"));
-            var variableSymbolCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Cocoa.Compiler", "Symbols", "VariableSymbol.co"));
-            var binderCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Cocoa.Compiler", "Binding", "Binder.co"));
-            var localSymbolCo = File.ReadAllText(Path.Combine(root, "src", "Cocoa.Co", "Cocoa.Compiler", "Binding", "LocalSymbol.co"));
-            var trees = ImmutableArray.Create(
-                SyntaxTree.Parse(lexerCo),
-                SyntaxTree.Parse(tokenCo),
-                SyntaxTree.Parse(parserCo),
-                SyntaxTree.Parse(nodeCo),
-                SyntaxTree.Parse(functionSymbolCo),
-                SyntaxTree.Parse(variableSymbolCo),
-                SyntaxTree.Parse(binderCo),
-                SyntaxTree.Parse(localSymbolCo),
-                SyntaxTree.Parse(BinderMainSource(embedded)));
+            var compilerDir = Path.Combine(root, "src", "Cocoa.Co", "Cocoa.Compiler");
+            var coFiles = Directory.GetFiles(compilerDir, "*.co", SearchOption.AllDirectories);
+            var trees = ImmutableArray.CreateBuilder<SyntaxTree>();
+            foreach (var coFile in coFiles)
+            {
+                trees.Add(SyntaxTree.Parse(File.ReadAllText(coFile)));
+            }
+            trees.Add(SyntaxTree.Parse(BinderMainSource(embedded)));
 
             var original = Console.Out;
             try

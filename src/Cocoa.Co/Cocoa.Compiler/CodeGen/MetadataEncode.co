@@ -1,0 +1,247 @@
+// Cocoa 自举 CodeGen · 元数据编码叶子（阶段 7 增量五 M5-a3）——
+// ECMA-335 序列化纯函数：压缩整数（II.23.2）、#US 尾字节判定（II.24.2.4）、
+// DebuggableAttribute 固定参数 blob。对齐 C# MetadataBuilder.Encode.cs：
+// WriteCompressedInteger / GetUserStringTrailingByte / EncodeDebuggableAttributeBlob。
+// Blob 产物以小端 hex 输出（与 IlAssembler 差分协议一致）。
+
+namespace Cocoa.CodeGen
+{
+    class MetadataEncode
+    {
+        /// <summary>ECMA-335 II.23.2 压缩整数：1/2/4 字节（阈值 0x7F / 0x3FFF）。</summary>
+        public static function CompressedHex(v: i32): string
+        {
+            if v <= 0x7F
+            {
+                return HexCodec.HexByte(v)
+            }
+
+            if v <= 0x3FFF
+            {
+                return HexCodec.HexByte(0x80 | (v >> 8)) + HexCodec.HexByte(v)
+            }
+
+            return HexCodec.HexByte(0xC0 | (v >> 24)) + HexCodec.HexByte(v >> 16) + HexCodec.HexByte(v >> 8) + HexCodec.HexByte(v)
+        }
+
+        /// <summary>ECMA-335 II.24.2.4：#US 堆每个 UTF-16 单元的尾字节（1 触发专用语义，0 普通）。</summary>
+        public static function UserStringTrailingByte(s: string): i32
+        {
+            var i = 0
+            while i < s.Length
+            {
+                let b = i32(s[i])
+                if b >= 0x7F
+                {
+                    return 1
+                }
+
+                if b >= 0x01 && b <= 0x08
+                {
+                    return 1
+                }
+
+                if b >= 0x0E && b <= 0x1F
+                {
+                    return 1
+                }
+
+                if b == 0x27 || b == 0x2D || b == 0x7F
+                {
+                    return 1
+                }
+
+                i = i + 1
+            }
+
+            return 0
+        }
+
+        /// <summary>DebuggableAttribute(bool, bool) 固定参数 blob：prolog + 2×ELEMENT_TYPE_BOOLEAN(true)。</summary>
+        public static function DebuggableBlobHex(): string
+        {
+            return "010002010201"
+        }
+
+        /// <summary>6e-M32 Tier-2：属性固定实参 blob（ECMA II.23.3：prolog 0x0001 + 定长实参）。
+        /// kinds ∈ {string,i32,bool,char,f64}；values：string=文本、i32=十进制串、bool="1"/"0"、
+        /// char=十进制码点、f64=双精度位模式 hex（小端 16 位）。</summary>
+        public static function AttributeBlobHex(kinds: string[], values: string[], count: i32): string
+        {
+            var h = "0100"
+            var i = 0
+            while i < count
+            {
+                let k = kinds[i]
+                if k == "string"
+                {
+                    h = h + "0e" + Utf16Blob(values[i])
+                }
+                else if k == "i32"
+                {
+                    h = h + "08" + HexCodec.HexU32(EvaluatorRuntime.ParseInt(values[i]))
+                }
+                else if k == "bool"
+                {
+                    h = h + "02" + values[i]
+                }
+                else if k == "char"
+                {
+                    h = h + "03" + HexCodec.HexU16(EvaluatorRuntime.ParseInt(values[i]))
+                }
+                else if k == "f64"
+                {
+                    h = h + "0d" + values[i]
+                }
+
+                i = i + 1
+            }
+
+            return h
+        }
+
+        /// <summary>M5-a5 批 2：ECMA-335 类型签名（II.23.2.15 元素类型编码）。
+        /// desc 文法（对齐 C# MetadataBuilder.EncodeType + IlTypeKind）：
+        ///   基元  void/bool/char/i1/u1/i2/u2/i32/u4/i64/u8/r4/f64/string/nint/nuint/object
+        ///   var:N                       → GENERICPARAM(0x13) + 压缩序号
+        ///   class:R:T[:vt]              → CLASS(0x12)/VALUETYPE(0x11) + 压缩 coded=(R<<2)|T
+        ///   szarray:X                   → SZARRAY(0x1D) + 递归 X
+        ///   byref:X                     → BYREF(0x10) + 递归 X
+        /// 产物 hex（小端，与 CompressedHex 一致）。</summary>
+        public static function EncodeTypeHex(desc: string): string
+        {
+            if desc == "void" { return "01" }
+            if desc == "bool" { return "02" }
+            if desc == "char" { return "03" }
+            if desc == "i1" { return "04" }
+            if desc == "u1" { return "05" }
+            if desc == "i2" { return "06" }
+            if desc == "u2" { return "07" }
+            if desc == "i32" { return "08" }
+            if desc == "u4" { return "09" }
+            if desc == "i64" { return "0a" }
+            if desc == "u8" { return "0b" }
+            if desc == "r4" { return "0c" }
+            if desc == "f64" { return "0d" }
+            if desc == "string" { return "0e" }
+            if desc == "nint" { return "18" }
+            if desc == "nuint" { return "19" }
+            if desc == "object" { return "1c" }
+
+            if HasPrefix(desc, "byref:")
+            {
+                return "10" + EncodeTypeHex(After(desc, 6))
+            }
+
+            if HasPrefix(desc, "class:")
+            {
+                let vt = desc.IndexOf(":vt")
+                if vt == desc.Length - 3
+                {
+                    return "11" + CodedHex(Substr(desc, 6, vt - 6))
+                }
+
+                return "12" + CodedHex(Substr(desc, 6, desc.Length - 6))
+            }
+
+            if HasPrefix(desc, "var:")
+            {
+                let n = EvaluatorRuntime.ParseInt(After(desc, 4))
+                return "13" + CompressedHex(n)
+            }
+
+            if HasPrefix(desc, "szarray:")
+            {
+                return "1d" + EncodeTypeHex(After(desc, 8))
+            }
+
+            return ""
+        }
+
+        /// <summary>M5-a5 批 2：方法签名（II.23.2.16 MethodDefSig）。
+        /// convention = 静态 0x00 / 实例 0x20(HAS_THIS)；paramCount 压缩整数；返回 + 参数逐个 EncodeType。</summary>
+        public static function EncodeMethodSignatureHex(returnDesc: string, paramDescs: string[], paramCount: i32, isStatic: bool): string
+        {
+            var h = isStatic ? "00" : "20"
+            h = h + CompressedHex(paramCount)
+            h = h + EncodeTypeHex(returnDesc)
+            var i = 0
+            while i < paramCount
+            {
+                h = h + EncodeTypeHex(paramDescs[i])
+                i = i + 1
+            }
+
+            return h
+        }
+
+        /// <summary>M5-a5 批 2：局部变量签名（II.23.2.6 LocalVarSig）：0x07 + 计数 + 类型。</summary>
+        public static function EncodeLocalVarSignatureHex(localDescs: string[], count: i32): string
+        {
+            var h = "07" + CompressedHex(count)
+            var i = 0
+            while i < count
+            {
+                h = h + EncodeTypeHex(localDescs[i])
+                i = i + 1
+            }
+
+            return h
+        }
+
+        /// <summary>M5-a5 批 2：字段签名（II.23.2.4 FieldSig）：0x06 + 类型。</summary>
+        public static function EncodeFieldSignatureHex(typeDesc: string): string
+        {
+            return "06" + EncodeTypeHex(typeDesc)
+        }
+
+        /// <summary>M5-a5 批 2：属性签名（II.23.2.5 PropertySig）：0x08|0x20 + 类型。</summary>
+        public static function EncodePropertySignatureHex(typeDesc: string): string
+        {
+            return "28" + EncodeTypeHex(typeDesc)
+        }
+
+        private static function CodedHex(s: string): string
+        {
+            let colon = s.IndexOf(":")
+            let row = EvaluatorRuntime.ParseInt(Substr(s, 0, colon))
+            let tag = EvaluatorRuntime.ParseInt(Substr(s, colon + 1, s.Length - colon - 1))
+            return CompressedHex((row << 2) | tag)
+        }
+
+        private static function HasPrefix(s: string, p: string): bool
+        {
+            if s.Length < p.Length
+            {
+                return false
+            }
+
+            return Substr(s, 0, p.Length) == p
+        }
+
+        private static function After(s: string, start: i32): string
+        {
+            return Substr(s, start, s.Length - start)
+        }
+
+        private static function Substr(s: string, start: i32, len: i32): string
+        {
+            return s.substring(start, len)
+        }
+
+        private static function Utf16Blob(s: string): string
+        {
+            var utf = ""
+            var i = 0
+            while i < s.Length
+            {
+                let c = i32(s[i])
+                utf = utf + HexCodec.HexByte(c) + HexCodec.HexByte(c >> 8)
+                i = i + 1
+            }
+
+            return CompressedHex(utf.Length / 2) + utf + "00"
+        }
+
+        }
+}

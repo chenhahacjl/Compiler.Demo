@@ -61,40 +61,81 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             Assert.Equal(text, trivia.Text);
         }
 
-        [Theory]
-        [MemberData(nameof(GetTokenPairsData))]
-        public void Lexer_Lexes_TokenPairs(SyntaxKind t1Kind, string t1Text,
-                                           SyntaxKind t2Kind, string t2Text)
+        [Fact]
+        public void Lexer_Lexes_TokenPairs()
         {
-            var text = t1Text + t2Text;
-            var tokens = SyntaxTree.ParseTokens(text).ToArray();
+            foreach (var (t1Kind, t1Text, t2Kind, t2Text) in GetTokenPairs())
+            {
+                var text = t1Text + t2Text;
+                var tokens = SyntaxTree.ParseTokens(text).ToArray();
 
-            Assert.Equal(2, tokens.Length);
-            Assert.Equal(t1Kind, tokens[0].Kind);
-            Assert.Equal(t1Text, tokens[0].Text);
-            Assert.Equal(t2Kind, tokens[1].Kind);
-            Assert.Equal(t2Text, tokens[1].Text);
+                var ok = tokens.Length == 2 &&
+                         tokens[0].Kind == t1Kind && tokens[0].Text == t1Text &&
+                         tokens[1].Kind == t2Kind && tokens[1].Text == t2Text;
+
+                if (!ok)
+                {
+                    var actual = tokens.Length == 2
+                        ? $"{tokens[0].Kind} '{tokens[0].Text}' | {tokens[1].Kind} '{tokens[1].Text}'"
+                        : $"<{tokens.Length} tokens>";
+                    Assert.True(false,
+                        $"TokenPair '{t1Kind}' '{t1Text}' + '{t2Kind}' '{t2Text}' lexed as: {actual}");
+                }
+            }
+        }
+
+        [Fact]
+        public void Lexer_Lexes_TokenPairs_WithSeparators()
+        {
+            foreach (var (t1Kind, t1Text, separatorKind, separatorText, t2Kind, t2Text) in GetTokenPairsWithSeparator())
+            {
+                var text = t1Text + separatorText + t2Text;
+                var tokens = SyntaxTree.ParseTokens(text).ToArray();
+
+                var ok = tokens.Length == 2 &&
+                         tokens[0].Kind == t1Kind && tokens[0].Text == t1Text &&
+                         tokens[1].Kind == t2Kind && tokens[1].Text == t2Text;
+
+                if (ok)
+                {
+                    var separator = Assert.Single(tokens[0].TrailingTrivia);
+                    ok = separator.Kind == separatorKind && separator.Text == separatorText;
+                }
+
+                if (!ok)
+                {
+                    var actual = tokens.Length == 2
+                        ? $"{tokens[0].Kind} '{tokens[0].Text}' | {tokens[1].Kind} '{tokens[1].Text}'"
+                        : $"<{tokens.Length} tokens>";
+                    Assert.True(false,
+                        $"TokenPair '{t1Kind}' '{t1Text}' + sep '{separatorKind}' '{separatorText}' + '{t2Kind}' '{t2Text}' lexed as: {actual}");
+                }
+            }
         }
 
         [Theory]
-        [MemberData(nameof(GetTokenPairsWithSeparatorData))]
-        public void Lexer_Lexes_TokenPairs_WithSeparators(SyntaxKind t1Kind, string t1Text,
-                                                          SyntaxKind separatorKind, string separatorText,
-                                                          SyntaxKind t2Kind, string t2Text)
+        [InlineData("+", "=")]
+        [InlineData("<", "=")]
+        [InlineData(">", "=")]
+        [InlineData("!", "=")]
+        [InlineData("&", "&")]
+        [InlineData("|", "|")]
+        [InlineData("=", "=")]
+        [InlineData("?", "?")]
+        [InlineData(".", ".")]
+        [InlineData("=", ">")]
+        [InlineData("-", ">")]
+        [InlineData("<", "<")]
+        [InlineData(">", ">")]
+        [InlineData("?", ".")]
+        public void Lexer_Lexes_CompositeOperators(string t1Text, string t2Text)
         {
-            var text = t1Text + separatorText + t2Text;
+            // 关键疑难对单点调试入口：多字符运算符最长匹配（t1+t2 合并为单 token）。
+            var text = t1Text + t2Text;
             var tokens = SyntaxTree.ParseTokens(text).ToArray();
 
-            Assert.Equal(2, tokens.Length);
-            Assert.Equal(t1Kind, tokens[0].Kind);
-            Assert.Equal(t1Text, tokens[0].Text);
-
-            var separator = Assert.Single(tokens[0].TrailingTrivia);
-            Assert.Equal(separatorKind, separator.Kind);
-            Assert.Equal(separatorText, separator.Text);
-
-            Assert.Equal(t2Kind, tokens[1].Kind);
-            Assert.Equal(t2Text, tokens[1].Text);
+            var token = Assert.Single(tokens);
+            Assert.Equal(text, token.Text);
         }
 
         [Fact]
@@ -395,22 +436,6 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             foreach (var (kind, text) in GetSeparators())
             {
                 yield return new object[] { kind, text };
-            }
-        }
-
-        public static IEnumerable<object[]> GetTokenPairsData()
-        {
-            foreach (var (t1Kind, t1Text, t2Kind, t2Text) in GetTokenPairs())
-            {
-                yield return new object[] { t1Kind, t1Text, t2Kind, t2Text };
-            }
-        }
-
-        public static IEnumerable<object[]> GetTokenPairsWithSeparatorData()
-        {
-            foreach (var (t1Kind, t1Text, separatorKind, separatorText, t2Kind, t2Text) in GetTokenPairsWithSeparator())
-            {
-                yield return new object[] { t1Kind, t1Text, separatorKind, separatorText, t2Kind, t2Text };
             }
         }
 

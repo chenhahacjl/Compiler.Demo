@@ -63,7 +63,7 @@ namespace Cocoa.Tests.CodeAnalysis
                 .Replace("\\", "\\\\")
                 .Replace("\"", "\\\"")
                 .Replace("\n", "\\n");
-            return "using MiniLexer\nusing System\n\nfunction Main(): i32\n{\n    let lex = MiniLexer.Lexer.Create(\"" + embedded + "\")\n    while true\n    {\n        let t = lex.Next()\n        System.Console.WriteLine(t.Describe())\n        if t.Kind() == \"EOF\"\n        {\n            break\n        }\n    }\n    return 0\n}";
+            return "using Cocoa.CodeAnalysis.Syntax\nusing System\n\nfunction Main(): i32\n{\n    let lex = Cocoa.CodeAnalysis.Syntax.Lexer.Create(\"" + embedded + "\")\n    while true\n    {\n        let t = lex.Next()\n        System.Console.WriteLine(t.Describe())\n        if t.Kind() == \"EOF\"\n        {\n            break\n        }\n    }\n    return 0\n}";
         }
 
         private const string ExpectedOutput =

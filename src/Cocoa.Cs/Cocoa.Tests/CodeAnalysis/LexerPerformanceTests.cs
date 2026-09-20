@@ -87,7 +87,7 @@ namespace Cocoa.Tests.CodeAnalysis
 
         private static string MainSource(string embedded)
         {
-            return "using MiniLexer\nusing System\n\nfunction Main(): i32\n{\n    let lex = MiniLexer.Lexer.Create(\"" + embedded + "\")\n    var count = 0\n    while true\n    {\n        let t = lex.Next()\n        if t.Kind() == \"EOF\"\n        {\n            break\n        }\n        count = count + 1\n    }\n    System.Console.WriteLine(string(count))\n    return 0\n}";
+            return "using Cocoa.CodeAnalysis.Syntax\nusing System\n\nfunction Main(): i32\n{\n    let lex = Cocoa.CodeAnalysis.Syntax.Lexer.Create(\"" + embedded + "\")\n    var count = 0\n    while true\n    {\n        let t = lex.Next()\n        if t.Kind() == \"EOF\"\n        {\n            break\n        }\n        count = count + 1\n    }\n    System.Console.WriteLine(string(count))\n    return 0\n}";
         }
 
         private static string[] References() => new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location };

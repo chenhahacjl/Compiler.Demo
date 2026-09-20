@@ -1,0 +1,18 @@
+namespace Cocoa.CodeAnalysis.Binding
+{
+    class BoundVariableExpression
+    {
+        private field _inner: BoundExpression
+        private field _variableName: string
+
+        public constructor(variableName: string, type: string)
+        {
+            _inner = new BoundExpression(BoundNodeKind.VariableExpression(), type)
+            _variableName = variableName
+        }
+
+        public function Kind(): i32 { return _inner.Kind() }
+        public function Type(): string { return _inner.Type() }
+        public function VariableName(): string { return _variableName }
+    }
+}

@@ -1,0 +1,112 @@
+﻿// Cocoa 鑷妇 CodeGen 路 姹傚€艰繍琛屾椂锛堥樁娈?7 澧為噺浜?M5-a1锛夆€斺€旀暟鍊?瀛楃涓茶В鏋愪笌鏍煎紡鍖栬緟鍔┿€?// 娉ㄦ剰 Cocoa 璇█绾︽潫锛氭棤 object 瑁呯澶氭€侊紙object 鐗规€у彟琛岀珛椤癸級锛屾晠鍊肩敤 Tagged Value 绫绘壙杞斤紱
+// 瑙ｆ瀽鐢?i32(char) ASCII 鍒ゅ畾锛坈har 姣旇緝杩愮畻绗﹀彈闄愶級銆?
+namespace Cocoa.CodeGen
+{
+    class EvaluatorRuntime
+    {
+        public static function IntToString(v: i32): string
+        {
+            return string(v)
+        }
+
+        public static function DoubleToString(v: f64): string
+        {
+            return v.ToString()
+        }
+
+        public static function BoolToString(b: bool): string
+        {
+            if b
+            {
+                return "true"
+            }
+
+            return "false"
+        }
+
+        public static function HasDot(s: string): bool
+        {
+            var i = 0
+            while i < s.Length
+            {
+                if i32(s[i]) == 46
+                {
+                    return true
+                }
+
+                i = i + 1
+            }
+
+            return false
+        }
+
+        public static function ParseInt(s: string): i32
+        {
+            var result = 0
+            var sign = 1
+            var i = 0
+            if s.Length > 0 && i32(s[0]) == 45
+            {
+                sign = -1
+                i = 1
+            }
+
+            while i < s.Length
+            {
+                let v = i32(s[i])
+                if v == 46
+                {
+                    break
+                }
+
+                if v >= 48 && v <= 57
+                {
+                    result = result * 10 + (v - 48)
+                }
+
+                i = i + 1
+            }
+
+            return result * sign
+        }
+
+        public static function ParseDouble(s: string): f64
+        {
+            var result = 0.0
+            var sign = 1.0
+            var i = 0
+            if s.Length > 0 && i32(s[0]) == 45
+            {
+                sign = -1.0
+                i = 1
+            }
+
+            var afterDot = false
+            var divisor = 1.0
+            while i < s.Length
+            {
+                let v = i32(s[i])
+                if v == 46
+                {
+                    afterDot = true
+                }
+                else if v >= 48 && v <= 57
+                {
+                    if afterDot
+                    {
+                        divisor = divisor * 10.0
+                        result = result + (v - 48) / divisor
+                    }
+                    else
+                    {
+                        result = result * 10.0 + (v - 48)
+                    }
+                }
+
+                i = i + 1
+            }
+
+            return result * sign
+        }
+    }
+}

@@ -1,0 +1,37 @@
+namespace Cocoa.CodeAnalysis.Binding
+{
+    class BoundBinaryOperatorKind
+    {
+        public static function Addition(): i32 { return 0 }
+        public static function Subtraction(): i32 { return 1 }
+        public static function Multiplication(): i32 { return 2 }
+        public static function Division(): i32 { return 3 }
+        public static function Modulo(): i32 { return 4 }
+        public static function Equals(): i32 { return 10 }
+        public static function NotEquals(): i32 { return 11 }
+        public static function Less(): i32 { return 12 }
+        public static function LessOrEquals(): i32 { return 13 }
+        public static function Greater(): i32 { return 14 }
+        public static function GreaterOrEquals(): i32 { return 15 }
+        public static function LogicalAnd(): i32 { return 20 }
+        public static function LogicalOr(): i32 { return 21 }
+
+        public static function Glyph(kind: i32): string
+        {
+            if kind == 0 { return "+" }
+            if kind == 1 { return "-" }
+            if kind == 2 { return "*" }
+            if kind == 3 { return "/" }
+            if kind == 4 { return "%" }
+            if kind == 10 { return "==" }
+            if kind == 11 { return "!=" }
+            if kind == 12 { return "<" }
+            if kind == 13 { return "<=" }
+            if kind == 14 { return ">" }
+            if kind == 15 { return ">=" }
+            if kind == 20 { return "&&" }
+            if kind == 21 { return "||" }
+            return "?"
+        }
+    }
+}

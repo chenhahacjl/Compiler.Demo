@@ -1,0 +1,29 @@
+namespace Cocoa.CodeAnalysis.Symbols
+{
+    class Symbol
+    {
+        private field _name: string
+        private field _kind: i32
+
+        public constructor()
+        {
+            _name = ""
+            _kind = -1
+        }
+
+        public function Name(): string
+        {
+            return _name
+        }
+
+        public function Kind(): i32
+        {
+            return _kind
+        }
+
+        public function Describe(): string
+        {
+            return _name
+        }
+    }
+}

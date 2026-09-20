@@ -1,0 +1,250 @@
+// Cocoa 自举 CodeGen · IL 指令编码器（阶段 7 增量五 M5-a3）——
+// 镜像 C# IlAssembler.Assemble：指令序列 → 字节（小端 hex 输出供差分；token 占位 0xFFFFFFFF）。
+// 支持 OperandType：InlineNone / InlineI / ShortInlineI / InlineVar / ShortInlineVar /
+// InlineBrTarget / ShortInlineBrTarget / token 类（InlineString/Method/Type/Field 占位）。
+// 分支 operand 以目标指令索引表示，第一遍算偏移、第二遍回填距离。
+
+namespace Cocoa.CodeGen
+{
+    class IlAssembler
+    {
+        private field _names: string[]
+        private field _opTypes: i32[]
+        private field _operands: i32[]
+        private field _targets: i32[]
+        private field _count: i32
+        private field _callDeltas: i32[]
+
+        public constructor()
+        {
+            _names = new string[64]
+            _opTypes = new i32[64]
+            _operands = new i32[64]
+            _targets = new i32[64]
+            _count = 0
+            _callDeltas = new i32[64]
+        }
+
+        public function Add(name: string, operandType: i32, operand: i32, targetIndex: i32): i32
+        {
+            if _count >= _names.Length
+            {
+                var nn = new string[_names.Length * 2]
+                var no = new i32[_opTypes.Length * 2]
+                var nv = new i32[_operands.Length * 2]
+                var nt = new i32[_targets.Length * 2]
+                var i = 0
+                while i < _count
+                {
+                    nn[i] = _names[i]
+                    no[i] = _opTypes[i]
+                    nv[i] = _operands[i]
+                    nt[i] = _targets[i]
+                    i = i + 1
+                }
+
+                _names = nn
+                _opTypes = no
+                _operands = nv
+                _targets = nt
+            }
+
+            if _callDeltas.Length < _names.Length
+            {
+                var nd = new i32[_names.Length]
+                var j = 0
+                while j < _count
+                {
+                    nd[j] = _callDeltas[j]
+                    j = j + 1
+                }
+
+                _callDeltas = nd
+            }
+
+            _names[_count] = name
+            _opTypes[_count] = operandType
+            _operands[_count] = operand
+            _targets[_count] = targetIndex
+            let idx = _count
+            _count = _count + 1
+            return idx
+        }
+
+        /// <summary>Call 指令净栈增量（returns ? 1 - argCount : -argCount），由发射器按目标 arity/返回值设置。</summary>
+        public function SetCallDelta(index: i32, delta: i32): void
+        {
+            _callDeltas[index] = delta
+        }
+
+        public function InstructionCount(): i32
+        {
+            return _count
+        }
+
+        /// <summary>线性扫描净栈增量峰值（Fat 头 MaxStack；对齐 C# IlAssembler.ComputeMaxStack：Ret 后按 0 基线重算）。</summary>
+        public function ComputeMaxStack(): i32
+        {
+            var max = 0
+            var depth = 0
+            var i = 0
+            while i < _count
+            {
+                depth = depth + StackDelta(i, _names[i])
+                if depth > max
+                {
+                    max = depth
+                }
+
+                if _names[i] == "Ret"
+                {
+                    depth = 0
+                }
+
+                i = i + 1
+            }
+
+            return max
+        }
+
+        /// <summary>单条指令净栈增量（自举发射子集；Call 用发射器登记的 arity/返回值增量）。</summary>
+        private function StackDelta(index: i32, name: string): i32
+        {
+            if name == "Ldc_I4" || name == "Ldc_I4_0" || name == "Ldc_I4_1" || name == "Ldarg" || name == "Ldloc" || name == "Dup"
+            {
+                return 1
+            }
+
+            if name == "Stloc" || name == "Pop" || name == "Ret" || name == "Brtrue" || name == "Brfalse"
+            {
+                return -1
+            }
+
+            if name == "Add" || name == "Sub" || name == "Mul" || name == "Div" || name == "Rem" ||
+               name == "Ceq" || name == "Clt" || name == "Cgt"
+            {
+                return -1
+            }
+
+            if name == "Call"
+            {
+                return _callDeltas[index]
+            }
+
+            return 0
+        }
+
+        /// <summary>编码为小端十六进制字符串（差分协议；token 占位 0xFFFFFFFF）。</summary>
+        public function Assemble(): string
+        {
+            // 第一遍：每条指令偏移
+            var offsets = new i32[_count]
+            var total = 0
+            var i = 0
+            while i < _count
+            {
+                offsets[i] = total
+                total = total + InstructionSize(i)
+                i = i + 1
+            }
+
+            // 第二遍：编码
+            var sb = ""
+            i = 0
+            while i < _count
+            {
+                let v = IlOpCodeTable.OpCodeValue(_names[i])
+                let opSize = OpSize(v)
+                if opSize == 2
+                {
+                    sb = sb + "fe"
+                    sb = sb + HexCodec.HexByte(v & 0xFF)
+                }
+                else
+                {
+                    sb = sb + HexCodec.HexByte(v)
+                }
+
+                let t = _opTypes[i]
+                let startOffset = offsets[i] + opSize
+                if t == 1
+                {
+                    sb = sb + HexCodec.HexI32(_operands[i])
+                }
+                else if t == 5
+                {
+                    sb = sb + HexCodec.HexByte(_operands[i])
+                }
+                else if t == 12
+                {
+                    sb = sb + HexCodec.HexI16(_operands[i])
+                }
+                else if t == 13
+                {
+                    sb = sb + HexCodec.HexByte(_operands[i])
+                }
+                else if t == 14
+                {
+                    let dist = offsets[_targets[i]] - (startOffset + 4)
+                    sb = sb + HexCodec.HexI32(dist)
+                }
+                else if t == 15
+                {
+                    let dist = offsets[_targets[i]] - (startOffset + 1)
+                    sb = sb + HexCodec.HexByte(dist)
+                }
+                else if t == 16
+                {
+                    let count = _operands[i]
+                    let baseOffset = startOffset + 4 + 4 * count
+                    sb = sb + HexCodec.HexI32(count)
+                    var k = 0
+                    while k < count
+                    {
+                        let dist = offsets[_targets[i] + k] - baseOffset
+                        sb = sb + HexCodec.HexI32(dist)
+                        k = k + 1
+                    }
+                }
+                else if t == 6 || t == 7 || t == 8 || t == 9
+                {
+                    if _operands[i] == 0
+                    {
+                        sb = sb + "ffffffff"
+                    }
+                    else
+                    {
+                        sb = sb + HexCodec.HexI32(_operands[i])
+                    }
+                }
+
+                i = i + 1
+            }
+
+            return sb
+        }
+
+        private function InstructionSize(index: i32): i32
+        {
+            let v = IlOpCodeTable.OpCodeValue(_names[index])
+            let opSize = OpSize(v)
+            if _opTypes[index] == 16
+            {
+                return opSize + 4 + 4 * _operands[index]
+            }
+
+            return opSize + IlOpCodeTable.OpCodeOperandSize(_names[index])
+        }
+
+        private static function OpSize(value: i32): i32
+        {
+            if value > 0xFF
+            {
+                return 2
+            }
+
+            return 1
+        }
+
+        }
+}

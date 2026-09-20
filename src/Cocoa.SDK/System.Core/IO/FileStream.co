@@ -1,4 +1,4 @@
-// System.IO 模块实现（本文件归属 System.Core）
+﻿// System.IO 模块实现（本文件归属 System.Core）
 // FileStream：真 seek 句柄。Evaluator/native 走本体（IOSyscall.File* 句柄原语）；IL 端直链 BCL
 // （newobj FileStream(path, FileMode.Open)，成员直链 BCL，9c 解锁）。三端语义一致：Open 可读写。
 // 6f 期：BCL 直连（facade）与实例字段（_h）当前编译器不能兼得（facade 类实例方法静态化）；
@@ -10,7 +10,8 @@ using System.Syscall
 
 namespace System.IO
 {
-    public facade class FileStream
+    [Facade("System.IO.FileStream")]
+    public class FileStream
     {
         private field _h: i64
 

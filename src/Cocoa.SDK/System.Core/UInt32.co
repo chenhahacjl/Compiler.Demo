@@ -1,8 +1,9 @@
-// Cocoa 系统标准库 · System.Core 基元 facade（namespace System，6e-M19 M2-b）
+﻿// Cocoa 系统标准库 · System.Core 基元 facade（namespace System，6e-M19 M2-b）
 
 namespace System
 {
-    public facade class UInt32
+    [Facade("System.UInt32")]
+    public class UInt32
     {
         public function ToString(): string
         {

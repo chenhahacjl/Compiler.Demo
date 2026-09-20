@@ -1,0 +1,523 @@
+// 鑷妇娴嬭瘯锛歅arser 鏍?dump 榛勯噾涓诧紙闃舵 7 澧為噺浜?M5-b0锛夆€斺€旂敱 GoldenGenerator 鎹曡幏鑷妇渚ц緭鍑虹敓鎴愶紝鍕挎墜鏀广€俓n// 39 鏈夋晥璇枡 + 6 鏃犳晥璇枡锛涙爲 dump + 璇婃柇锛坄error:` 鍓嶇紑锛夐€愬瓧鑺傛瘮瀵广€俓n
+using Cocoa.CodeAnalysis.Syntax
+
+namespace Cocoa.CodeAnalysis.Tests
+{
+    class ParserGoldenTests
+    {
+        public static function Run(r: TestRunner): void
+        {
+            RunSource(r, Valid0Corpus(), Valid0Expected(), "ParserGolden/valid-0")
+            RunSource(r, Valid1Corpus(), Valid1Expected(), "ParserGolden/valid-1")
+            RunSource(r, Valid2Corpus(), Valid2Expected(), "ParserGolden/valid-2")
+            RunSource(r, Valid3Corpus(), Valid3Expected(), "ParserGolden/valid-3")
+            RunSource(r, Valid4Corpus(), Valid4Expected(), "ParserGolden/valid-4")
+            RunSource(r, Valid5Corpus(), Valid5Expected(), "ParserGolden/valid-5")
+            RunSource(r, Valid6Corpus(), Valid6Expected(), "ParserGolden/valid-6")
+            RunSource(r, Valid7Corpus(), Valid7Expected(), "ParserGolden/valid-7")
+            RunSource(r, Valid8Corpus(), Valid8Expected(), "ParserGolden/valid-8")
+            RunSource(r, Valid9Corpus(), Valid9Expected(), "ParserGolden/valid-9")
+            RunSource(r, Valid10Corpus(), Valid10Expected(), "ParserGolden/valid-10")
+            RunSource(r, Valid11Corpus(), Valid11Expected(), "ParserGolden/valid-11")
+            RunSource(r, Valid12Corpus(), Valid12Expected(), "ParserGolden/valid-12")
+            RunSource(r, Valid13Corpus(), Valid13Expected(), "ParserGolden/valid-13")
+            RunSource(r, Valid14Corpus(), Valid14Expected(), "ParserGolden/valid-14")
+            RunSource(r, Valid15Corpus(), Valid15Expected(), "ParserGolden/valid-15")
+            RunSource(r, Valid16Corpus(), Valid16Expected(), "ParserGolden/valid-16")
+            RunSource(r, Valid17Corpus(), Valid17Expected(), "ParserGolden/valid-17")
+            RunSource(r, Valid18Corpus(), Valid18Expected(), "ParserGolden/valid-18")
+            RunSource(r, Valid19Corpus(), Valid19Expected(), "ParserGolden/valid-19")
+            RunSource(r, Valid20Corpus(), Valid20Expected(), "ParserGolden/valid-20")
+            RunSource(r, Valid21Corpus(), Valid21Expected(), "ParserGolden/valid-21")
+            RunSource(r, Valid22Corpus(), Valid22Expected(), "ParserGolden/valid-22")
+            RunSource(r, Valid23Corpus(), Valid23Expected(), "ParserGolden/valid-23")
+            RunSource(r, Valid24Corpus(), Valid24Expected(), "ParserGolden/valid-24")
+            RunSource(r, Valid25Corpus(), Valid25Expected(), "ParserGolden/valid-25")
+            RunSource(r, Valid26Corpus(), Valid26Expected(), "ParserGolden/valid-26")
+            RunSource(r, Valid27Corpus(), Valid27Expected(), "ParserGolden/valid-27")
+            RunSource(r, Valid28Corpus(), Valid28Expected(), "ParserGolden/valid-28")
+            RunSource(r, Valid29Corpus(), Valid29Expected(), "ParserGolden/valid-29")
+            RunSource(r, Valid30Corpus(), Valid30Expected(), "ParserGolden/valid-30")
+            RunSource(r, Valid31Corpus(), Valid31Expected(), "ParserGolden/valid-31")
+            RunSource(r, Valid32Corpus(), Valid32Expected(), "ParserGolden/valid-32")
+            RunSource(r, Valid33Corpus(), Valid33Expected(), "ParserGolden/valid-33")
+            RunSource(r, Valid34Corpus(), Valid34Expected(), "ParserGolden/valid-34")
+            RunSource(r, Valid35Corpus(), Valid35Expected(), "ParserGolden/valid-35")
+            RunSource(r, Valid36Corpus(), Valid36Expected(), "ParserGolden/valid-36")
+            RunSource(r, Valid37Corpus(), Valid37Expected(), "ParserGolden/valid-37")
+            RunSource(r, Valid38Corpus(), Valid38Expected(), "ParserGolden/valid-38")
+            RunSource(r, Invalid0Corpus(), Invalid0Expected(), "ParserGolden/invalid-0")
+            RunSource(r, Invalid1Corpus(), Invalid1Expected(), "ParserGolden/invalid-1")
+            RunSource(r, Invalid2Corpus(), Invalid2Expected(), "ParserGolden/invalid-2")
+            RunSource(r, Invalid3Corpus(), Invalid3Expected(), "ParserGolden/invalid-3")
+            RunSource(r, Invalid4Corpus(), Invalid4Expected(), "ParserGolden/invalid-4")
+            RunSource(r, Invalid5Corpus(), Invalid5Expected(), "ParserGolden/invalid-5")
+        }
+
+        private static function RunSource(r: TestRunner, source: string, expected: string, label: string): void
+        {
+            let p = Parser.Create(source)
+            let root = p.ParseCompilationUnit()
+            var sb = root.Dump()
+            var i = 0
+            while i < p.DiagnosticCount()
+            {
+                sb = sb + "\n" + p.DiagnosticAt(i)
+                i = i + 1
+            }
+
+            r.CheckEqual(expected, sb, label)
+        }
+
+        private static function Valid0Corpus(): string
+        {
+            return "function Main(): i32\n{\n    return 1\n}\n"
+        }
+
+        private static function Valid0Expected(): string
+        {
+            return "(CompilationUnit (FunctionDeclaration (FunctionKeyword \"function\") (IdentifierToken \"Main\") (OpenParenthesisToken \"(\") (CloseParenthesisToken \")\") (TypeClause (ColonToken \":\") (IdentifierToken \"i32\")) (BlockStatement (OpenBraceToken \"{\") (ReturnStatement (ReturnKeyword \"return\") (LiteralExpression (NumberToken \"1\"))) (CloseBraceToken \"}\"))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid1Corpus(): string
+        {
+            return "function Add(a: i32, b: i32): i32\n{\n    return a + b\n}\n"
+        }
+
+        private static function Valid1Expected(): string
+        {
+            return "(CompilationUnit (FunctionDeclaration (FunctionKeyword \"function\") (IdentifierToken \"Add\") (OpenParenthesisToken \"(\") (Parameter (IdentifierToken \"a\") (TypeClause (ColonToken \":\") (IdentifierToken \"i32\"))) (CommaToken \",\") (Parameter (IdentifierToken \"b\") (TypeClause (ColonToken \":\") (IdentifierToken \"i32\"))) (CloseParenthesisToken \")\") (TypeClause (ColonToken \":\") (IdentifierToken \"i32\")) (BlockStatement (OpenBraceToken \"{\") (ReturnStatement (ReturnKeyword \"return\") (BinaryExpression (NameExpression (IdentifierToken \"a\")) (PlusToken \"+\") (NameExpression (IdentifierToken \"b\")))) (CloseBraceToken \"}\"))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid2Corpus(): string
+        {
+            return "function Main()\n{\n    var x = 10\n    print(x)\n}\n"
+        }
+
+        private static function Valid2Expected(): string
+        {
+            return "(CompilationUnit (FunctionDeclaration (FunctionKeyword \"function\") (IdentifierToken \"Main\") (OpenParenthesisToken \"(\") (CloseParenthesisToken \")\") (BlockStatement (OpenBraceToken \"{\") (VariableDeclaration (VarKeyword \"var\") (IdentifierToken \"x\") (EqualsToken \"=\") (LiteralExpression (NumberToken \"10\"))) (ExpressionStatement (CallExpression (IdentifierToken \"print\") (OpenParenthesisToken \"(\") (NameExpression (IdentifierToken \"x\")) (CloseParenthesisToken \")\"))) (CloseBraceToken \"}\"))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid3Corpus(): string
+        {
+            return "let f = (x: i32) => x + 1\n"
+        }
+
+        private static function Valid3Expected(): string
+        {
+            return "(CompilationUnit (GlobalStatement (VariableDeclaration (LetKeyword \"let\") (IdentifierToken \"f\") (EqualsToken \"=\") (LambdaExpression (OpenParenthesisToken \"(\") (Parameter (IdentifierToken \"x\") (TypeClause (ColonToken \":\") (IdentifierToken \"i32\"))) (CloseParenthesisToken \")\") (FatArrowToken \"=>\") (BinaryExpression (NameExpression (IdentifierToken \"x\")) (PlusToken \"+\") (LiteralExpression (NumberToken \"1\")))))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid4Corpus(): string
+        {
+            return "function Run(n: i32): void\n{\n    var sum = n * 2 + 1\n    if sum > 10\n    {\n        print(sum)\n    }\n    else\n    {\n        print(0)\n    }\n}\n"
+        }
+
+        private static function Valid4Expected(): string
+        {
+            return "(CompilationUnit (FunctionDeclaration (FunctionKeyword \"function\") (IdentifierToken \"Run\") (OpenParenthesisToken \"(\") (Parameter (IdentifierToken \"n\") (TypeClause (ColonToken \":\") (IdentifierToken \"i32\"))) (CloseParenthesisToken \")\") (TypeClause (ColonToken \":\") (IdentifierToken \"void\")) (BlockStatement (OpenBraceToken \"{\") (VariableDeclaration (VarKeyword \"var\") (IdentifierToken \"sum\") (EqualsToken \"=\") (BinaryExpression (BinaryExpression (NameExpression (IdentifierToken \"n\")) (StarToken \"*\") (LiteralExpression (NumberToken \"2\"))) (PlusToken \"+\") (LiteralExpression (NumberToken \"1\")))) (IfStatement (IfKeyword \"if\") (BinaryExpression (NameExpression (IdentifierToken \"sum\")) (GreaterToken \">\") (LiteralExpression (NumberToken \"10\"))) (BlockStatement (OpenBraceToken \"{\") (ExpressionStatement (CallExpression (IdentifierToken \"print\") (OpenParenthesisToken \"(\") (NameExpression (IdentifierToken \"sum\")) (CloseParenthesisToken \")\"))) (CloseBraceToken \"}\")) (ElseClause (ElseKeyword \"else\") (BlockStatement (OpenBraceToken \"{\") (ExpressionStatement (CallExpression (IdentifierToken \"print\") (OpenParenthesisToken \"(\") (LiteralExpression (NumberToken \"0\")) (CloseParenthesisToken \")\"))) (CloseBraceToken \"}\")))) (CloseBraceToken \"}\"))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid5Corpus(): string
+        {
+            return "var g = !flag && a <= b\n"
+        }
+
+        private static function Valid5Expected(): string
+        {
+            return "(CompilationUnit (GlobalStatement (VariableDeclaration (VarKeyword \"var\") (IdentifierToken \"g\") (EqualsToken \"=\") (BinaryExpression (UnaryExpression (BangToken \"!\") (NameExpression (IdentifierToken \"flag\"))) (AmpersandAmpersandToken \"&&\") (BinaryExpression (NameExpression (IdentifierToken \"a\")) (LessOrEqualsToken \"<=\") (NameExpression (IdentifierToken \"b\")))))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid6Corpus(): string
+        {
+            return "function Main()\n{\n    print(Add(2, 3))\n}\n"
+        }
+
+        private static function Valid6Expected(): string
+        {
+            return "(CompilationUnit (FunctionDeclaration (FunctionKeyword \"function\") (IdentifierToken \"Main\") (OpenParenthesisToken \"(\") (CloseParenthesisToken \")\") (BlockStatement (OpenBraceToken \"{\") (ExpressionStatement (CallExpression (IdentifierToken \"print\") (OpenParenthesisToken \"(\") (CallExpression (IdentifierToken \"Add\") (OpenParenthesisToken \"(\") (LiteralExpression (NumberToken \"2\")) (CommaToken \",\") (LiteralExpression (NumberToken \"3\")) (CloseParenthesisToken \")\")) (CloseParenthesisToken \")\"))) (CloseBraceToken \"}\"))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid7Corpus(): string
+        {
+            return "function Main()\n{\n    while i < 10\n    {\n        i = i + 1\n    }\n}\n"
+        }
+
+        private static function Valid7Expected(): string
+        {
+            return "(CompilationUnit (FunctionDeclaration (FunctionKeyword \"function\") (IdentifierToken \"Main\") (OpenParenthesisToken \"(\") (CloseParenthesisToken \")\") (BlockStatement (OpenBraceToken \"{\") (WhileStatement (WhileKeyword \"while\") (BinaryExpression (NameExpression (IdentifierToken \"i\")) (LessToken \"<\") (LiteralExpression (NumberToken \"10\"))) (BlockStatement (OpenBraceToken \"{\") (ExpressionStatement (AssignmentExpression (NameExpression (IdentifierToken \"i\")) (EqualsToken \"=\") (BinaryExpression (NameExpression (IdentifierToken \"i\")) (PlusToken \"+\") (LiteralExpression (NumberToken \"1\"))))) (CloseBraceToken \"}\"))) (CloseBraceToken \"}\"))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid8Corpus(): string
+        {
+            return "function Main()\n{\n    for i = 0 to 10 step 2\n    {\n        print(i)\n    }\n}\n"
+        }
+
+        private static function Valid8Expected(): string
+        {
+            return "(CompilationUnit (FunctionDeclaration (FunctionKeyword \"function\") (IdentifierToken \"Main\") (OpenParenthesisToken \"(\") (CloseParenthesisToken \")\") (BlockStatement (OpenBraceToken \"{\") (ForRangeStatement (ForKeyword \"for\") (IdentifierToken \"i\") (EqualsToken \"=\") (LiteralExpression (NumberToken \"0\")) (ToKeyword \"to\") (LiteralExpression (NumberToken \"10\")) (StepKeyword \"step\") (LiteralExpression (NumberToken \"2\")) (BlockStatement (OpenBraceToken \"{\") (ExpressionStatement (CallExpression (IdentifierToken \"print\") (OpenParenthesisToken \"(\") (NameExpression (IdentifierToken \"i\")) (CloseParenthesisToken \")\"))) (CloseBraceToken \"}\"))) (CloseBraceToken \"}\"))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid9Corpus(): string
+        {
+            return "let r = obj.Get(x) + -1\n"
+        }
+
+        private static function Valid9Expected(): string
+        {
+            return "(CompilationUnit (GlobalStatement (VariableDeclaration (LetKeyword \"let\") (IdentifierToken \"r\") (EqualsToken \"=\") (BinaryExpression (MemberCallExpression (NameExpression (IdentifierToken \"obj\")) (DotToken \".\") (IdentifierToken \"Get\") (OpenParenthesisToken \"(\") (NameExpression (IdentifierToken \"x\")) (CloseParenthesisToken \")\")) (PlusToken \"+\") (UnaryExpression (MinusToken \"-\") (LiteralExpression (NumberToken \"1\")))))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid10Corpus(): string
+        {
+            return "let s = \"hi\" + c\n"
+        }
+
+        private static function Valid10Expected(): string
+        {
+            return "(CompilationUnit (GlobalStatement (VariableDeclaration (LetKeyword \"let\") (IdentifierToken \"s\") (EqualsToken \"=\") (BinaryExpression (LiteralExpression (StringToken \"\\\"hi\\\"\")) (PlusToken \"+\") (NameExpression (IdentifierToken \"c\"))))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid11Corpus(): string
+        {
+            return "function Main()\n{\n    let ok = a && b || !c\n    print(ok)\n}\n"
+        }
+
+        private static function Valid11Expected(): string
+        {
+            return "(CompilationUnit (FunctionDeclaration (FunctionKeyword \"function\") (IdentifierToken \"Main\") (OpenParenthesisToken \"(\") (CloseParenthesisToken \")\") (BlockStatement (OpenBraceToken \"{\") (VariableDeclaration (LetKeyword \"let\") (IdentifierToken \"ok\") (EqualsToken \"=\") (BinaryExpression (BinaryExpression (NameExpression (IdentifierToken \"a\")) (AmpersandAmpersandToken \"&&\") (NameExpression (IdentifierToken \"b\"))) (PipePipeToken \"||\") (UnaryExpression (BangToken \"!\") (NameExpression (IdentifierToken \"c\"))))) (ExpressionStatement (CallExpression (IdentifierToken \"print\") (OpenParenthesisToken \"(\") (NameExpression (IdentifierToken \"ok\")) (CloseParenthesisToken \")\"))) (CloseBraceToken \"}\"))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid12Corpus(): string
+        {
+            return "class Foo extends Bar, IA\n{\n    private field _x: i32\n    public property P: i32 { get set }\n    public function Get(): i32\n    {\n        return _x\n    }\n    public constructor(x: i32)\n    {\n        _x = x\n    }\n}\n"
+        }
+
+        private static function Valid12Expected(): string
+        {
+            return "(CompilationUnit (ClassDeclaration (ClassKeyword \"class\") (IdentifierToken \"Foo\") (TypeClause (ExtendsKeyword \"extends\") (IdentifierToken \"Bar\")) (TypeClause (ColonToken \"\") (IdentifierToken \"IA\")) (OpenBraceToken \"{\") (ClassFieldDeclaration (PrivateKeyword \"private\") (IdentifierToken \"_x\") (TypeClause (ColonToken \":\") (IdentifierToken \"i32\"))) (PropertyDeclaration (PublicKeyword \"public\") (PropertyKeyword \"property\") (IdentifierToken \"P\") (TypeClause (ColonToken \":\") (IdentifierToken \"i32\")) (OpenBraceToken \"{\") (PropertyAccessor (GetKeyword \"get\")) (PropertyAccessor (SetKeyword \"set\")) (CloseBraceToken \"}\")) (FunctionDeclaration (PublicKeyword \"public\") (FunctionKeyword \"function\") (IdentifierToken \"Get\") (OpenParenthesisToken \"(\") (CloseParenthesisToken \")\") (TypeClause (ColonToken \":\") (IdentifierToken \"i32\")) (BlockStatement (OpenBraceToken \"{\") (ReturnStatement (ReturnKeyword \"return\") (NameExpression (IdentifierToken \"_x\"))) (CloseBraceToken \"}\"))) (ConstructorDeclaration (PublicKeyword \"public\") (ConstructorKeyword \"constructor\") (OpenParenthesisToken \"(\") (Parameter (IdentifierToken \"x\") (TypeClause (ColonToken \":\") (IdentifierToken \"i32\"))) (CloseParenthesisToken \")\") (BlockStatement (OpenBraceToken \"{\") (ExpressionStatement (AssignmentExpression (NameExpression (IdentifierToken \"_x\")) (EqualsToken \"=\") (NameExpression (IdentifierToken \"x\")))) (CloseBraceToken \"}\"))) (CloseBraceToken \"}\")) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid13Corpus(): string
+        {
+            return "struct Point\n{\n    public field X: i32\n    public field Y: i32\n}\n"
+        }
+
+        private static function Valid13Expected(): string
+        {
+            return "(CompilationUnit (ClassDeclaration (StructKeyword \"struct\") (IdentifierToken \"Point\") (OpenBraceToken \"{\") (ClassFieldDeclaration (PublicKeyword \"public\") (IdentifierToken \"X\") (TypeClause (ColonToken \":\") (IdentifierToken \"i32\"))) (ClassFieldDeclaration (PublicKeyword \"public\") (IdentifierToken \"Y\") (TypeClause (ColonToken \":\") (IdentifierToken \"i32\"))) (CloseBraceToken \"}\")) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid14Corpus(): string
+        {
+            return "interface IFoo\n{\n    function Get(): i32\n    property P: i32 { get }\n}\n"
+        }
+
+        private static function Valid14Expected(): string
+        {
+            return "(CompilationUnit (InterfaceDeclaration (InterfaceKeyword \"interface\") (IdentifierToken \"IFoo\") (OpenBraceToken \"{\") (FunctionDeclaration (FunctionKeyword \"function\") (IdentifierToken \"Get\") (OpenParenthesisToken \"(\") (CloseParenthesisToken \")\") (TypeClause (ColonToken \":\") (IdentifierToken \"i32\"))) (PropertyDeclaration (PropertyKeyword \"property\") (IdentifierToken \"P\") (TypeClause (ColonToken \":\") (IdentifierToken \"i32\")) (OpenBraceToken \"{\") (PropertyAccessor (GetKeyword \"get\")) (CloseBraceToken \"}\")) (CloseBraceToken \"}\")) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid15Corpus(): string
+        {
+            return "function Main()\n{\n    try\n    {\n        run()\n    }\n    catch e: Exception\n    {\n        print(e.Message)\n    }\n    finally\n    {\n        cleanup()\n    }\n}\n"
+        }
+
+        private static function Valid15Expected(): string
+        {
+            return "(CompilationUnit (FunctionDeclaration (FunctionKeyword \"function\") (IdentifierToken \"Main\") (OpenParenthesisToken \"(\") (CloseParenthesisToken \")\") (BlockStatement (OpenBraceToken \"{\") (TryStatement (TryKeyword \"try\") (BlockStatement (OpenBraceToken \"{\") (ExpressionStatement (CallExpression (IdentifierToken \"run\") (OpenParenthesisToken \"(\") (CloseParenthesisToken \")\"))) (CloseBraceToken \"}\")) (CatchClause (CatchKeyword \"catch\") (IdentifierToken \"e\") (TypeClause (ColonToken \":\") (IdentifierToken \"Exception\")) (BlockStatement (OpenBraceToken \"{\") (ExpressionStatement (CallExpression (IdentifierToken \"print\") (OpenParenthesisToken \"(\") (MemberAccessExpression (NameExpression (IdentifierToken \"e\")) (DotToken \".\") (IdentifierToken \"Message\")) (CloseParenthesisToken \")\"))) (CloseBraceToken \"}\"))) (FinallyClause (FinallyKeyword \"finally\") (BlockStatement (OpenBraceToken \"{\") (ExpressionStatement (CallExpression (IdentifierToken \"cleanup\") (OpenParenthesisToken \"(\") (CloseParenthesisToken \")\"))) (CloseBraceToken \"}\")))) (CloseBraceToken \"}\"))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid16Corpus(): string
+        {
+            return "function Main()\n{\n    foreach (var item in list)\n    {\n        print(item)\n    }\n}\n"
+        }
+
+        private static function Valid16Expected(): string
+        {
+            return "(CompilationUnit (FunctionDeclaration (FunctionKeyword \"function\") (IdentifierToken \"Main\") (OpenParenthesisToken \"(\") (CloseParenthesisToken \")\") (BlockStatement (OpenBraceToken \"{\") (ForeachStatement (ForeachKeyword \"foreach\") (OpenParenthesisToken \"(\") (VarKeyword \"var\") (IdentifierToken \"item\") (InKeyword \"in\") (NameExpression (IdentifierToken \"list\")) (CloseParenthesisToken \")\") (BlockStatement (OpenBraceToken \"{\") (ExpressionStatement (CallExpression (IdentifierToken \"print\") (OpenParenthesisToken \"(\") (NameExpression (IdentifierToken \"item\")) (CloseParenthesisToken \")\"))) (CloseBraceToken \"}\"))) (CloseBraceToken \"}\"))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid17Corpus(): string
+        {
+            return "function Main()\n{\n    for (var i = 0; i < 10; i++)\n    {\n        print(i)\n    }\n}\n"
+        }
+
+        private static function Valid17Expected(): string
+        {
+            return "(CompilationUnit (FunctionDeclaration (FunctionKeyword \"function\") (IdentifierToken \"Main\") (OpenParenthesisToken \"(\") (CloseParenthesisToken \")\") (BlockStatement (OpenBraceToken \"{\") (ForStatement (ForKeyword \"for\") (OpenParenthesisToken \"(\") (VariableDeclaration (VarKeyword \"var\") (IdentifierToken \"i\") (EqualsToken \"=\") (LiteralExpression (NumberToken \"0\"))) (SemicolonToken \";\") (BinaryExpression (NameExpression (IdentifierToken \"i\")) (LessToken \"<\") (LiteralExpression (NumberToken \"10\"))) (SemicolonToken \";\") (PostfixIncrementExpression (NameExpression (IdentifierToken \"i\")) (PlusPlusToken \"++\")) (CloseParenthesisToken \")\") (BlockStatement (OpenBraceToken \"{\") (ExpressionStatement (CallExpression (IdentifierToken \"print\") (OpenParenthesisToken \"(\") (NameExpression (IdentifierToken \"i\")) (CloseParenthesisToken \")\"))) (CloseBraceToken \"}\"))) (CloseBraceToken \"}\"))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid18Corpus(): string
+        {
+            return "let map: List<i32> = null\n"
+        }
+
+        private static function Valid18Expected(): string
+        {
+            return "(CompilationUnit (GlobalStatement (VariableDeclaration (LetKeyword \"let\") (IdentifierToken \"map\") (GenericTypeClause (ColonToken \":\") (IdentifierToken \"List\") (LessToken \"<\") (TypeClause (IdentifierToken \"i32\")) (GreaterToken \">\")) (EqualsToken \"=\") (LiteralExpression (NullKeyword \"null\")))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid19Corpus(): string
+        {
+            return "class Foo\n{\n    private field _x: i32 = 5\n    public property P: i32 { get set } = 42\n}\n"
+        }
+
+        private static function Valid19Expected(): string
+        {
+            return "(CompilationUnit (ClassDeclaration (ClassKeyword \"class\") (IdentifierToken \"Foo\") (OpenBraceToken \"{\") (ClassFieldDeclaration (PrivateKeyword \"private\") (IdentifierToken \"_x\") (TypeClause (ColonToken \":\") (IdentifierToken \"i32\")) (EqualsToken \"=\") (LiteralExpression (NumberToken \"5\"))) (PropertyDeclaration (PublicKeyword \"public\") (PropertyKeyword \"property\") (IdentifierToken \"P\") (TypeClause (ColonToken \":\") (IdentifierToken \"i32\")) (OpenBraceToken \"{\") (PropertyAccessor (GetKeyword \"get\")) (PropertyAccessor (SetKeyword \"set\")) (CloseBraceToken \"}\") (EqualsToken \"=\") (LiteralExpression (NumberToken \"42\"))) (CloseBraceToken \"}\")) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid20Corpus(): string
+        {
+            return "let a = new i32[] {1, 2, 3}\n"
+        }
+
+        private static function Valid20Expected(): string
+        {
+            return "(CompilationUnit (GlobalStatement (VariableDeclaration (LetKeyword \"let\") (IdentifierToken \"a\") (EqualsToken \"=\") (ArrayCreationExpression (NewKeyword \"new\") (IdentifierToken \"i32\") (OpenBracketToken \"[\") (CloseBracketToken \"]\") (OpenBraceToken \"{\") (LiteralExpression (NumberToken \"1\")) (CommaToken \",\") (LiteralExpression (NumberToken \"2\")) (CommaToken \",\") (LiteralExpression (NumberToken \"3\")) (CloseBraceToken \"}\")))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid21Corpus(): string
+        {
+            return "let b = x is T\nlet c = a as T\nlet d = e ?? f\n"
+        }
+
+        private static function Valid21Expected(): string
+        {
+            return "(CompilationUnit (GlobalStatement (VariableDeclaration (LetKeyword \"let\") (IdentifierToken \"b\") (EqualsToken \"=\") (IsExpression (NameExpression (IdentifierToken \"x\")) (IsKeyword \"is\") (IdentifierToken \"T\")))) (GlobalStatement (VariableDeclaration (LetKeyword \"let\") (IdentifierToken \"c\") (EqualsToken \"=\") (AsExpression (NameExpression (IdentifierToken \"a\")) (AsKeyword \"as\") (IdentifierToken \"T\")))) (GlobalStatement (VariableDeclaration (LetKeyword \"let\") (IdentifierToken \"d\") (EqualsToken \"=\") (BinaryExpression (NameExpression (IdentifierToken \"e\")) (QuestionQuestionToken \"??\") (NameExpression (IdentifierToken \"f\"))))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid22Corpus(): string
+        {
+            return "let arr = new string[] {\"x\", \"y\"}\n"
+        }
+
+        private static function Valid22Expected(): string
+        {
+            return "(CompilationUnit (GlobalStatement (VariableDeclaration (LetKeyword \"let\") (IdentifierToken \"arr\") (EqualsToken \"=\") (ArrayCreationExpression (NewKeyword \"new\") (IdentifierToken \"string\") (OpenBracketToken \"[\") (CloseBracketToken \"]\") (OpenBraceToken \"{\") (LiteralExpression (StringToken \"\\\"x\\\"\")) (CommaToken \",\") (LiteralExpression (StringToken \"\\\"y\\\"\")) (CloseBraceToken \"}\")))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid23Corpus(): string
+        {
+            return "class Point\n{\n    public field X: i32\n    public field Y: i32\n    public function Distance(p: Point): f64\n    {\n        return 0\n    }\n}\n"
+        }
+
+        private static function Valid23Expected(): string
+        {
+            return "(CompilationUnit (ClassDeclaration (ClassKeyword \"class\") (IdentifierToken \"Point\") (OpenBraceToken \"{\") (ClassFieldDeclaration (PublicKeyword \"public\") (IdentifierToken \"X\") (TypeClause (ColonToken \":\") (IdentifierToken \"i32\"))) (ClassFieldDeclaration (PublicKeyword \"public\") (IdentifierToken \"Y\") (TypeClause (ColonToken \":\") (IdentifierToken \"i32\"))) (FunctionDeclaration (PublicKeyword \"public\") (FunctionKeyword \"function\") (IdentifierToken \"Distance\") (OpenParenthesisToken \"(\") (Parameter (IdentifierToken \"p\") (TypeClause (ColonToken \":\") (IdentifierToken \"Point\"))) (CloseParenthesisToken \")\") (TypeClause (ColonToken \":\") (IdentifierToken \"f64\")) (BlockStatement (OpenBraceToken \"{\") (ReturnStatement (ReturnKeyword \"return\") (LiteralExpression (NumberToken \"0\"))) (CloseBraceToken \"}\"))) (CloseBraceToken \"}\")) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid24Corpus(): string
+        {
+            return "using System\nusing Cocoa.CodeAnalysis.Syntax\n\nfunction Main()\n{\n    print(1)\n}\n"
+        }
+
+        private static function Valid24Expected(): string
+        {
+            return "(CompilationUnit (UsingDirective (UsingKeyword \"using\") (IdentifierToken \"System\")) (UsingDirective (UsingKeyword \"using\") (IdentifierToken \"Cocoa\") (DotToken \".\") (IdentifierToken \"CodeAnalysis\") (DotToken \".\") (IdentifierToken \"Syntax\")) (FunctionDeclaration (FunctionKeyword \"function\") (IdentifierToken \"Main\") (OpenParenthesisToken \"(\") (CloseParenthesisToken \")\") (BlockStatement (OpenBraceToken \"{\") (ExpressionStatement (CallExpression (IdentifierToken \"print\") (OpenParenthesisToken \"(\") (LiteralExpression (NumberToken \"1\")) (CloseParenthesisToken \")\"))) (CloseBraceToken \"}\"))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid25Corpus(): string
+        {
+            return "using System.Collections.Generic\n\nlet items = new List<i32>()\n"
+        }
+
+        private static function Valid25Expected(): string
+        {
+            return "(CompilationUnit (UsingDirective (UsingKeyword \"using\") (IdentifierToken \"System\") (DotToken \".\") (IdentifierToken \"Collections\") (DotToken \".\") (IdentifierToken \"Generic\")) (GlobalStatement (VariableDeclaration (LetKeyword \"let\") (IdentifierToken \"items\") (EqualsToken \"=\") (ObjectCreationExpression (NewKeyword \"new\") (IdentifierToken \"List\") (TypeArgumentList (LessToken \"<\") (TypeClause (IdentifierToken \"i32\")) (GreaterToken \">\")) (OpenParenthesisToken \"(\") (CloseParenthesisToken \")\")))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid26Corpus(): string
+        {
+            return "let p = new Point()\n"
+        }
+
+        private static function Valid26Expected(): string
+        {
+            return "(CompilationUnit (GlobalStatement (VariableDeclaration (LetKeyword \"let\") (IdentifierToken \"p\") (EqualsToken \"=\") (ObjectCreationExpression (NewKeyword \"new\") (IdentifierToken \"Point\") (OpenParenthesisToken \"(\") (CloseParenthesisToken \")\")))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid27Corpus(): string
+        {
+            return "using System\nfunction Main()\n{\n    Console.WriteLine(Greeting(\"Cocoa\"))\n    Console.WriteLine(Sum(20, 22))\n}\n"
+        }
+
+        private static function Valid27Expected(): string
+        {
+            return "(CompilationUnit (UsingDirective (UsingKeyword \"using\") (IdentifierToken \"System\")) (FunctionDeclaration (FunctionKeyword \"function\") (IdentifierToken \"Main\") (OpenParenthesisToken \"(\") (CloseParenthesisToken \")\") (BlockStatement (OpenBraceToken \"{\") (ExpressionStatement (MemberCallExpression (NameExpression (IdentifierToken \"Console\")) (DotToken \".\") (IdentifierToken \"WriteLine\") (OpenParenthesisToken \"(\") (CallExpression (IdentifierToken \"Greeting\") (OpenParenthesisToken \"(\") (LiteralExpression (StringToken \"\\\"Cocoa\\\"\")) (CloseParenthesisToken \")\")) (CloseParenthesisToken \")\"))) (ExpressionStatement (MemberCallExpression (NameExpression (IdentifierToken \"Console\")) (DotToken \".\") (IdentifierToken \"WriteLine\") (OpenParenthesisToken \"(\") (CallExpression (IdentifierToken \"Sum\") (OpenParenthesisToken \"(\") (LiteralExpression (NumberToken \"20\")) (CommaToken \",\") (LiteralExpression (NumberToken \"22\")) (CloseParenthesisToken \")\")) (CloseParenthesisToken \")\"))) (CloseBraceToken \"}\"))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid28Corpus(): string
+        {
+            return "using System\nfunction Main()\n{\n    var total = 0\n    for var i = 1 to 5\n    {\n        if i == 3\n        {\n            continue\n        }\n        total = total + i\n    }\n}\n"
+        }
+
+        private static function Valid28Expected(): string
+        {
+            return "(CompilationUnit (UsingDirective (UsingKeyword \"using\") (IdentifierToken \"System\")) (FunctionDeclaration (FunctionKeyword \"function\") (IdentifierToken \"Main\") (OpenParenthesisToken \"(\") (CloseParenthesisToken \")\") (BlockStatement (OpenBraceToken \"{\") (VariableDeclaration (VarKeyword \"var\") (IdentifierToken \"total\") (EqualsToken \"=\") (LiteralExpression (NumberToken \"0\"))) (ForRangeStatement (ForKeyword \"for\") (VarKeyword \"var\") (IdentifierToken \"i\") (EqualsToken \"=\") (LiteralExpression (NumberToken \"1\")) (ToKeyword \"to\") (LiteralExpression (NumberToken \"5\")) (BlockStatement (OpenBraceToken \"{\") (IfStatement (IfKeyword \"if\") (BinaryExpression (NameExpression (IdentifierToken \"i\")) (EqualsEqualsToken \"==\") (LiteralExpression (NumberToken \"3\"))) (BlockStatement (OpenBraceToken \"{\") (ContinueStatement (ContinueKeyword \"continue\")) (CloseBraceToken \"}\"))) (ExpressionStatement (AssignmentExpression (NameExpression (IdentifierToken \"total\")) (EqualsToken \"=\") (BinaryExpression (NameExpression (IdentifierToken \"total\")) (PlusToken \"+\") (NameExpression (IdentifierToken \"i\"))))) (CloseBraceToken \"}\"))) (CloseBraceToken \"}\"))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid29Corpus(): string
+        {
+            return "function DoOnce(): i32\n{\n    var i = 0\n    do\n    {\n        i = i + 1\n    } while i < 0\n    return i\n}\n"
+        }
+
+        private static function Valid29Expected(): string
+        {
+            return "(CompilationUnit (FunctionDeclaration (FunctionKeyword \"function\") (IdentifierToken \"DoOnce\") (OpenParenthesisToken \"(\") (CloseParenthesisToken \")\") (TypeClause (ColonToken \":\") (IdentifierToken \"i32\")) (BlockStatement (OpenBraceToken \"{\") (VariableDeclaration (VarKeyword \"var\") (IdentifierToken \"i\") (EqualsToken \"=\") (LiteralExpression (NumberToken \"0\"))) (DoWhileStatement (DoKeyword \"do\") (BlockStatement (OpenBraceToken \"{\") (ExpressionStatement (AssignmentExpression (NameExpression (IdentifierToken \"i\")) (EqualsToken \"=\") (BinaryExpression (NameExpression (IdentifierToken \"i\")) (PlusToken \"+\") (LiteralExpression (NumberToken \"1\"))))) (CloseBraceToken \"}\")) (WhileKeyword \"while\") (BinaryExpression (NameExpression (IdentifierToken \"i\")) (LessToken \"<\") (LiteralExpression (NumberToken \"0\")))) (ReturnStatement (ReturnKeyword \"return\") (NameExpression (IdentifierToken \"i\"))) (CloseBraceToken \"}\"))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid30Corpus(): string
+        {
+            return "using System\nfunction Run(args: string[])\n{\n    Console.WriteLine(Add(20, 22))\n    Console.WriteLine(args.Length)\n    if args.Length > 0\n    {\n        Console.WriteLine(args[0])\n    }\n}\n"
+        }
+
+        private static function Valid30Expected(): string
+        {
+            return "(CompilationUnit (UsingDirective (UsingKeyword \"using\") (IdentifierToken \"System\")) (FunctionDeclaration (FunctionKeyword \"function\") (IdentifierToken \"Run\") (OpenParenthesisToken \"(\") (Parameter (IdentifierToken \"args\") (ArrayTypeClause (ColonToken \":\") (IdentifierToken \"string\") (TypeClause (ColonToken \":\") (IdentifierToken \"string\")) (OpenBracketToken \"[\") (CloseBracketToken \"]\"))) (CloseParenthesisToken \")\") (BlockStatement (OpenBraceToken \"{\") (ExpressionStatement (MemberCallExpression (NameExpression (IdentifierToken \"Console\")) (DotToken \".\") (IdentifierToken \"WriteLine\") (OpenParenthesisToken \"(\") (CallExpression (IdentifierToken \"Add\") (OpenParenthesisToken \"(\") (LiteralExpression (NumberToken \"20\")) (CommaToken \",\") (LiteralExpression (NumberToken \"22\")) (CloseParenthesisToken \")\")) (CloseParenthesisToken \")\"))) (ExpressionStatement (MemberCallExpression (NameExpression (IdentifierToken \"Console\")) (DotToken \".\") (IdentifierToken \"WriteLine\") (OpenParenthesisToken \"(\") (MemberAccessExpression (NameExpression (IdentifierToken \"args\")) (DotToken \".\") (IdentifierToken \"Length\")) (CloseParenthesisToken \")\"))) (IfStatement (IfKeyword \"if\") (BinaryExpression (MemberAccessExpression (NameExpression (IdentifierToken \"args\")) (DotToken \".\") (IdentifierToken \"Length\")) (GreaterToken \">\") (LiteralExpression (NumberToken \"0\"))) (BlockStatement (OpenBraceToken \"{\") (ExpressionStatement (MemberCallExpression (NameExpression (IdentifierToken \"Console\")) (DotToken \".\") (IdentifierToken \"WriteLine\") (OpenParenthesisToken \"(\") (ElementAccessExpression (NameExpression (IdentifierToken \"args\")) (OpenBracketToken \"[\") (LiteralExpression (NumberToken \"0\")) (CloseBracketToken \"]\")) (CloseParenthesisToken \")\"))) (CloseBraceToken \"}\"))) (CloseBraceToken \"}\"))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid31Corpus(): string
+        {
+            return "public class Person\n{\n    private field _name: string\n}\n"
+        }
+
+        private static function Valid31Expected(): string
+        {
+            return "(CompilationUnit (ClassDeclaration (PublicKeyword \"public\") (ClassKeyword \"class\") (IdentifierToken \"Person\") (OpenBraceToken \"{\") (ClassFieldDeclaration (PrivateKeyword \"private\") (IdentifierToken \"_name\") (TypeClause (ColonToken \":\") (IdentifierToken \"string\"))) (CloseBraceToken \"}\")) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid32Corpus(): string
+        {
+            return "public enum Color { Red, Green, Blue }\n\npublic enum HttpStatus { OK = 200, NotFound = 404, InternalServerError = 500 }\n"
+        }
+
+        private static function Valid32Expected(): string
+        {
+            return "(CompilationUnit (EnumDeclaration (PublicKeyword \"public\") (EnumKeyword \"enum\") (IdentifierToken \"Color\") (OpenBraceToken \"{\") (EnumMember (IdentifierToken \"Red\")) (CommaToken \",\") (EnumMember (IdentifierToken \"Green\")) (CommaToken \",\") (EnumMember (IdentifierToken \"Blue\")) (CloseBraceToken \"}\")) (EnumDeclaration (PublicKeyword \"public\") (EnumKeyword \"enum\") (IdentifierToken \"HttpStatus\") (OpenBraceToken \"{\") (EnumMember (IdentifierToken \"OK\") (EqualsToken \"=\") (LiteralExpression (NumberToken \"200\"))) (CommaToken \",\") (EnumMember (IdentifierToken \"NotFound\") (EqualsToken \"=\") (LiteralExpression (NumberToken \"404\"))) (CommaToken \",\") (EnumMember (IdentifierToken \"InternalServerError\") (EqualsToken \"=\") (LiteralExpression (NumberToken \"500\"))) (CloseBraceToken \"}\")) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid33Corpus(): string
+        {
+            return "namespace MyLib\n{\n    public class Point\n    {\n        private field _x: i32\n    }\n}\n"
+        }
+
+        private static function Valid33Expected(): string
+        {
+            return "(CompilationUnit (NamespaceDeclaration (NamespaceKeyword \"namespace\") (IdentifierToken \"MyLib\") (OpenBraceToken \"{\") (ClassDeclaration (PublicKeyword \"public\") (ClassKeyword \"class\") (IdentifierToken \"Point\") (OpenBraceToken \"{\") (ClassFieldDeclaration (PrivateKeyword \"private\") (IdentifierToken \"_x\") (TypeClause (ColonToken \":\") (IdentifierToken \"i32\"))) (CloseBraceToken \"}\")) (CloseBraceToken \"}\")) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid34Corpus(): string
+        {
+            return "class Kernel32\n{\n    import kernel32.dll\n    {\n        static stdcall function GetTickCount(): i32\n    }\n}\n"
+        }
+
+        private static function Valid34Expected(): string
+        {
+            return "(CompilationUnit (ClassDeclaration (ClassKeyword \"class\") (IdentifierToken \"Kernel32\") (OpenBraceToken \"{\") (ImportBlock (ImportKeyword \"import\") (IdentifierToken \"kernel32\") (DotToken \".\") (IdentifierToken \"dll\") (OpenBraceToken \"{\") (FunctionDeclaration (StaticKeyword \"static\") (StdcallKeyword \"stdcall\") (FunctionKeyword \"function\") (IdentifierToken \"GetTickCount\") (OpenParenthesisToken \"(\") (CloseParenthesisToken \")\") (TypeClause (ColonToken \":\") (IdentifierToken \"i32\"))) (CloseBraceToken \"}\")) (CloseBraceToken \"}\")) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid35Corpus(): string
+        {
+            return "let a = obj.b.c\nlet d = x.y.z.W()\n"
+        }
+
+        private static function Valid35Expected(): string
+        {
+            return "(CompilationUnit (GlobalStatement (VariableDeclaration (LetKeyword \"let\") (IdentifierToken \"a\") (EqualsToken \"=\") (MemberAccessExpression (MemberAccessExpression (NameExpression (IdentifierToken \"obj\")) (DotToken \".\") (IdentifierToken \"b\")) (DotToken \".\") (IdentifierToken \"c\")))) (GlobalStatement (VariableDeclaration (LetKeyword \"let\") (IdentifierToken \"d\") (EqualsToken \"=\") (MemberCallExpression (MemberAccessExpression (MemberAccessExpression (NameExpression (IdentifierToken \"x\")) (DotToken \".\") (IdentifierToken \"y\")) (DotToken \".\") (IdentifierToken \"z\")) (DotToken \".\") (IdentifierToken \"W\") (OpenParenthesisToken \"(\") (CloseParenthesisToken \")\")))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid36Corpus(): string
+        {
+            return "let d: f64 = 3.14\nlet g = f32(0.016)\n"
+        }
+
+        private static function Valid36Expected(): string
+        {
+            return "(CompilationUnit (GlobalStatement (VariableDeclaration (LetKeyword \"let\") (IdentifierToken \"d\") (TypeClause (ColonToken \":\") (IdentifierToken \"f64\")) (EqualsToken \"=\") (LiteralExpression (DoubleToken \"3.14\")))) (GlobalStatement (VariableDeclaration (LetKeyword \"let\") (IdentifierToken \"g\") (EqualsToken \"=\") (CallExpression (IdentifierToken \"f32\") (OpenParenthesisToken \"(\") (LiteralExpression (DoubleToken \"0.016\")) (CloseParenthesisToken \")\")))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid37Corpus(): string
+        {
+            return "Ui.VStack(gui, () => {\n    gui.Label(\"hi\")\n    Ui.HStack(gui, () => {\n        gui.Button(\"ok\")\n    })\n})\n"
+        }
+
+        private static function Valid37Expected(): string
+        {
+            return "(CompilationUnit (GlobalStatement (ExpressionStatement (MemberCallExpression (NameExpression (IdentifierToken \"Ui\")) (DotToken \".\") (IdentifierToken \"VStack\") (OpenParenthesisToken \"(\") (NameExpression (IdentifierToken \"gui\")) (CommaToken \",\") (LambdaExpression (OpenParenthesisToken \"(\") (CloseParenthesisToken \")\") (FatArrowToken \"=>\") (BlockStatement (OpenBraceToken \"{\") (ExpressionStatement (MemberCallExpression (NameExpression (IdentifierToken \"gui\")) (DotToken \".\") (IdentifierToken \"Label\") (OpenParenthesisToken \"(\") (LiteralExpression (StringToken \"\\\"hi\\\"\")) (CloseParenthesisToken \")\"))) (ExpressionStatement (MemberCallExpression (NameExpression (IdentifierToken \"Ui\")) (DotToken \".\") (IdentifierToken \"HStack\") (OpenParenthesisToken \"(\") (NameExpression (IdentifierToken \"gui\")) (CommaToken \",\") (LambdaExpression (OpenParenthesisToken \"(\") (CloseParenthesisToken \")\") (FatArrowToken \"=>\") (BlockStatement (OpenBraceToken \"{\") (ExpressionStatement (MemberCallExpression (NameExpression (IdentifierToken \"gui\")) (DotToken \".\") (IdentifierToken \"Button\") (OpenParenthesisToken \"(\") (LiteralExpression (StringToken \"\\\"ok\\\"\")) (CloseParenthesisToken \")\"))) (CloseBraceToken \"}\"))) (CloseParenthesisToken \")\"))) (CloseBraceToken \"}\"))) (CloseParenthesisToken \")\")))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Valid38Corpus(): string
+        {
+            return "function Describe(name: string, age: i32): string\n{\n    var years = age * 1\n    return name + \" (\" + (string)years + \")\"\n}\n"
+        }
+
+        private static function Valid38Expected(): string
+        {
+            return "(CompilationUnit (FunctionDeclaration (FunctionKeyword \"function\") (IdentifierToken \"Describe\") (OpenParenthesisToken \"(\") (Parameter (IdentifierToken \"name\") (TypeClause (ColonToken \":\") (IdentifierToken \"string\"))) (CommaToken \",\") (Parameter (IdentifierToken \"age\") (TypeClause (ColonToken \":\") (IdentifierToken \"i32\"))) (CloseParenthesisToken \")\") (TypeClause (ColonToken \":\") (IdentifierToken \"string\")) (BlockStatement (OpenBraceToken \"{\") (VariableDeclaration (VarKeyword \"var\") (IdentifierToken \"years\") (EqualsToken \"=\") (BinaryExpression (NameExpression (IdentifierToken \"age\")) (StarToken \"*\") (LiteralExpression (NumberToken \"1\")))) (ReturnStatement (ReturnKeyword \"return\") (BinaryExpression (BinaryExpression (BinaryExpression (NameExpression (IdentifierToken \"name\")) (PlusToken \"+\") (LiteralExpression (StringToken \"\\\" (\\\"\"))) (PlusToken \"+\") (CastExpression (OpenParenthesisToken \"(\") (IdentifierToken \"string\") (CloseParenthesisToken \")\") (NameExpression (IdentifierToken \"years\")))) (PlusToken \"+\") (LiteralExpression (StringToken \"\\\")\\\"\")))) (CloseBraceToken \"}\"))) (EndOfFileToken \"\"))"
+        }
+
+        private static function Invalid0Corpus(): string
+        {
+            return "function Main(\n{\n}\n"
+        }
+
+        private static function Invalid0Expected(): string
+        {
+            return "(CompilationUnit (FunctionDeclaration (FunctionKeyword \"function\") (IdentifierToken \"Main\") (OpenParenthesisToken \"(\") (Parameter (IdentifierToken \"{\")) (CloseParenthesisToken \"}\")) (EndOfFileToken \"\"))\nerror: L2:C1 expected IdentifierToken, found OpenBraceToken \"{\"\nerror: L3:C1 expected CloseParenthesisToken, found CloseBraceToken \"}\""
+        }
+
+        private static function Invalid1Corpus(): string
+        {
+            return "let x =\n"
+        }
+
+        private static function Invalid1Expected(): string
+        {
+            return "(CompilationUnit (GlobalStatement (VariableDeclaration (LetKeyword \"let\") (IdentifierToken \"x\") (EqualsToken \"=\") (EndOfFileToken \"\"))) (EndOfFileToken \"\"))\nerror: L2:C1 unexpected token EndOfFileToken \"\""
+        }
+
+        private static function Invalid2Corpus(): string
+        {
+            return "function Main()\n{\n    var = 5\n}\n"
+        }
+
+        private static function Invalid2Expected(): string
+        {
+            return "(CompilationUnit (FunctionDeclaration (FunctionKeyword \"function\") (IdentifierToken \"Main\") (OpenParenthesisToken \"(\") (CloseParenthesisToken \")\") (BlockStatement (OpenBraceToken \"{\") (VariableDeclaration (VarKeyword \"var\") (IdentifierToken \"=\")) (ExpressionStatement (LiteralExpression (NumberToken \"5\"))) (CloseBraceToken \"}\"))) (EndOfFileToken \"\"))\nerror: L3:C9 expected IdentifierToken, found EqualsToken \"=\""
+        }
+
+        private static function Invalid3Corpus(): string
+        {
+            return "class Foo extends\n{\n}\n"
+        }
+
+        private static function Invalid3Expected(): string
+        {
+            return "(CompilationUnit (ClassDeclaration (ClassKeyword \"class\") (IdentifierToken \"Foo\") (TypeClause (ExtendsKeyword \"extends\") (IdentifierToken \"{\")) (OpenBraceToken \"}\") (CloseBraceToken \"\")) (EndOfFileToken \"\"))\nerror: L2:C1 expected IdentifierToken, found OpenBraceToken \"{\"\nerror: L3:C1 expected OpenBraceToken, found CloseBraceToken \"}\"\nerror: L4:C1 expected CloseBraceToken, found EndOfFileToken \"\""
+        }
+
+        private static function Invalid4Corpus(): string
+        {
+            return "enum E { A B }\n"
+        }
+
+        private static function Invalid4Expected(): string
+        {
+            return "(CompilationUnit (EnumDeclaration (EnumKeyword \"enum\") (IdentifierToken \"E\") (OpenBraceToken \"{\") (EnumMember (IdentifierToken \"A\")) (CloseBraceToken \"B\")) (GlobalStatement (ExpressionStatement (CloseBraceToken \"}\"))) (EndOfFileToken \"\"))\nerror: L1:C12 expected CloseBraceToken, found IdentifierToken \"B\"\nerror: L1:C14 unexpected token CloseBraceToken \"}\""
+        }
+
+        private static function Invalid5Corpus(): string
+        {
+            return "function Main()\n{\n    return 1\n"
+        }
+
+        private static function Invalid5Expected(): string
+        {
+            return "(CompilationUnit (FunctionDeclaration (FunctionKeyword \"function\") (IdentifierToken \"Main\") (OpenParenthesisToken \"(\") (CloseParenthesisToken \")\") (BlockStatement (OpenBraceToken \"{\") (ReturnStatement (ReturnKeyword \"return\") (LiteralExpression (NumberToken \"1\"))) (CloseBraceToken \"\"))) (EndOfFileToken \"\"))\nerror: L4:C1 expected CloseBraceToken, found EndOfFileToken \"\""
+        }
+
+    }
+}

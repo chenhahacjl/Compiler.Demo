@@ -1,0 +1,38 @@
+namespace Cocoa.CodeAnalysis.Symbols
+{
+    class GlobalVariableSymbol
+    {
+        private field _name: string
+        private field _isReadOnly: bool
+        private field _type: string
+
+        public static function Create(name: string, isReadOnly: bool, type: string): GlobalVariableSymbol
+        {
+            var v = new GlobalVariableSymbol()
+            v._name = name
+            v._isReadOnly = isReadOnly
+            v._type = type
+            return v
+        }
+
+        public function Name(): string
+        {
+            return _name
+        }
+
+        public function IsReadOnly(): bool
+        {
+            return _isReadOnly
+        }
+
+        public function Type(): string
+        {
+            return _type
+        }
+
+        public function Describe(): string
+        {
+            return "var " + _name + ": " + _type
+        }
+    }
+}

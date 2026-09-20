@@ -1,0 +1,121 @@
+// Cocoa 自举 CodeGen · 元数据根外壳（阶段 7 增量五 M5-a3）——
+// ECMA-335 II.24.2.2：BSJB 魔数 + 版本 + 流目录 + 五流数据。对齐 C# ManagedPEWriter.WriteMetadataRoot：
+// 版本 "v4.0.30319"、流偏移相对根起点、每流对齐 4。输入为 IlMetadataBuilder 产出的五流 hex。
+
+namespace Cocoa.CodeGen
+{
+    class IlMetadataRoot
+    {
+        /// <summary>组装元数据根 hex（输入五流 hex；输出与 C# WriteMetadataRoot(stream, 0, streams) 逐字节一致）。</summary>
+        public static function BuildHex(tablesHex: string, stringsHex: string, usHex: string, guidHex: string, blobHex: string): string
+        {
+            let names = new string[5]
+            names[0] = "#~"
+            names[1] = "#Strings"
+            names[2] = "#US"
+            names[3] = "#GUID"
+            names[4] = "#Blob"
+            let hexes = new string[5]
+            hexes[0] = tablesHex
+            hexes[1] = stringsHex
+            hexes[2] = usHex
+            hexes[3] = guidHex
+            hexes[4] = blobHex
+            let sizes = new i32[5]
+            var i = 0
+            while i < 5
+            {
+                sizes[i] = Align4(hexes[i].Length / 2)
+                i = i + 1
+            }
+
+            // 头部固定前缀：BSJB + 版本（主/次 1.1）+ reserved + 版本长度 12 + "v4.0.30319\0"+pad + Flags + 流数
+            // 前缀字节数 = 4+2+2+4+4 + 12 + 2 + 2 = 30
+            // 逐流模拟 C# 的按位置 4 对齐，先算出头部结束位置 headerEnd（首流数据偏移）
+            var pos = 30
+            i = 0
+            while i < 5
+            {
+                pos = pos + 4 + 4
+                pos = pos + names[i].Length + 1
+                pos = Align4(pos)
+                i = i + 1
+            }
+
+            let headerEnd = pos
+
+            var r = ""
+            r = r + "424a5342"
+            r = r + "0100"
+            r = r + "0100"
+            r = r + "00000000"
+            r = r + "0c000000"
+            r = r + "76342e302e333033313900"
+            r = r + "00"
+            r = r + "0000"
+            r = r + "0005"
+
+            // 流头：数据偏移（相对根起点）+ 对齐后 size + 名（按位置 4 对齐）
+            i = 0
+            while i < 5
+            {
+                r = r + HexCodec.HexU32(headerEnd + StreamOffset(sizes, i))
+                r = r + HexCodec.HexU32(sizes[i])
+                r = r + AsciiHex(names[i]) + "00"
+                while (r.Length / 2) % 4 != 0
+                {
+                    r = r + "00"
+                }
+
+                i = i + 1
+            }
+
+            // 流数据（每流对齐 4）
+            i = 0
+            while i < 5
+            {
+                r = r + hexes[i]
+                while (r.Length / 2) % 4 != 0
+                {
+                    r = r + "00"
+                }
+
+                i = i + 1
+            }
+
+            return r
+        }
+
+        private static function StreamOffset(sizes: i32[], index: i32): i32
+        {
+            var off = 0
+            var i = 0
+            while i < index
+            {
+                off = off + sizes[i]
+                i = i + 1
+            }
+
+            return off
+        }
+
+        private static function AsciiHex(s: string): string
+        {
+            var h = ""
+            var i = 0
+            while i < s.Length
+            {
+                h = h + HexCodec.HexByte(i32(s[i]))
+                i = i + 1
+            }
+
+            return h
+        }
+
+        private static function Align4(v: i32): i32
+        {
+            return (v + 3) & ~3
+        }
+
+        }
+}

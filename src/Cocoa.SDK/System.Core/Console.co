@@ -1,11 +1,12 @@
-// Cocoa 系统标准库 · System.Core（namespace System）——BCL 存在类型即 facade（Console/Environment 因 IL 后端未覆盖其程序集引用层级，保持真实类+syscall 转发，见 docs-dev/标准库设计.md）
+﻿// Cocoa 系统标准库 · System.Core（namespace System）——BCL 存在类型即 facade（Console/Environment 因 IL 后端未覆盖其程序集引用层级，保持真实类+syscall 转发，见 docs-dev/标准库设计.md）
 // facade class Console —— facade：IL 直连 System.Console；native/Evaluator 转发 System.Syscall.ConsoleSyscall
 using System.Syscall
 
 namespace System
 {
     /// <summary>Provides standard input, output, and error stream access.</summary>
-    facade class Console
+    [Facade("System.Console")]
+    class Console
     {
         /// <summary>Writes an empty line to the standard output.</summary>
         static function WriteLine(): void

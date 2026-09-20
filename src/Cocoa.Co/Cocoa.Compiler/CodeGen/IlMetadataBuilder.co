@@ -1,0 +1,467 @@
+// Cocoa 自举 CodeGen · ECMA-335 元数据构建器（阶段 7 增量五 M5-a3）——
+// 复刻 C# MetadataBuilder（最小表子集）：Module/TypeRef/TypeDef/MethodDef/Param/
+// MemberRef/CustomAttribute/Assembly/AssemblyRef 表 + #Strings/#US/#GUID/#Blob 堆。
+// 输入经测试驱动从参考 DLL 读取注入（TypeRef/MemberRef 门面全集），算法与 C# 逐字节对齐：
+// 堆插入序 = AssemblyRef pkt 注册期 → 表序列化行走序；MVID = MD5(module|assembly) 前 16 字节（确定性）。
+
+namespace Cocoa.CodeGen
+{
+    class IlMetadataBuilder
+    {
+        // 输入数据（构造时注入）
+        private field _moduleName: string
+        private field _assemblyName: string
+        private field _typeRefCount: i32
+        private field _typeRefScope: i32[]
+        private field _typeRefNs: string[]
+        private field _typeRefName: string[]
+        private field _memberRefCount: i32
+        private field _memberRefParent: i32[]
+        private field _memberRefName: string[]
+        private field _memberRefSig: string[]
+        private field _methodCount: i32
+        private field _methodName: string[]
+        private field _methodSig: string[]
+        private field _methodRva: i32[]
+        private field _methodParamCount: i32[]
+        private field _methodFlags: i32[]
+        private field _asmRefCount: i32
+        private field _asmRefName: string[]
+        private field _asmRefMajor: i32[]
+        private field _asmRefMinor: i32[]
+        private field _asmRefBuild: i32[]
+        private field _asmRefRev: i32[]
+        private field _asmRefFlags: i32[]
+        private field _asmRefPk: string[]
+        private field _asmRefCulture: string[]
+        private field _debugCtorRow: i32
+        private field _attrParentCoded: i32[]
+        private field _attrCtorCoded: i32[]
+        private field _attrValueBlob: string[]
+        private field _attrCount: i32
+        private field _mvidHex: string
+        private field _usHex: string
+
+        // 堆
+        private field _strings: string[]
+        private field _stringOffsets: i32[]
+        private field _stringCount: i32
+        private field _stringBytes: i32
+        private field _blobs: string[]
+        private field _blobOffsets: i32[]
+        private field _blobCount: i32
+        private field _blobBytes: i32
+
+        public constructor(
+            moduleName: string, assemblyName: string,
+            typeRefScope: i32[], typeRefNs: string[], typeRefName: string[],
+            memberRefParent: i32[], memberRefName: string[], memberRefSig: string[],
+            methodName: string[], methodSig: string[], methodRva: i32[], methodParamCount: i32[], methodFlags: i32[],
+            asmRefName: string[], asmRefMajor: i32[], asmRefMinor: i32[], asmRefBuild: i32[], asmRefRev: i32[],
+            asmRefFlags: i32[], asmRefPk: string[], asmRefCulture: string[],
+            debugCtorRow: i32, attrParentCoded: i32[], attrCtorCoded: i32[], attrValueBlob: string[],
+            mvidHex: string, usHex: string)
+        {
+            _moduleName = moduleName
+            _assemblyName = assemblyName
+            _typeRefCount = typeRefName.Length
+            _typeRefScope = typeRefScope
+            _typeRefNs = typeRefNs
+            _typeRefName = typeRefName
+            _memberRefCount = memberRefName.Length
+            _memberRefParent = memberRefParent
+            _memberRefName = memberRefName
+            _memberRefSig = memberRefSig
+            _methodCount = methodName.Length
+            _methodName = methodName
+            _methodSig = methodSig
+            _methodRva = methodRva
+            _methodParamCount = methodParamCount
+            _methodFlags = methodFlags
+            _asmRefCount = asmRefName.Length
+            _asmRefName = asmRefName
+            _asmRefMajor = asmRefMajor
+            _asmRefMinor = asmRefMinor
+            _asmRefBuild = asmRefBuild
+            _asmRefRev = asmRefRev
+            _asmRefFlags = asmRefFlags
+            _asmRefPk = asmRefPk
+            _asmRefCulture = asmRefCulture
+            _debugCtorRow = debugCtorRow
+            _attrParentCoded = attrParentCoded
+            _attrCtorCoded = attrCtorCoded
+            _attrValueBlob = attrValueBlob
+            _attrCount = attrParentCoded.Length
+            _mvidHex = mvidHex
+            _usHex = usHex
+
+            _stringCount = 0
+            _stringBytes = 0
+            _blobCount = 0
+            _blobBytes = 0
+            _strings = new string[256]
+            _stringOffsets = new i32[256]
+            _blobs = new string[256]
+            _blobOffsets = new i32[256]
+
+            // 索引 0 预置空条目（GetOrAdd("")/empty → 0）
+            _strings[0] = ""
+            _stringOffsets[0] = 0
+            _stringCount = 1
+            _stringBytes = 1
+            _blobs[0] = ""
+            _blobOffsets[0] = 0
+            _blobCount = 1
+            _blobBytes = 1
+        }
+
+        public function TablesHex(): string
+        {
+            var t = ""
+            let typeDefCount = 2
+            let typeRefCount = _typeRefCount
+            let methodDefCount = _methodCount
+            let memberRefCount = _memberRefCount
+            let customAttributeCount = _attrCount > 0 ? _attrCount : 1
+            let assemblyRefCount = _asmRefCount
+            var paramCount = 0
+            var p = 0
+            while p < _methodCount
+            {
+                paramCount = paramCount + _methodParamCount[p]
+                p = p + 1
+            }
+
+            // AssemblyRef pkt blob 注册期预置（硬编码顺序与 DefineAssemblyRef 一致）
+            var a = 0
+            while a < _asmRefCount
+            {
+                GetOrAddBlob(_asmRefPk[a])
+                a = a + 1
+            }
+
+            // ---- #~ 表流头 ----
+            t = t + HexCodec.HexU32(0)            // reserved
+            t = t + HexCodec.HexByte(2)           // major
+            t = t + HexCodec.HexByte(0)           // minor
+            t = t + HexCodec.HexByte(0)           // heapSizes（small）
+            t = t + HexCodec.HexByte(1)           // reserved
+            t = t + HexCodec.HexU32(0x00001547)   // valid low（Module/TypeRef/TypeDef/MethodDef/Param/MemberRef/CustomAttribute/Assembly）
+            t = t + HexCodec.HexU32(0x00000009)   // valid high（bit32=Assembly，bit35=AssemblyRef）
+            t = t + HexCodec.HexU32(0x3325FA00)   // sorted low
+            t = t + HexCodec.HexU32(0x00001600)   // sorted high
+
+            // 行数（与 Serialize.cs 顺序）
+            t = t + HexCodec.HexU32(1)
+            if typeRefCount > 0 { t = t + HexCodec.HexU32(typeRefCount) }
+            if typeDefCount > 0 { t = t + HexCodec.HexU32(typeDefCount) }
+            if methodDefCount > 0 { t = t + HexCodec.HexU32(methodDefCount) }
+            if paramCount > 0 { t = t + HexCodec.HexU32(paramCount) }
+            if memberRefCount > 0 { t = t + HexCodec.HexU32(memberRefCount) }
+            if customAttributeCount > 0 { t = t + HexCodec.HexU32(customAttributeCount) }
+            t = t + HexCodec.HexU32(1)            // Assembly
+            if assemblyRefCount > 0 { t = t + HexCodec.HexU32(assemblyRefCount) }
+
+            // ---- Module（1 行）----
+            t = t + HexCodec.HexU16(0)
+            t = t + HexCodec.HexU16(GetOrAddString(_moduleName))
+            t = t + HexCodec.HexU16(1)            // MVID（GUID 堆偏移 0）
+            t = t + HexCodec.HexU16(0)
+            t = t + HexCodec.HexU16(0)
+
+            // ---- TypeRef ----
+            var i = 0
+            while i < typeRefCount
+            {
+                // ResolutionScope：AssemblyRef（tag 2）→ (row << 2) | 2
+                let scope = (_typeRefScope[i] << 2) | 2
+                t = t + HexCodec.HexU16(scope)
+                t = t + HexCodec.HexU16(GetOrAddString(_typeRefName[i]))
+                t = t + HexCodec.HexU16(GetOrAddString(_typeRefNs[i]))
+                i = i + 1
+            }
+
+            // 注：TypeRef 列序为 Name 先、Namespace 后（对齐 C# Serialize.cs），使 #Strings 堆插入序一致。
+
+            // ---- TypeDef（<Module> + <CocoaTopLevel>）----
+            // <Module>：flags=0 name="<Module>" ns="" extends=0 fieldList=1 methodList=1
+            t = t + HexCodec.HexU32(0)
+            t = t + HexCodec.HexU16(GetOrAddString("<Module>"))
+            t = t + HexCodec.HexU16(GetOrAddString(""))
+            t = t + HexCodec.HexU16(0)
+            t = t + HexCodec.HexU16(1)
+            t = t + HexCodec.HexU16(1)
+            // <CocoaTopLevel>：flags=Public(1) extends=System.Object TypeRef 行 1（coded=(1<<2)|1=5）
+            t = t + HexCodec.HexU32(0x00000001)
+            t = t + HexCodec.HexU16(GetOrAddString("<CocoaTopLevel>"))
+            t = t + HexCodec.HexU16(GetOrAddString(""))
+            t = t + HexCodec.HexU16(5)
+            t = t + HexCodec.HexU16(1)
+            t = t + HexCodec.HexU16(1)
+
+            // ---- MethodDef ----
+            var paramRow = 1
+            i = 0
+            while i < methodDefCount
+            {
+                t = t + HexCodec.HexU32(_methodRva[i])
+                t = t + HexCodec.HexU16(0)        // ImplFlags
+                t = t + HexCodec.HexU16(_methodFlags[i])
+                t = t + HexCodec.HexU16(GetOrAddString(_methodName[i]))
+                t = t + HexCodec.HexU16(GetOrAddBlob(_methodSig[i]))
+                t = t + HexCodec.HexU16(paramRow)
+                paramRow = paramRow + _methodParamCount[i]
+                i = i + 1
+            }
+
+            // ---- Param ----
+            i = 0
+            while i < methodDefCount
+            {
+                var seq = 1
+                var q = 0
+                while q < _methodParamCount[i]
+                {
+                    t = t + HexCodec.HexU16(0)
+                    t = t + HexCodec.HexU16(seq)
+                    t = t + HexCodec.HexU16(GetOrAddString(""))
+                    seq = seq + 1
+                    q = q + 1
+                }
+
+                i = i + 1
+            }
+
+            // ---- MemberRef ----
+            i = 0
+            while i < memberRefCount
+            {
+                // Parent：TypeRef（tag 3 位 = 1）→ (row << 3) | 1
+                let parentCoded = (_memberRefParent[i] << 3) | 1
+                t = t + HexCodec.HexU16(parentCoded)
+                t = t + HexCodec.HexU16(GetOrAddString(_memberRefName[i]))
+                t = t + HexCodec.HexU16(GetOrAddBlob(_memberRefSig[i]))
+                i = i + 1
+            }
+
+            // ---- CustomAttribute（行：Parent(HasCustomAttribute coded) + Type(CustomAttributeType coded) + Value#）----
+            // 6e-M32 Tier-2：N 属性由发射侧编码（parentCoded/ctorCoded/valueBlob 数组）；无数组时兼容 Debuggable(Assembly)。
+            if _attrCount > 0
+            {
+                i = 0
+                while i < _attrCount
+                {
+                    t = t + HexCodec.HexU16(_attrParentCoded[i])
+                    t = t + HexCodec.HexU16(_attrCtorCoded[i])
+                    t = t + HexCodec.HexU16(GetOrAddBlob(_attrValueBlob[i]))
+                    i = i + 1
+                }
+            }
+            else
+            {
+                t = t + HexCodec.HexU16((1 << 5) | 0x0E)
+                t = t + HexCodec.HexU16((_debugCtorRow << 3) | 3)
+                t = t + HexCodec.HexU16(GetOrAddBlob("010002010201"))
+            }
+
+            // ---- Assembly（1 行）----
+            t = t + HexCodec.HexU32(0x0804)       // HashAlgId = SHA1
+            t = t + HexCodec.HexU16(1)
+            t = t + HexCodec.HexU16(0)
+            t = t + HexCodec.HexU16(0)
+            t = t + HexCodec.HexU16(0)
+            t = t + HexCodec.HexU32(0)            // Flags
+            t = t + HexCodec.HexU16(GetOrAddBlob(""))   // PublicKey（空）
+            t = t + HexCodec.HexU16(GetOrAddString(_assemblyName))
+            t = t + HexCodec.HexU16(GetOrAddString(""))
+
+            // ---- AssemblyRef ----
+            i = 0
+            while i < assemblyRefCount
+            {
+                t = t + HexCodec.HexU16(_asmRefMajor[i])
+                t = t + HexCodec.HexU16(_asmRefMinor[i])
+                t = t + HexCodec.HexU16(_asmRefBuild[i])
+                t = t + HexCodec.HexU16(_asmRefRev[i])
+                t = t + HexCodec.HexU32(_asmRefFlags[i])
+                t = t + HexCodec.HexU16(GetOrAddBlob(_asmRefPk[i]))
+                t = t + HexCodec.HexU16(GetOrAddString(_asmRefName[i]))
+                t = t + HexCodec.HexU16(GetOrAddString(_asmRefCulture[i]))
+                t = t + HexCodec.HexU16(GetOrAddBlob(""))   // HashValue（空）
+                i = i + 1
+            }
+
+            // 表流尾对齐
+            t = t + HexCodec.HexByte(0)
+            while (t.Length / 2) % 4 != 0
+            {
+                t = t + HexCodec.HexByte(0)
+            }
+
+            return t
+        }
+
+        public function StringsHex(): string
+        {
+            var h = ""
+            var i = 0
+            while i < _stringCount
+            {
+                h = h + StringAsciiHex(_strings[i]) + "00"
+                i = i + 1
+            }
+
+            return h
+        }
+
+        public function UsHex(): string
+        {
+            return _usHex
+        }
+
+        public function GuidHex(): string
+        {
+            return _mvidHex
+        }
+
+        public function BlobHex(): string
+        {
+            var h = "00"   // 索引 0 空 blob
+            var i = 1
+            while i < _blobCount
+            {
+                h = h + CompressedLengthHex(_blobs[i].Length / 2)
+                h = h + _blobs[i]
+                i = i + 1
+            }
+
+            return h
+        }
+
+        private function CompressedLengthHex(v: i32): string
+        {
+            if v <= 0x7F
+            {
+                return HexCodec.HexByte(v)
+            }
+
+            if v <= 0x3FFF
+            {
+                return HexCodec.HexByte(0x80 | (v >> 8)) + HexCodec.HexByte(v)
+            }
+
+            return HexCodec.HexByte(0xC0 | (v >> 24)) + HexCodec.HexByte(v >> 16) + HexCodec.HexByte(v >> 8) + HexCodec.HexByte(v)
+        }
+
+        private function StringAsciiHex(s: string): string
+        {
+            var h = ""
+            var i = 0
+            while i < s.Length
+            {
+                h = h + HexCodec.HexByte(i32(s[i]))
+                i = i + 1
+            }
+
+            return h
+        }
+
+        private function GetOrAddString(s: string): i32
+        {
+            if s == ""
+            {
+                return 0
+            }
+
+            var i = 0
+            while i < _stringCount
+            {
+                if _strings[i] == s
+                {
+                    return _stringOffsets[i]
+                }
+
+                i = i + 1
+            }
+
+            if _stringCount >= _strings.Length
+            {
+                var bigger = new string[_strings.Length * 2]
+                var bo = new i32[_stringOffsets.Length * 2]
+                var k = 0
+                while k < _stringCount
+                {
+                    bigger[k] = _strings[k]
+                    bo[k] = _stringOffsets[k]
+                    k = k + 1
+                }
+
+                _strings = bigger
+                _stringOffsets = bo
+            }
+
+            let off = _stringBytes
+            _strings[_stringCount] = s
+            _stringOffsets[_stringCount] = off
+            _stringCount = _stringCount + 1
+            _stringBytes = _stringBytes + s.Length + 1
+            return off
+        }
+
+        private function GetOrAddBlob(hex: string): i32
+        {
+            if hex == ""
+            {
+                return 0
+            }
+
+            var i = 0
+            while i < _blobCount
+            {
+                if _blobs[i] == hex
+                {
+                    return _blobOffsets[i]
+                }
+
+                i = i + 1
+            }
+
+            if _blobCount >= _blobs.Length
+            {
+                var bigger = new string[_blobs.Length * 2]
+                var bo = new i32[_blobOffsets.Length * 2]
+                var k = 0
+                while k < _blobCount
+                {
+                    bigger[k] = _blobs[k]
+                    bo[k] = _blobOffsets[k]
+                    k = k + 1
+                }
+
+                _blobs = bigger
+                _blobOffsets = bo
+            }
+
+            var off = _blobBytes
+            var dataLen = hex.Length / 2
+            if dataLen <= 0x7F
+            {
+                _blobBytes = _blobBytes + 1 + dataLen
+            }
+            else if dataLen <= 0x3FFF
+            {
+                _blobBytes = _blobBytes + 2 + dataLen
+            }
+            else
+            {
+                _blobBytes = _blobBytes + 4 + dataLen
+            }
+
+            _blobs[_blobCount] = hex
+            _blobOffsets[_blobCount] = off
+            _blobCount = _blobCount + 1
+            return off
+        }
+
+        }
+}

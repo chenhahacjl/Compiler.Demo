@@ -1,7 +1,4 @@
-// Cocoa 自举语法 Node —— 阶段 7 增量二（M8-a1）：kind 名 = C# SyntaxKind 配置名的通用树节点。
-// Dump() 与 C# ParserDifferentialTests.TreeDump 规范格式逐字节一致；访问器（M9-a0）供 Binder/后续增量遍历。
-
-namespace MiniParser
+namespace Cocoa.CodeAnalysis.Syntax
 {
     class Node
     {
@@ -32,6 +29,7 @@ namespace MiniParser
             n._count = 0
             return n
         }
+
         public function Add(child: Node): void
         {
             if _count >= _items.Length
@@ -50,8 +48,6 @@ namespace MiniParser
             _items[_count] = child
             _count = _count + 1
         }
-
-        // ── 访问器（M9-a0：Binder/后续增量按 kind + 子索引遍历；结构已由树差分锁定）──
 
         public function Kind(): string
         {

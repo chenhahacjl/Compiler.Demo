@@ -1,6 +1,6 @@
 // Cocoa 自举函数符号 —— 阶段 7 增量三（M9-a1）：名/参数/返回类型；Describe() 与 C# SymbolDump 函数行同构。
 
-namespace MiniBinder
+namespace Cocoa.CodeAnalysis.Symbols
 {
     class FunctionSymbol
     {
@@ -9,8 +9,11 @@ namespace MiniBinder
         private field _paramTypes: string[]
         private field _paramCount: i32
         private field _returnType: string
-        private field _locals: LocalSymbol[]
+        private field _locals: LocalVariableSymbol[]
         private field _localCount: i32
+        private field _attributeNames: string[]
+        private field _attributeArgs: string[]
+        private field _attributeCount: i32
 
         public static function Create(name: string, returnType: string): FunctionSymbol
         {
@@ -20,8 +23,11 @@ namespace MiniBinder
             f._paramNames = new string[8]
             f._paramTypes = new string[8]
             f._paramCount = 0
-            f._locals = new LocalSymbol[8]
+            f._locals = new LocalVariableSymbol[8]
             f._localCount = 0
+            f._attributeNames = new string[8]
+            f._attributeArgs = new string[8]
+            f._attributeCount = 0
             return f
         }
 
@@ -48,8 +54,6 @@ namespace MiniBinder
             _paramCount = _paramCount + 1
         }
 
-        // ── 访问器（M9-a2：Binder 调用点 arity 检查）──
-
         public function ParamCount(): i32
         {
             return _paramCount
@@ -70,12 +74,11 @@ namespace MiniBinder
             return _returnType
         }
 
-        /// <summary>局部符号（M9-a3）：声明序追加；查询与 dump 用。</summary>
         public function AddLocal(name: string, type: string): void
         {
             if _localCount >= _locals.Length
             {
-                var bigger = new LocalSymbol[_locals.Length * 2]
+                var bigger = new LocalVariableSymbol[_locals.Length * 2]
                 var j = 0
                 while j < _localCount
                 {
@@ -86,7 +89,7 @@ namespace MiniBinder
                 _locals = bigger
             }
 
-            _locals[_localCount] = LocalSymbol.Create(name, type)
+            _locals[_localCount] = LocalVariableSymbol.Create(name, true, type)
             _localCount = _localCount + 1
         }
 
@@ -95,12 +98,11 @@ namespace MiniBinder
             return _localCount
         }
 
-        public function Local(index: i32): LocalSymbol
+        public function Local(index: i32): LocalVariableSymbol
         {
             return _locals[index]
         }
 
-        /// <summary>局部名 → 规范类型名（M9-a3 推断用）；未声明返回空串。</summary>
         public function LocalTypeOf(name: string): string
         {
             var i = 0
@@ -115,6 +117,44 @@ namespace MiniBinder
             }
 
             return ""
+        }
+
+        public function AddAttribute(name: string, argText: string): void
+        {
+            if _attributeCount >= _attributeNames.Length
+            {
+                var bn = new string[_attributeNames.Length * 2]
+                var ba = new string[_attributeArgs.Length * 2]
+                var i = 0
+                while i < _attributeCount
+                {
+                    bn[i] = _attributeNames[i]
+                    ba[i] = _attributeArgs[i]
+                    i = i + 1
+                }
+
+                _attributeNames = bn
+                _attributeArgs = ba
+            }
+
+            _attributeNames[_attributeCount] = name
+            _attributeArgs[_attributeCount] = argText
+            _attributeCount = _attributeCount + 1
+        }
+
+        public function AttributeCount(): i32
+        {
+            return _attributeCount
+        }
+
+        public function AttributeName(index: i32): string
+        {
+            return _attributeNames[index]
+        }
+
+        public function AttributeArgText(index: i32): string
+        {
+            return _attributeArgs[index]
         }
 
         public function Describe(): string

@@ -1,4 +1,4 @@
-using Cocoa.CodeAnalysis;
+﻿using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.CodeGen.Native;
 using Cocoa.Targeting;
@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Collections.Immutable;
 using Xunit;
 
 namespace Cocoa.Tests.CodeAnalysis.CocoaAssembly
@@ -98,6 +99,17 @@ namespace MyLib
             Assert.True(diagnostics.Length == 0, string.Join("; ", diagnostics));
 
             return output;
+        }
+
+        private static string FindSdkCoa()
+        {
+            var dir = AppContext.BaseDirectory;
+            while (!File.Exists(Path.Combine(dir, "src", "Cocoa.Cs", "libs", "System.Core.coa")))
+            {
+                dir = Directory.GetParent(dir)!.FullName;
+            }
+
+            return Path.Combine(dir, "src", "Cocoa.Cs", "libs", "System.Core.coa");
         }
 
         [Fact]
@@ -310,6 +322,34 @@ namespace MyLib
             CoaSerializer.Write(writer, cod);
 
             Assert.Equal(text, writer.ToString());
+        }
+
+        [Fact]
+        public void M32_Attribute_Channel_RoundTrips()
+        {
+            var source = @"
+using System
+
+namespace Lib
+{
+    class TestAttribute extends Attribute
+    {
+    }
+
+    [Test] function F(): void
+    {
+    }
+}
+";
+            var output = EmitLibrary(NewDir(), source);
+            var text = File.ReadAllText(output);
+            Assert.True(text.Contains("attrs:"), "coa 缺 attrs: 字段：\n" + string.Join("\n", text.Split('\n').Where(l => l.Contains(" F")).Take(2)));
+
+            // external 挂载 SDK（System.Attribute 基类解析）
+            var sdk = CoaSerializer.Load(FindSdkCoa());
+            var loaded = CoaSerializer.Load(output, ImmutableArray.Create(sdk));
+            var f = loaded.Functions.First(x => x.Name == "F");
+            Assert.True(f.Attributes.Any(a => a.Type.Name == "TestAttribute"), "F 读回缺 TestAttribute，实际数=" + f.Attributes.Length);
         }
 
         [Fact]
@@ -779,7 +819,7 @@ function Main(): i32
             var source = @"
 namespace System
 {
-    public facade class Exception
+   [Facade(""System.Exception"")] public class Exception
     {
         public constructor(message: string)
         {

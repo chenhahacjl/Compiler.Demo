@@ -1,0 +1,79 @@
+// Cocoa system standard library. System.Text.StringBuilder —— 可变字符串构建器。
+// char[] 翻倍扩容 + StringFromChars syscall O(n) ToString（源自 Cocoa.Cs/StringBuilderTests 内嵌实现）。
+// 自举编译器/自举测试用其高效拼接大字符串（避免 `string +` 的 O(n²)）。
+
+namespace System.Text
+{
+    public class StringBuilder
+    {
+        private field _chars: char[]
+        private field _count: i32
+
+        public constructor()
+        {
+            _chars = new char[16]
+            _count = 0
+        }
+
+        public function Length(): i32
+        {
+            return _count
+        }
+
+        public function Append(s: string): StringBuilder
+        {
+            var i = 0
+            while i < s.Length
+            {
+                EnsureCapacity(_count + 1)
+                _chars[_count] = s[i]
+                _count = _count + 1
+                i = i + 1
+            }
+
+            return this
+        }
+
+        public function Clear(): void
+        {
+            _count = 0
+        }
+
+        public function ToString(): string
+        {
+            var chars = new char[_count]
+            var i = 0
+            while i < _count
+            {
+                chars[i] = _chars[i]
+                i = i + 1
+            }
+
+            return System.Syscall.StringSyscall.StringFromChars(chars)
+        }
+
+        private function EnsureCapacity(required: i32): void
+        {
+            if required <= _chars.Length
+            {
+                return
+            }
+
+            var newLen = _chars.Length * 2
+            while newLen < required
+            {
+                newLen = newLen * 2
+            }
+
+            var grown = new char[newLen]
+            var i = 0
+            while i < _count
+            {
+                grown[i] = _chars[i]
+                i = i + 1
+            }
+
+            _chars = grown
+        }
+    }
+}

@@ -19,5 +19,6 @@
     <Source Include="Syntax\*.co" />
     <Source Include="Symbols\*.co" />
     <Source Include="Binding\*.co" />
+    <Source Include="CodeGen\*.co" />
   </ItemGroup>
 </Project>

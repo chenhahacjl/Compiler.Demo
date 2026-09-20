@@ -1,0 +1,18 @@
+namespace Cocoa.CodeAnalysis.Binding
+{
+    class BoundLiteralExpression
+    {
+        private field _inner: BoundExpression
+        private field _value: object
+
+        public constructor(value: object, type: string)
+        {
+            _inner = new BoundExpression(BoundNodeKind.LiteralExpression(), type)
+            _value = value
+        }
+
+        public function Kind(): i32 { return _inner.Kind() }
+        public function Type(): string { return _inner.Type() }
+        public function Value(): object { return _value }
+    }
+}

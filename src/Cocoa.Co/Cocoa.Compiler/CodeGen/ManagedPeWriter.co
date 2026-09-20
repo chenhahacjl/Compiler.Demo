@@ -1,0 +1,347 @@
+// Cocoa 自举 CodeGen · 托管 PE 写入器（阶段 7 增量五 M5-a5 批 1）——
+// 镜像 C# ManagedPEWriter.Build（netcore/PE32+ 直通）：.text 段（COR20 头 + 方法体区 +
+// 元数据根 + #~ #Strings #US #GUID #Blob 五流）+ 回填 CLR 头 + PeImageBuilder PE 壳。
+// 输入 = 方法体（编码后指令 hex + localSigToken + maxStack）+ 元数据五流 hex + entryPointToken。
+// 差分基准：C# Compilation.Emit → 自举对同一输入产出逐字节一致 .dll（PEReader 可加载）。
+
+using Cocoa.CodeAnalysis.Syntax
+using Cocoa.CodeAnalysis.Binding
+
+namespace Cocoa.CodeGen
+{
+    class ManagedPeWriter
+    {
+        // ── hex 工具 ──
+
+        private static function HexValue(c: i32): i32
+        {
+            if c >= 48 && c <= 57
+            {
+                return c - 48
+            }
+
+            if c >= 97 && c <= 102
+            {
+                return c - 97 + 10
+            }
+
+            return c - 65 + 10
+        }
+
+        public static function HexToBytes(hex: string): i32[]
+        {
+            let n = hex.Length / 2
+            var b = new i32[n]
+            var i = 0
+            while i < n
+            {
+                b[i] = (HexValue(i32(hex[i * 2])) << 4) | HexValue(i32(hex[i * 2 + 1]))
+                i = i + 1
+            }
+
+            return b
+        }
+
+        private static function Align4(value: i32): i32
+        {
+            return (value + 3) & ~3
+        }
+
+        // ── 字节写入（i32[] 缓冲）──
+
+        private static function WriteU16(b: i32[], off: i32, v: i32): void
+        {
+            b[off] = v & 0xff
+            b[off + 1] = (v >> 8) & 0xff
+        }
+
+        private static function WriteU32(b: i32[], off: i32, v: i32): void
+        {
+            b[off] = v & 0xff
+            b[off + 1] = (v >> 8) & 0xff
+            b[off + 2] = (v >> 16) & 0xff
+            b[off + 3] = (v >> 24) & 0xff
+        }
+
+        // ── 组装 ──
+
+        /// <summary>
+        /// 生成托管 .dll（netcore PE32+）。输入面 = C# ManagedPEWriter.Build 的等价物：
+        /// methodBodiesHex[i] 为第 i 方法的 IL 字节 hex；localSigTokens/maxStacks 平行；
+        /// 元数据五流 hex 由 IlMetadataBuilder（或 C# 抓取）提供。
+        /// </summary>
+        public static function Build(
+            moduleName: string,
+            methodBodiesHex: string[], bodyCount: i32,
+            localSigTokens: i32[], maxStacks: i32[],
+            metadataTablesHex: string,
+            metadataStringsHex: string,
+            metadataUsHex: string,
+            metadataGuidHex: string,
+            metadataBlobHex: string,
+            entryPointToken: i32): i32[]
+        {
+            // ---- .text 布局（netcore：textRva=0x1000，无 IAT 前置）----
+            var sectionBytes = new i32[1048576]
+            var sectionLen = 0
+
+            // 1. CLR 头（72 字节）
+            let corHeaderOffset = 0
+            let corHeaderRva = 0x1000
+            sectionLen = CorHeaderSize()
+
+            // 2. 方法体区（4 字节对齐；Fat 头 12 字节 + 代码）
+            sectionLen = Align4(sectionLen)
+            let methodStreamOffset = sectionLen
+            let methodStreamRva = 0x1000 + methodStreamOffset
+
+            var methodRvas = new i32[bodyCount]
+            var i = 0
+            while i < bodyCount
+            {
+                sectionLen = Align4(sectionLen)
+                methodRvas[i] = 0x1000 + sectionLen - methodStreamOffset
+
+                // Fat 头（12 字节）
+                var flags = 0x3003 // Fat | 头大小 3
+                if localSigTokens[i] != 0
+                {
+                    flags = flags | 0x10 // InitLocals
+                }
+
+                WriteU16(sectionBytes, sectionLen, flags)
+                WriteU16(sectionBytes, sectionLen + 2, maxStacks[i])
+                let codeLen = methodBodiesHex[i].Length / 2
+                WriteU32(sectionBytes, sectionLen + 4, codeLen)
+                WriteU32(sectionBytes, sectionLen + 8, localSigTokens[i])
+                sectionLen = sectionLen + 12
+
+                // 代码
+                var code = HexToBytes(methodBodiesHex[i])
+                var k = 0
+                while k < code.Length
+                {
+                    sectionBytes[sectionLen + k] = code[k]
+                    k = k + 1
+                }
+
+                sectionLen = sectionLen + code.Length
+                i = i + 1
+            }
+
+            // 3. 元数据区（4 字节对齐）：元数据根 + 五流
+            sectionLen = Align4(sectionLen)
+            let metadataOffset = sectionLen
+            let metadataRva = 0x1000 + metadataOffset
+
+            let tablesBytes = HexToBytes(metadataTablesHex)
+            let stringsBytes = HexToBytes(metadataStringsHex)
+            let usBytes = HexToBytes(metadataUsHex)
+            let guidBytes = HexToBytes(metadataGuidHex)
+            let blobBytes = HexToBytes(metadataBlobHex)
+
+            // 元数据根（BSJB + version + 流头 + 流数据）
+            sectionLen = WriteMetadataRoot(sectionBytes, sectionLen,
+                tablesBytes, stringsBytes, usBytes, guidBytes, blobBytes)
+
+            // ---- 回填 CLR 头 ----
+            WriteCorHeader(sectionBytes, corHeaderOffset, metadataRva, sectionLen - metadataOffset, entryPointToken)
+
+            // 截断 sectionBytes 到实际长度
+            var textBytes = new i32[sectionLen]
+            var t = 0
+            while t < sectionLen
+            {
+                textBytes[t] = sectionBytes[t]
+                t = t + 1
+            }
+
+            // ---- PE 壳（netcore PE32+）----
+            let config = new PeImageConfig(0x8664, 0x140000000, 3, 0x8540, 0)
+            config.SectionAlignment = 0x1000
+            config.FileAlignment = 0x200
+            config.SizeOfHeaders = 0x400
+            config.MajorOs = 6
+            config.MinorOs = 0
+            config.MajorSub = 6
+            config.MinorSub = 0
+
+            var sections = new PeSectionSpec[1]
+            sections[0] = new PeSectionSpec(".text", textBytes, 0x1000, 0x60000020)
+
+            var dirs = new PeDirEntry[1]
+            dirs[0] = new PeDirEntry(14, corHeaderRva, CorHeaderSize())
+
+            return PeImageBuilder.Build(config, sections, 1, dirs)
+        }
+
+        private static function CorHeaderSize(): i32
+        {
+            return 72
+        }
+
+        private static function WriteMetadataRoot(b: i32[], start: i32,
+            tables: i32[], strings: i32[], us: i32[], guid: i32[], blob: i32[]): i32
+        {
+            var off = start
+
+            // BSJB（4）+ major/minor（4）+ reserved（4）+ versionLength（4）
+            WriteU32(b, off, 0x424A5342)   // BSJB
+            off = off + 4
+            WriteU16(b, off, 1)
+            WriteU16(b, off + 2, 1)
+            off = off + 4
+            WriteU32(b, off, 0)            // reserved
+            off = off + 4
+
+            // version "v4.0.30319\0"（12 字节，Align4 后仍 12）
+            WriteU32(b, off, 12)
+            off = off + 4
+            var version = "v4.0.30319"
+            var v = 0
+            while v < version.Length
+            {
+                b[off + v] = i32(version[v])
+                v = v + 1
+            }
+
+            b[off + version.Length] = 0
+            off = off + 12
+
+            // 流头：flags(2) + count(2)
+            WriteU16(b, off, 0)
+            WriteU16(b, off + 2, 5)
+            off = off + 4
+
+            // 流头区（每流：offset(4) + size(4) + 名字 + alig 4）
+            var tOff = off - start
+            WriteU32(b, off, 0)   // #~ offset 占位
+            off = off + 4
+            WriteU32(b, off, Align4(tables.Length))
+            off = off + 4
+            off = WriteStreamName(b, off, "#~")
+
+            var sOff = off - start
+            WriteU32(b, off, 0)   // #Strings offset 占位
+            off = off + 4
+            WriteU32(b, off, Align4(strings.Length))
+            off = off + 4
+            off = WriteStreamName(b, off, "#Strings")
+
+            var uOff = off - start
+            WriteU32(b, off, 0)   // #US offset 占位
+            off = off + 4
+            WriteU32(b, off, Align4(us.Length))
+            off = off + 4
+            off = WriteStreamName(b, off, "#US")
+
+            var gOff = off - start
+            WriteU32(b, off, 0)   // #GUID offset 占位
+            off = off + 4
+            WriteU32(b, off, Align4(guid.Length))
+            off = off + 4
+            off = WriteStreamName(b, off, "#GUID")
+
+            var bOff = off - start
+            WriteU32(b, off, 0)   // #Blob offset 占位
+            off = off + 4
+            WriteU32(b, off, Align4(blob.Length))
+            off = off + 4
+            off = WriteStreamName(b, off, "#Blob")
+
+            // 回填流偏移（首个流紧跟流头区）
+            var firstStreamOffset = off - start
+            WriteU32(b, start + tOff, firstStreamOffset)
+            WriteU32(b, start + sOff, firstStreamOffset + Align4(tables.Length))
+            WriteU32(b, start + uOff, firstStreamOffset + Align4(tables.Length) + Align4(strings.Length))
+            WriteU32(b, start + gOff, firstStreamOffset + Align4(tables.Length) + Align4(strings.Length) + Align4(us.Length))
+            WriteU32(b, start + bOff, firstStreamOffset + Align4(tables.Length) + Align4(strings.Length) + Align4(us.Length) + Align4(guid.Length))
+
+            // 流数据
+            var k = 0
+            while k < tables.Length
+            {
+                b[off + k] = tables[k]
+                k = k + 1
+            }
+
+            off = off + tables.Length
+            off = Align4(off)
+            k = 0
+            while k < strings.Length
+            {
+                b[off + k] = strings[k]
+                k = k + 1
+            }
+
+            off = off + strings.Length
+            off = Align4(off)
+            k = 0
+            while k < us.Length
+            {
+                b[off + k] = us[k]
+                k = k + 1
+            }
+
+            off = off + us.Length
+            off = Align4(off)
+            k = 0
+            while k < guid.Length
+            {
+                b[off + k] = guid[k]
+                k = k + 1
+            }
+
+            off = off + guid.Length
+            off = Align4(off)
+            k = 0
+            while k < blob.Length
+            {
+                b[off + k] = blob[k]
+                k = k + 1
+            }
+
+            off = off + blob.Length
+            off = Align4(off)
+
+            return off
+        }
+
+        private static function WriteStreamName(b: i32[], off: i32, name: string): i32
+        {
+            var n = 0
+            while n < name.Length
+            {
+                b[off + n] = i32(name[n])
+                n = n + 1
+            }
+
+            b[off + name.Length] = 0
+            return Align4(off + name.Length + 1)
+        }
+
+        private static function WriteCorHeader(b: i32[], offset: i32, metadataRva: i32, metadataSize: i32, entryPointToken: i32): void
+        {
+            WriteU32(b, offset, CorHeaderSize())   // cb
+            WriteU16(b, offset + 4, 2)             // MajorRuntimeVersion
+            WriteU16(b, offset + 6, 5)             // MinorRuntimeVersion
+            WriteU32(b, offset + 8, metadataRva)   // MetaData RVA
+            WriteU32(b, offset + 12, metadataSize) // MetaData Size
+            WriteU32(b, offset + 16, 1)            // Flags: COMIMAGE_FLAGS_ILONLY
+            WriteU32(b, offset + 20, entryPointToken)
+            WriteU32(b, offset + 24, 0)            // Resources RVA
+            WriteU32(b, offset + 28, 0)            // Resources Size
+            WriteU32(b, offset + 32, 0)            // StrongName RVA
+            WriteU32(b, offset + 36, 0)            // StrongName Size
+            WriteU32(b, offset + 40, 0)            // CodeManagerTable
+            WriteU32(b, offset + 44, 0)            // VTableFixups
+            WriteU32(b, offset + 48, 0)            // ExportAddressTableJumps
+            WriteU32(b, offset + 52, 0)            // ManagedNativeHeader
+            // +20 字节 padding 到 72
+            WriteU32(b, offset + 56, 0)
+            WriteU32(b, offset + 60, 0)
+            WriteU32(b, offset + 64, 0)
+            WriteU32(b, offset + 68, 0)
+        }
+    }
+}

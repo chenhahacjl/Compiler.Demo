@@ -1,0 +1,51 @@
+﻿// 鑷妇娴嬭瘯锛歀exer 璁℃暟 + 1MB 鎬ц兘锛堥樁娈?7 澧為噺浜?M5-b0锛夆€斺€旂Щ妞?Cocoa.Cs/LexerPerformanceTests銆?// Run()锛氶粯璁ゅ浠跺唴閫備腑璇枡锛?000 琛?鈫?10000 token锛夛紝Evaluator/native 閮藉揩銆?// RunPerf()锛?00k 琛岋紙鈮?MB锛夆啋 500k token锛屼粎 native 璁℃椂闂ㄧ锛圡ain 鎸?--perf 闂ㄦ帶锛?// Evaluator 瀛楄妭鐮佽В閲婂櫒璺?1MB 澶參锛夛紱鐢?System.Text.StringBuilder锛圫DK锛孫(n)锛夋瀯寤猴紝閬垮厤 O(n虏)銆?
+using Cocoa.CodeAnalysis.Syntax
+using System.Text
+
+namespace Cocoa.CodeAnalysis.Tests
+{
+    class LexerPerfTests
+    {
+        public static function Run(r: TestRunner): void
+        {
+            RunCount(r, 2000, 10000, "LexerPerf/count-small")
+        }
+
+        public static function RunPerf(r: TestRunner): void
+        {
+            RunCount(r, 100000, 500000, "LexerPerf/count-1mb")
+        }
+
+        private static function RunCount(r: TestRunner, lines: i32, expectedTokens: i32, label: string): void
+        {
+            let corpus = BuildCorpus(lines)
+            let lex = Lexer.Create(corpus)
+            var count = 0
+            while true
+            {
+                let t = lex.Next()
+                if t.Kind() == "EOF"
+                {
+                    break
+                }
+
+                count = count + 1
+            }
+
+            r.CheckEqualI32(expectedTokens, count, label)
+        }
+
+        private static function BuildCorpus(n: i32): string
+        {
+            let sb = new System.Text.StringBuilder()
+            var i = 0
+            while i < n
+            {
+                sb.Append("x = x + 1\n")
+                i = i + 1
+            }
+
+            return sb.ToString()
+        }
+    }
+}

@@ -1,8 +1,9 @@
-// Cocoa 系统标准库 · System.Range（范围）
+﻿// Cocoa 系统标准库 · System.Range（范围）
 
 namespace System
 {
-    public facade struct Range
+    [Facade("System.Range")]
+    public struct Range
     {
         public field _start: Index
         public field _end: Index

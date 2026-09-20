@@ -343,12 +343,19 @@ namespace Cocoa.CodeGen.Managed.Writer
                 WriteRef(GetOrAddBlob(EncodeFieldSignature(fieldRef.FieldType)), blobIsBig);
             }
 
-            // ---- CustomAttribute（行：Parent(5-bit HasCustomAttribute) + Type(3-bit CustomAttributeType) + Value#）----
+            // ---- CustomAttribute（行：Parent(HasCustomAttribute coded) + Type(CustomAttributeType coded) + Value#）----
             foreach (var attribute in _customAttributes)
             {
-                WriteCoded((1 << 5) | 0x0E, hasCustomAttributeIsBig); // HasCustomAttribute: Assembly 行 1, tag=0x0E
-                var caType = (_memberRefIndex[attribute.Constructor] << 3) | 3;
-                WriteCoded(caType, customAttributeTypeIsBig); // CustomAttributeType: MemberRef=3
+                // 6e-M32 Tier-2：目标由发射侧编码（ParentRow/ParentTag/CtorRow/CtorTag）。
+                // 旧路径（字段全 0）保持 Assembly 行 1 + MemberRef ctor 的既有语义（Debuggable）。
+                var parentCoded = attribute.ParentRow == 0 && attribute.ParentTag == 0
+                    ? (1 << 5) | 0x0E
+                    : (attribute.ParentRow << 5) | attribute.ParentTag;
+                WriteCoded(parentCoded, hasCustomAttributeIsBig);
+                var caType = attribute.CtorRow == 0 && attribute.CtorTag == 0
+                    ? (_memberRefIndex[attribute.Constructor] << 3) | 3
+                    : (attribute.CtorRow << 3) | attribute.CtorTag;
+                WriteCoded(caType, customAttributeTypeIsBig); // CustomAttributeType: MemberRef=3 / MethodDef=2
                 WriteRef(GetOrAddBlob(attribute.FixedArguments), blobIsBig); // Value
             }
 

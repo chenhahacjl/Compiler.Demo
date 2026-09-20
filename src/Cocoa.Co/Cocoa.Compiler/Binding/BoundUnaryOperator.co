@@ -1,0 +1,49 @@
+namespace Cocoa.CodeAnalysis.Binding
+{
+    class BoundUnaryOperator
+    {
+        private field _opKind: i32
+        private field _operandType: string
+        private field _resultType: string
+
+        public constructor(opKind: i32, operandType: string, resultType: string)
+        {
+            _opKind = opKind
+            _operandType = operandType
+            _resultType = resultType
+        }
+
+        public function OpKind(): i32 { return _opKind }
+        public function OperandType(): string { return _operandType }
+        public function ResultType(): string { return _resultType }
+
+        public static function Bind(opKind: i32, operandType: string): BoundUnaryOperator
+        {
+            if operandType == "int"
+            {
+                if opKind == 0 || opKind == 1 || opKind == 3
+                {
+                    return new BoundUnaryOperator(opKind, operandType, "int")
+                }
+            }
+
+            if operandType == "double"
+            {
+                if opKind == 0 || opKind == 1
+                {
+                    return new BoundUnaryOperator(opKind, operandType, "double")
+                }
+            }
+
+            if operandType == "bool"
+            {
+                if opKind == 2
+                {
+                    return new BoundUnaryOperator(opKind, operandType, "bool")
+                }
+            }
+
+            return null
+        }
+    }
+}

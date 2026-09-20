@@ -53,6 +53,9 @@ namespace Cocoa.CodeGen.Native
         private readonly List<PefileImport> _imports = new();
         private readonly List<LirVirtualRegister> _sysArgs = new();
 
+        // M5-a4 续作：布局无关符号化 dump——asm 标签 → 符号（函数名 / L{irLabel} / rt:运行时名）
+        private readonly Dictionary<int, string> _labelSymbols = new();
+
         private Dictionary<LirVirtualRegister, int> _slots = new();
         private int _stackDepth;
         private int _frameBytes;
@@ -99,6 +102,8 @@ namespace Cocoa.CodeGen.Native
             EmitStub();
             EmitFunctions();
             RegisterVTableFixups();
+            if (System.Environment.GetEnvironmentVariable("COCOA_DUMP_SYM") != null)
+                DumpSymbols();
         }
 
         private void DumpIr()
@@ -294,6 +299,7 @@ namespace Cocoa.CodeGen.Native
                 var label = function.Name == _program.EntryFunctionName ? _entryLabel : _a.CreateLabel();
                 _functionLabels.Add(function, label);
                 _nameToLabel[function.Name] = label;
+                _labelSymbols[label] = function.Name;
             }
 
             foreach (var kvp in _program.SpecialFunctions)

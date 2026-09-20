@@ -1,0 +1,191 @@
+﻿// Cocoa 鑷妇娴嬭瘯锛氳瘝娉曡〃闈紙绉绘 Cocoa.Cs/MiniLexerTests锛孧5-b0锛夆€斺€?// 涓や釜鍐呭祵璇枡 + 榛勯噾 token 娴侊紙Describe 鏍煎紡 `KIND text line:col`锛夐€愯姣斿銆?
+using Cocoa.CodeAnalysis.Syntax
+
+namespace Cocoa.CodeAnalysis.Tests
+{
+    class LexerSurfaceTests
+    {
+        public static function Run(r: TestRunner): void
+        {
+            RunProgram(r, LexerProgram(), LexerExpected(), "LexerSurface/LexerProgram")
+            RunProgram(r, TokenSurfaceProgram(), TokenSurfaceExpected(), "LexerSurface/TokenSurface")
+        }
+
+        private static function RunProgram(r: TestRunner, program: string, expected: string, label: string): void
+        {
+            let lex = Lexer.Create(program)
+            var sb = ""
+            while true
+            {
+                let t = lex.Next()
+                sb = sb + t.Describe() + "\n"
+                if t.Kind() == "EOF"
+                {
+                    break
+                }
+            }
+
+            r.CheckEqual(expected, sb, label)
+        }
+
+        private static function LexerProgram(): string
+        {
+            return "function main()\n" +
+                   "{\n" +
+                   "    var n = 42\n" +
+                   "    var h = 0xFF\n" +
+                   "    var d = 3.14e2\n" +
+                   "    var s = \"hi\\nthere\"\n" +
+                   "    var c = 'q'\n" +
+                   "    // line comment\n" +
+                   "    /* block\n" +
+                   "       comment */\n" +
+                   "    ok = a <= b && c != d\n" +
+                   "    e >> 2\n" +
+                   "    f => g\n" +
+                   "}"
+        }
+
+        private static function TokenSurfaceProgram(): string
+        {
+            return "function Test()\n" +
+                   "{\n" +
+                   "    var v = @\"verbatim\"\n" +
+                   "    var r = \"\"\"raw\"\"\"\n" +
+                   "    var i = $\"x={1}\"\n" +
+                   "    var n = 0b1010_1\n" +
+                   "    var d = 1_000.5\n" +
+                   "    var l = 42L\n" +
+                   "    var u = 1ul\n" +
+                   "    var f = 1.5f\n" +
+                   "    @ident = a <<= b\n" +
+                   "    c >>= d\n" +
+                   "    e ??= f\n" +
+                   "    g?.h\n" +
+                   "    i ?? j\n" +
+                   "    k -> l\n" +
+                   "    m..n\n" +
+                   "    bad = #\n" +
+                   "    brk = \"abc\n" +
+                   "}"
+        }
+
+        private static function LexerExpected(): string
+        {
+            return "Keyword function 1:1\n" +
+                   "Identifier main 1:10\n" +
+                   "Symbol ( 1:14\n" +
+                   "Symbol ) 1:15\n" +
+                   "Symbol { 2:1\n" +
+                   "Keyword var 3:5\n" +
+                   "Identifier n 3:9\n" +
+                   "Symbol = 3:11\n" +
+                   "Number 42 3:13\n" +
+                   "Keyword var 4:5\n" +
+                   "Identifier h 4:9\n" +
+                   "Symbol = 4:11\n" +
+                   "Number 0xFF 4:13\n" +
+                   "Keyword var 5:5\n" +
+                   "Identifier d 5:9\n" +
+                   "Symbol = 5:11\n" +
+                   "Double 3.14e2 5:13\n" +
+                   "Keyword var 6:5\n" +
+                   "Identifier s 6:9\n" +
+                   "Symbol = 6:11\n" +
+                   "String \"hi\\nthere\" 6:13\n" +
+                   "Keyword var 7:5\n" +
+                   "Identifier c 7:9\n" +
+                   "Symbol = 7:11\n" +
+                   "Char 'q' 7:13\n" +
+                   "Identifier ok 11:5\n" +
+                   "Symbol = 11:8\n" +
+                   "Identifier a 11:10\n" +
+                   "Symbol <= 11:12\n" +
+                   "Identifier b 11:15\n" +
+                   "Symbol && 11:17\n" +
+                   "Identifier c 11:20\n" +
+                   "Symbol != 11:22\n" +
+                   "Identifier d 11:25\n" +
+                   "Identifier e 12:5\n" +
+                   "Symbol >> 12:7\n" +
+                   "Number 2 12:10\n" +
+                   "Identifier f 13:5\n" +
+                   "Symbol => 13:7\n" +
+                   "Identifier g 13:10\n" +
+                   "Symbol } 14:1\n" +
+                   "EOF  14:2\n"
+        }
+
+        private static function TokenSurfaceExpected(): string
+        {
+            return "Keyword function 1:1\n" +
+                   "Identifier Test 1:10\n" +
+                   "Symbol ( 1:14\n" +
+                   "Symbol ) 1:15\n" +
+                   "Symbol { 2:1\n" +
+                   "Keyword var 3:5\n" +
+                   "Identifier v 3:9\n" +
+                   "Symbol = 3:11\n" +
+                   "VerbatimString @\"verbatim\" 3:13\n" +
+                   "Keyword var 4:5\n" +
+                   "Identifier r 4:9\n" +
+                   "Symbol = 4:11\n" +
+                   "RawString \"\"\"raw\"\"\" 4:13\n" +
+                   "Keyword var 5:5\n" +
+                   "Identifier i 5:9\n" +
+                   "Symbol = 5:11\n" +
+                   "InterpolatedString $\"x={1}\" 5:13\n" +
+                   "Keyword var 6:5\n" +
+                   "Identifier n 6:9\n" +
+                   "Symbol = 6:11\n" +
+                   "Number 0b1010_1 6:13\n" +
+                   "Keyword var 7:5\n" +
+                   "Identifier d 7:9\n" +
+                   "Symbol = 7:11\n" +
+                   "Double 1_000.5 7:13\n" +
+                   "Keyword var 8:5\n" +
+                   "Identifier l 8:9\n" +
+                   "Symbol = 8:11\n" +
+                   "Number 42L 8:13\n" +
+                   "Keyword var 9:5\n" +
+                   "Identifier u 9:9\n" +
+                   "Symbol = 9:11\n" +
+                   "Number 1ul 9:13\n" +
+                   "Keyword var 10:5\n" +
+                   "Identifier f 10:9\n" +
+                   "Symbol = 10:11\n" +
+                   "Double 1.5f 10:13\n" +
+                   "Identifier @ident 11:5\n" +
+                   "Symbol = 11:12\n" +
+                   "Identifier a 11:14\n" +
+                   "Symbol <<= 11:16\n" +
+                   "Identifier b 11:20\n" +
+                   "Identifier c 12:5\n" +
+                   "Symbol >>= 12:7\n" +
+                   "Identifier d 12:11\n" +
+                   "Identifier e 13:5\n" +
+                   "Symbol ??= 13:7\n" +
+                   "Identifier f 13:11\n" +
+                   "Identifier g 14:5\n" +
+                   "Symbol ?. 14:6\n" +
+                   "Identifier h 14:8\n" +
+                   "Identifier i 15:5\n" +
+                   "Symbol ?? 15:7\n" +
+                   "Identifier j 15:10\n" +
+                   "Identifier k 16:5\n" +
+                   "Symbol -> 16:7\n" +
+                   "Identifier l 16:10\n" +
+                   "Identifier m 17:5\n" +
+                   "Symbol .. 17:6\n" +
+                   "Identifier n 17:8\n" +
+                   "Identifier bad 18:5\n" +
+                   "Symbol = 18:9\n" +
+                   "Error # 18:11\n" +
+                   "Identifier brk 19:5\n" +
+                   "Symbol = 19:9\n" +
+                   "String \"abc 19:11\n" +
+                   "Symbol } 20:1\n" +
+                   "EOF  20:2\n"
+        }
+    }
+}

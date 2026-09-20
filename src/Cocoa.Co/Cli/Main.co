@@ -1,10 +1,11 @@
 // B0 骨架（阶段 7 增量一 M7-a4 建立、增量二 M8 扩展）：自举词法器 + 自举解析器可执行程序。
 // 用 C# 编译器把 src/Cocoa.Co 构建为可运行二进制（native 与 IL），
 // 读入文件 → 自举 Lexer 逐 token Describe() 输出 → 自举 Parser 打印规范树 dump 与诊断。
-// 用法：cocoa-co <file.co>
+// M5-a2：新增 `run <file.co>` 子命令——经自举 Interpreter 执行程序（输出 + 退出码）。
+// 用法：cocoa-co <file.co> | cocoa-co run <file.co>
 
-using MiniLexer
-using MiniParser
+using Cocoa.CodeAnalysis.Syntax
+using Cocoa.CodeAnalysis.Binding
 using System
 using System.IO
 
@@ -12,12 +13,24 @@ function Main(args: string[]): i32
 {
     if args.Length < 1
     {
-        Console.WriteLine("usage: cocoa-co <file.co>")
+        Console.WriteLine("usage: cocoa-co <file.co> | cocoa-co run <file.co>")
         return 1
     }
 
+    if args[0] == "run"
+    {
+        if args.Length < 2
+        {
+            Console.WriteLine("usage: cocoa-co run <file.co>")
+            return 1
+        }
+
+        let src = File.ReadAllText(args[1])
+        return RunProgram(src)
+    }
+
     let source = File.ReadAllText(args[0])
-    let lex = MiniLexer.Lexer.Create(source)
+    let lex = Cocoa.CodeAnalysis.Syntax.Lexer.Create(source)
     while true
     {
         let t = lex.Next()
@@ -28,7 +41,7 @@ function Main(args: string[]): i32
         }
     }
 
-    let parser = MiniParser.Parser.Create(source)
+    let parser = Cocoa.CodeAnalysis.Syntax.Parser.Create(source)
     let root = parser.ParseCompilationUnit()
     Console.WriteLine("--- tree ---")
     Console.WriteLine(root.Dump())
@@ -39,7 +52,7 @@ function Main(args: string[]): i32
         i = i + 1
     }
 
-    let binder = MiniBinder.Binder.Create(source)
+    let binder = Cocoa.CodeAnalysis.Binding.Binder.Create(source)
     binder.BindCompilationUnit()
     Console.WriteLine("--- symbols ---")
     Console.WriteLine(binder.DescribeSymbols())
@@ -54,4 +67,20 @@ function Main(args: string[]): i32
     Console.WriteLine(binder.DescribeBoundTrees())
 
     return 0
+}
+
+// M5-a2：自举 Interpreter 执行程序 → 输出真实控制台输出，返回 Main 的返回值（作为退出码）。
+function RunProgram(source: string): i32
+{
+    let binder = Cocoa.CodeAnalysis.Binding.Binder.Create(source)
+    binder.BindCompilationUnit()
+    let interp = Cocoa.CodeGen.InterpreterBackend.FromBinder(binder)
+    let value = interp.EvaluateMain()
+    let outText = interp.Output()
+    if outText.Length > 0
+    {
+        Console.Write(outText)
+    }
+
+    return value.ToInt()
 }

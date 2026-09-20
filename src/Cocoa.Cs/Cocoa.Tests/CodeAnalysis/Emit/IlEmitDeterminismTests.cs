@@ -157,23 +157,48 @@ function Main()
                 var diagnostics = compilation.Emit("Main", References, exePath, IlTarget.Parse("net9.0"));
                 Assert.Empty(string.Join("\n", diagnostics));
 
-                var psi = new System.Diagnostics.ProcessStartInfo("dotnet", $"\"{exePath}\"")
-                {
-                    RedirectStandardInput = true,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                };
-                using var process = System.Diagnostics.Process.Start(psi)!;
-                process.StandardInput.Close();
-                var stdout = process.StandardOutput.ReadToEnd();
-                var stderr = process.StandardError.ReadToEnd();
-                process.WaitForExit(15000);
+                var (exitCode, output) = RunUncaughtProcess(exePath);
                 File.Delete(exePath);
 
-                Assert.NotEqual(0, process.ExitCode);
-                Assert.DoesNotContain("RuntimeWrappedException", stdout + "\n" + stderr);
+                Assert.NotEqual(0, exitCode);
+                Assert.DoesNotContain("RuntimeWrappedException", output);
             }
+        }
+
+        /// <summary>鲁棒运行子进程：异步读 stdout/stderr（免管道填满死锁），超时强杀（免 WER 崩溃对话框悬挂）。</summary>
+        private static (int ExitCode, string Output) RunUncaughtProcess(string exePath)
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo("dotnet", $"\"{exePath}\"")
+            {
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+            };
+
+            using var process = System.Diagnostics.Process.Start(psi)!;
+            process.StandardInput.Close();
+
+            var stdoutTask = process.StandardOutput.ReadToEndAsync();
+            var stderrTask = process.StandardError.ReadToEndAsync();
+            if (!process.WaitForExit(30000))
+            {
+                try
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+                catch (System.InvalidOperationException)
+                {
+                    // 已退出竞态：忽略
+                }
+
+                process.WaitForExit();
+                Assert.True(false, $"子进程 {exePath} 30s 内未退出，已强杀——疑似崩溃对话框悬挂。");
+            }
+
+            var stdout = stdoutTask.GetAwaiter().GetResult();
+            var stderr = stderrTask.GetAwaiter().GetResult();
+            return (process.ExitCode, stdout + "\n" + stderr);
         }
     }
 }

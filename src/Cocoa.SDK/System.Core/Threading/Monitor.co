@@ -1,10 +1,11 @@
-// Cocoa 系统标准库 · System.Threading.Monitor（互斥锁原语）
+﻿// Cocoa 系统标准库 · System.Threading.Monitor（互斥锁原语）
 // facade 映射到 BCL System.Threading.Monitor
 // 方法体为解释器回退实现；IL 后端重定向到 BCL
 
 namespace System.Threading
 {
-    public facade class Monitor
+    [Facade("System.Threading.Monitor")]
+    public class Monitor
     {
         public static function Enter(obj: object): void
         {

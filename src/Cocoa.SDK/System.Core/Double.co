@@ -1,11 +1,12 @@
-// Cocoa 系统标准库 · System.Core 基元 facade（namespace System）
+﻿// Cocoa 系统标准库 · System.Core 基元 facade（namespace System）
 // class Double —— f64 的成员面载体（6e-M19 M2-b，对齐 C# System.Double）。
 
 using System.Syscall
 
 namespace System
 {
-    public facade class Double
+    [Facade("System.Double")]
+    public class Double
     {
         public function ToString(): string
         {

@@ -1,0 +1,137 @@
+﻿// Cocoa 鑷妇 CodeGen 路 Tagged Value锛堥樁娈?7 澧為噺浜?M5-a1锛夆€斺€?// 鍊兼ā鍨嬶細kind锛坕nt/double/string/bool/null/return锛? 瑙勮寖鏂囨湰銆傛棤 object 澶氭€侊紝
+// 鐢?kind 鍒嗘淳瀵归綈 C# Evaluator 鐨勮绠卞€艰涔夛紙int 鏁撮櫎 vs double 闄ゆ硶銆佺被鍨嬫帹鏂嚜瀛楅潰閲忔枃鏈級銆?
+namespace Cocoa.CodeGen
+{
+    class Value
+    {
+        private field _kind: string
+        private field _text: string
+        private field _inner: Value
+
+        public constructor()
+        {
+            _kind = "null"
+            _text = ""
+            _inner = null
+        }
+
+        public static function Int(v: i32): Value
+        {
+            var x = new Value()
+            x._kind = "int"
+            x._text = EvaluatorRuntime.IntToString(v)
+            return x
+        }
+
+        public static function Double(v: f64): Value
+        {
+            var x = new Value()
+            x._kind = "double"
+            x._text = EvaluatorRuntime.DoubleToString(v)
+            return x
+        }
+
+        public static function Str(s: string): Value
+        {
+            var x = new Value()
+            x._kind = "string"
+            x._text = s
+            return x
+        }
+
+        public static function Bool(b: bool): Value
+        {
+            var x = new Value()
+            x._kind = "bool"
+            x._text = EvaluatorRuntime.BoolToString(b)
+            return x
+        }
+
+        public static function Null(): Value
+        {
+            var x = new Value()
+            x._kind = "null"
+            x._text = ""
+            return x
+        }
+
+        public static function Return(v: Value): Value
+        {
+            var x = new Value()
+            x._kind = "return"
+            x._text = ""
+            x._inner = v
+            return x
+        }
+
+        public function Kind(): string
+        {
+            return _kind
+        }
+
+        public function Text(): string
+        {
+            return _text
+        }
+
+        public function Inner(): Value
+        {
+            return _inner
+        }
+
+        public function IsReturn(): bool
+        {
+            return _kind == "return"
+        }
+
+        public function IsNull(): bool
+        {
+            return _kind == "null"
+        }
+
+        public function Format(): string
+        {
+            return _text
+        }
+
+        public function ToInt(): i32
+        {
+            if _kind == "bool"
+            {
+                if _text == "true"
+                {
+                    return 1
+                }
+
+                return 0
+            }
+
+            return EvaluatorRuntime.ParseInt(_text)
+        }
+
+        public function ToDouble(): f64
+        {
+            if _kind == "int" || _kind == "bool"
+            {
+                return ToInt() * 1.0
+            }
+
+            return EvaluatorRuntime.ParseDouble(_text)
+        }
+
+        public function ToBool(): bool
+        {
+            if _kind == "bool"
+            {
+                return _text == "true"
+            }
+
+            if _kind == "null"
+            {
+                return false
+            }
+
+            return ToInt() != 0
+        }
+    }
+}

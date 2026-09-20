@@ -1,0 +1,11 @@
+namespace Cocoa.CodeAnalysis.Symbols
+{
+    class TypeKind
+    {
+        public static function Class(): i32 { return 0 }
+        public static function Struct(): i32 { return 1 }
+        public static function Interface(): i32 { return 2 }
+        public static function Enum(): i32 { return 3 }
+        public static function Delegate(): i32 { return 4 }
+    }
+}

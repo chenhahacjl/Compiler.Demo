@@ -12,6 +12,7 @@
 |------|------|
 | [开发计划.md](开发计划.md) | 阶段路线图总纲（阶段 0-9，含各里程碑提交与进度） |
 | [标准库设计.md](标准库设计.md) | System.Core 单库布局 · Syscall 收口 · facade 原则与例外 |
+| [架构与目录.md](架构与目录.md) | 仓库结构约定：Cocoa.Cs 依赖图 · CoaFormat 子命名空间 · docs/tools 分层（结构整理 2026-09） |
 
 ## 2. plan/ — 规划 · 待办（🧭/📋）
 
@@ -21,6 +22,7 @@
 | [plan/自举实施计划.md](plan/自举实施计划.md) | 阶段 7 实施主线：管线增量分解 / 验收护栏（增量一 Lexer ✅；增量二 Parser 🔄 M8-a0…a8） |
 | [plan/IR分层与格式设计.md](plan/IR分层与格式设计.md) | HIR/MIR/LIR 三层语义与命名、「.coa 存 HIR」决策（S-7 定稿为准） |
 | [plan/语义债务清单.md](plan/语义债务清单.md) | 定夺类设计偏差 D1-D5（非 bug），修或维持需逐项拍板 |
+| [plan/未完成盘点.md](plan/未完成盘点.md) | 全仓未开发/未完成/已后置内容总账（自举主线 / stdlib 遗留 / 语言面 / native 硬边界 / Evaluator / 语义债务 / 远期），逐项状态·阻塞·证据 |
 | [plan/重构执行计划.md](plan/重构执行计划.md) | 重构步骤与进度表（⬜/🔄/✅/⏭️ 标记） |
 | [plan/Cocoa.IDE设计.md](plan/Cocoa.IDE设计.md) | 类 Visual Studio 桌面 IDE：Avalonia 11 路线 + 功能矩阵 |
 | [plan/UI库规划.md](plan/UI库规划.md) | UI 生态系统：Handle 句柄类型 + System.UI 立即模式库（6e-M25；**阶段 1–5 已完成**：核心 + Win32 GDI 轮询后端 + 完整控件集/输入/滚动 + 主题/样式栈 + WinForms 命名 + native extern 编组 + 声明式语法糖/一控件一文件；示例 BasicUI/AdvancedUI/NativeUI/DeclarativeUI；实施记录见 §13–§17） |

@@ -1,10 +1,11 @@
-// Cocoa 系统标准库 · Core（namespace System.IO）——BCL 存在类型即 facade
+﻿// Cocoa 系统标准库 · Core（namespace System.IO）——BCL 存在类型即 facade
 // class File —— facade：IL 直连 System.IO.File；native/Evaluator 转发 System.Syscall.FileSyscall
 using System.Syscall
 
 namespace System.IO
 {
-    public facade class File
+    [Facade("System.IO.File")]
+    public class File
     {
         public static function ReadAllText(path: string): string
         {

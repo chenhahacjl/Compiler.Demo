@@ -1,0 +1,26 @@
+namespace Cocoa.CodeAnalysis.Binding
+{
+    class BoundVariableDeclaration
+    {
+        private field _inner: BoundStatement
+        private field _variableName: string
+        private field _isReadOnly: bool
+        private field _type: string
+        private field _initializer: BoundExpression
+
+        public constructor(variableName: string, isReadOnly: bool, type: string, initializer: BoundExpression)
+        {
+            _inner = new BoundStatement(BoundNodeKind.VariableDeclaration())
+            _variableName = variableName
+            _isReadOnly = isReadOnly
+            _type = type
+            _initializer = initializer
+        }
+
+        public function Kind(): i32 { return _inner.Kind() }
+        public function VariableName(): string { return _variableName }
+        public function IsReadOnly(): bool { return _isReadOnly }
+        public function Type(): string { return _type }
+        public function Initializer(): BoundExpression { return _initializer }
+    }
+}

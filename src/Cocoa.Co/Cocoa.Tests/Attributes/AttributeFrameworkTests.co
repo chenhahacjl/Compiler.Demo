@@ -1,0 +1,64 @@
+// 自举测试：attribute 驱动测试发现（阶段 7 增量五 P5）——
+// 驱动 co Binder 绑定带 `[Test]` 标记的源，经 GetFunctionAttribute* 查询断言发现结果。
+// 双轨运行（C# 引导 Evaluator + native exe）验证 co 编译器行为一致。
+
+using Cocoa.CodeAnalysis.Syntax
+using Cocoa.CodeAnalysis.Binding
+
+namespace Cocoa.CodeAnalysis.Tests
+{
+    class AttributeFrameworkTests
+    {
+        public static function Run(r: TestRunner): void
+        {
+            CheckTestMarker(r)
+            CheckTestMarkerWithArgs(r)
+            CheckDiscoveryCoverage(r)
+        }
+
+        private static function CheckTestMarker(r: TestRunner): void
+        {
+            let b = Binder.Create("[Test] function MyTest(): void\n{\n}\n")
+            b.BindCompilationUnit()
+            r.CheckEqualI32(1, b.GetFunctionAttributeCount(0), "Attributes/discovery-count")
+            r.CheckEqual("Test", b.GetFunctionAttributeName(0, 0), "Attributes/discovery-name")
+        }
+
+        private static function CheckTestMarkerWithArgs(r: TestRunner): void
+        {
+            let b = Binder.Create("[Mark(1,true,\"s\")] function MyTest(): i32\n{\n    return 0\n}\n")
+            b.BindCompilationUnit()
+            r.CheckEqualI32(1, b.GetFunctionAttributeCount(0), "Attributes/args-count")
+            r.CheckEqual("Mark", b.GetFunctionAttributeName(0, 0), "Attributes/args-name")
+            r.CheckEqual("1,true,\"s\"", b.GetFunctionAttributeArgText(0, 0), "Attributes/args-text")
+        }
+
+        /// <summary>发现/运行一致性：co Binder 枚举 [Test] 函数，登记已运行名，断言覆盖。</summary>
+        private static function CheckDiscoveryCoverage(r: TestRunner): void
+        {
+            let b = Binder.Create("[Test] function Foo(): void\n{\n}\n[Test] function Bar(): void\n{\n}\nfunction Helper(): void\n{\n}\n")
+            b.BindCompilationUnit()
+            var names = new string[8]
+            var count = 0
+            var i = 0
+            while i < b.GetFunctionCount()
+            {
+                if b.GetFunctionAttributeCount(i) > 0
+                {
+                    if b.GetFunctionAttributeName(i, 0) == "Test"
+                    {
+                        names[count] = b.GetFunctionName(i)
+                        count = count + 1
+                    }
+                }
+
+                i = i + 1
+            }
+
+            r.CheckEqualI32(2, count, "Attributes/coverage-discovered")
+            r.RegisterTest("Foo")
+            r.RegisterTest("Bar")
+            r.CheckTestCoverage(names, count)
+        }
+    }
+}

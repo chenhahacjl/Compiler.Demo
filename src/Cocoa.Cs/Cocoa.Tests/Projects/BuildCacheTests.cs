@@ -120,16 +120,37 @@ namespace Cocoa.Tests.Projects
             Assert.False(string.IsNullOrEmpty(fingerprint));
         }
 
-        [Fact]
-        public void Fingerprint_ReferenceChange_Invalidates()
+        [Theory]
+        [InlineData("def", true)]
+        [InlineData("abcd", false)]
+        public void Fingerprint_ReferenceChange_Invalidates(string content, bool changeTimestamp)
         {
             var reference = Path.Combine(_directory, "ref.dll");
+            var timestamp = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             File.WriteAllText(reference, "abc");
+            File.SetLastWriteTimeUtc(reference, timestamp);
+            var originalTimestamp = File.GetLastWriteTimeUtc(reference);
+            var originalLength = new FileInfo(reference).Length;
 
             var before = BuildCache.ComputeFingerprint(
                 ImmutableArray<string>.Empty, ImmutableArray.Create(reference), ImmutableArray<string>.Empty, ImmutableArray<string>.Empty);
 
-            File.WriteAllText(reference, "def");
+            Assert.Equal(before, BuildCache.ComputeFingerprint(
+                ImmutableArray<string>.Empty, ImmutableArray.Create(reference), ImmutableArray<string>.Empty, ImmutableArray<string>.Empty));
+
+            File.WriteAllText(reference, content);
+            File.SetLastWriteTimeUtc(reference, changeTimestamp ? timestamp.AddSeconds(2) : timestamp);
+
+            if (changeTimestamp)
+            {
+                Assert.Equal(originalLength, new FileInfo(reference).Length);
+                Assert.NotEqual(originalTimestamp, File.GetLastWriteTimeUtc(reference));
+            }
+            else
+            {
+                Assert.NotEqual(originalLength, new FileInfo(reference).Length);
+                Assert.Equal(originalTimestamp, File.GetLastWriteTimeUtc(reference));
+            }
 
             var after = BuildCache.ComputeFingerprint(
                 ImmutableArray<string>.Empty, ImmutableArray.Create(reference), ImmutableArray<string>.Empty, ImmutableArray<string>.Empty);

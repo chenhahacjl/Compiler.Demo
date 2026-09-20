@@ -562,7 +562,30 @@ namespace Cocoa.CodeGen.Interpreter
                 return value is string;
             }
 
+            // object 多态：值类型目标（obj is int / is double / is bool / is char…）→ 装箱值类型判定。
+            if (node.TargetType.IsPrimitiveValueType)
+            {
+                return MatchesValueType(value, node.TargetType);
+            }
+
             return false;
+        }
+
+        private static bool MatchesValueType(object value, TypeSymbol t)
+        {
+            return t == TypeSymbol.Int32 ? value is int :
+                t == TypeSymbol.Int64 ? value is long :
+                t == TypeSymbol.Boolean ? value is bool :
+                t == TypeSymbol.Double ? value is double :
+                t == TypeSymbol.Char ? value is char :
+                t == TypeSymbol.UInt8 ? value is byte :
+                t == TypeSymbol.Int8 ? value is sbyte :
+                t == TypeSymbol.Int16 ? value is short :
+                t == TypeSymbol.UInt16 ? value is ushort :
+                t == TypeSymbol.UInt32 ? value is uint :
+                t == TypeSymbol.UInt64 ? value is ulong :
+                t == TypeSymbol.Float ? value is float :
+                false;
         }
 
         /// <summary>
@@ -811,6 +834,12 @@ namespace Cocoa.CodeGen.Interpreter
                 return value is string ? value : null;
             }
 
+            // object 多态：值类型目标（obj as int / as double…）→ 命中返回原装箱值，否则 null。
+            if (node.TargetType.IsPrimitiveValueType)
+            {
+                return MatchesValueType(value, node.TargetType) ? value : null;
+            }
+
             return null;
         }
 
@@ -827,7 +856,14 @@ namespace Cocoa.CodeGen.Interpreter
             if (node.Type == TypeSymbol.Any)
             {
                 return value;
-            }            else if (node.Type == TypeSymbol.Boolean)
+            }
+
+            // object 多态：装箱（值类型/引用 → System.Object）——值在 CLR 中已装箱，直通。
+            if (node.Type == Symbols.NamedTypeSymbol.SystemObject)
+            {
+                return value;
+            }
+            else if (node.Type == TypeSymbol.Boolean)
             {
                 return Convert.ToBoolean(value);
             }

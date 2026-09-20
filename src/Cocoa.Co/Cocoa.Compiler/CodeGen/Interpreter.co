@@ -1,0 +1,779 @@
+﻿// Cocoa 鑷妇 CodeGen 路 鏍戦亶鍘嗘眰鍊煎櫒锛堥樁娈?7 澧為噺浜?M5-a1锛夆€斺€?// 娑堣垂鑷妇 Binder 鐨勯檷绾у悗缁戝畾鏍戯紙鍚?Label/Goto/ConditionalGoto锛夛紝瀵归綈 C# Evaluator 璇箟銆?// 鍊兼ā鍨嬶細Tagged Value锛坘ind 鍒嗘淳锛屾棤 object 澶氭€侊級銆?// 鏀寔璇彞锛欱lock/Return/ExpressionStatement/VariableDeclaration/Label/Goto/ConditionalGoto锛?// 琛ㄨ揪寮忥細Literal/Variable/Assignment/Unary/Binary/Call锛堢敤鎴峰嚱鏁伴€掑綊 + 灏戦噺鍐呯疆锛夈€?// Console.* 鍐呯疆鎹曡幏杩?_output锛堝樊鍒嗘瘮瀵圭敤锛屼笉鐩村嚭鎺у埗鍙帮級銆?
+using Cocoa.CodeAnalysis.Syntax
+
+namespace Cocoa.CodeGen
+{
+    class Interpreter
+    {
+        private field _fnNames: string[]
+        private field _fnBodies: Node[]
+        private field _fnParamStart: i32[]
+        private field _fnParamCounts: i32[]
+        private field _allParamNames: string[]
+        private field _allParamCount: i32
+        private field _fnCount: i32
+        private field _output: string
+        private field _diags: string[]
+        private field _diagCount: i32
+        private field _maxSteps: i32
+
+        public constructor()
+        {
+            _fnNames = new string[16]
+            _fnBodies = new Node[16]
+            _fnParamStart = new i32[16]
+            _fnParamCounts = new i32[16]
+            _allParamNames = new string[64]
+            _allParamCount = 0
+            _fnCount = 0
+            _output = ""
+            _diags = new string[8]
+            _diagCount = 0
+            _maxSteps = 1000000
+        }
+
+        public function BeginFunction(name: string, body: Node, paramCount: i32): void
+        {
+            if _fnCount >= _fnNames.Length
+            {
+                var nn = new string[_fnNames.Length * 2]
+                var nb = new Node[_fnBodies.Length * 2]
+                var ns = new i32[_fnParamStart.Length * 2]
+                var nc = new i32[_fnParamCounts.Length * 2]
+                var i = 0
+                while i < _fnCount
+                {
+                    nn[i] = _fnNames[i]
+                    nb[i] = _fnBodies[i]
+                    ns[i] = _fnParamStart[i]
+                    nc[i] = _fnParamCounts[i]
+                    i = i + 1
+                }
+
+                _fnNames = nn
+                _fnBodies = nb
+                _fnParamStart = ns
+                _fnParamCounts = nc
+            }
+
+            _fnNames[_fnCount] = name
+            _fnBodies[_fnCount] = body
+            _fnParamStart[_fnCount] = _allParamCount
+            _fnParamCounts[_fnCount] = paramCount
+            _fnCount = _fnCount + 1
+        }
+
+        public function AddParamName(p: string): void
+        {
+            if _allParamCount >= _allParamNames.Length
+            {
+                var bigger = new string[_allParamNames.Length * 2]
+                var i = 0
+                while i < _allParamCount
+                {
+                    bigger[i] = _allParamNames[i]
+                    i = i + 1
+                }
+
+                _allParamNames = bigger
+            }
+
+            _allParamNames[_allParamCount] = p
+            _allParamCount = _allParamCount + 1
+        }
+
+        public function DiagnosticCount(): i32
+        {
+            return _diagCount
+        }
+
+        public function DiagnosticAt(index: i32): string
+        {
+            return _diags[index]
+        }
+
+        public function Output(): string
+        {
+            return _output
+        }
+
+        private function ReportError(msg: string): void
+        {
+            if _diagCount >= _diags.Length
+            {
+                var bigger = new string[_diags.Length * 2]
+                var i = 0
+                while i < _diagCount
+                {
+                    bigger[i] = _diags[i]
+                    i = i + 1
+                }
+
+                _diags = bigger
+            }
+
+            _diags[_diagCount] = msg
+            _diagCount = _diagCount + 1
+        }
+
+        private function FindFunction(name: string): i32
+        {
+            var i = 0
+            while i < _fnCount
+            {
+                if _fnNames[i] == name
+                {
+                    return i
+                }
+
+                i = i + 1
+            }
+
+            return -1
+        }
+
+        public function EvaluateMain(): Value
+        {
+            let idx = FindFunction("Main")
+            if idx < 0
+            {
+                ReportError("error: No Main function found.")
+                return Value.Null()
+            }
+
+            let result = EvalBlock(_fnBodies[idx], new string[32], new Value[32], 0)
+            if result.IsReturn()
+            {
+                return result.Inner()
+            }
+
+            return result
+        }
+
+        private function EvalBlock(block: Node, localNames: string[], localValues: Value[], localCount: i32): Value
+        {
+            var lc = localCount
+            var i = 0
+            var steps = 0
+            while i < block.ChildCount()
+            {
+                steps = steps + 1
+                if steps > _maxSteps
+                {
+                    ReportError("error: Interpreter exceeded maximum step count.")
+                    return Value.Null()
+                }
+
+                let stmt = block.Child(i)
+                let k = stmt.Kind()
+
+                if k == "LabelStatement"
+                {
+                    i = i + 1
+                }
+                else if k == "GotoStatement"
+                {
+                    i = FindLabelIndex(block, stmt.Child(0).Text())
+                }
+                else if k == "ConditionalGotoStatement"
+                {
+                    let cond = EvalExpression(stmt.Child(2), localNames, localValues, lc)
+                    let jumpIfTrue = stmt.Child(1).Text() == "True"
+                    if cond.ToBool() == jumpIfTrue
+                    {
+                        i = FindLabelIndex(block, stmt.Child(0).Text())
+                    }
+                    else
+                    {
+                        i = i + 1
+                    }
+                }
+                else if k == "ReturnStatement"
+                {
+                    if stmt.ChildCount() > 0 && !stmt.Child(0).IsToken()
+                    {
+                        return Value.Return(EvalExpression(stmt.Child(0), localNames, localValues, lc))
+                    }
+
+                    return Value.Return(Value.Null())
+                }
+                else if k == "ExpressionStatement"
+                {
+                    EvalExpression(stmt.Child(0), localNames, localValues, lc)
+                    i = i + 1
+                }
+                else if k == "VariableDeclaration"
+                {
+                    let name = stmt.Child(1).Text()
+                    let value = EvalExpression(stmt.Child(2), localNames, localValues, lc)
+                    localNames[lc] = name
+                    localValues[lc] = value
+                    lc = lc + 1
+                    i = i + 1
+                }
+                else
+                {
+                    i = i + 1
+                }
+            }
+
+            return Value.Null()
+        }
+
+        private function FindLabelIndex(block: Node, label: string): i32
+        {
+            var i = 0
+            while i < block.ChildCount()
+            {
+                let c = block.Child(i)
+                if c.Kind() == "LabelStatement" && c.Child(0).Text() == label
+                {
+                    return i
+                }
+
+                i = i + 1
+            }
+
+            return block.ChildCount()
+        }
+
+        private function EvalExpression(node: Node, localNames: string[], localValues: Value[], localCount: i32): Value
+        {
+            let k = node.Kind()
+
+            if k == "LiteralExpression"
+            {
+                return EvalLiteral(node)
+            }
+
+            if k == "VariableExpression"
+            {
+                return EvalVariable(node.Child(0).Text(), localNames, localValues, localCount)
+            }
+
+            if k == "AssignmentExpression"
+            {
+                return EvalAssignment(node, localNames, localValues, localCount)
+            }
+
+            if k == "UnaryExpression"
+            {
+                return EvalUnary(node, localNames, localValues, localCount)
+            }
+
+            if k == "BinaryExpression"
+            {
+                return EvalBinary(node, localNames, localValues, localCount)
+            }
+
+            if k == "CallExpression"
+            {
+                return EvalCall(node, localNames, localValues, localCount)
+            }
+
+            if k == "MemberCallExpression"
+            {
+                return EvalMemberCall(node, localNames, localValues, localCount)
+            }
+
+            return Value.Null()
+        }
+
+        private function EvalLiteral(node: Node): Value
+        {
+            let tok = node.Child(0)
+            let text = tok.Text()
+
+            if text == "true"
+            {
+                return Value.Bool(true)
+            }
+
+            if text == "false"
+            {
+                return Value.Bool(false)
+            }
+
+            if text == "null"
+            {
+                return Value.Null()
+            }
+
+            if EvaluatorRuntime.HasDot(text)
+            {
+                return Value.Double(EvaluatorRuntime.ParseDouble(text))
+            }
+
+            return Value.Int(EvaluatorRuntime.ParseInt(text))
+        }
+
+        private function EvalVariable(name: string, localNames: string[], localValues: Value[], localCount: i32): Value
+        {
+            var i = localCount - 1
+            while i >= 0
+            {
+                if localNames[i] == name
+                {
+                    return localValues[i]
+                }
+
+                i = i - 1
+            }
+
+            ReportError("error: Variable '" + name + "' not found.")
+            return Value.Null()
+        }
+
+        private function EvalAssignment(node: Node, localNames: string[], localValues: Value[], localCount: i32): Value
+        {
+            let name = node.Child(0).Text()
+            let value = EvalExpression(node.Child(1), localNames, localValues, localCount)
+
+            var i = localCount - 1
+            while i >= 0
+            {
+                if localNames[i] == name
+                {
+                    localValues[i] = value
+                    return value
+                }
+
+                i = i - 1
+            }
+
+            ReportError("error: Variable '" + name + "' not found.")
+            return Value.Null()
+        }
+
+        private function EvalUnary(node: Node, localNames: string[], localValues: Value[], localCount: i32): Value
+        {
+            let op = node.Child(0).Text()
+            let operand = EvalExpression(node.Child(1), localNames, localValues, localCount)
+
+            if op == "-"
+            {
+                if operand.Kind() == "double"
+                {
+                    return Value.Double(-operand.ToDouble())
+                }
+
+                return Value.Int(-operand.ToInt())
+            }
+
+            if op == "!"
+            {
+                return Value.Bool(!operand.ToBool())
+            }
+
+            if op == "~"
+            {
+                return Value.Int(-operand.ToInt() - 1)
+            }
+
+            return operand
+        }
+
+        private function EvalBinary(node: Node, localNames: string[], localValues: Value[], localCount: i32): Value
+        {
+            let op = node.Child(0).Text()
+            let left = EvalExpression(node.Child(1), localNames, localValues, localCount)
+            let right = EvalExpression(node.Child(2), localNames, localValues, localCount)
+
+            if op == "+"
+            {
+                if left.Kind() == "string" || right.Kind() == "string"
+                {
+                    return Value.Str(left.Format() + right.Format())
+                }
+
+                if left.Kind() == "double" || right.Kind() == "double"
+                {
+                    return Value.Double(left.ToDouble() + right.ToDouble())
+                }
+
+                return Value.Int(left.ToInt() + right.ToInt())
+            }
+
+            if op == "-"
+            {
+                if left.Kind() == "double" || right.Kind() == "double"
+                {
+                    return Value.Double(left.ToDouble() - right.ToDouble())
+                }
+
+                return Value.Int(left.ToInt() - right.ToInt())
+            }
+
+            if op == "*"
+            {
+                if left.Kind() == "double" || right.Kind() == "double"
+                {
+                    return Value.Double(left.ToDouble() * right.ToDouble())
+                }
+
+                return Value.Int(left.ToInt() * right.ToInt())
+            }
+
+            if op == "/"
+            {
+                if left.Kind() == "double" || right.Kind() == "double"
+                {
+                    return Value.Double(left.ToDouble() / right.ToDouble())
+                }
+
+                return Value.Int(left.ToInt() / right.ToInt())
+            }
+
+            if op == "%"
+            {
+                return Value.Int(left.ToInt() % right.ToInt())
+            }
+
+            if op == "=="
+            {
+                return Value.Bool(EqualValues(left, right))
+            }
+
+            if op == "!="
+            {
+                return Value.Bool(!EqualValues(left, right))
+            }
+
+            if op == "<"
+            {
+                return Value.Bool(left.ToDouble() < right.ToDouble())
+            }
+
+            if op == "<="
+            {
+                return Value.Bool(left.ToDouble() <= right.ToDouble())
+            }
+
+            if op == ">"
+            {
+                return Value.Bool(left.ToDouble() > right.ToDouble())
+            }
+
+            if op == ">="
+            {
+                return Value.Bool(left.ToDouble() >= right.ToDouble())
+            }
+
+            if op == "&&"
+            {
+                return Value.Bool(left.ToBool() && right.ToBool())
+            }
+
+            if op == "||"
+            {
+                return Value.Bool(left.ToBool() || right.ToBool())
+            }
+
+            return Value.Null()
+        }
+
+        private function EqualValues(left: Value, right: Value): bool
+        {
+            if left.IsNull() && right.IsNull()
+            {
+                return true
+            }
+
+            if left.IsNull() || right.IsNull()
+            {
+                return false
+            }
+
+            if left.Kind() == "bool" && right.Kind() == "bool"
+            {
+                return left.ToBool() == right.ToBool()
+            }
+
+            if IsNumeric(left) && IsNumeric(right)
+            {
+                return left.ToDouble() == right.ToDouble()
+            }
+
+            return left.Format() == right.Format()
+        }
+
+        private function IsNumeric(v: Value): bool
+        {
+            return v.Kind() == "int" || v.Kind() == "double"
+        }
+
+        private function EvalCall(node: Node, localNames: string[], localValues: Value[], localCount: i32): Value
+        {
+            let name = node.Child(0).Text()
+
+            if name == "System.Console.WriteLine"
+            {
+                if node.ChildCount() > 1
+                {
+                    let arg = EvalExpression(node.Child(1), localNames, localValues, localCount)
+                    _output = _output + arg.Format() + "\n"
+                }
+                else
+                {
+                    _output = _output + "\n"
+                }
+
+                return Value.Null()
+            }
+
+            if name == "System.Console.Write"
+            {
+                if node.ChildCount() > 1
+                {
+                    let arg = EvalExpression(node.Child(1), localNames, localValues, localCount)
+                    _output = _output + arg.Format()
+                }
+
+                return Value.Null()
+            }
+
+            if name == "System.String.Concat"
+            {
+                if node.ChildCount() > 2
+                {
+                    let a = EvalExpression(node.Child(1), localNames, localValues, localCount)
+                    let b = EvalExpression(node.Child(2), localNames, localValues, localCount)
+                    return Value.Str(a.Format() + b.Format())
+                }
+
+                return Value.Str("")
+            }
+
+            if name == "System.Int32.Parse"
+            {
+                if node.ChildCount() > 1
+                {
+                    let arg = EvalExpression(node.Child(1), localNames, localValues, localCount)
+                    return Value.Int(EvaluatorRuntime.ParseInt(arg.Format()))
+                }
+
+                return Value.Int(0)
+            }
+
+            if name == "get_Length"
+            {
+                if node.ChildCount() > 1
+                {
+                    let arg = EvalExpression(node.Child(1), localNames, localValues, localCount)
+                    return Value.Int(arg.Format().Length)
+                }
+
+                return Value.Int(0)
+            }
+
+            let idx = FindFunction(name)
+            if idx < 0
+            {
+                ReportError("error: Function '" + name + "' not found.")
+                return Value.Null()
+            }
+
+            let start = _fnParamStart[idx]
+            let pc = _fnParamCounts[idx]
+            var names = new string[32]
+            var values = new Value[32]
+            var j = 0
+            while j < pc
+            {
+                names[j] = _allParamNames[start + j]
+                values[j] = EvalExpression(node.Child(j + 1), localNames, localValues, localCount)
+                j = j + 1
+            }
+
+            let result = EvalBlock(_fnBodies[idx], names, values, pc)
+            if result.IsReturn()
+            {
+                return result.Inner()
+            }
+
+            return result
+        }
+
+        private function EvalMemberCall(node: Node, localNames: string[], localValues: Value[], localCount: i32): Value
+        {
+            let receiver = ReceiverName(node.Child(0))
+            let method = node.Child(2).Text()
+            let qualified = receiver + "." + method
+
+            if qualified == "Console.WriteLine" || qualified == "System.Console.WriteLine"
+            {
+                let arg = ArgValue(node, 0, localNames, localValues, localCount)
+                _output = _output + arg.Format() + "\n"
+                return Value.Null()
+            }
+
+            if qualified == "Console.Write" || qualified == "System.Console.Write"
+            {
+                let arg = ArgValue(node, 0, localNames, localValues, localCount)
+                _output = _output + arg.Format()
+                return Value.Null()
+            }
+
+            if qualified == "System.Math.Max" || qualified == "System.Math.Min"
+            {
+                let a = ArgValue(node, 0, localNames, localValues, localCount)
+                let b = ArgValue(node, 1, localNames, localValues, localCount)
+                if qualified == "System.Math.Max"
+                {
+                    if a.ToDouble() < b.ToDouble()
+                    {
+                        return b
+                    }
+
+                    return a
+                }
+
+                if a.ToDouble() > b.ToDouble()
+                {
+                    return b
+                }
+
+                return a
+            }
+
+            if qualified == "System.Math.Abs"
+            {
+                let a = ArgValue(node, 0, localNames, localValues, localCount)
+                if a.Kind() == "double"
+                {
+                    let v = a.ToDouble()
+                    if v < 0.0
+                    {
+                        return Value.Double(-v)
+                    }
+
+                    return a
+                }
+
+                let vi = a.ToInt()
+                if vi < 0
+                {
+                    return Value.Int(-vi)
+                }
+
+                return a
+            }
+
+            if qualified == "System.Math.Pow"
+            {
+                let a = ArgValue(node, 0, localNames, localValues, localCount)
+                let b = ArgValue(node, 1, localNames, localValues, localCount)
+                var result = 1.0
+                var exp = b.ToInt()
+                var negative = exp < 0
+                if negative
+                {
+                    exp = -exp
+                }
+
+                var k = 0
+                while k < exp
+                {
+                    result = result * a.ToDouble()
+                    k = k + 1
+                }
+
+                if negative
+                {
+                    result = 1.0 / result
+                }
+
+                if a.Kind() == "double" || b.Kind() == "double"
+                {
+                    return Value.Double(result)
+                }
+
+                var ir = 1
+                var ie = b.ToInt()
+                if ie < 0
+                {
+                    ie = -ie
+                }
+
+                var ik = 0
+                while ik < ie
+                {
+                    ir = ir * a.ToInt()
+                    ik = ik + 1
+                }
+
+                if b.ToInt() < 0
+                {
+                    return Value.Int(0)
+                }
+
+                return Value.Int(ir)
+            }
+
+            if qualified == "System.Int32.Parse"
+            {
+                let arg = ArgValue(node, 0, localNames, localValues, localCount)
+                return Value.Int(EvaluatorRuntime.ParseInt(arg.Format()))
+            }
+
+            return Value.Null()
+        }
+
+        private function ReceiverName(node: Node): string
+        {
+            let k = node.Kind()
+            if k == "VariableExpression" || k == "NameExpression"
+            {
+                return node.Child(0).Text()
+            }
+
+            if k == "MemberAccessExpression"
+            {
+                let recv = ReceiverName(node.Child(0))
+                let member = node.Child(2).Text()
+                return recv + "." + member
+            }
+
+            return ""
+        }
+
+        private function ArgCount(node: Node): i32
+        {
+            var count = 0
+            var i = 3
+            while i < node.ChildCount()
+            {
+                if !node.Child(i).IsToken()
+                {
+                    count = count + 1
+                }
+
+                i = i + 1
+            }
+
+            return count
+        }
+
+        private function ArgValue(node: Node, argIndex: i32, localNames: string[], localValues: Value[], localCount: i32): Value
+        {
+            var seen = 0
+            var i = 3
+            while i < node.ChildCount()
+            {
+                if !node.Child(i).IsToken()
+                {
+                    if seen == argIndex
+                    {
+                        return EvalExpression(node.Child(i), localNames, localValues, localCount)
+                    }
+
+                    seen = seen + 1
+                }
+
+                i = i + 1
+            }
+
+            return Value.Null()
+        }
+    }
+}

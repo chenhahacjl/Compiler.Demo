@@ -1,6 +1,6 @@
 // Cocoa 自举局部变量符号 —— 阶段 7 增量三（M9-a3）：名/类型；Describe() 与 C# SymbolDump 局部行同构（缩进由 Binder 组装）。
 
-namespace MiniBinder
+namespace Cocoa.CodeAnalysis.Symbols
 {
     class LocalSymbol
     {

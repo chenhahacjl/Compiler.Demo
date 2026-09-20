@@ -1,0 +1,38 @@
+// Cocoa 自举测试入口（阶段 7 增量五 M5-b0 骨架）：
+// 创建 TestRunner → 依次运行各测试组 → 打印 Summary → 有失败退出码 1。
+
+using Cocoa.CodeAnalysis.Tests
+using System
+
+function Main(args: string[]): i32
+{
+    let runner = new Cocoa.CodeAnalysis.Tests.TestRunner()
+
+    // 测试组（阶段 7 增量五：Lexer 表面 + Lexer/Parser/Binder 黄金差分 + Interpreter + Lexer 计数）
+    Cocoa.CodeAnalysis.Tests.LexerSurfaceTests.Run(runner)
+    Cocoa.CodeAnalysis.Tests.LexerGoldenTests.Run(runner)
+    Cocoa.CodeAnalysis.Tests.ParserGoldenTests.Run(runner)
+    Cocoa.CodeAnalysis.Tests.BinderGoldenTests.Run(runner)
+    Cocoa.CodeAnalysis.Tests.InterpreterGoldenTests.Run(runner)
+    Cocoa.CodeAnalysis.Tests.IlEmitterSelfHostedTests.Run(runner)
+    Cocoa.CodeAnalysis.Tests.AttributeFrameworkTests.Run(runner)
+    Cocoa.CodeAnalysis.Tests.X64AssemblerSelfHostedTests.Run(runner)
+    Cocoa.CodeAnalysis.Tests.LexerPerfTests.Run(runner)
+
+    // 1MB 性能门禁：仅 `--perf` 时运行（Evaluator 字节码解释器跑 1MB 太慢，native 计时）
+    if args.Length > 0
+    {
+        if args[0] == "--perf"
+        {
+            Cocoa.CodeAnalysis.Tests.LexerPerfTests.RunPerf(runner)
+        }
+    }
+
+    System.Console.WriteLine(runner.Summary())
+    if runner.HasFailures()
+    {
+        return 1
+    }
+
+    return 0
+}

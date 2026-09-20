@@ -1,0 +1,57 @@
+namespace Cocoa.CodeAnalysis.Symbols
+{
+    class ParameterSymbol
+    {
+        private field _name: string
+        private field _type: string
+        private field _ordinal: i32
+        private field _isOut: bool
+        private field _isRef: bool
+
+        public static function Create(name: string, type: string, ordinal: i32): ParameterSymbol
+        {
+            var p = new ParameterSymbol()
+            p._name = name
+            p._type = type
+            p._ordinal = ordinal
+            p._isOut = false
+            p._isRef = false
+            return p
+        }
+
+        public function Name(): string
+        {
+            return _name
+        }
+
+        public function Type(): string
+        {
+            return _type
+        }
+
+        public function Ordinal(): i32
+        {
+            return _ordinal
+        }
+
+        public function IsOut(): bool
+        {
+            return _isOut
+        }
+
+        public function IsRef(): bool
+        {
+            return _isRef
+        }
+
+        public function IsByRef(): bool
+        {
+            return _isOut || _isRef
+        }
+
+        public function Describe(): string
+        {
+            return _name + ": " + _type
+        }
+    }
+}

@@ -17,6 +17,7 @@
     <Source Include="IO/*.co" />
     <Source Include="Collections/*.co" />
     <Source Include="Syscall/*.co" />
+    <Source Include="Text/*.co" />
     <Source Include="Threading/*.co" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,17 @@
+namespace Cocoa.CodeAnalysis.Binding
+{
+    class BoundStatement
+    {
+        private field _kind: i32
+
+        public constructor(kind: i32)
+        {
+            _kind = kind
+        }
+
+        public function Kind(): i32
+        {
+            return _kind
+        }
+    }
+}

@@ -1,0 +1,24 @@
+<Project Version="1">
+  <PropertyGroup Label="Language">
+    <Language>Cocoa</Language>
+  </PropertyGroup>
+  <PropertyGroup Label="Assembly">
+    <AssemblyName>Cocoa.Tests</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label="Target">
+    <Platform>x64</Platform>
+    <TargetFramework>net48</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup Label="Output">
+    <OutputType>Executable</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Label="Build">
+    <OutputPath>out</OutputPath>
+    <!-- 双轨运行：native exe 作为真自举门禁；-b 可覆盖（镜像 Cli） -->
+    <Backend>native</Backend>
+  </PropertyGroup>
+  <ItemGroup>
+    <Source Include="**/*.co" />
+    <Reference Include="../Cocoa.Compiler/out/Cocoa.Compiler.coa" />
+  </ItemGroup>
+</Project>

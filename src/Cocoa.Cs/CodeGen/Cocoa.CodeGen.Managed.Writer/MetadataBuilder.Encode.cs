@@ -28,6 +28,64 @@ namespace Cocoa.CodeGen.Managed.Writer
             return stream.ToArray();
         }
 
+        /// <summary>6e-M32 Tier-2：属性固定实参 blob（ECMA II.23.3）——prolog 0x0001 + 定长实参。
+        /// 支持字面量集 {string/i32/bool/char/f64}；枚举暂按 int32。named args 暂不支持。</summary>
+        public static byte[] EncodeAttributeBlob(IReadOnlyList<object?> values, IReadOnlyList<TypeSymbol> types)
+        {
+            using var stream = new MemoryStream();
+            stream.WriteByte(0x01); // prolog 低位
+            stream.WriteByte(0x00); // prolog 高位
+            for (var i = 0; i < values.Count; i++)
+            {
+                EncodeAttributeArgument(stream, values[i], types[i]);
+            }
+
+            return stream.ToArray();
+        }
+
+        private static void EncodeAttributeArgument(Stream stream, object? value, TypeSymbol type)
+        {
+            if (type == TypeSymbol.String)
+            {
+                stream.WriteByte(0x0E); // ELEMENT_TYPE_STRING
+                var text = (string)value!;
+                var utf16 = text.SelectMany(c => new[] { (byte)c, (byte)(c >> 8) }).ToArray();
+                WriteCompressedInteger(stream, utf16.Length);
+                stream.Write(utf16, 0, utf16.Length);
+                stream.WriteByte(0x00); // null terminator byte
+            }
+            else if (type == TypeSymbol.Int32)
+            {
+                stream.WriteByte(0x08); // ELEMENT_TYPE_I4
+                stream.WriteByte((byte)(int)value!);
+                stream.WriteByte((byte)((int)value! >> 8));
+                stream.WriteByte((byte)((int)value! >> 16));
+                stream.WriteByte((byte)((int)value! >> 24));
+            }
+            else if (type == TypeSymbol.Boolean)
+            {
+                stream.WriteByte(0x02); // ELEMENT_TYPE_BOOLEAN
+                stream.WriteByte((bool)value! ? (byte)1 : (byte)0);
+            }
+            else if (type == TypeSymbol.Char)
+            {
+                stream.WriteByte(0x03); // ELEMENT_TYPE_CHAR
+                var c = (char)value!;
+                stream.WriteByte((byte)c);
+                stream.WriteByte((byte)(c >> 8));
+            }
+            else if (type == TypeSymbol.Double)
+            {
+                stream.WriteByte(0x0D); // ELEMENT_TYPE_R8
+                var bytes = BitConverter.GetBytes((double)value!);
+                stream.Write(bytes, 0, bytes.Length);
+            }
+            else
+            {
+                throw new InvalidOperationException($"Unsupported attribute argument type {type}");
+            }
+        }
+
         /// <summary>可见性 → ECMA-335 可见性掩码（MethodDef/FieldDef 共用：Public=0x6/Assembly=0x3/Family=0x4/Private=0x1）。</summary>
         private static ushort VisibilityToFlags(IlVisibility visibility)
         {

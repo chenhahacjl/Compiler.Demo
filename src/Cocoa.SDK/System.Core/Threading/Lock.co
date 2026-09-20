@@ -1,11 +1,12 @@
-// Cocoa 系统标准库 · System.Threading.Lock（互斥锁）
+﻿// Cocoa 系统标准库 · System.Threading.Lock（互斥锁）
 // 对齐 BCL System.Threading.Lock（sealed class，非 facade）
 // 解释器回退：内部使用 Monitor；IL 后端直接使用 BCL Lock
 // 注：BCL 的 EnterScope/Scope 模式依赖 ref struct，Cocoa 解析器暂不支持，待语言能力补齐后对齐
 
 namespace System.Threading
 {
-    public sealed facade class Lock
+    [Facade("System.Threading.Lock")]
+    public sealed class Lock
     {
         private field _owner: object = new object()
 

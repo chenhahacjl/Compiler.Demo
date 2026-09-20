@@ -1,4 +1,4 @@
-// Cocoa 系统标准库 · System.IO 模块
+﻿// Cocoa 系统标准库 · System.IO 模块
 // Path：静态容器（IL 直链 BCL System.IO.Path；native/Evaluator 走本体且语义逐字对齐 BCL，
 // 以 .NET 源码/黑盒行为为 spec，Windows 分支）。PathParityTests 逐输入对拍锁定。
 
@@ -8,7 +8,8 @@ using System.Syscall
 
 namespace System.IO
 {
-    public facade class Path
+    [Facade("System.IO.Path")]
+    public class Path
     {
         private static function IsSeparator(c: char): bool
         {

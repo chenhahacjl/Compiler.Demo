@@ -1,0 +1,24 @@
+namespace Cocoa.CodeAnalysis.Binding
+{
+    class BoundCallExpression
+    {
+        private field _inner: BoundExpression
+        private field _functionName: string
+        private field _arguments: BoundExpression[]
+        private field _argumentCount: i32
+
+        public constructor(functionName: string, arguments: BoundExpression[], argumentCount: i32, type: string)
+        {
+            _inner = new BoundExpression(BoundNodeKind.CallExpression(), type)
+            _functionName = functionName
+            _arguments = arguments
+            _argumentCount = argumentCount
+        }
+
+        public function Kind(): i32 { return _inner.Kind() }
+        public function Type(): string { return _inner.Type() }
+        public function FunctionName(): string { return _functionName }
+        public function ArgumentCount(): i32 { return _argumentCount }
+        public function Argument(index: i32): BoundExpression { return _arguments[index] }
+    }
+}

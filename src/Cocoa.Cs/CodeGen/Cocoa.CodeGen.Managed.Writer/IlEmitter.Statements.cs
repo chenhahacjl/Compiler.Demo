@@ -326,7 +326,9 @@ namespace Cocoa.CodeGen.Managed.Writer
 
         private void EmitExpression(IlAssembler il, BoundExpression node)
         {
-            if (node.ConstantValue != null)
+            // 常量局部（let 常量传播）的 VariableExpression 带 ConstantValue，但应发射局部读取
+            //（local 已存储常量值），而非按常量表达式发射——排除后走 EmitVariableExpression。
+            if (node.ConstantValue != null && node.Kind != BoundNodeKind.VariableExpression)
             {
                 EmitConstantExpression(il, node);
                 return;
@@ -416,7 +418,7 @@ namespace Cocoa.CodeGen.Managed.Writer
         private void EmitIsExpression(IlAssembler il, BoundIsExpression node)
         {
             EmitExpression(il, node.Expression);
-            il.Emit(IlOpCodeTable.Get("Isinst"), ToIlType(node.TargetType));
+            il.Emit(IlOpCodeTable.Get("Isinst"), IsInstTypeToken(node.TargetType));
             il.Emit(IlOpCodeTable.Get("Ldnull"));
             il.Emit(IlOpCodeTable.Get("Cgt_Un"));
         }
@@ -425,7 +427,20 @@ namespace Cocoa.CodeGen.Managed.Writer
         private void EmitAsExpression(IlAssembler il, BoundAsExpression node)
         {
             EmitExpression(il, node.Expression);
-            il.Emit(IlOpCodeTable.Get("Isinst"), ToIlType(node.TargetType));
+            il.Emit(IlOpCodeTable.Get("Isinst"), IsInstTypeToken(node.TargetType));
+        }
+
+        /// <summary>isinst 目标 token：值类型/string 用 corlib 装箱 TypeRef（System.Int32/System.String 等，
+        /// 非内联元素类型）；其余引用类型用 ToIlType。</summary>
+        private object IsInstTypeToken(TypeSymbol type)
+        {
+            if (type == TypeSymbol.String)
+            {
+                return _framework.StringType;
+            }
+
+            var boxed = BoxedTypeName(type);
+            return boxed != null ? _framework.RequireType(boxed) : ToIlType(type);
         }
 
         /// <summary>

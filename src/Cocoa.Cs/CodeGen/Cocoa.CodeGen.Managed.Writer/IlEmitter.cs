@@ -332,7 +332,31 @@ namespace Cocoa.CodeGen.Managed.Writer
                 bodies.Add(new ManagedPEWriter.MethodBodyBlob(ctorCode, 0, 1));
             }
 
-            _metadata.AddCustomAttribute(new IlCustomAttribute(_framework.DebuggableAttributeCtor, MetadataBuilder.EncodeDebuggableAttributeBlob()));
+            // 6e-M32 Tier-2：用户 attribute 发射（函数 + 类；字段/属性随类型成员行映射后续扩展）。
+            // 属性类 ctor 为程序集内 MethodDef（CustomAttributeType tag=2）。
+            foreach (var function in orderedFunctions)
+            {
+                if (function.Attributes.IsDefaultOrEmpty || !_methods.ContainsKey(function))
+                {
+                    continue;
+                }
+
+                var parentRow = _metadata.MethodDefRowOf(_methods[function]);
+                EmitSymbolAttributes(function.Attributes, parentRow, parentTag: 0);
+            }
+
+            foreach (var classType in classes)
+            {
+                if (classType.Attributes.IsDefaultOrEmpty || !_classTypeDefs.TryGetValue(classType, out var typeDef))
+                {
+                    continue;
+                }
+
+                var parentRow = _metadata.TypeDefRowOf(typeDef);
+                EmitSymbolAttributes(classType.Attributes, parentRow, parentTag: 2);
+            }
+
+            _metadata.AddCustomAttribute(new IlCustomAttribute(_framework.DebuggableAttributeCtor, MetadataBuilder.EncodeDebuggableAttributeBlob(), parentRow: 1, parentTag: 0x0E, ctorRow: _metadata.GetMemberRefRow(_framework.DebuggableAttributeCtor), ctorTag: 3));
 
             var entryPointToken = program.MainFunction == null ? 0 : _metadata.BuildTokenMap()[_methods[program.MainFunction]];
             var pe = ManagedPEWriter.Build(_moduleName, methods, bodies, _metadata, entryPointToken, target);
@@ -352,6 +376,27 @@ namespace Cocoa.CodeGen.Managed.Writer
         {
             var runtimeConfigPath = Path.ChangeExtension(outputPath, ".runtimeconfig.json");
             File.WriteAllText(runtimeConfigPath, target.GetRuntimeConfigJson());
+        }
+
+        private void EmitSymbolAttributes(ImmutableArray<AttributeSymbol> attributes, int parentRow, int parentTag)
+        {
+            foreach (var attribute in attributes)
+            {
+                var ctorFn = attribute.Type.Methods.FirstOrDefault(m => m.IsConstructor && !m.IsStatic);
+                if (ctorFn == null || !_methods.TryGetValue(ctorFn, out var ctorDef))
+                {
+                    // 外部属性类（非程序集内）ctor → MemberRef 路径暂缺省；程序集内优先
+                    continue;
+                }
+
+                var blob = MetadataBuilder.EncodeAttributeBlob(
+                    attribute.Arguments.Select(a => a.Value).ToArray(),
+                    attribute.Arguments.Select(a => a.Type).ToArray());
+                _metadata.AddCustomAttribute(new IlCustomAttribute(
+                    (IlMethodRef)null!, blob,
+                    parentRow: parentRow, parentTag: parentTag,
+                    ctorRow: _metadata.MethodDefRowOf(ctorDef), ctorTag: 2));
+            }
         }
 
         private void EmitFunctionDeclaration(FunctionSymbol function)

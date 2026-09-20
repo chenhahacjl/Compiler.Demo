@@ -1,0 +1,24 @@
+namespace Cocoa.CodeAnalysis.Binding
+{
+    class BoundExpression
+    {
+        private field _kind: i32
+        private field _type: string
+
+        public constructor(kind: i32, type: string)
+        {
+            _kind = kind
+            _type = type
+        }
+
+        public function Kind(): i32
+        {
+            return _kind
+        }
+
+        public function Type(): string
+        {
+            return _type
+        }
+    }
+}

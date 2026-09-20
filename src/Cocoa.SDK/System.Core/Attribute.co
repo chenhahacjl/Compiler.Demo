@@ -1,0 +1,10 @@
+// Cocoa 系统标准库 · System.Attribute（6e-M32 Tier-2 通用属性基类）
+// 用户自定义属性类以 `class X : Attribute` 声明；用法 `[X]`（XxxAttribute 后缀可省略）。
+// 编译期元数据：属性类自身按普通类（TypeDef）发射，用法进 CustomAttribute 表。
+
+namespace System
+{
+    public class Attribute
+    {
+    }
+}

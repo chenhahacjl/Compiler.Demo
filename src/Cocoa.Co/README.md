@@ -56,9 +56,9 @@ src\Cocoa.Co\
 |------|------|------|
 | 增量一 | 自举 Lexer 对齐（M7-a0…a4：token 面 + 差分 + 三后端 + ≥1MB 护栏 + B0 骨架） | ✅ 完成（2026-09-13） |
 | 增量二 | 自举 Syntax/Parser（M8-a0…a12：递归下降 + 规范树 dump 差分；样例 33/33 全绿、语料 39、无效程序同报错、B0 打印树） | ✅ 完成（2026-09-14） |
-| 增量三 | 自举 Binder（M9-a0…a4：符号声明面 + 局部符号 + 诊断逐字节对齐；15 语料逐字节一致、9 组无效程序条数+文本一致、两遍式前向可见、B0 断言） | ✅ 完成（2026-09-14） |
-| 增量四 | Lowering 降级（if/while→label/goto）+ 绑定树 dump 差分（5 组语料逐字节一致） | ✅ |
-| 增量五 | CodeGen 发射（Native/Il 对称） | ⬜ |
+| 增量三 | 自举 Binder（M9-a0…a5：符号声明面 + 局部符号 + 诊断逐字节对齐；13 语料 byte-for-byte、break/continue/step/嵌套控制流） | ✅ 完成（2026-09-15） |
+| 增量四 | Lowering 降级（if/while/do-while/for-range/break/continue/step + 嵌套）+ 绑定树 dump 差分（13 组语料 byte-for-byte） | ✅ 完成（2026-09-15，并入增量三） |
+| 增量五 | CodeGen 发射（M5-a0…a4：结构化输出 + Interpreter + B0 端到端 + IL 骨架 + Native 骨架） | 🧭 |
 | 结构重组 | Compiler/Cli 程序集拆分 + Backend 项目级声明 + cosln 入口（位置保留 src/Cocoa.Co） | 🔄 本 README 定稿，迁移紧随执行 |
 | 阶段 8 | B0→B1→B2 自举链 + 构建引擎自举 + 命名空间转正 | ⬜ |
 

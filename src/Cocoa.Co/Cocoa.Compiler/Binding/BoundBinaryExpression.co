@@ -1,0 +1,24 @@
+namespace Cocoa.CodeAnalysis.Binding
+{
+    class BoundBinaryExpression
+    {
+        private field _inner: BoundExpression
+        private field _opKind: i32
+        private field _left: BoundExpression
+        private field _right: BoundExpression
+
+        public constructor(opKind: i32, left: BoundExpression, right: BoundExpression, type: string)
+        {
+            _inner = new BoundExpression(BoundNodeKind.BinaryExpression(), type)
+            _opKind = opKind
+            _left = left
+            _right = right
+        }
+
+        public function Kind(): i32 { return _inner.Kind() }
+        public function Type(): string { return _inner.Type() }
+        public function OpKind(): i32 { return _opKind }
+        public function Left(): BoundExpression { return _left }
+        public function Right(): BoundExpression { return _right }
+    }
+}

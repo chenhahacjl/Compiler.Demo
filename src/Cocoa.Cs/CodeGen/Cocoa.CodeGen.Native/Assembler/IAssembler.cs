@@ -34,6 +34,9 @@ namespace Cocoa.CodeGen.Native.Assembler
         byte[] ToArray();
         byte[] GetData();
 
+        /// <summary>rel32 标签 fixup 列表（Offset=当前 Position，Label=目标汇编标签号）——符号化 dump 导出。</summary>
+        System.Collections.Generic.IReadOnlyList<(int Offset, int Label)> LabelFixups { get; }
+
         // 数据段绝对地址重定位（6e-M19 M4a：vtable 槽 → 代码 / 名字指针 → 数据）
         void AddDataCodeFixup(int dataOffset, int label);
         void AddDataDataFixup(int dataOffset, int symbol);

@@ -939,15 +939,20 @@ namespace Cocoa.CodeGen.Native
         /// <summary>M4c：基元/伪记录 vtable（System.Type 对象），typeId=-1 表示自引用头。</summary>
         private LirVirtualRegister EmitPseudoVTable(string fullName)
         {
+            EnsurePseudoVTable(fullName);
+            var vtable = AllocateRegister(LirType.Addr);
+            Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.LeaData, vtable, LirOperand.Data(NativeObjectModel.PseudoVTableKey(fullName))));
+            return vtable;
+        }
+
+        /// <summary>注册伪 vtable 数据项（幂等；box 值类型与 is/as 判定共用）。</summary>
+        private void EnsurePseudoVTable(string fullName)
+        {
             var key = NativeObjectModel.PseudoVTableKey(fullName);
             if (_pseudoVTableKeys.Add(key))
             {
                 _irProgram.AddData(LirDataItem.VTable(key, -1, _irProgram.InternString(fullName), NativeObjectModel.ObjectSlotFunctions));
             }
-
-            var vtable = AllocateRegister(LirType.Addr);
-            Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.LeaData, vtable, LirOperand.Data(key)));
-            return vtable;
         }
 
         /// <summary>类型对应的封装类全名（伪 vtable 名字来源）。</summary>

@@ -1,11 +1,12 @@
-// Cocoa 系统标准库 · System.Core（namespace System）——BCL 存在类型即 facade
+﻿// Cocoa 系统标准库 · System.Core（namespace System）——BCL 存在类型即 facade
 // class Math —— facade：IL 直连 System.Math.*；native/Evaluator 走纯体，Sqrt 走 System.Syscall.MathSyscall
 using System.Syscall
 
 namespace System
 {
     /// <summary>Provides basic mathematical functions and constants.</summary>
-    facade class Math
+    [Facade("System.Math")]
+    class Math
     {
         /// <summary>Returns the larger of two integers.</summary>
         /// <param name="a">The first integer.</param>

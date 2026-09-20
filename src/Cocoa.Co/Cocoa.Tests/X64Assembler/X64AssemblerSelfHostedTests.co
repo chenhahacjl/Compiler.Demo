@@ -1,0 +1,116 @@
+// 自举测试：X64Assembler 编码内核（阶段 7 增量五 M5-a4 续作切片 1）——
+// 指令 → hex 金签，与 C# X64AssemblerEncodingTests 同构（逐字节断言）。
+// 寄存器常数对齐 C# X64Register 枚举：RAX/EAX=0 RCX/ECX=1 RDX/EDX=2 RSP/ESP=4 RBP/EBP=5。
+
+using Cocoa.CodeAnalysis.Syntax
+using Cocoa.CodeAnalysis.Binding
+using Cocoa.CodeGen
+
+namespace Cocoa.CodeAnalysis.Tests
+{
+    class X64AssemblerSelfHostedTests
+    {
+        public static function Run(r: TestRunner): void
+        {
+            CheckPushRet(r)
+            CheckLoadStoreSlots(r)
+            CheckSysCallArgs(r)
+            CheckMoves(r)
+            CheckFrameAndConversion(r)
+        }
+
+        private static function CheckPushRet(r: TestRunner): void
+        {
+            let a = new X64Assembler()
+            a.Push(5) // rbp
+            r.CheckEqual("55", a.Hex(), "X64Asm/push-rbp")
+            let b = new X64Assembler()
+            b.Ret()
+            r.CheckEqual("c3", b.Hex(), "X64Asm/ret")
+        }
+
+        private static function CheckLoadStoreSlots(r: TestRunner): void
+        {
+            // mov rax, qword [rbp-8] → 48 8B 45 F8
+            let a = new X64Assembler()
+            a.MovRegMem(2, 0, 5, -8)
+            r.CheckEqual("488b45f8", a.Hex(), "X64Asm/loadslot-qword")
+
+            // mov qword [rbp-8], rax → 48 89 45 F8
+            let b = new X64Assembler()
+            b.MovMemReg(2, 5, -8, 0)
+            r.CheckEqual("488945f8", b.Hex(), "X64Asm/storeslot-qword")
+
+            // mov dword [rbp-8], eax → 89 45 F8
+            let c = new X64Assembler()
+            c.MovMemReg(1, 5, -8, 0)
+            r.CheckEqual("8945f8", c.Hex(), "X64Asm/storeslot-dword")
+
+            // mov dword [rbp-12], edx → 89 55 F4
+            let d = new X64Assembler()
+            d.MovMemReg(1, 5, -12, 2)
+            r.CheckEqual("8955f4", d.Hex(), "X64Asm/storeslot-high")
+
+            // mov eax, [rbp-0x10] → 8B 45 F0
+            let e = new X64Assembler()
+            e.MovRegMem(1, 0, 5, -16)
+            r.CheckEqual("8b45f0", e.Hex(), "X64Asm/loadslot-dword")
+        }
+
+        private static function CheckSysCallArgs(r: TestRunner): void
+        {
+            // mov rcx, rax → 48 8B C8
+            let a = new X64Assembler()
+            a.MovRegReg(2, 1, 0)
+            r.CheckEqual("488bc8", a.Hex(), "X64Asm/syscall-arg0")
+
+            // mov qword [rsp+0x20], rax → 48 89 44 24 20
+            let b = new X64Assembler()
+            b.MovMemReg(2, 4, 0x20, 0)
+            r.CheckEqual("4889442420", b.Hex(), "X64Asm/syscall-arg5")
+        }
+
+        private static function CheckMoves(r: TestRunner): void
+        {
+            // mov eax, 0 → B8 00 00 00 00
+            let a = new X64Assembler()
+            a.MovRegImm(1, 0, 0)
+            r.CheckEqual("b800000000", a.Hex(), "X64Asm/mov-dword-imm")
+
+            // movabs rax, 0x123456789 → 48 B8 89 67 45 23 01 00 00 00
+            let b = new X64Assembler()
+            b.MovRegImm64(0, 0x123456789)
+            r.CheckEqual("48b88967452301000000", b.Hex(), "X64Asm/movabs-imm64")
+
+            // movsxd rax, eax → 48 63 C0
+            let c = new X64Assembler()
+            c.Movsxd(0, 0)
+            r.CheckEqual("4863c0", c.Hex(), "X64Asm/movsxd")
+        }
+
+        private static function CheckFrameAndConversion(r: TestRunner): void
+        {
+            // sub rsp, 0x30 → 48 83 EC 30
+            let a = new X64Assembler()
+            a.SubRegImm(2, 4, 0x30)
+            r.CheckEqual("4883ec30", a.Hex(), "X64Asm/sub-rsp")
+
+            // cqo → 48 99
+            let b = new X64Assembler()
+            b.Cqo()
+            r.CheckEqual("4899", b.Hex(), "X64Asm/cqo")
+
+            // movzx eax, al（byte 源不设 REX；0F B6 目标 r32 自动清高 32）→ 0F B6 C0
+            let c = new X64Assembler()
+            c.MovzxRegReg(0, 0, 0)
+            r.CheckEqual("0fb6c0", c.Hex(), "X64Asm/movzx-byte")
+
+            // jcc Equal L0 → 0F 84 00 00 00 00（rel32 占位）
+            let d = new X64Assembler()
+            let l = d.CreateLabel()
+            d.MarkLabel(l)
+            d.Jcc(0, l)
+            r.CheckEqual("0f8400000000", d.Hex(), "X64Asm/jcc-eq")
+        }
+    }
+}

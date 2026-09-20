@@ -1,0 +1,175 @@
+// Cocoa 自举测试迷你断言框架 —— 阶段 7 增量五（M5-b0）：
+// Cocoa 无 enum/静态字段/继承，用实例类 + Main 持有；CheckEqual/CheckTrue 记录失败，Summary 汇总。
+// 双轨运行：C# 引导（编译 .co → Evaluator 跑，断言退出码）+ cocoa build/run（native exe）。
+
+namespace Cocoa.CodeAnalysis.Tests
+{
+    class TestRunner
+    {
+        private field _passCount: i32
+        private field _failCount: i32
+        private field _failures: string[]
+        private field _failureCount: i32
+        private field _testNames: string[]
+        private field _testCount: i32
+
+        public constructor()
+        {
+            _passCount = 0
+            _failCount = 0
+            _failures = new string[16]
+            _failureCount = 0
+            _testNames = new string[16]
+            _testCount = 0
+        }
+
+        public function PassCount(): i32
+        {
+            return _passCount
+        }
+
+        public function FailCount(): i32
+        {
+            return _failCount
+        }
+
+        public function FailureCount(): i32
+        {
+            return _failureCount
+        }
+
+        public function FailureAt(index: i32): string
+        {
+            return _failures[index]
+        }
+
+        public function HasFailures(): bool
+        {
+            return _failCount > 0
+        }
+
+        public function CheckTrue(cond: bool, label: string): void
+        {
+            if cond
+            {
+                _passCount = _passCount + 1
+            }
+            else
+            {
+                RecordFailure(label, "expected true, got false")
+            }
+        }
+
+        public function CheckEqual(expected: string, actual: string, label: string): void
+        {
+            if expected == actual
+            {
+                _passCount = _passCount + 1
+            }
+            else
+            {
+                RecordFailure(label, "expected [" + expected + "] got [" + actual + "]")
+            }
+        }
+
+        public function CheckEqualI32(expected: i32, actual: i32, label: string): void
+        {
+            if expected == actual
+            {
+                _passCount = _passCount + 1
+            }
+            else
+            {
+                RecordFailure(label, "expected " + string(expected) + " got " + string(actual))
+            }
+        }
+
+        /// <summary>登记已运行的 [Test] 函数名（覆盖校验用）。</summary>
+        public function RegisterTest(name: string): void
+        {
+            if _testCount >= _testNames.Length
+            {
+                var bigger = new string[_testNames.Length * 2]
+                var i = 0
+                while i < _testCount
+                {
+                    bigger[i] = _testNames[i]
+                    i = i + 1
+                }
+
+                _testNames = bigger
+            }
+
+            _testNames[_testCount] = name
+            _testCount = _testCount + 1
+        }
+
+        /// <summary>发现/运行一致性：断言每个已发现 [Test] 函数名都被登记运行。</summary>
+        public function CheckTestCoverage(discoveredNames: string[], discoveredCount: i32): void
+        {
+            var i = 0
+            while i < discoveredCount
+            {
+                if !HasRegistered(discoveredNames[i])
+                {
+                    RecordFailure("TestCoverage", "已发现但未运行: " + discoveredNames[i])
+                }
+
+                i = i + 1
+            }
+        }
+
+        private function HasRegistered(name: string): bool
+        {
+            var i = 0
+            while i < _testCount
+            {
+                if _testNames[i] == name
+                {
+                    return true
+                }
+
+                i = i + 1
+            }
+
+            return false
+        }
+
+        private function RecordFailure(label: string, detail: string): void
+        {
+            _failCount = _failCount + 1
+            if _failureCount >= _failures.Length
+            {
+                var bigger = new string[_failures.Length * 2]
+                var i = 0
+                while i < _failureCount
+                {
+                    bigger[i] = _failures[i]
+                    i = i + 1
+                }
+
+                _failures = bigger
+            }
+
+            _failures[_failureCount] = label + ": " + detail
+            _failureCount = _failureCount + 1
+        }
+
+        public function Summary(): string
+        {
+            var sb = "PASS: " + string(_passCount) + "  FAIL: " + string(_failCount)
+            if _failureCount > 0
+            {
+                sb = sb + "\n"
+                var i = 0
+                while i < _failureCount
+                {
+                    sb = sb + "FAIL " + _failures[i] + "\n"
+                    i = i + 1
+                }
+            }
+
+            return sb
+        }
+    }
+}

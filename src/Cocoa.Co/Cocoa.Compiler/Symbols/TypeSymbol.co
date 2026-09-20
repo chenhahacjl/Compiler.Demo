@@ -1,0 +1,107 @@
+namespace Cocoa.CodeAnalysis.Symbols
+{
+    class TypeSymbol
+    {
+        private field _name: string
+        private field _elementType: TypeSymbol
+
+        public constructor()
+        {
+            _name = ""
+            _elementType = null
+        }
+
+        // ── 静态单例（对齐 C# TypeSymbol 22 个）──
+        public static function Error(): TypeSymbol { return TypeSymbol.CreateSpecial("?") }
+        public static function Any(): TypeSymbol { return TypeSymbol.CreateSpecial("any") }
+        public static function Null(): TypeSymbol { return TypeSymbol.CreateSpecial("null") }
+        public static function Boolean(): TypeSymbol { return TypeSymbol.CreateSpecial("bool") }
+        public static function Int8(): TypeSymbol { return TypeSymbol.CreateSpecial("sbyte") }
+        public static function Int16(): TypeSymbol { return TypeSymbol.CreateSpecial("short") }
+        public static function Int32(): TypeSymbol { return TypeSymbol.CreateSpecial("int") }
+        public static function Int64(): TypeSymbol { return TypeSymbol.CreateSpecial("long") }
+        public static function UInt8(): TypeSymbol { return TypeSymbol.CreateSpecial("byte") }
+        public static function UInt16(): TypeSymbol { return TypeSymbol.CreateSpecial("ushort") }
+        public static function UInt32(): TypeSymbol { return TypeSymbol.CreateSpecial("uint") }
+        public static function UInt64(): TypeSymbol { return TypeSymbol.CreateSpecial("ulong") }
+        public static function Float(): TypeSymbol { return TypeSymbol.CreateSpecial("float") }
+        public static function Double(): TypeSymbol { return TypeSymbol.CreateSpecial("double") }
+        public static function Char(): TypeSymbol { return TypeSymbol.CreateSpecial("char") }
+        public static function String(): TypeSymbol { return TypeSymbol.CreateSpecial("string") }
+        public static function Void(): TypeSymbol { return TypeSymbol.CreateSpecial("void") }
+
+        private static function CreateSpecial(name: string): TypeSymbol
+        {
+            var t = new TypeSymbol()
+            t._name = name
+            t._elementType = null
+            return t
+        }
+
+        public static function Create(name: string): TypeSymbol
+        {
+            var t = new TypeSymbol()
+            t._name = name
+            t._elementType = null
+            return t
+        }
+
+        public static function ArrayOf(elementType: TypeSymbol): TypeSymbol
+        {
+            var t = new TypeSymbol()
+            t._name = elementType._name + "[]"
+            t._elementType = elementType
+            return t
+        }
+
+        public function Name(): string
+        {
+            return _name
+        }
+
+        public function ElementType(): TypeSymbol
+        {
+            return _elementType
+        }
+
+        public function IsArray(): bool
+        {
+            return _elementType != null
+        }
+
+        public function IsPrimitiveValueType(): bool
+        {
+            return _name == "int" || _name == "long" || _name == "double" ||
+                   _name == "bool" || _name == "char" || _name == "sbyte" ||
+                   _name == "short" || _name == "byte" || _name == "ushort" ||
+                   _name == "uint" || _name == "ulong" || _name == "float"
+        }
+
+        public function IsValueType(): bool
+        {
+            return IsPrimitiveValueType()
+        }
+
+        public function IsInteger(): bool
+        {
+            return _name == "sbyte" || _name == "short" || _name == "int" ||
+                   _name == "long" || _name == "byte" || _name == "ushort" ||
+                   _name == "uint" || _name == "ulong"
+        }
+
+        public function IsFloat(): bool
+        {
+            return _name == "float" || _name == "double"
+        }
+
+        public function IsNumeric(): bool
+        {
+            return IsInteger() || IsFloat()
+        }
+
+        public function Describe(): string
+        {
+            return _name
+        }
+    }
+}

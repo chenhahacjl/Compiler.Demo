@@ -66,7 +66,7 @@ namespace Cocoa.Tests.CodeAnalysis
             "let b = x is T\nlet c = a as T\nlet d = e ?? f\n",
             "let arr = new string[] {\"x\", \"y\"}\n",
             "class Point\n{\n    public field X: i32\n    public field Y: i32\n    public function Distance(p: Point): f64\n    {\n        return 0\n    }\n}\n",
-            "using System\nusing MiniLexer\n\nfunction Main()\n{\n    print(1)\n}\n",
+            "using System\nusing Cocoa.CodeAnalysis.Syntax\n\nfunction Main()\n{\n    print(1)\n}\n",
             "using System.Collections.Generic\n\nlet items = new List<i32>()\n",
             "let p = new Point()\n",
             "using System\nfunction Main()\n{\n    Console.WriteLine(Greeting(\"Cocoa\"))\n    Console.WriteLine(Sum(20, 22))\n}\n",
@@ -152,7 +152,7 @@ namespace Cocoa.Tests.CodeAnalysis
                 "let b = x is T\nlet c = a as T\nlet d = e ?? f\n",
                 "let arr = new string[] {\"x\", \"y\"}\n",
                 "class Point\n{\n    public field X: i32\n    public field Y: i32\n    public function Distance(p: Point): f64\n    {\n        return 0\n    }\n}\n",
-                "using System\nusing MiniLexer\n\nfunction Main()\n{\n    print(1)\n}\n",
+                "using System\nusing Cocoa.CodeAnalysis.Syntax\n\nfunction Main()\n{\n    print(1)\n}\n",
                 "using System.Collections.Generic\n\nlet items = new List<i32>()\n",
                 "function Main()\n{\n    var total = 0\n    for var i = 1 to 5\n    {\n        if i == 3\n        {\n            continue\n        }\n        total = total + i\n    }\n}\n",
             "using System\nfunction Main()\n{\n    var buf: u8[] = new u8[3]\n    buf[0] = 200\n    buf[1] = 0xFF\n    Console.WriteLine(0xFF)\n}\n",
@@ -273,7 +273,7 @@ namespace Cocoa.Tests.CodeAnalysis
 
         private static string MainSource(string embedded)
         {
-            return "using MiniParser\nusing System\n\nfunction Main(): i32\n{\n    let p = MiniParser.Parser.Create(\"" + embedded + "\")\n    let root = p.ParseCompilationUnit()\n    System.Console.WriteLine(root.Dump())\n    var i = 0\n    while i < p.DiagnosticCount()\n    {\n        System.Console.WriteLine(p.DiagnosticAt(i))\n        i = i + 1\n    }\n\n    return 0\n}";
+            return "using Cocoa.CodeAnalysis.Syntax\nusing System\n\nfunction Main(): i32\n{\n    let p = Cocoa.CodeAnalysis.Syntax.Parser.Create(\"" + embedded + "\")\n    let root = p.ParseCompilationUnit()\n    System.Console.WriteLine(root.Dump())\n    var i = 0\n    while i < p.DiagnosticCount()\n    {\n        System.Console.WriteLine(p.DiagnosticAt(i))\n        i = i + 1\n    }\n\n    return 0\n}";
         }
 
         private static string[] References() => new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location };

@@ -9,7 +9,7 @@
 //   String/VerbatimString/RawString/InterpolatedString/Char/Symbol/Error/EOF。
 // 依赖：string.substring(start, length)（特殊成员，跨三后端）、Char.* 成员面、System.Console。
 
-namespace MiniLexer
+namespace Cocoa.CodeAnalysis.Syntax
 {
     class Lexer
     {
@@ -1134,7 +1134,6 @@ namespace MiniLexer
             if text == "public" { return true }
             if text == "private" { return true }
             if text == "where" { return true }
-            if text == "facade" { return true }
             if text == "throw" { return true }
             if text == "try" { return true }
             if text == "catch" { return true }

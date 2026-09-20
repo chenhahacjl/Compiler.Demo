@@ -1,0 +1,426 @@
+// Cocoa 自举 CodeGen · PE 镜像组装器（阶段 7 增量五 M5-a5 批 1）——
+// 镜像 C# Cocoa.CodeGen.PE.PeImageBuilder/PeHeaders/PeConstants（netcore PE32+ 先行）。
+// 输出 byte[]（i32[] 缓冲，0-255）。无 record struct/Span → 缓冲写入器 + 固定偏移。
+
+namespace Cocoa.CodeGen
+{
+    class PeSectionSpec
+    {
+        public field Name: string
+        public field RawData: i32[]
+        public field VirtualAddress: i32
+        public field Characteristics: i32
+
+        public constructor(name: string, raw: i32[], va: i32, chars: i32)
+        {
+            Name = name
+            RawData = raw
+            VirtualAddress = va
+            Characteristics = chars
+        }
+    }
+
+    class PeImageConfig
+    {
+        public field Machine: i32
+        public field ImageBase: i64
+        public field Subsystem: i32
+        public field DllCharacteristics: i32
+        public field AddressOfEntryPoint: i32
+        public field SectionAlignment: i32
+        public field FileAlignment: i32
+        public field SizeOfHeaders: i32
+        public field MajorOs: i32
+        public field MinorOs: i32
+        public field MajorSub: i32
+        public field MinorSub: i32
+        public field FileCharsOverride: i32
+
+        public constructor(machine: i32, imageBase: i64, subsystem: i32, dllChars: i32, entry: i32)
+        {
+            Machine = machine
+            ImageBase = imageBase
+            Subsystem = subsystem
+            DllCharacteristics = dllChars
+            AddressOfEntryPoint = entry
+            SectionAlignment = 0x1000
+            FileAlignment = 0x200
+            SizeOfHeaders = 0x400
+            MajorOs = 6
+            MinorOs = 0
+            MajorSub = 6
+            MinorSub = 0
+            FileCharsOverride = 0
+        }
+    }
+
+    class PeImageBuilder
+    {
+        private static function DosHeaderSize(): i32
+        {
+            return 64
+        }
+
+        private static function DosStubSize(): i32
+        {
+            return 0x40
+        }
+
+        public static function Build(config: PeImageConfig, sections: PeSectionSpec[], sectionCount: i32, directories: PeDirEntry[]): i32[]
+        {
+            var headers = BuildHeaders(config, sections, sectionCount, directories)
+            let sizeOfHeaders = config.SizeOfHeaders
+
+            // raw 布局
+            var rawSizes = new i32[sectionCount]
+            var rawOffsets = new i32[sectionCount]
+            var rawOffset = sizeOfHeaders
+            var i = 0
+            while i < sectionCount
+            {
+                var rawSize = AlignI32(headers.Length - sizeOfHeaders + 1, config.FileAlignment)
+                rawSize = AlignI32(sections[i].RawData.Length, config.FileAlignment)
+                rawSizes[i] = rawSize
+                rawOffsets[i] = rawOffset
+                rawOffset = rawOffset + rawSize
+                i = i + 1
+            }
+
+            var image = new i32[rawOffset]
+            var h = 0
+            while h < headers.Length
+            {
+                image[h] = headers[h]
+                h = h + 1
+            }
+
+            var s = 0
+            while s < sectionCount
+            {
+                var k = 0
+                while k < sections[s].RawData.Length
+                {
+                    image[rawOffsets[s] + k] = sections[s].RawData[k]
+                    k = k + 1
+                }
+
+                s = s + 1
+            }
+
+            return image
+        }
+
+        private static function BuildHeaders(config: PeImageConfig, sections: PeSectionSpec[], sectionCount: i32, directories: PeDirEntry[]): i32[]
+        {
+            let sizeOfHeaders = config.SizeOfHeaders
+            var headers = new i32[sizeOfHeaders]
+
+            // DOS 头（64B）
+            WriteU16(headers, 0, 0x5A4D)          // MZ
+            WriteU16(headers, 2, 0x90)
+            WriteU16(headers, 4, 1)
+            WriteU16(headers, 6, 0)
+            WriteU16(headers, 8, 4)
+            WriteU16(headers, 10, 0)
+            WriteU16(headers, 12, 0xFFFF)
+            WriteU16(headers, 14, 0)
+            WriteU16(headers, 16, 0xB8)
+            WriteU16(headers, 18, 0)
+            WriteU16(headers, 20, 0)
+            WriteU16(headers, 22, 0)
+            WriteU16(headers, 24, 0x40)
+            WriteU16(headers, 26, 0)
+            // ERes8 28..35 zero；EOemid 36；EOeminfo 38
+            WriteU16(headers, 36, 0)
+            WriteU16(headers, 38, 0)
+            // ERes2 40..59 zero
+            WriteI32(headers, 60, 0x80)           // e_lfanew
+
+            // DOS stub（0x40..0x80）
+            WriteDosStub(headers, 64)
+
+            // PE 签名 @ 0x80
+            headers[0x80] = 0x50
+            headers[0x81] = 0x45
+            headers[0x82] = 0
+            headers[0x83] = 0
+
+            // COFF 头 @ 0x84（20B）
+            let machine = config.Machine
+            WriteU16(headers, 0x84, machine)
+            WriteU16(headers, 0x86, sectionCount)
+            WriteU32(headers, 0x88, 0)   // TimeDateStamp
+            WriteU32(headers, 0x8C, 0)   // PointerToSymbolTable
+            WriteU32(headers, 0x90, 0)   // NumberOfSymbols
+            let pe32 = machine == 0x014C
+            let optionalSize = pe32 ? 96 + 16 * 8 : 112 + 16 * 8
+            WriteU16(headers, 0x94, optionalSize)
+            let chars = config.FileCharsOverride != 0 ? config.FileCharsOverride : (0x0022 /*Executable|LargeAddress*/)
+            WriteU16(headers, 0x96, chars)
+
+            // 可选头 @ 0x98
+            var lastSectionEndU32 = 0
+            var sizeOfCode = 0
+            var baseOfCode = 0
+            var sizeOfInitData = 0
+            var i = 0
+            while i < sectionCount
+            {
+                var ve = sections[i].VirtualAddress + sections[i].RawData.Length
+                if ve > lastSectionEndU32
+                {
+                    lastSectionEndU32 = ve
+                }
+
+                if (sections[i].Characteristics & 0x20) != 0
+                {
+                    if baseOfCode == 0
+                    {
+                        baseOfCode = sections[i].VirtualAddress
+                    }
+
+                    sizeOfCode = sizeOfCode + AlignU32(sections[i].RawData.Length, config.FileAlignment)
+                }
+                else if (sections[i].Characteristics & 0x40) != 0
+                {
+                    if baseOfCode == 0
+                    {
+                        baseOfCode = sections[i].VirtualAddress
+                    }
+
+                    sizeOfInitData = sizeOfInitData + AlignU32(sections[i].RawData.Length, config.FileAlignment)
+                }
+
+                i = i + 1
+            }
+
+            let optionalOffset = 0x98
+            if !pe32
+            {
+                WriteU16(headers, optionalOffset, 0x20B)   // Pe32Plus
+                headers[optionalOffset + 2] = 9            // MajorLinker
+                headers[optionalOffset + 3] = 0
+                WriteU32(headers, optionalOffset + 4, sizeOfCode)
+                WriteU32(headers, optionalOffset + 8, sizeOfInitData)
+                WriteU32(headers, optionalOffset + 12, 0)
+                WriteU32(headers, optionalOffset + 16, config.AddressOfEntryPoint)
+                WriteU32(headers, optionalOffset + 20, baseOfCode)
+                WriteI64(headers, optionalOffset + 24, config.ImageBase)
+                WriteU32(headers, optionalOffset + 32, config.SectionAlignment)
+                WriteU32(headers, optionalOffset + 36, config.FileAlignment)
+                WriteU16(headers, optionalOffset + 40, config.MajorOs)
+                WriteU16(headers, optionalOffset + 42, config.MinorOs)
+                WriteU16(headers, optionalOffset + 44, 0)
+                WriteU16(headers, optionalOffset + 46, 0)
+                WriteU16(headers, optionalOffset + 48, config.MajorSub)
+                WriteU16(headers, optionalOffset + 50, config.MinorSub)
+                WriteU32(headers, optionalOffset + 52, 0)
+                WriteU32(headers, optionalOffset + 56, AlignU32(lastSectionEndU32, config.SectionAlignment))
+                WriteU32(headers, optionalOffset + 60, config.SizeOfHeaders)
+                WriteU32(headers, optionalOffset + 64, 0)
+                WriteU16(headers, optionalOffset + 68, config.Subsystem)
+                WriteU16(headers, optionalOffset + 70, config.DllCharacteristics)
+                WriteI64(headers, optionalOffset + 72, 0x100000)
+                WriteI64(headers, optionalOffset + 80, 0x20000)
+                WriteI64(headers, optionalOffset + 88, 0x100000)
+                WriteI64(headers, optionalOffset + 96, 0x1000)
+                WriteU32(headers, optionalOffset + 104, 0)
+                WriteU32(headers, optionalOffset + 108, 16)
+            }
+            else
+            {
+                WriteU16(headers, optionalOffset, 0x10B)   // Pe32
+                headers[optionalOffset + 2] = 9
+                headers[optionalOffset + 3] = 0
+                WriteU32(headers, optionalOffset + 4, sizeOfCode)
+                WriteU32(headers, optionalOffset + 8, sizeOfInitData)
+                WriteU32(headers, optionalOffset + 12, 0)
+                WriteU32(headers, optionalOffset + 16, config.AddressOfEntryPoint)
+                WriteU32(headers, optionalOffset + 20, baseOfCode)
+                WriteU32(headers, optionalOffset + 24, baseOfCode)   // BaseOfData（粗略）
+                WriteU32(headers, optionalOffset + 28, I32FromI64(config.ImageBase))
+                WriteU32(headers, optionalOffset + 32, config.SectionAlignment)
+                WriteU32(headers, optionalOffset + 36, config.FileAlignment)
+                WriteU16(headers, optionalOffset + 40, config.MajorOs)
+                WriteU16(headers, optionalOffset + 42, config.MinorOs)
+                WriteU16(headers, optionalOffset + 44, 0)
+                WriteU16(headers, optionalOffset + 46, 0)
+                WriteU16(headers, optionalOffset + 48, config.MajorSub)
+                WriteU16(headers, optionalOffset + 50, config.MinorSub)
+                WriteU32(headers, optionalOffset + 52, 0)
+                WriteU32(headers, optionalOffset + 56, AlignU32(lastSectionEndU32, config.SectionAlignment))
+                WriteU32(headers, optionalOffset + 60, config.SizeOfHeaders)
+                WriteU32(headers, optionalOffset + 64, 0)
+                WriteU16(headers, optionalOffset + 68, config.Subsystem)
+                WriteU16(headers, optionalOffset + 70, config.DllCharacteristics)
+                WriteU32(headers, optionalOffset + 72, 0x100000)
+                WriteU32(headers, optionalOffset + 76, 0x20000)
+                WriteU32(headers, optionalOffset + 80, 0x100000)
+                WriteU32(headers, optionalOffset + 84, 0x1000)
+                WriteU32(headers, optionalOffset + 88, 0)
+                WriteU32(headers, optionalOffset + 92, 16)
+            }
+
+            // 数据目录（16 项 × 8B）
+            var dirsStart = optionalOffset + (pe32 ? 96 : 112)
+            var d = 0
+            while d < 16
+            {
+                WriteU32(headers, dirsStart + d * 8, 0)
+                WriteU32(headers, dirsStart + d * 8 + 4, 0)
+                d = d + 1
+            }
+
+            var di = 0
+            while di < directories.Length
+            {
+                let dir = directories[di]
+                if dir.Entry >= 0 && dir.Entry < 16
+                {
+                    WriteU32(headers, dirsStart + dir.Entry * 8, dir.Rva)
+                    WriteU32(headers, dirsStart + dir.Entry * 8 + 4, dir.Size)
+                }
+
+                di = di + 1
+            }
+
+            // 节表 @ optionalOffset + optionalSize
+            var sectionTable = optionalOffset + optionalSize
+            var si = 0
+            while si < sectionCount
+            {
+                let sec = sections[si]
+                // name 8B
+                var k = 0
+                while k < 8
+                {
+                    headers[sectionTable + si * 40 + k] = k < sec.Name.Length ? i32(sec.Name[k]) : 0
+                    k = k + 1
+                }
+
+                WriteU32(headers, sectionTable + si * 40 + 8, sec.RawData.Length)
+                WriteU32(headers, sectionTable + si * 40 + 12, sec.VirtualAddress)
+                WriteU32(headers, sectionTable + si * 40 + 16, AlignU32(sec.RawData.Length, config.FileAlignment))
+                var rawOff = config.SizeOfHeaders
+                var j = 0
+                while j < si
+                {
+                    rawOff = rawOff + AlignU32(sections[j].RawData.Length, config.FileAlignment)
+                    j = j + 1
+                }
+
+                WriteU32(headers, sectionTable + si * 40 + 20, rawOff)
+                WriteU32(headers, sectionTable + si * 40 + 24, 0)
+                WriteU32(headers, sectionTable + si * 40 + 28, 0)
+                WriteU16(headers, sectionTable + si * 40 + 32, 0)
+                WriteU16(headers, sectionTable + si * 40 + 34, 0)
+                WriteU32(headers, sectionTable + si * 40 + 36, sec.Characteristics)
+                si = si + 1
+            }
+
+            return headers
+        }
+
+        private static function WriteDosStub(headers: i32[], offset: i32): void
+        {
+            var stub = new i32[64]
+            stub[0] = 0x0E
+            stub[1] = 0x1F
+            stub[2] = 0xBA
+            stub[3] = 0x0E
+            stub[4] = 0x00
+            stub[5] = 0xB4
+            stub[6] = 0x09
+            stub[7] = 0xCD
+            stub[8] = 0x21
+            stub[9] = 0xB8
+            stub[10] = 0x01
+            stub[11] = 0x4C
+            stub[12] = 0xCD
+            stub[13] = 0x21
+            // "This program cannot be run in DOS mode.\r\r\n$"
+            var msg = "This program cannot be run in DOS mode."
+            var m = 0
+            while m < msg.Length
+            {
+                stub[14 + m] = i32(msg[m])
+                m = m + 1
+            }
+
+            stub[14 + msg.Length] = 13
+            stub[14 + msg.Length + 1] = 13
+            stub[14 + msg.Length + 2] = 10
+            stub[14 + msg.Length + 3] = 0x24
+
+            var i = 0
+            while i < 62
+            {
+                headers[offset + i] = stub[i]
+                i = i + 1
+            }
+        }
+
+        private static function AlignU32(value: i32, alignment: i32): i32
+        {
+            var rem = value % alignment
+            return rem == 0 ? value : value + alignment - rem
+        }
+
+        private static function AlignI32(value: i32, alignment: i32): i32
+        {
+            var rem = value % alignment
+            return rem == 0 ? value : value + alignment - rem
+        }
+
+        private static function I32FromI64(v: i64): i32
+        {
+            return i32(v)
+        }
+
+        private static function WriteU16(b: i32[], off: i32, v: i32): void
+        {
+            b[off] = v & 0xff
+            b[off + 1] = (v >> 8) & 0xff
+        }
+
+        private static function WriteU32(b: i32[], off: i32, v: i32): void
+        {
+            b[off] = v & 0xff
+            b[off + 1] = (v >> 8) & 0xff
+            b[off + 2] = (v >> 16) & 0xff
+            b[off + 3] = (v >> 24) & 0xff
+        }
+
+        private static function WriteI32(b: i32[], off: i32, v: i32): void
+        {
+            b[off] = v & 0xff
+            b[off + 1] = (v >> 8) & 0xff
+            b[off + 2] = (v >> 16) & 0xff
+            b[off + 3] = (v >> 24) & 0xff
+        }
+
+        private static function WriteI64(b: i32[], off: i32, v: i64): void
+        {
+            var i = 0
+            while i < 8
+            {
+                b[off + i] = i32((v >> (i * 8)) & 0xff)
+                i = i + 1
+            }
+        }
+    }
+
+    class PeDirEntry
+    {
+        public field Entry: i32
+        public field Rva: i32
+        public field Size: i32
+
+        public constructor(entry: i32, rva: i32, size: i32)
+        {
+            Entry = entry
+            Rva = rva
+            Size = size
+        }
+    }
+}

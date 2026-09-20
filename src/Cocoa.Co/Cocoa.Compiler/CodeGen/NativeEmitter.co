@@ -1,0 +1,973 @@
+// Cocoa 自举 CodeGen · Native 发射器（阶段 7 增量五 M5-a4）——
+// 绑定树（自举 Binder Node 树，Lowerer 输出 goto/label/conditionalgoto 形态）→ LIR 文本
+// （对齐 C# LirPrinter.Format 逐字节：FUNCTION / bbN: #Lx / 指令 / terminator）。
+// 本轮范围：顶层用户函数直线 + 控制流 + i32 算术/比较/一元 + 用户函数调用。
+// 关键对齐事实（源码镜像 C# MirToLir + LirFunction.BuildBlocks + LirPrinter.Format）：
+//   - 寄存器全局递增（跨用户函数共享分配器）；函数体参数直映射 v 寄存器
+//   - 标签 id：0 预留给函数尾（EndLabelId），后续按「首次 GetLabel 出现顺序」从 1 起递增
+//   - 每函数先 stackcheck，再 initparam（x64 每参 8 字节槽）
+//   - 语句以 Label/Jmp/Jcc/Ret 切基本块：= C# BuildBlocks 规则
+// 差分基准：C# EmitNative + COCOA_DUMP_IR → LirPrinter.Format(program)（用户函数段）。
+
+using Cocoa.CodeAnalysis.Syntax
+using Cocoa.CodeAnalysis.Binding
+
+namespace Cocoa.CodeGen
+{
+    class NativeEmitter
+    {
+        // 扁平指令流（结构化条目），末尾 BuildBlocks 切块后进入 _lines
+        private field _op: string[]        // "ins" / "label" / "jmp" / "jcc" / "ret"
+        private field _text: string[]      // 指令行正文（不含块前缀）
+        private field _entryCount: i32
+
+        // 最终格式化输出
+        private field _lines: string[]
+        private field _lineCount: i32
+
+        // 寄存器（跨函数全局递增）
+        private field _regCount: i32
+
+        // 标签惰性分配：名字 → id（0 预留给函数尾，1 起按首次出现）
+        private field _labelNames: string[]
+        private field _labelIds: i32[]
+        private field _labelCount: i32
+
+        // 参数/局部变量 → 寄存器映射
+        private field _localNames: string[]
+        private field _localRegs: i32[]
+        private field _localCount: i32
+
+        // 常量折叠（let 常量登记）
+        private field _constantNames: string[]
+        private field _constantValues: Value[]
+        private field _constantCount: i32
+
+        // 用户函数名表（call 目标）
+        private field _methodNames: string[]
+        private field _methodCount: i32
+
+        // M5-a4 续作：每函数寄存器登记表（AllocReg 追加，EmitFunction 重置）——LirToAssembler 槽分配面
+        private field _fnRegs: i32[]
+        private field _fnRegCount: i32
+        private field _fnReturnSize: i32
+        private field _isEntry: bool
+        private field _fnName: string
+
+        public constructor()
+        {
+            _op = new string[256]
+            _text = new string[256]
+            _entryCount = 0
+            _lines = new string[256]
+            _lineCount = 0
+            _regCount = 0
+            _labelNames = new string[32]
+            _labelIds = new i32[32]
+            _labelCount = 0
+            _localNames = new string[64]
+            _localRegs = new i32[64]
+            _localCount = 0
+            _constantNames = new string[32]
+            _constantValues = new Value[32]
+            _constantCount = 0
+            _methodNames = new string[16]
+            _methodCount = 0
+            _fnRegs = new i32[64]
+            _fnRegCount = 0
+            _fnReturnSize = 0
+            _isEntry = false
+            _fnName = ""
+            _insBuf = new string[64]
+            _insBufCount = 0
+            _blockLabelCounter = 0
+        }
+
+        public function SetMethods(names: string[], count: i32): void
+        {
+            _methodNames = names
+            _methodCount = count
+        }
+
+        public function RegisterCount(): i32
+        {
+            return _regCount
+        }
+
+        public function Count(): i32
+        {
+            return _lineCount
+        }
+
+        public function Line(i: i32): string
+        {
+            return _lines[i]
+        }
+
+        private function AddEntry(op: string, text: string): void
+        {
+            if _entryCount >= _op.Length
+            {
+                var o = new string[_op.Length * 2]
+                var t = new string[_text.Length * 2]
+                var i = 0
+                while i < _entryCount
+                {
+                    o[i] = _op[i]
+                    t[i] = _text[i]
+                    i = i + 1
+                }
+
+                _op = o
+                _text = t
+            }
+
+            _op[_entryCount] = op
+            _text[_entryCount] = text
+            _entryCount = _entryCount + 1
+        }
+
+        // ---- 寄存器 / 局部 ----
+
+        private function AllocReg(): i32
+        {
+            let r = _regCount
+            _regCount = _regCount + 1
+            if _fnRegCount >= _fnRegs.Length
+            {
+                var nr = new i32[_fnRegs.Length * 2]
+                var i = 0
+                while i < _fnRegCount
+                {
+                    nr[i] = _fnRegs[i]
+                    i = i + 1
+                }
+
+                _fnRegs = nr
+            }
+
+            _fnRegs[_fnRegCount] = r
+            _fnRegCount = _fnRegCount + 1
+            return r
+        }
+
+        // ---- LirToAssembler 输入面（M5-a4 续作）----
+
+        public function OpCount(): i32
+        {
+            return _entryCount
+        }
+
+        public function OpKind(i: i32): string
+        {
+            return _op[i]
+        }
+
+        public function OpText(i: i32): string
+        {
+            return _text[i]
+        }
+
+        public function FnRegCount(): i32
+        {
+            return _fnRegCount
+        }
+
+        public function FnRegId(k: i32): i32
+        {
+            return _fnRegs[k]
+        }
+
+        private function RegName(r: i32): string
+        {
+            return "v" + string(r)
+        }
+
+        private function LocalIndex(name: string): i32
+        {
+            var i = 0
+            while i < _localCount
+            {
+                if _localNames[i] == name
+                {
+                    return _localRegs[i]
+                }
+
+                i = i + 1
+            }
+
+            return -1
+        }
+
+        private function AllocLocal(name: string): i32
+        {
+            let idx = LocalIndex(name)
+            if idx >= 0
+            {
+                return idx
+            }
+
+            let r = AllocReg()
+            if _localCount >= _localNames.Length
+            {
+                var nn = new string[_localNames.Length * 2]
+                var nr = new i32[_localRegs.Length * 2]
+                var i = 0
+                while i < _localCount
+                {
+                    nn[i] = _localNames[i]
+                    nr[i] = _localRegs[i]
+                    i = i + 1
+                }
+
+                _localNames = nn
+                _localRegs = nr
+            }
+
+            _localNames[_localCount] = name
+            _localRegs[_localCount] = r
+            _localCount = _localCount + 1
+            return r
+        }
+
+        // ---- 标签惰性分配 ----
+
+        private function GetLabel(name: string): i32
+        {
+            var i = 0
+            while i < _labelCount
+            {
+                if _labelNames[i] == name
+                {
+                    return _labelIds[i]
+                }
+
+                i = i + 1
+            }
+
+            let id = _labelCount + 1
+            if _labelCount >= _labelNames.Length
+            {
+                var nn = new string[_labelNames.Length * 2]
+                var ni = new i32[_labelIds.Length * 2]
+                var j = 0
+                while j < _labelCount
+                {
+                    nn[j] = _labelNames[j]
+                    ni[j] = _labelIds[j]
+                    j = j + 1
+                }
+
+                _labelNames = nn
+                _labelIds = ni
+            }
+
+            _labelNames[_labelCount] = name
+            _labelIds[_labelCount] = id
+            _labelCount = _labelCount + 1
+            return id
+        }
+
+        // ---- 常量折叠（i32/bool，与 IlEmitter 同一求值核对齐 C# ConstantFolding）----
+
+        private function RegisterConstant(stmt: Node): void
+        {
+            if stmt.ChildCount() < 3
+            {
+                return
+            }
+
+            if stmt.Child(0).Text() != "let"
+            {
+                return
+            }
+
+            let v = EvalConstant(stmt.Child(2))
+            if v == null
+            {
+                return
+            }
+
+            _constantNames[_constantCount] = stmt.Child(1).Text()
+            _constantValues[_constantCount] = v
+            _constantCount = _constantCount + 1
+            if _constantCount >= _constantNames.Length
+            {
+                var nn = new string[_constantNames.Length * 2]
+                var nv = new Value[_constantValues.Length * 2]
+                var i = 0
+                while i < _constantCount
+                {
+                    nn[i] = _constantNames[i]
+                    nv[i] = _constantValues[i]
+                    i = i + 1
+                }
+
+                _constantNames = nn
+                _constantValues = nv
+            }
+        }
+
+        private function ConstantValue(name: string): Value
+        {
+            var i = 0
+            while i < _constantCount
+            {
+                if _constantNames[i] == name
+                {
+                    return _constantValues[i]
+                }
+
+                i = i + 1
+            }
+
+            return null
+        }
+
+        private function EvalConstant(expr: Node): Value
+        {
+            let k = expr.Kind()
+            if k == "LiteralExpression"
+            {
+                let t = expr.Child(0).Kind()
+                if t == "TrueKeyword"
+                {
+                    return Value.Bool(true)
+                }
+
+                if t == "FalseKeyword"
+                {
+                    return Value.Bool(false)
+                }
+
+                if t == "NumberToken"
+                {
+                    let text = expr.Child(0).Text()
+                    if EvaluatorRuntime.HasDot(text)
+                    {
+                        return null
+                    }
+
+                    return Value.Int(EvaluatorRuntime.ParseInt(text))
+                }
+
+                return null
+            }
+
+            if k == "VariableExpression"
+            {
+                return ConstantValue(expr.Child(0).Text())
+            }
+
+            if k == "BinaryExpression"
+            {
+                let left = EvalConstant(expr.Child(1))
+                let right = EvalConstant(expr.Child(2))
+                if left != null && right != null
+                {
+                    return ApplyBinary(expr.Child(0).Text(), left, right)
+                }
+
+                return null
+            }
+
+            if k == "UnaryExpression"
+            {
+                let operand = EvalConstant(expr.Child(1))
+                if operand != null
+                {
+                    return ApplyUnary(expr.Child(0).Text(), operand)
+                }
+
+                return null
+            }
+
+            return null
+        }
+
+        private function ApplyBinary(op: string, left: Value, right: Value): Value
+        {
+            if left.Kind() == "int" && right.Kind() == "int"
+            {
+                let l = left.ToInt()
+                let r = right.ToInt()
+                if op == "+" { return Value.Int(l + r) }
+                if op == "-" { return Value.Int(l - r) }
+                if op == "*" { return Value.Int(l * r) }
+                if op == "/"
+                {
+                    if r == 0 { return null }
+                    return Value.Int(l / r)
+                }
+
+                if op == "%"
+                {
+                    if r == 0 { return null }
+                    return Value.Int(l % r)
+                }
+
+                if op == "==" { return Value.Bool(l == r) }
+                if op == "!=" { return Value.Bool(l != r) }
+                if op == "<" { return Value.Bool(l < r) }
+                if op == "<=" { return Value.Bool(l <= r) }
+                if op == ">" { return Value.Bool(l > r) }
+                if op == ">=" { return Value.Bool(l >= r) }
+                if op == "&" { return Value.Int(l & r) }
+                if op == "|" { return Value.Int(l | r) }
+                if op == "^" { return Value.Int(l ^ r) }
+                return null
+            }
+
+            if left.Kind() == "bool" && right.Kind() == "bool"
+            {
+                let l = left.ToBool()
+                let r = right.ToBool()
+                if op == "&&" { return Value.Bool(l && r) }
+                if op == "||" { return Value.Bool(l || r) }
+                if op == "==" { return Value.Bool(l == r) }
+                if op == "!=" { return Value.Bool(l != r) }
+                return null
+            }
+
+            return null
+        }
+
+        private function ApplyUnary(op: string, v: Value): Value
+        {
+            if op == "+"
+            {
+                return v
+            }
+
+            if op == "-"
+            {
+                if v.Kind() == "int" { return Value.Int(-v.ToInt()) }
+                return null
+            }
+
+            if op == "!"
+            {
+                if v.Kind() == "bool" { return Value.Bool(!v.ToBool()) }
+                return null
+            }
+
+            if op == "~"
+            {
+                if v.Kind() == "int" { return Value.Int(~v.ToInt()) }
+                return null
+            }
+
+            return null
+        }
+
+        private function TryEmitConst(v: Value): i32
+        {
+            if v.Kind() == "int" || v.Kind() == "bool"
+            {
+                let r = AllocReg()
+                if v.Kind() == "int"
+                {
+                    AddEntry("ins", "const " + RegName(r) + " " + EvaluatorRuntime.IntToString(v.ToInt()))
+                }
+                else
+                {
+                    if v.ToBool()
+                    {
+                        AddEntry("ins", "const " + RegName(r) + " 1")
+                    }
+                    else
+                    {
+                        AddEntry("ins", "const " + RegName(r) + " 0")
+                    }
+                }
+
+                return r
+            }
+
+            return -1
+        }
+
+        // ---- 发射函数 ----
+
+        public function EmitFunction(body: Node, paramNames: string[], paramCount: i32, isEntry: bool, returnSize: i32, fnName: string): void
+        {
+            // 清空表达式段状态
+            _entryCount = 0
+            _labelNames = new string[32]
+            _labelIds = new i32[32]
+            _labelCount = 0
+            _localNames = new string[64]
+            _localRegs = new i32[64]
+            _localCount = 0
+            _constantNames = new string[32]
+            _constantValues = new Value[32]
+            _constantCount = 0
+            _blockLabelCounter = 0
+            _insBufCount = 0
+            _fnRegCount = 0
+            _fnReturnSize = returnSize
+            _isEntry = isEntry
+            _fnName = fnName
+
+            // 函数尾标签 id 预留 0
+            var i = 0
+            while i < paramCount
+            {
+                AllocLocal(paramNames[i])
+                i = i + 1
+            }
+
+            // prologue：stackcheck 先行（对齐 C# EmitFunction）
+            AddEntry("ins", "stackcheck")
+
+            // 参数：InitParam（x64 每参 8 字节槽）；入口函数参数由运行时 BuildArgs 构造
+            var a = 0
+            while a < paramCount
+            {
+                let id = LocalIndex(paramNames[a])
+                if isEntry
+                {
+                    AddEntry("ins", RegName(id) + " = entry-param")
+                }
+                else
+                {
+                    AddEntry("ins", "initparam " + RegName(id) + " " + string(a * 8))
+                }
+
+                a = a + 1
+            }
+
+            // 预扫 let 常量（发射前登记折叠常量，对齐 IlEmitter）
+            ScanConstants(body)
+
+            var s = 0
+            while s < body.ChildCount()
+            {
+                let stmt = body.Child(s)
+                if !stmt.IsToken()
+                {
+                    EmitStatement(stmt)
+                }
+
+                s = s + 1
+            }
+
+            // epilogue：ret EndLabelId（id 0）
+            AddEntry("ret", "L0")
+
+            BuildBlocks()
+        }
+
+        private function ScanConstants(body: Node): void
+        {
+            var i = 0
+            while i < body.ChildCount()
+            {
+                let stmt = body.Child(i)
+                if !stmt.IsToken()
+                {
+                    if stmt.Kind() == "VariableDeclaration"
+                    {
+                        RegisterConstant(stmt)
+                    }
+                }
+
+                i = i + 1
+            }
+        }
+
+        private function EmitStatement(stmt: Node): void
+        {
+            let k = stmt.Kind()
+
+            if k == "VariableDeclaration"
+            {
+                let name = stmt.Child(1).Text()
+                let value = EmitExpression(stmt.Child(2))
+                let id = AllocLocal(name)
+                AddEntry("ins", "mov " + RegName(id) + " " + RegName(value))
+            }
+            else if k == "ReturnStatement"
+            {
+                if stmt.ChildCount() > 0 && !stmt.Child(0).IsToken()
+                {
+                    let value = EmitExpression(stmt.Child(0))
+                    AddEntry("ins", "storeret " + RegName(value))
+                }
+
+                AddEntry("jmp", "L0")
+            }
+            else if k == "ExpressionStatement"
+            {
+                EmitExpression(stmt.Child(0))
+            }
+            else if k == "NopStatement"
+            {
+                // 无 LIR 指令
+            }
+            else if k == "LabelStatement"
+            {
+                let id = GetLabel(stmt.Child(0).Text())
+                AddEntry("label", "L" + string(id))
+            }
+            else if k == "GotoStatement"
+            {
+                let id = GetLabel(stmt.Child(0).Text())
+                AddEntry("jmp", "L" + string(id))
+            }
+            else if k == "ConditionalGotoStatement"
+            {
+                let cond = EmitExpression(stmt.Child(2))
+                let target = GetLabel(stmt.Child(0).Text())
+                let jumpIfTrue = stmt.Child(1).Text() == "True"
+                AddEntry("ins", "cmp " + RegName(cond) + ", 0")
+                if jumpIfTrue
+                {
+                    AddEntry("jcc", "NotEqual, L" + string(target))
+                }
+                else
+                {
+                    AddEntry("jcc", "Equal, L" + string(target))
+                }
+            }
+        }
+
+        /// <summary>表达式发射：返回结果寄存器（镜像 C# MirToLir.EmitExpression 分配顺序）。</summary>
+        private function EmitExpression(expr: Node): i32
+        {
+            let folded = EvalConstant(expr)
+            if folded != null
+            {
+                let fr = TryEmitConst(folded)
+                if fr >= 0
+                {
+                    return fr
+                }
+            }
+
+            let k = expr.Kind()
+
+            if k == "LiteralExpression"
+            {
+                let r = AllocReg()
+                AddEntry("ins", "const " + RegName(r) + " " + EvaluatorRuntime.IntToString(EvaluatorRuntime.ParseInt(expr.Child(0).Text())))
+                return r
+            }
+            else if k == "VariableExpression"
+            {
+                let id = LocalIndex(expr.Child(0).Text())
+                if id >= 0
+                {
+                    return id
+                }
+
+                // 未知变量（全局/未登记）：分配占位寄存器
+                let r = AllocReg()
+                return r
+            }
+            else if k == "AssignmentExpression"
+            {
+                let value = EmitExpression(expr.Child(1))
+                let id = AllocLocal(expr.Child(0).Text())
+                AddEntry("ins", "mov " + RegName(id) + " " + RegName(value))
+                return id
+            }
+            else if k == "BinaryExpression"
+            {
+                let left = EmitExpression(expr.Child(1))
+                let right = EmitExpression(expr.Child(2))
+                let result = AllocReg()
+                EmitBinaryOp(expr.Child(0).Text(), left, right, result)
+                return result
+            }
+            else if k == "UnaryExpression"
+            {
+                let operand = EmitExpression(expr.Child(1))
+                let result = AllocReg()
+                EmitUnaryOp(expr.Child(0).Text(), operand, result)
+                return result
+            }
+            else if k == "CallExpression"
+            {
+                return EmitCall(expr)
+            }
+
+            let r = AllocReg()
+            return r
+        }
+
+        private function EmitBinaryOp(op: string, left: i32, right: i32, result: i32): void
+        {
+            let ls = RegName(left)
+            let rs = RegName(right)
+            let dst = RegName(result)
+            if op == "+" { AddEntry("ins", "add " + dst + " " + ls + ", " + rs) }
+            else if op == "-" { AddEntry("ins", "sub " + dst + " " + ls + ", " + rs) }
+            else if op == "*" { AddEntry("ins", "imul " + dst + " " + ls + ", " + rs) }
+            else if op == "/"
+            {
+                AddEntry("ins", "mov " + dst + " " + ls)
+                AddEntry("ins", "idiv " + dst + " " + rs)
+            }
+            else if op == "%"
+            {
+                AddEntry("ins", "mov " + dst + " " + ls)
+                AddEntry("ins", "irem " + dst + " " + rs)
+            }
+            else if op == "=="
+            {
+                AddEntry("ins", "cmp " + ls + ", " + rs)
+                AddEntry("ins", "setcc " + dst + " Equal")
+            }
+            else if op == "!="
+            {
+                AddEntry("ins", "cmp " + ls + ", " + rs)
+                AddEntry("ins", "setcc " + dst + " NotEqual")
+            }
+            else if op == "<"
+            {
+                AddEntry("ins", "cmp " + ls + ", " + rs)
+                AddEntry("ins", "setcc " + dst + " Less")
+            }
+            else if op == "<="
+            {
+                AddEntry("ins", "cmp " + ls + ", " + rs)
+                AddEntry("ins", "setcc " + dst + " LessOrEqual")
+            }
+            else if op == ">"
+            {
+                AddEntry("ins", "cmp " + ls + ", " + rs)
+                AddEntry("ins", "setcc " + dst + " Greater")
+            }
+            else if op == ">="
+            {
+                AddEntry("ins", "cmp " + ls + ", " + rs)
+                AddEntry("ins", "setcc " + dst + " GreaterOrEqual")
+            }
+            else if op == "&" || op == "&&" { AddEntry("ins", "and " + dst + " " + ls + ", " + rs) }
+            else if op == "|" || op == "||" { AddEntry("ins", "or " + dst + " " + ls + ", " + rs) }
+            else if op == "^" { AddEntry("ins", "xor " + dst + " " + ls + ", " + rs) }
+            else if op == "<<" { AddEntry("ins", "shl " + dst + " " + ls + ", " + rs) }
+            else if op == ">>" { AddEntry("ins", "sar " + dst + " " + ls + ", " + rs) }
+        }
+
+        private function EmitUnaryOp(op: string, operand: i32, result: i32): void
+        {
+            if op == "+"
+            {
+                _op[result] = "ins"
+                _text[result] = "mov " + RegName(result) + " " + RegName(operand)
+                return
+            }
+
+            if op == "-"
+            {
+                AddEntry("ins", "mov " + RegName(result) + " " + RegName(operand))
+                AddEntry("ins", "neg " + RegName(result))
+                return
+            }
+
+            if op == "~"
+            {
+                AddEntry("ins", "mov " + RegName(result) + " " + RegName(operand))
+                AddEntry("ins", "not " + RegName(result))
+                return
+            }
+
+            // !
+            AddEntry("ins", "cmp " + RegName(operand) + ", 0")
+            AddEntry("ins", "setcc " + RegName(result) + " Equal")
+        }
+
+        private function EmitCall(expr: Node): i32
+        {
+            let argCount = expr.ChildCount() - 1
+            let total = argCount * 8
+            AddEntry("ins", "reserveargs " + string(total))
+
+            var args = new i32[16]
+            var n = 0
+            var i = 1
+            while i < expr.ChildCount()
+            {
+                args[n] = EmitExpression(expr.Child(i))
+                AddEntry("ins", "storearg " + string(n * 8) + ", " + RegName(args[n]))
+                n = n + 1
+                i = i + 1
+            }
+
+            let result = AllocReg()
+            let fname = expr.Child(0).Text()
+            AddEntry("ins", "call " + RegName(result) + " " + fname + ", 0")
+            AddEntry("ins", "freeargs " + string(total))
+            return result
+        }
+
+        // 指令累积缓冲与块序（BuildBlocks 用）
+        private field _insBuf: string[]
+        private field _insBufCount: i32
+        private field _blockLabelCounter: i32
+
+        // ---- 基本块切分 + LirPrinter 格式化（严格对齐 C# LirFunction.BuildBlocks）----
+
+        private function BuildBlocks(): void
+        {
+            _lineCount = 0
+            var blockIndex = 0
+            var labels = new string[8]
+            var labelCount = 0
+            var hasIns = false
+            var terminator = ""
+
+            var i = 0
+            while i < _entryCount
+            {
+                let op = _op[i]
+                let text = _text[i]
+
+                if op == "label"
+                {
+                    // Label：若当前块已有内容（指令/terminator/别名）则收束开新块，否则并入别名（顺序标签折叠）
+                    if hasIns || terminator != "" || labelCount > 0
+                    {
+                        let pushed = FlushBlock(labels, labelCount, hasIns, terminator)
+                        blockIndex = blockIndex + pushed
+                        labels = new string[8]
+                        labelCount = 0
+                        hasIns = false
+                        terminator = ""
+                    }
+
+                    labels[labelCount] = text
+                    labelCount = labelCount + 1
+                }
+                else if op == "jmp" || op == "jcc"
+                {
+                    // terminator 收束当前块（C#：current.Terminator = …; blocks.Add(current)）
+                    let term = op == "jmp" ? "jmp " + text : "jcc " + text
+                    let pushed1 = FlushBlock(labels, labelCount, hasIns, term)
+                    blockIndex = blockIndex + pushed1
+                    labels = new string[8]
+                    labelCount = 0
+                    hasIns = false
+                    terminator = ""
+                }
+                else if op == "ret"
+                {
+                    // Ret：若当前有指令则先收束；随后独立空块标 EndLabelId，terminator=Return
+                    //（C#：current.AddLabel(EndLabelId); current.Terminator=Return; blocks.Add(current)）
+                    if hasIns
+                    {
+                        let pushed2 = FlushBlock(labels, labelCount, hasIns, terminator)
+                        blockIndex = blockIndex + pushed2
+                        labels = new string[8]
+                        labelCount = 0
+                        hasIns = false
+                        terminator = ""
+                    }
+
+                    labels[labelCount] = text
+                    labelCount = labelCount + 1
+                    let pushed3 = FlushBlock(labels, labelCount, false, "ret " + text)
+                    blockIndex = blockIndex + pushed3
+                    labels = new string[8]
+                    labelCount = 0
+                    terminator = ""
+                }
+                else
+                {
+                    AddInstructionToBuf(text)
+                    hasIns = true
+                }
+
+                i = i + 1
+            }
+
+            let pushed4 = FlushBlock(labels, labelCount, hasIns, terminator)
+            blockIndex = blockIndex + pushed4
+        }
+
+        private function AddInstructionToBuf(text: string): void
+        {
+            if _insBufCount >= _insBuf.Length
+            {
+                var b = new string[_insBuf.Length * 2]
+                var i = 0
+                while i < _insBufCount
+                {
+                    b[i] = _insBuf[i]
+                    i = i + 1
+                }
+
+                _insBuf = b
+            }
+
+            _insBuf[_insBufCount] = text
+            _insBufCount = _insBufCount + 1
+        }
+
+        private function DrainInstructions(): void
+        {
+            var i = 0
+            while i < _insBufCount
+            {
+                AddLine("  " + _insBuf[i])
+                i = i + 1
+            }
+
+            _insBufCount = 0
+        }
+
+        /// <summary>收束当前块：无内容（无别名/无指令/无 terminator）→ 不落盘返回 0；否则返回 1。</summary>
+        private function FlushBlock(labels: string[], labelCount: i32, hasIns: bool, terminator: string): i32
+        {
+            if labelCount == 0 && !hasIns && terminator == ""
+            {
+                DrainInstructions()
+                return 0
+            }
+
+            // 块头：bbN: #Lx…
+            var h = "bb" + string(_blockLabelCounter) + ":"
+            var j = 0
+            while j < labelCount
+            {
+                h = h + " #" + labels[j]
+                j = j + 1
+            }
+
+            _blockLabelCounter = _blockLabelCounter + 1
+            AddLine(h)
+
+            // 指令行
+            DrainInstructions()
+
+            // terminator 行
+            if terminator != ""
+            {
+                AddLine("  " + terminator)
+            }
+
+            return 1
+        }
+
+        private function AddLine(text: string): void
+        {
+            if _lineCount >= _lines.Length
+            {
+                var bigger = new string[_lines.Length * 2]
+                var i = 0
+                while i < _lineCount
+                {
+                    bigger[i] = _lines[i]
+                    i = i + 1
+                }
+
+                _lines = bigger
+            }
+
+            _lines[_lineCount] = text
+            _lineCount = _lineCount + 1
+        }
+    }
+}

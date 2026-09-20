@@ -1,0 +1,864 @@
+// Cocoa 自举 CodeGen · IL 发射器（阶段 7 增量五 M5-a3）——
+// 绑定树（自举 Binder Node 树）→ IL 指令序列（写入 IlAssembler）。
+// 支持：字面量 / 变量（参数 Ldarg / 局部 Ldloc/Stloc）/ 算术与比较二元 / 一元 / 返回 / 声明 /
+// 控制流（Label→Nop、Goto→Br、ConditionalGoto→Brtrue/Brfalse）。
+// 对齐 C# IlEmitter：长形式 + 比较序列（!=→Ceq,Ldc_I4_0,Ceq 等）；常量折叠为后续扩展。
+
+using Cocoa.CodeAnalysis.Syntax
+
+namespace Cocoa.CodeGen
+{
+    class IlEmitter
+    {
+        private field _assembler: IlAssembler
+        private field _paramNames: string[]
+        private field _paramCount: i32
+        private field _localNames: string[]
+        private field _localCount: i32
+        private field _labelNames: string[]
+        private field _labelIndexes: i32[]
+        private field _statementReachable: bool[]
+        private field _labelCount: i32
+        private field _methodNames: string[]
+        private field _methodTokens: i32[]
+        private field _methodReturnsValue: bool[]
+        private field _methodCount: i32
+        private field _error: string
+        private field _constantNames: string[]
+        private field _constantValues: Value[]
+        private field _constantCount: i32
+
+        public constructor()
+        {
+            _assembler = null
+            _paramNames = new string[16]
+            _paramCount = 0
+            _localNames = new string[16]
+            _localCount = 0
+            _labelNames = new string[16]
+            _labelIndexes = new i32[16]
+            _labelCount = 0
+            _methodNames = new string[0]
+            _methodTokens = new i32[0]
+            _methodReturnsValue = new bool[0]
+            _methodCount = 0
+            _error = ""
+            _constantNames = new string[16]
+            _constantValues = new Value[16]
+            _constantCount = 0
+        }
+
+        public function SetMethods(names: string[], tokens: i32[], returnsValue: bool[]): void
+        {
+            _methodNames = names
+            _methodTokens = tokens
+            _methodReturnsValue = returnsValue
+            _methodCount = names.Length
+        }
+
+        public function Error(): string
+        {
+            return _error
+        }
+
+        private function MethodIndex(name: string): i32
+        {
+            var i = 0
+            while i < _methodCount
+            {
+                if _methodNames[i] == name
+                {
+                    return i
+                }
+
+                i = i + 1
+            }
+
+            _error = "Unresolved method: " + name
+            return -1
+        }
+
+        private function ProducesValue(expr: Node): bool
+        {
+            if expr.Kind() == "CallExpression"
+            {
+                let index = MethodIndex(expr.Child(0).Text())
+                if index >= 0
+                {
+                    return _methodReturnsValue[index]
+                }
+
+                return false
+            }
+
+            return true
+        }
+
+        /// <summary>发射函数体（body = Binder.GetFunctionBody 的 BlockStatement Node 树）。</summary>
+        public function EmitFunction(assembler: IlAssembler, body: Node, paramNames: string[], paramCount: i32): void
+        {
+            _assembler = assembler
+            _error = ""
+            _paramNames = new string[16]
+            _paramCount = paramCount
+            _localNames = new string[16]
+            _localCount = 0
+            _labelNames = new string[body.ChildCount()]
+            _labelIndexes = new i32[body.ChildCount()]
+            _statementReachable = new bool[body.ChildCount()]
+            _labelCount = 0
+
+            var p = 0
+            while p < paramCount
+            {
+                _paramNames[p] = paramNames[p]
+                p = p + 1
+            }
+
+            _constantNames = new string[body.ChildCount()]
+            _constantValues = new Value[body.ChildCount()]
+            _constantCount = 0
+            let foldedBody = FoldBody(body)
+            ComputeReachability(foldedBody)
+            ComputeLabels(foldedBody)
+
+            var i = 0
+            while i < foldedBody.ChildCount()
+            {
+                let stmt = foldedBody.Child(i)
+                if !stmt.IsToken()
+                {
+                    if _statementReachable[i]
+                    {
+                        EmitStatement(stmt)
+                    }
+                }
+
+                i = i + 1
+            }
+        }
+
+        // ── 常量折叠（对齐 C# ConstantFolding i32/bool 子集 + Lowerer 常量条件重写）──
+        // 折叠在发射器内完成：预扫登记 let 常量，条件常量重写为 Goto/Nop，
+        // 表达式折叠在 Count/Emit 时按同一求值核计算，保证计数与发射逐字节一致。
+
+        private function FoldBody(body: Node): Node
+        {
+            var outBody = Node.MakeCompound("BlockStatement")
+            var i = 0
+            while i < body.ChildCount()
+            {
+                let stmt = body.Child(i)
+                if !stmt.IsToken()
+                {
+                    let k = stmt.Kind()
+                    if k == "VariableDeclaration"
+                    {
+                        RegisterConstant(stmt)
+                        outBody.Add(stmt)
+                    }
+                    else if k == "ConditionalGotoStatement"
+                    {
+                        let cond = EvalConstant(stmt.Child(2))
+                        if cond != null
+                        {
+                            let jumpIfTrue = stmt.Child(1).Text() == "True"
+                            let jump = jumpIfTrue == cond.ToBool()
+                            let name = stmt.Child(0).Text()
+                            if jump
+                            {
+                                let g = Node.MakeCompound("GotoStatement")
+                                g.Add(Node.MakeToken("name", name))
+                                outBody.Add(g)
+                            }
+                            else
+                            {
+                                outBody.Add(Node.MakeCompound("NopStatement"))
+                            }
+                        }
+                        else
+                        {
+                            outBody.Add(stmt)
+                        }
+                    }
+                    else
+                    {
+                        outBody.Add(stmt)
+                    }
+                }
+
+                i = i + 1
+            }
+
+            return outBody
+        }
+
+        private function RegisterConstant(stmt: Node): void
+        {
+            if stmt.ChildCount() < 3
+            {
+                return
+            }
+
+            if stmt.Child(0).Text() != "let"
+            {
+                return
+            }
+
+            let v = EvalConstant(stmt.Child(2))
+            if v == null
+            {
+                return
+            }
+
+            _constantNames[_constantCount] = stmt.Child(1).Text()
+            _constantValues[_constantCount] = v
+            _constantCount = _constantCount + 1
+        }
+
+        private function ConstantValue(name: string): Value
+        {
+            var i = 0
+            while i < _constantCount
+            {
+                if _constantNames[i] == name
+                {
+                    return _constantValues[i]
+                }
+
+                i = i + 1
+            }
+
+            return null
+        }
+
+        private function EvalConstant(expr: Node): Value
+        {
+            let k = expr.Kind()
+            if k == "LiteralExpression"
+            {
+                let t = expr.Child(0).Kind()
+                if t == "TrueKeyword"
+                {
+                    return Value.Bool(true)
+                }
+
+                if t == "FalseKeyword"
+                {
+                    return Value.Bool(false)
+                }
+
+                if t == "NumberToken"
+                {
+                    let text = expr.Child(0).Text()
+                    if EvaluatorRuntime.HasDot(text)
+                    {
+                        return null
+                    }
+
+                    return Value.Int(EvaluatorRuntime.ParseInt(text))
+                }
+
+                return null
+            }
+
+            if k == "VariableExpression"
+            {
+                return ConstantValue(expr.Child(0).Text())
+            }
+
+            if k == "BinaryExpression"
+            {
+                let left = EvalConstant(expr.Child(1))
+                let right = EvalConstant(expr.Child(2))
+                if left != null && right != null
+                {
+                    return ApplyBinary(expr.Child(0).Text(), left, right)
+                }
+
+                return null
+            }
+
+            if k == "UnaryExpression"
+            {
+                let operand = EvalConstant(expr.Child(1))
+                if operand != null
+                {
+                    return ApplyUnary(expr.Child(0).Text(), operand)
+                }
+
+                return null
+            }
+
+            return null
+        }
+
+        private function ApplyBinary(op: string, left: Value, right: Value): Value
+        {
+            if left.Kind() == "int" && right.Kind() == "int"
+            {
+                let l = left.ToInt()
+                let r = right.ToInt()
+                if op == "+" { return Value.Int(l + r) }
+                if op == "-" { return Value.Int(l - r) }
+                if op == "*" { return Value.Int(l * r) }
+                if op == "/"
+                {
+                    if r == 0 { return null }
+                    return Value.Int(l / r)
+                }
+
+                if op == "%"
+                {
+                    if r == 0 { return null }
+                    return Value.Int(l % r)
+                }
+
+                if op == "==" { return Value.Bool(l == r) }
+                if op == "!=" { return Value.Bool(l != r) }
+                if op == "<" { return Value.Bool(l < r) }
+                if op == "<=" { return Value.Bool(l <= r) }
+                if op == ">" { return Value.Bool(l > r) }
+                if op == ">=" { return Value.Bool(l >= r) }
+                if op == "&" { return Value.Int(l & r) }
+                if op == "|" { return Value.Int(l | r) }
+                if op == "^" { return Value.Int(l ^ r) }
+                return null
+            }
+
+            if left.Kind() == "bool" && right.Kind() == "bool"
+            {
+                let l = left.ToBool()
+                let r = right.ToBool()
+                if op == "&&" { return Value.Bool(l && r) }
+                if op == "||" { return Value.Bool(l || r) }
+                if op == "==" { return Value.Bool(l == r) }
+                if op == "!=" { return Value.Bool(l != r) }
+                return null
+            }
+
+            return null
+        }
+
+        private function ApplyUnary(op: string, v: Value): Value
+        {
+            if op == "+"
+            {
+                return v
+            }
+
+            if op == "-"
+            {
+                if v.Kind() == "int" { return Value.Int(-v.ToInt()) }
+                return null
+            }
+
+            if op == "!"
+            {
+                if v.Kind() == "bool" { return Value.Bool(!v.ToBool()) }
+                return null
+            }
+
+            if op == "~"
+            {
+                if v.Kind() == "int" { return Value.Int(~v.ToInt()) }
+                return null
+            }
+
+            return null
+        }
+
+        private function EmitConstantValue(v: Value): void
+        {
+            if v.Kind() == "int"
+            {
+                _assembler.Add("Ldc_I4", 1, v.ToInt(), -1)
+            }
+            else if v.Kind() == "bool"
+            {
+                if v.ToBool()
+                {
+                    _assembler.Add("Ldc_I4_1", 0, 0, -1)
+                }
+                else
+                {
+                    _assembler.Add("Ldc_I4_0", 0, 0, -1)
+                }
+            }
+        }
+
+        private function ComputeReachability(body: Node): void
+        {
+            MarkReachable(0)
+            var changed = true
+            while changed
+            {
+                changed = false
+                var i = 0
+                while i < body.ChildCount()
+                {
+                    if _statementReachable[i]
+                    {
+                        let stmt = body.Child(i)
+                        let k = stmt.Kind()
+                        if k == "GotoStatement" || k == "ConditionalGotoStatement"
+                        {
+                            let target = GotoTargetIndex(body, stmt.Child(0).Text())
+                            if MarkReachable(target)
+                            {
+                                changed = true
+                            }
+                        }
+
+                        if k != "GotoStatement" && k != "ReturnStatement"
+                        {
+                            if MarkReachable(i + 1)
+                            {
+                                changed = true
+                            }
+                        }
+                    }
+
+                    i = i + 1
+                }
+            }
+        }
+
+        private function MarkReachable(index: i32): bool
+        {
+            if index < 0 || index >= _statementReachable.Length
+            {
+                return false
+            }
+
+            if _statementReachable[index]
+            {
+                return false
+            }
+
+            _statementReachable[index] = true
+            return true
+        }
+
+        private function GotoTargetIndex(body: Node, name: string): i32
+        {
+            var i = 0
+            while i < body.ChildCount()
+            {
+                let stmt = body.Child(i)
+                if stmt.Kind() == "LabelStatement"
+                {
+                    if stmt.Child(0).Text() == name
+                    {
+                        return i
+                    }
+                }
+
+                i = i + 1
+            }
+
+            return -1
+        }
+
+        private function ComputeLabels(body: Node): void
+        {
+            var running = 0
+            var i = 0
+            while i < body.ChildCount()
+            {
+                let stmt = body.Child(i)
+                if _statementReachable[i] && !stmt.IsToken()
+                {
+                    let k = stmt.Kind()
+                    if k == "LabelStatement"
+                    {
+                        _labelNames[_labelCount] = stmt.Child(0).Text()
+                        _labelIndexes[_labelCount] = running
+                        _labelCount = _labelCount + 1
+                        running = running + 1
+                    }
+                    else if k == "GotoStatement"
+                    {
+                        running = running + 1
+                    }
+                    else if k == "ConditionalGotoStatement"
+                    {
+                        running = running + CountExpression(stmt.Child(2)) + 1
+                    }
+                    else if k == "NopStatement"
+                    {
+                        running = running + 1
+                    }
+                    else
+                    {
+                        running = running + CountStatement(stmt)
+                    }
+                }
+
+                i = i + 1
+            }
+        }
+
+        private function LabelIndex(name: string): i32
+        {
+            var i = 0
+            while i < _labelCount
+            {
+                if _labelNames[i] == name
+                {
+                    return _labelIndexes[i]
+                }
+
+                i = i + 1
+            }
+
+            return -1
+        }
+
+        private function CountStatement(stmt: Node): i32
+        {
+            let k = stmt.Kind()
+            if k == "VariableDeclaration"
+            {
+                return CountExpression(stmt.Child(2)) + 1
+            }
+
+            if k == "ReturnStatement"
+            {
+                if stmt.ChildCount() > 0
+                {
+                    if !stmt.Child(0).IsToken()
+                    {
+                        return CountExpression(stmt.Child(0)) + 1
+                    }
+                }
+
+                return 1
+            }
+
+            if k == "ExpressionStatement"
+            {
+                let expr = stmt.Child(0)
+                var count = CountExpression(expr)
+                if ProducesValue(expr)
+                {
+                    count = count + 1
+                }
+
+                return count
+            }
+
+            return 0
+        }
+
+        private function CountExpression(expr: Node): i32
+        {
+            let k = expr.Kind()
+            if k == "LiteralExpression" || k == "VariableExpression"
+            {
+                return 1
+            }
+
+            if k == "BinaryExpression"
+            {
+                let folded = EvalConstant(expr)
+                if folded != null
+                {
+                    return 1
+                }
+
+                return CountExpression(expr.Child(1)) + CountExpression(expr.Child(2)) + OpCount(expr.Child(0).Text())
+            }
+
+            if k == "UnaryExpression"
+            {
+                let folded = EvalConstant(expr)
+                if folded != null
+                {
+                    return 1
+                }
+
+                let op = expr.Child(0).Text()
+                var count = CountExpression(expr.Child(1))
+                if op == "+" { return count }
+                if op == "!" { return count + 2 }
+                return count + 1
+            }
+
+            if k == "AssignmentExpression"
+            {
+                return CountExpression(expr.Child(1)) + 2
+            }
+
+            if k == "CallExpression"
+            {
+                var count = 1
+                var i = 1
+                while i < expr.ChildCount()
+                {
+                    count = count + CountExpression(expr.Child(i))
+                    i = i + 1
+                }
+
+                return count
+            }
+
+            return 1
+        }
+
+        private function OpCount(op: string): i32
+        {
+            if op == "!=" || op == "<=" || op == ">="
+            {
+                return 3
+            }
+
+            return 1
+        }
+
+        private function EmitStatement(stmt: Node): void
+        {
+            let k = stmt.Kind()
+
+            if k == "VariableDeclaration"
+            {
+                let name = stmt.Child(1).Text()
+                let slot = AllocLocal(name)
+                EmitExpression(stmt.Child(2))
+                _assembler.Add("Stloc", 12, slot, -1)
+            }
+            else if k == "ReturnStatement"
+            {
+                if stmt.ChildCount() > 0
+                {
+                    if !stmt.Child(0).IsToken()
+                    {
+                        EmitExpression(stmt.Child(0))
+                    }
+                }
+
+                _assembler.Add("Ret", 0, 0, -1)
+            }
+            else if k == "ExpressionStatement"
+            {
+                EmitExpression(stmt.Child(0))
+                if ProducesValue(stmt.Child(0))
+                {
+                    _assembler.Add("Pop", 0, 0, -1)
+                }
+            }
+            else if k == "NopStatement"
+            {
+                _assembler.Add("Nop", 0, 0, -1)
+            }
+            else if k == "LabelStatement"
+            {
+                _assembler.Add("Nop", 0, 0, -1)
+            }
+            else if k == "GotoStatement"
+            {
+                let idx = LabelIndex(stmt.Child(0).Text())
+                _assembler.Add("Br", 14, 0, idx)
+            }
+            else if k == "ConditionalGotoStatement"
+            {
+                EmitExpression(stmt.Child(2))
+                let jumpIfTrue = stmt.Child(1).Text() == "True"
+                let idx = LabelIndex(stmt.Child(0).Text())
+                if jumpIfTrue
+                {
+                    _assembler.Add("Brtrue", 14, 0, idx)
+                }
+                else
+                {
+                    _assembler.Add("Brfalse", 14, 0, idx)
+                }
+            }
+        }
+
+        private function EmitExpression(expr: Node): void
+        {
+            let k = expr.Kind()
+
+            if k == "LiteralExpression"
+            {
+                let folded = EvalConstant(expr)
+                if folded != null
+                {
+                    EmitConstantValue(folded)
+                }
+                else
+                {
+                    let text = expr.Child(0).Text()
+                    _assembler.Add("Ldc_I4", 1, EvaluatorRuntime.ParseInt(text), -1)
+                }
+            }
+            else if k == "VariableExpression"
+            {
+                let name = expr.Child(0).Text()
+                let isParam = ParamIndex(name)
+                if isParam >= 0
+                {
+                    _assembler.Add("Ldarg", 12, isParam, -1)
+                }
+                else
+                {
+                    _assembler.Add("Ldloc", 12, LocalIndex(name), -1)
+                }
+            }
+            else if k == "BinaryExpression"
+            {
+                let folded = EvalConstant(expr)
+                if folded != null
+                {
+                    EmitConstantValue(folded)
+                }
+                else
+                {
+                    EmitExpression(expr.Child(1))
+                    EmitExpression(expr.Child(2))
+                    EmitBinaryOp(expr.Child(0).Text())
+                }
+            }
+            else if k == "AssignmentExpression"
+            {
+                EmitExpression(expr.Child(1))
+                _assembler.Add("Dup", 0, 0, -1)
+                _assembler.Add("Stloc", 12, LocalIndex(expr.Child(0).Text()), -1)
+            }
+            else if k == "CallExpression"
+            {
+                var i = 1
+                while i < expr.ChildCount()
+                {
+                    EmitExpression(expr.Child(i))
+                    i = i + 1
+                }
+
+                let index = MethodIndex(expr.Child(0).Text())
+                if index >= 0
+                {
+                    let idx = _assembler.Add("Call", 7, _methodTokens[index], -1)
+                    let returnsV = _methodReturnsValue[index]
+                    let delta = (returnsV ? 1 : 0) - (expr.ChildCount() - 1)
+                    _assembler.SetCallDelta(idx, delta)
+                }
+            }
+            else if k == "UnaryExpression"
+            {
+                let folded = EvalConstant(expr)
+                if folded != null
+                {
+                    EmitConstantValue(folded)
+                }
+                else
+                {
+                    EmitExpression(expr.Child(1))
+                    EmitUnaryOp(expr.Child(0).Text())
+                }
+            }
+        }
+
+        private function EmitUnaryOp(op: string): void
+        {
+            if op == "-"
+            {
+                _assembler.Add("Neg", 0, 0, -1)
+            }
+            else if op == "~"
+            {
+                _assembler.Add("Not", 0, 0, -1)
+            }
+            else if op == "!"
+            {
+                // !cond：Ldc_I4_0; Ceq
+                _assembler.Add("Ldc_I4_0", 0, 0, -1)
+                _assembler.Add("Ceq", 0, 0, -1)
+            }
+        }
+
+        private function EmitBinaryOp(op: string): void
+        {
+            if op == "+" { _assembler.Add("Add", 0, 0, -1) }
+            else if op == "-" { _assembler.Add("Sub", 0, 0, -1) }
+            else if op == "*" { _assembler.Add("Mul", 0, 0, -1) }
+            else if op == "/" { _assembler.Add("Div", 0, 0, -1) }
+            else if op == "%" { _assembler.Add("Rem", 0, 0, -1) }
+            else if op == "==" { _assembler.Add("Ceq", 0, 0, -1) }
+            else if op == "!="
+            {
+                _assembler.Add("Ceq", 0, 0, -1)
+                _assembler.Add("Ldc_I4_0", 0, 0, -1)
+                _assembler.Add("Ceq", 0, 0, -1)
+            }
+            else if op == "<" { _assembler.Add("Clt", 0, 0, -1) }
+            else if op == "<="
+            {
+                _assembler.Add("Cgt", 0, 0, -1)
+                _assembler.Add("Ldc_I4_0", 0, 0, -1)
+                _assembler.Add("Ceq", 0, 0, -1)
+            }
+            else if op == ">" { _assembler.Add("Cgt", 0, 0, -1) }
+            else if op == ">="
+            {
+                _assembler.Add("Clt", 0, 0, -1)
+                _assembler.Add("Ldc_I4_0", 0, 0, -1)
+                _assembler.Add("Ceq", 0, 0, -1)
+            }
+        }
+
+        // 参数 arg 索引（0..paramCount-1）；非参数返回 -1
+        private function ParamIndex(name: string): i32
+        {
+            var p = 0
+            while p < _paramCount
+            {
+                if _paramNames[p] == name
+                {
+                    return p
+                }
+
+                p = p + 1
+            }
+
+            return -1
+        }
+
+        private function AllocLocal(name: string): i32
+        {
+            let slot = _localCount
+            if _localCount >= _localNames.Length
+            {
+                var bigger = new string[_localNames.Length * 2]
+                var i = 0
+                while i < _localCount
+                {
+                    bigger[i] = _localNames[i]
+                    i = i + 1
+                }
+
+                _localNames = bigger
+            }
+
+            _localNames[_localCount] = name
+            _localCount = _localCount + 1
+            return slot
+        }
+
+        private function LocalIndex(name: string): i32
+        {
+            var i = 0
+            while i < _localCount
+            {
+                if _localNames[i] == name
+                {
+                    return i
+                }
+
+                i = i + 1
+            }
+
+            return 0
+        }
+    }
+}

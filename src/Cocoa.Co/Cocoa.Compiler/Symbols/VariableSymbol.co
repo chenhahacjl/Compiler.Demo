@@ -1,7 +1,7 @@
 // Cocoa 自举全局变量符号 —— 阶段 7 增量三（M9-a1）：名/类型；Describe() 与 C# SymbolDump 变量行同构。
 
 
-namespace MiniBinder
+namespace Cocoa.CodeAnalysis.Symbols
 {
     class VariableSymbol
     {

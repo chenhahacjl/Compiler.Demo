@@ -5,9 +5,9 @@
 //   二元/一元/字面量/名字/调用/成员访问/lambda。
 // 依赖：MiniLexer（Token/Lexer）、string 成员、System.Console。
 
-using MiniLexer
+using Cocoa.CodeAnalysis.Syntax
 
-namespace MiniParser
+namespace Cocoa.CodeAnalysis.Syntax
 {
     class Parser
     {
@@ -141,6 +141,8 @@ namespace MiniParser
                 return ParseNamespaceDeclaration()
             }
 
+            let attrs = ParseOptionalAttributeList()
+
             let mods = new Node[8]
             var modCount = 0
             while IsModifier()
@@ -151,7 +153,7 @@ namespace MiniParser
 
             if IsKeywordText("class") || IsKeywordText("struct")
             {
-                return ParseClassDeclaration(mods, modCount)
+                return ParseClassDeclaration(attrs, mods, modCount)
             }
 
             if IsKeywordText("interface")
@@ -161,17 +163,17 @@ namespace MiniParser
 
             if IsKeywordText("enum")
             {
-                return ParseEnumDeclaration(mods, modCount)
+                return ParseEnumDeclaration(attrs, mods, modCount)
             }
 
             if IsKeywordText("function")
             {
-                return ParseFunctionDeclaration(mods, modCount)
+                return ParseFunctionDeclaration(attrs, mods, modCount)
             }
 
             if IsKeywordText("field") || IsKeywordText("property") || IsKeywordText("constructor")
             {
-                return ParseClassMemberCore(mods, modCount)
+                return ParseClassMemberCore(attrs, mods, modCount)
             }
 
             let stmt = ParseStatement()
@@ -186,7 +188,7 @@ namespace MiniParser
             return k == "PublicKeyword" || k == "PrivateKeyword" || k == "InternalKeyword" ||
                 k == "ProtectedKeyword" || k == "StaticKeyword" || k == "ReadonlyKeyword" ||
                 k == "SealedKeyword" || k == "VirtualKeyword" || k == "OverrideKeyword" ||
-                k == "AbstractKeyword" || k == "PartialKeyword" || k == "FacadeKeyword" ||
+                k == "AbstractKeyword" || k == "PartialKeyword" ||
                 k == "CdeclKeyword" || k == "StdcallKeyword" || k == "SyscallKeyword"
         }
 
@@ -213,9 +215,14 @@ namespace MiniParser
         }
 
         /// <summary>枚举声明：`enum E { A, B = 5 }`（成员以逗号分隔，逗号入 dump）。</summary>
-        private function ParseEnumDeclaration(mods: Node[], modCount: i32): Node
+        private function ParseEnumDeclaration(attrs: Node, mods: Node[], modCount: i32): Node
         {
             let node = Node.MakeCompound("EnumDeclaration")
+            if attrs.ChildCount() > 0
+            {
+                node.Add(attrs)
+            }
+
             var i = 0
             while i < modCount
             {
@@ -251,9 +258,14 @@ namespace MiniParser
             return node
         }
 
-        private function ParseClassDeclaration(mods: Node[], modCount: i32): Node
+        private function ParseClassDeclaration(attrs: Node, mods: Node[], modCount: i32): Node
         {
             let cls = Node.MakeCompound("ClassDeclaration")
+            if attrs.ChildCount() > 0
+            {
+                cls.Add(attrs)
+            }
+
             var mi = 0
             while mi < modCount
             {
@@ -342,6 +354,8 @@ namespace MiniParser
                 return ParseImportBlock()
             }
 
+            let attrs = ParseOptionalAttributeList()
+
             let mods = new Node[8]
             var modCount = 0
             while IsModifier()
@@ -352,10 +366,56 @@ namespace MiniParser
 
             if IsKeywordText("function")
             {
-                return ParseFunctionDeclaration(mods, modCount)
+                return ParseFunctionDeclaration(attrs, mods, modCount)
             }
 
-            return ParseClassMemberCore(mods, modCount)
+            return ParseClassMemberCore(attrs, mods, modCount)
+        }
+
+        /// <summary>6e-M32 Tier-2：声明前 attribute 列表（`[Name(...)]`/`[Name]`，可多个）。节点形如
+        /// (AttributeList (Attribute name (arg...)) ...)，实参为字面量 token。</summary>
+        private function ParseOptionalAttributeList(): Node
+        {
+            let list = Node.MakeCompound("AttributeList")
+            while KindName() == "OpenBracketToken"
+            {
+                Match("OpenBracketToken")
+                let attr = Node.MakeCompound("Attribute")
+                attr.Add(Match("IdentifierToken"))
+                if KindName() == "OpenParenthesisToken"
+                {
+                    Match("OpenParenthesisToken")
+                    while KindName() != "CloseParenthesisToken" && _cur.Kind() != "EOF"
+                    {
+                        let k = KindName()
+                        if k == "StringToken" || k == "NumberToken" || k == "TrueKeyword" ||
+                            k == "FalseKeyword" || k == "CharToken"
+                        {
+                            attr.Add(Match(k))
+                        }
+                        else
+                        {
+                            Advance()
+                        }
+
+                        if KindName() == "CommaToken"
+                        {
+                            attr.Add(Match("CommaToken"))
+                        }
+                        else
+                        {
+                            break
+                        }
+                    }
+
+                    Match("CloseParenthesisToken")
+                }
+
+                Match("CloseBracketToken")
+                list.Add(attr)
+            }
+
+            return list
         }
 
         /// <summary>类内 import 块：`import kernel32.dll { static stdcall function ... }`（DLL 名 token 含点号）。</summary>
@@ -380,12 +440,17 @@ namespace MiniParser
             return node
         }
 
-        private function ParseClassMemberCore(mods: Node[], modCount: i32): Node
+        private function ParseClassMemberCore(attrs: Node, mods: Node[], modCount: i32): Node
         {
             if IsKeywordText("field")
             {
                 Advance() // field 关键字不入节点（C# 侧）
                 let f = Node.MakeCompound("ClassFieldDeclaration")
+                if attrs.ChildCount() > 0
+                {
+                    f.Add(attrs)
+                }
+
                 var i = 0
                 while i < modCount
                 {
@@ -411,6 +476,11 @@ namespace MiniParser
             if IsKeywordText("property")
             {
                 let p = Node.MakeCompound("PropertyDeclaration")
+                if attrs.ChildCount() > 0
+                {
+                    p.Add(attrs)
+                }
+
                 var i = 0
                 while i < modCount
                 {
@@ -446,6 +516,11 @@ namespace MiniParser
             if IsKeywordText("constructor")
             {
                 let c = Node.MakeCompound("ConstructorDeclaration")
+                if attrs.ChildCount() > 0
+                {
+                    c.Add(attrs)
+                }
+
                 var i = 0
                 while i < modCount
                 {
@@ -478,9 +553,14 @@ namespace MiniParser
             return ParseStatement()
         }
 
-        private function ParseFunctionDeclaration(mods: Node[], modCount: i32): Node
+        private function ParseFunctionDeclaration(attrs: Node, mods: Node[], modCount: i32): Node
         {
             let fn = Node.MakeCompound("FunctionDeclaration")
+            if attrs.ChildCount() > 0
+            {
+                fn.Add(attrs)
+            }
+
             var mi = 0
             while mi < modCount
             {
@@ -1360,7 +1440,6 @@ namespace MiniParser
             if text == "public" { return "PublicKeyword" }
             if text == "private" { return "PrivateKeyword" }
             if text == "where" { return "WhereKeyword" }
-            if text == "facade" { return "FacadeKeyword" }
             if text == "throw" { return "ThrowKeyword" }
             if text == "try" { return "TryKeyword" }
             if text == "catch" { return "CatchKeyword" }

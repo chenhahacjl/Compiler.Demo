@@ -1,0 +1,19 @@
+namespace Cocoa.CodeAnalysis.Binding
+{
+    class BoundUnaryOperatorKind
+    {
+        public static function Identity(): i32 { return 0 }
+        public static function Negation(): i32 { return 1 }
+        public static function LogicalNegation(): i32 { return 2 }
+        public static function OnesComplement(): i32 { return 3 }
+
+        public static function Glyph(kind: i32): string
+        {
+            if kind == 0 { return "+" }
+            if kind == 1 { return "-" }
+            if kind == 2 { return "!" }
+            if kind == 3 { return "~" }
+            return "?"
+        }
+    }
+}

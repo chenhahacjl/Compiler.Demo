@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using Xunit;
@@ -94,7 +94,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit
             var source = @"
 namespace System
 {
-    facade struct DateTime
+    [Facade(""System.DateTime"")] struct DateTime
     {
         public constructor(y: i32, m: i32, d: i32) {}
         public static function DaysInMonth(y: i32, m: i32): i32
@@ -120,7 +120,7 @@ function Main()
             var source = @"
 namespace System
 {
-    facade struct DateTime
+    [Facade(""System.DateTime"")] struct DateTime
     {
         public constructor(y: i32, m: i32, d: i32) {}
         public static function Compare(a: DateTime, b: DateTime): i32
@@ -147,7 +147,7 @@ function Main()
             var source = @"
 namespace System
 {
-    facade struct DateTime
+    [Facade(""System.DateTime"")] struct DateTime
     {
         public constructor(y: i32, m: i32, d: i32) {}
         public static function Compare(a: DateTime, b: DateTime): i32
@@ -173,7 +173,7 @@ function Main()
             var source = @"
 namespace System
 {
-    facade struct DateTime
+    [Facade(""System.DateTime"")] struct DateTime
     {
         public constructor(y: i32, m: i32, d: i32) {}
         public function CompareTo(other: DateTime): i32 { return 0 }
@@ -197,7 +197,7 @@ function Main()
             var source = @"
 namespace System
 {
-    facade struct DateTime
+    [Facade(""System.DateTime"")] struct DateTime
     {
         public constructor(y: i32, m: i32, d: i32) {}
         public property Ticks: i64 { get }
@@ -219,7 +219,7 @@ function Main()
             var source = @"
 namespace System.Numerics
 {
-    facade struct Vector3
+    [Facade(""System.Vector3"")] struct Vector3
     {
         public constructor(x: f32, y: f32, z: f32) {}
         public field X: f32
@@ -267,7 +267,7 @@ function Main()
             var source = @"
 namespace System.Numerics
 {
-    facade struct Vector3
+    [Facade(""System.Vector3"")] struct Vector3
     {
         public constructor(x: f32, y: f32, z: f32) {}
         public property X: f32 { get set }
@@ -285,7 +285,7 @@ namespace System.Numerics
             var source = @"
 namespace System.Numerics
 {
-    facade struct Vector3
+    [Facade(""System.Vector3"")] struct Vector3
     {
         public constructor(x: f32, y: f32, z: f32) {}
         public field Magnitude: f32

@@ -1,0 +1,107 @@
+namespace Cocoa.CodeAnalysis.Symbols
+{
+    class NamedTypeSymbol
+    {
+        private field _inner: TypeSymbol
+        private field _typeKind: i32
+        private field _baseTypeName: string
+        private field _fieldNames: string[]
+        private field _fieldTypes: string[]
+        private field _fieldCount: i32
+
+        public constructor()
+        {
+            _inner = TypeSymbol.Create("")
+            _typeKind = 0
+            _baseTypeName = ""
+            _fieldNames = new string[4]
+            _fieldTypes = new string[4]
+            _fieldCount = 0
+        }
+
+        public static function SystemObject(): NamedTypeSymbol
+        {
+            return NamedTypeSymbol.Create("object", 0)
+        }
+
+        public static function Create(name: string, typeKind: i32): NamedTypeSymbol
+        {
+            var n = new NamedTypeSymbol()
+            n._inner = TypeSymbol.Create(name)
+            n._typeKind = typeKind
+            n._baseTypeName = ""
+            n._fieldNames = new string[4]
+            n._fieldTypes = new string[4]
+            n._fieldCount = 0
+            return n
+        }
+
+        public function Name(): string
+        {
+            return _inner.Name()
+        }
+
+        public function TypeKind(): i32
+        {
+            return _typeKind
+        }
+
+        public function BaseType(): string
+        {
+            return _baseTypeName
+        }
+
+        public function SetBaseType(name: string): void
+        {
+            _baseTypeName = name
+        }
+
+        public function InnerType(): TypeSymbol
+        {
+            return _inner
+        }
+
+        public function AddField(name: string, type: string): void
+        {
+            if _fieldCount >= _fieldNames.Length
+            {
+                var biggerNames = new string[_fieldNames.Length * 2]
+                var biggerTypes = new string[_fieldTypes.Length * 2]
+                var i = 0
+                while i < _fieldCount
+                {
+                    biggerNames[i] = _fieldNames[i]
+                    biggerTypes[i] = _fieldTypes[i]
+                    i = i + 1
+                }
+
+                _fieldNames = biggerNames
+                _fieldTypes = biggerTypes
+            }
+
+            _fieldNames[_fieldCount] = name
+            _fieldTypes[_fieldCount] = type
+            _fieldCount = _fieldCount + 1
+        }
+
+        public function FieldCount(): i32
+        {
+            return _fieldCount
+        }
+
+        public function FieldName(index: i32): string
+        {
+            return _fieldNames[index]
+        }
+
+        public function FieldType(index: i32): string
+        {
+            return _fieldTypes[index]
+        }
+
+        public function Describe(): string
+        {
+            return _inner.Name()
+        }
+    }
+}

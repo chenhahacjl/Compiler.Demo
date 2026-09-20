@@ -30,8 +30,7 @@ namespace Cocoa.CodeGen.Managed.Writer
 
         private readonly Dictionary<IlTypeRef, int> _typeRefIndex = new Dictionary<IlTypeRef, int>();
         private readonly Dictionary<IlAssemblyRef, int> _assemblyRefIndex = new Dictionary<IlAssemblyRef, int>();
-        private readonly Dictionary<IlMethodRef, int> _memberRefIndex = new Dictionary<IlMethodRef, int>();
-        private readonly Dictionary<IlFieldRef, int> _fieldRefIndex = new Dictionary<IlFieldRef, int>();
+        private readonly Dictionary<IlMethodRef, int> _memberRefIndex = new Dictionary<IlMethodRef, int>();        private readonly Dictionary<IlFieldRef, int> _fieldRefIndex = new Dictionary<IlFieldRef, int>();
         private readonly List<IlTypeSpec> _typeSpecs = new List<IlTypeSpec>();
         private readonly Dictionary<string, int> _strings = new Dictionary<string, int>();
         private readonly Dictionary<string, uint> _userStrings = new Dictionary<string, uint>();
@@ -243,6 +242,15 @@ namespace Cocoa.CodeGen.Managed.Writer
             _standAloneSigs.Add(reference);
             return reference;
         }
+
+        /// <summary>MemberRef 行号（发射侧构造 CustomAttribute ctor 编码用）。</summary>
+        public int GetMemberRefRow(IlMethodRef reference) => _memberRefIndex[reference];
+
+        /// <summary>TypeDef 行号（<Module> 行 1，其后按 _typeDefs 序 2..）。</summary>
+        public int TypeDefRowOf(IlTypeDef typeDef) => 2 + _typeDefs.IndexOf(typeDef);
+
+        /// <summary>MethodDef 行号（= _typeDefs 各类型方法扁平序 +1，与 Serialize 一致）。</summary>
+        public int MethodDefRowOf(IlMethodDef method) => MethodDefs.ToList().IndexOf(method) + 1;
 
         /// <summary>构建 token 映射（IlAssembler 回填用）：引用对象 → 元数据 token。</summary>
         public Dictionary<object, uint> BuildTokenMap()

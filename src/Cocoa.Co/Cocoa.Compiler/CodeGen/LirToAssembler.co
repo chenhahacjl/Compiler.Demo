@@ -1,0 +1,736 @@
+// Cocoa 自举 CodeGen · LirToAssembler（阶段 7 增量五 M5-a4 续作切片 2）——
+// NativeEmitter 扁平 LIR → X64Assembler 机器码 + 布局无关符号化 hex（对齐 C# LirToAssembler）。
+// 范围：顶层用户函数 i32 子集（栈槽分配/帧布局/stackcheck/initparam/const/mov/算术/比较/
+// setcc/除法/调用 reserveargs/storearg/freeargs/storeret/ret/label/jmp/jcc）。
+// rel32 目标归一化为符号：函数名（StackOverflow/ExitProcess/call 目标）或 `{fn}:L{label}`。
+// 差分基准：C# COCOA_DUMP_SYM 符号化 dump（用户函数段）。
+
+using Cocoa.CodeAnalysis.Syntax
+using Cocoa.CodeAnalysis.Binding
+
+namespace Cocoa.CodeGen
+{
+    class LirToAssembler
+    {
+        private field _emitter: X64Assembler
+        private field _src: NativeEmitter
+        private field _slots: i32[]        // reg id → 槽序号（按 id 升序）
+        private field _slotCount: i32
+        private field _frameBytes: i32
+        private field _fnName: string
+        private field _isEntry: bool
+        private field _returnSize: i32
+        private field _isRuntimeStub: bool
+        private field _labelAsm: i32[]      // LIR 标签 id → 汇编标签
+        private field _labelCount: i32
+        private field _relocOffs: i32[]     // rel32 起始偏移
+        private field _relocSyms: string[]  // rel32 符号目标
+        private field _relocCount: i32
+        private field _stackDepth: i32
+        private field _alignStack: bool[]
+        private field _alignStackCount: i32
+        private field _sysArgs: i32[]    // SetArg 登记的寄存器序（SysCall 装载用）
+        private field _regSizes: i32[]  // reg id → 字节宽（4/8）
+
+        public constructor(src: NativeEmitter)
+        {
+            _emitter = new X64Assembler()
+            _src = src
+            _slots = new i32[64]
+            _slotCount = 0
+            _frameBytes = 0
+            _fnName = ""
+            _isEntry = false
+            _returnSize = 0
+            _isRuntimeStub = false
+            _labelAsm = new i32[64]
+            _labelCount = 0
+            _relocOffs = new i32[128]
+            _relocSyms = new string[128]
+            _relocCount = 0
+            _stackDepth = 0
+            _alignStack = new bool[32]
+            _alignStackCount = 0
+            _sysArgs = new i32[16]
+            _regSizes = new i32[64]
+            var ri = 0
+            while ri < 64
+            {
+                _regSizes[ri] = 4
+                ri = ri + 1
+            }
+        }
+
+        public function SetFunction(fnName: string, isEntry: bool, returnSize: i32): void
+        {
+            _fnName = fnName
+            _isEntry = isEntry
+            _returnSize = returnSize
+            _isRuntimeStub = false
+        }
+
+        public function SetRuntimeStub(fnName: string): void
+        {
+            _fnName = fnName
+            _isRuntimeStub = true
+        }
+
+        public function SymbolicHex(): string
+        {
+            var hex = _emitter.Hex()
+            var i = _relocCount - 1
+            while i >= 0
+            {
+                let off = _relocOffs[i]
+                let sym = _relocSyms[i]
+                hex = hex.substring(0, off * 2) + "<" + sym + ">" + hex.substring(off * 2 + 8, hex.Length - (off * 2 + 8))
+                i = i - 1
+            }
+
+            return hex
+        }
+
+        // ---- 槽分配 ----
+
+        private function BuildSlots(): void
+        {
+            var regs = new i32[_src.FnRegCount()]
+            let n = _src.FnRegCount()
+            var i = 0
+            while i < n
+            {
+                regs[i] = _src.FnRegId(i)
+                i = i + 1
+            }
+
+            var s = 0
+            while s < n
+            {
+                var best = s
+                var t = s + 1
+                while t < n
+                {
+                    if regs[t] < regs[best]
+                    {
+                        best = t
+                    }
+
+                    t = t + 1
+                }
+
+                let tmp = regs[s]
+                regs[s] = regs[best]
+                regs[best] = tmp
+                s = s + 1
+            }
+
+            _slotCount = n
+            i = 0
+            while i < n
+            {
+                _slots[regs[i]] = i
+                i = i + 1
+            }
+
+            _frameBytes = 8 * (_slotCount + 1)
+            if _frameBytes % 16 == 8
+            {
+                _frameBytes = _frameBytes + 8
+            }
+        }
+
+        private function SlotOffset(reg: i32): i32
+        {
+            return -16 - 8 * _slots[reg]
+        }
+
+        // ---- 标签 ----
+
+        private function AsmLabel(labelId: i32): i32
+        {
+            if labelId >= _labelCount
+            {
+                _labelCount = labelId + 1
+                _labelAsm[labelId] = _emitter.CreateLabel()
+            }
+
+            return _labelAsm[labelId]
+        }
+
+        private function RecordRelocAt(off: i32, sym: string): void
+        {
+            _relocOffs[_relocCount] = off
+            _relocSyms[_relocCount] = sym
+            _relocCount = _relocCount + 1
+        }
+
+        // ---- 主发射 ----
+
+        public function Emit(): void
+        {
+            if _isRuntimeStub
+            {
+                EmitRuntimeStub()
+                return
+            }
+
+            BuildSlots()
+
+            // prologue
+            _emitter.Push(5)                       // push rbp
+            _emitter.MovRegReg(2, 5, 4)            // mov rbp, rsp
+            _emitter.SubRegImm(2, 4, _frameBytes)  // sub rsp, frameBytes
+
+            var i = 0
+            while i < _src.OpCount()
+            {
+                let kind = _src.OpKind(i)
+                let text = _src.OpText(i)
+                if kind == "ins"
+                {
+                    EmitIns(text)
+                }
+                else if kind == "label"
+                {
+                    let id = ParseLabelId(text)
+                    _emitter.MarkLabel(AsmLabel(id))
+                }
+                else if kind == "jmp"
+                {
+                    let id = ParseLabelId(text)
+                    _emitter.Jmp(AsmLabel(id))
+                    RecordRelocAt(_emitter.Position() - 4, LabelSymbol(text))
+                }
+                else if kind == "jcc"
+                {
+                    let comma = text.IndexOf(", ")
+                    let cond = CondFromName(text.substring(0, comma))
+                    let id = ParseLabelId(SubFrom(text, comma + 2))
+                    _emitter.Jcc(cond, AsmLabel(id))
+                    RecordRelocAt(_emitter.Position() - 4, LabelSymbol(SubFrom(text, comma + 2)))
+                }
+                else if kind == "ret"
+                {
+                    EmitRet()
+                }
+
+                i = i + 1
+            }
+        }
+
+        private function SubFrom(s: string, start: i32): string
+        {
+            return s.substring(start, s.Length - start)
+        }
+
+        private function LabelSymbol(text: string): string
+        {
+            return _fnName + ":L" + text.substring(1, text.Length - 1)
+        }
+
+        private function ParseLabelId(text: string): i32
+        {
+            return EvaluatorRuntime.ParseInt(text.substring(1, text.Length - 1))
+        }
+
+        private function RegId(text: string): i32
+        {
+            return EvaluatorRuntime.ParseInt(text.substring(1, text.Length - 1))
+        }
+
+        private function StartsWithV(text: string): bool
+        {
+            return text.Length > 0 && i32(text[0]) == 118
+        }
+
+        private function CondFromName(name: string): i32
+        {
+            if name == "Equal" { return 0 }
+            if name == "NotEqual" { return 1 }
+            if name == "Less" { return 2 }
+            if name == "LessOrEqual" { return 3 }
+            if name == "Greater" { return 4 }
+            if name == "GreaterOrEqual" { return 5 }
+            if name == "Below" { return 6 }
+            if name == "BelowOrEqual" { return 7 }
+            if name == "Above" { return 8 }
+            if name == "AboveOrEqual" { return 9 }
+            if name == "Parity" { return 10 }
+            return 11
+        }
+
+        // ---- 指令分发 ----
+
+        private function EmitIns(text: string): void
+        {
+            if text == "stackcheck"
+            {
+                EmitStackCheck()
+                return
+            }
+
+            let space = text.IndexOf(" ")
+            let opcode = text.substring(0, space)
+            let rest = SubFrom(text, space + 1)
+
+            if opcode == "const"
+            {
+                let space2 = rest.IndexOf(" ")
+                let dst = RegId(rest.substring(0, space2))
+                let imm = EvaluatorRuntime.ParseInt(SubFrom(rest, space2 + 1))
+                _emitter.MovRegImm(1, 0, imm)
+                _emitter.MovMemReg(1, 5, SlotOffset(dst), 0)
+                return
+            }
+
+            if opcode == "mov"
+            {
+                let space2 = rest.IndexOf(" ")
+                let dst = RegId(rest.substring(0, space2))
+                let src = RegId(SubFrom(rest, space2 + 1))
+                _emitter.MovRegMem(1, 0, 5, SlotOffset(src))
+                _emitter.MovMemReg(1, 5, SlotOffset(dst), 0)
+                return
+            }
+
+            if opcode == "initparam"
+            {
+                let space2 = rest.IndexOf(" ")
+                let dst = RegId(rest.substring(0, space2))
+                let off = EvaluatorRuntime.ParseInt(SubFrom(rest, space2 + 1))
+                _emitter.MovRegMem(1, 0, 5, 16 + off)
+                _emitter.MovMemReg(1, 5, SlotOffset(dst), 0)
+                return
+            }
+
+            if opcode == "storeret"
+            {
+                let src = RegId(rest)
+                _emitter.MovRegMem(1, 0, 5, SlotOffset(src))
+                _emitter.MovMemReg(1, 5, -8, 0)
+                return
+            }
+
+            if opcode == "add" || opcode == "sub" || opcode == "imul" || opcode == "and" || opcode == "or" || opcode == "xor"
+            {
+                let comma = rest.IndexOf(", ")
+                let dstAndA = rest.substring(0, comma)
+                let space2 = dstAndA.IndexOf(" ")
+                let dst = RegId(dstAndA.substring(0, space2))
+                let a = RegId(SubFrom(dstAndA, space2 + 1))
+                let b = RegId(SubFrom(rest, comma + 2))
+                _emitter.MovRegMem(1, 0, 5, SlotOffset(a))
+                _emitter.MovRegMem(1, 1, 5, SlotOffset(b))
+                if opcode == "add" { _emitter.AddRegReg(1, 0, 1) }
+                else if opcode == "sub" { _emitter.SubRegReg(1, 0, 1) }
+                else if opcode == "imul" { _emitter.ImulRegReg(1, 0, 1) }
+                else if opcode == "and" { _emitter.AndRegReg(1, 0, 1) }
+                else if opcode == "or" { _emitter.OrRegReg(1, 0, 1) }
+                else { _emitter.XorRegReg(1, 0, 1) }
+                _emitter.MovMemReg(1, 5, SlotOffset(dst), 0)
+                return
+            }
+
+            if opcode == "idiv" || opcode == "irem"
+            {
+                // idiv vDST vA（无逗号：空格分隔 dst 与 A 除数）
+                let space2 = rest.IndexOf(" ")
+                let dst = RegId(rest.substring(0, space2))
+                let a = RegId(SubFrom(rest, space2 + 1))
+                _emitter.MovRegMem(1, 0, 5, SlotOffset(dst))
+                _emitter.MovRegMem(1, 1, 5, SlotOffset(a))
+                _emitter.CmpRegImm(1, 1, 0)
+                _emitter.Jcc(0, AsmLabel(0))     // DivByZero 占位
+                RecordRelocAt(_emitter.Position() - 4, "DivByZero")
+                _emitter.MovRegReg(1, 2, 0)      // mov edx, eax
+                _emitter.SarRegImm(1, 2, 31)
+                _emitter.IdivReg(1, 1)
+                _emitter.MovMemReg(1, 5, SlotOffset(dst), opcode == "idiv" ? 0 : 2)
+                return
+            }
+
+            if opcode == "cmp"
+            {
+                let comma = rest.IndexOf(", ")
+                let dst = RegId(rest.substring(0, comma))
+                let bText = SubFrom(rest, comma + 2)
+                _emitter.MovRegMem(1, 0, 5, SlotOffset(dst))
+                if StartsWithV(bText)
+                {
+                    _emitter.CmpRegMem(1, 0, 5, SlotOffset(RegId(bText)))
+                }
+                else
+                {
+                    _emitter.CmpRegImm(1, 0, EvaluatorRuntime.ParseInt(bText))
+                }
+
+                return
+            }
+
+            if opcode == "setcc"
+            {
+                let space2 = rest.IndexOf(" ")
+                let dst = RegId(rest.substring(0, space2))
+                let cond = CondFromName(SubFrom(rest, space2 + 1))
+                _emitter.Setcc(cond, 0)
+                _emitter.MovzxRegReg(0, 0, 0)   // movzx eax, al（0F B6 C0）
+                _emitter.MovMemReg(1, 5, SlotOffset(dst), 0)
+                return
+            }
+
+            if opcode == "call"
+            {
+                let space2 = rest.IndexOf(" ")
+                let dst = RegId(rest.substring(0, space2))
+                let fnRest = SubFrom(rest, space2 + 1)
+                let comma = fnRest.IndexOf(", ")
+                let fnName = fnRest.substring(0, comma)
+                _emitter.Call(AsmLabel(0))
+                RecordRelocAt(_emitter.Position() - 4, fnName)
+                _emitter.MovMemReg(1, 5, SlotOffset(dst), 0)
+                return
+            }
+
+            if opcode == "reserveargs"
+            {
+                let bytes = EvaluatorRuntime.ParseInt(rest)
+                let slots = bytes / 8
+                let patch = (_stackDepth + slots) % 2 != 0
+                _emitter.SubRegImm(2, 4, bytes)     // sub rsp, bytes
+                _stackDepth = _stackDepth + slots
+                _alignStack[_alignStackCount] = patch
+                _alignStackCount = _alignStackCount + 1
+                if patch
+                {
+                    _emitter.SubRegImm(2, 4, 8)     // 对齐补丁
+                    _stackDepth = _stackDepth + 1
+                }
+
+                return
+            }
+
+            if opcode == "freeargs"
+            {
+                let bytes = EvaluatorRuntime.ParseInt(rest)
+                let slots = bytes / 8
+                _alignStackCount = _alignStackCount - 1
+                let patched = _alignStack[_alignStackCount]
+                _emitter.AddRegImm(2, 4, bytes)
+                _stackDepth = _stackDepth - slots
+                if patched
+                {
+                    _emitter.AddRegImm(2, 4, 8)
+                    _stackDepth = _stackDepth - 1
+                }
+
+                return
+            }
+
+            if opcode == "storearg"
+            {
+                let space2 = rest.IndexOf(" ")
+                let off = EvaluatorRuntime.ParseInt(rest.substring(0, space2))
+                let src = RegId(SubFrom(rest, space2 + 1))
+                _emitter.MovRegMem(1, 0, 5, SlotOffset(src))
+                _emitter.MovMemReg(1, 4, off, 0)
+                return
+            }
+        }
+
+        // ---- stackcheck / ret ----
+
+        /// <summary>WriteStr(buf, len)：GetStdHandle → GetFileType；console→WriteConsoleW(5)，否则 WriteFile(5)。
+        /// 槽位（对照 C# hex）：v0=-0x10(8) v1=-0x18(4) v3=-0x28(8) v5=-0x38(4) v4=-0x30(8) v6=-0x40(4) v7=-0x48(4)。</summary>
+        private function EmitWriteStr(): void
+        {
+            // prologue：push rbp; mov rbp,rsp 已由 EmitRuntimeStub 公共前缀发射；此处仅补帧
+            _emitter.SubRegImm(2, 4, 0xd0)
+
+            // initregarg v0 (buf=rcx): mov rax,rcx; store -0x10
+            _emitter.MovRegReg(2, 0, 1)
+            _emitter.MovMemReg(2, 5, -0x10, 0)
+            // initregarg v1 (len=edx): mov eax,edx; store -0x18
+            _emitter.MovRegReg(1, 0, 2)
+            _emitter.MovMemReg(1, 5, -0x18, 0)
+            // leaslot written（地址→v3=-0x28）：lea rax,[rbp-0xc8]
+            _emitter.Lea(0, 5, -0xc8)
+            _emitter.MovMemReg(2, 5, -0x28, 0)
+            // const v5 = -11
+            _emitter.MovRegImm(1, 0, -11)
+            _emitter.MovMemReg(1, 5, -0x38, 0)
+
+            // setarg 0, v5 → ecx（dword）
+            EmitSetArgFromSlot(0, -0x38, 1)
+            // syscall GetStdHandle(1)：sub rsp,0x30; rev-load; call; add
+            _emitter.SubRegImm(2, 4, 0x30)
+            EmitSetArgFromSlot(0, -0x38, 1)
+            _emitter.CallRip()
+            _emitter.AddRegImm(2, 4, 0x30)
+            // store result v4=-0x30（8B）
+            _emitter.MovMemReg(2, 5, -0x30, 0)
+
+            // setarg 0, v4 → rcx（qword）
+            EmitSetArgFromSlot(0, -0x30, 2)
+            // syscall GetFileType(1)
+            _emitter.SubRegImm(2, 4, 0x30)
+            EmitSetArgFromSlot(0, -0x30, 2)
+            _emitter.CallRip()
+            _emitter.AddRegImm(2, 4, 0x30)
+            // store result v6=-0x40（4B）
+            _emitter.MovMemReg(1, 5, -0x40, 0)
+
+            // cmp v6, 2
+            _emitter.MovRegMem(1, 0, 5, -0x40)
+            _emitter.CmpRegImm(1, 0, 2)
+            // jcc NotEqual, L0
+            _emitter.Jcc(1, AsmLabel(1))
+            RecordRelocAt(_emitter.Position() - 4, _fnName + ":L0")
+
+            // console 路径：setarg 0..3
+            EmitSetArgFromSlot(0, -0x30, 2)   // handle → rcx
+            EmitSetArgFromSlot(1, -0x10, 2)   // buf → rdx
+            EmitSetArgFromSlot(2, -0x18, 1)   // len → r8d
+            EmitSetArgFromSlot(3, -0x28, 2)   // written → r9
+            // syscall WriteConsoleW(5) rev-load
+            _emitter.SubRegImm(2, 4, 0x30)
+            EmitSetArgFromSlot(0, -0x30, 2)
+            EmitSetArgFromSlot(1, -0x10, 2)
+            EmitSetArgFromSlot(2, -0x18, 1)
+            EmitSetArgFromSlot(3, -0x28, 2)
+            // 第 5 参：mov qword [rsp+0x20], 0
+            _emitter.MovMemImm(2, 4, 0x20, 0)
+            _emitter.CallRip()
+            _emitter.AddRegImm(2, 4, 0x30)
+            // jmp L1
+            _emitter.Jmp(AsmLabel(2))
+            RecordRelocAt(_emitter.Position() - 4, _fnName + ":L1")
+
+            // L0: 文件路径
+            _emitter.MarkLabel(AsmLabel(1))
+            // mov v7 v1; shl v7 v7 1 → v7=-0x48(4)
+            _emitter.MovRegMem(1, 0, 5, -0x18)
+            _emitter.MovMemReg(1, 5, -0x48, 0)
+            _emitter.MovRegMem(1, 0, 5, -0x48)
+            _emitter.ShlRegImm(1, 0, 1)
+            _emitter.MovMemReg(1, 5, -0x48, 0)
+            // setarg 0..3
+            EmitSetArgFromSlot(0, -0x30, 2)
+            EmitSetArgFromSlot(1, -0x10, 2)
+            EmitSetArgFromSlot(2, -0x48, 1)
+            EmitSetArgFromSlot(3, -0x28, 2)
+            // syscall WriteFile(5) rev-load
+            _emitter.SubRegImm(2, 4, 0x30)
+            EmitSetArgFromSlot(0, -0x30, 2)
+            EmitSetArgFromSlot(1, -0x10, 2)
+            EmitSetArgFromSlot(2, -0x48, 1)
+            EmitSetArgFromSlot(3, -0x28, 2)
+            _emitter.MovMemImm(2, 4, 0x20, 0)
+            _emitter.CallRip()
+            _emitter.AddRegImm(2, 4, 0x30)
+
+            // L1: epilog
+            _emitter.MarkLabel(AsmLabel(2))
+            _emitter.MovRegReg(2, 4, 5)
+            _emitter.Pop(5)
+            _emitter.Ret()
+        }
+
+        /// <summary>setarg：载槽 [rbp+off] → eax/rax → 参数寄存器。size=1 用 eax（r8d），size=2 用 rax（rcx/rdx/r9）。</summary>
+        private function EmitSetArgFromSlot(ordinal: i32, off: i32, size: i32): void
+        {
+            if ordinal == 0
+            {
+                if size == 1
+                {
+                    _emitter.MovRegMem(1, 0, 5, off)
+                    _emitter.MovRegReg(1, 1, 0)   // ecx ← eax
+                }
+                else
+                {
+                    _emitter.MovRegMem(2, 0, 5, off)
+                    _emitter.MovRegReg(2, 1, 0)   // rcx ← rax
+                }
+
+                return
+            }
+
+            if ordinal == 1
+            {
+                if size == 1
+                {
+                    _emitter.MovRegMem(1, 0, 5, off)
+                    _emitter.MovRegReg(1, 2, 0)   // edx ← eax
+                }
+                else
+                {
+                    _emitter.MovRegMem(2, 0, 5, off)
+                    _emitter.MovRegReg(2, 2, 0)   // rdx ← rax
+                }
+
+                return
+            }
+
+            if ordinal == 2
+            {
+                if size == 1
+                {
+                    _emitter.MovRegMem(1, 0, 5, off)
+                    _emitter.MovRegReg(1, 8, 0)   // r8d ← eax
+                }
+                else
+                {
+                    _emitter.MovRegMem(2, 0, 5, off)
+                    _emitter.MovRegReg(2, 8, 0)   // r8
+                }
+
+                return
+            }
+
+            if ordinal == 3
+            {
+                if size == 1
+                {
+                    _emitter.MovRegMem(1, 0, 5, off)
+                    _emitter.MovRegReg(1, 9, 0)   // r9d ← eax
+                }
+                else
+                {
+                    _emitter.MovRegMem(2, 0, 5, off)
+                    _emitter.MovRegReg(2, 9, 0)   // r9 ← rax
+                }
+
+                return
+            }
+        }
+
+        private function EmitRuntimeStub(): void
+        {
+            // 运行时 stub 专用发射（字节级复刻 C# RuntimeEmitterLir）。
+            // ExitProcess：载入退出码 → ecx→syscall ExitProcess。
+            // TickCount：syscall GetTickCount64（0 参）→ StoreRet → 返回。
+            // DivByZero/StackOverflow（EmitError）：LeaRip 错误消息 → PrintString → ExitProcess(1)。
+
+            // prologue：push rbp; mov rbp,rsp
+            _emitter.Push(5)
+            _emitter.MovRegReg(2, 5, 4)
+
+            if _fnName == "WriteStr"
+            {
+                EmitWriteStr()
+                return
+            }
+
+            if _fnName == "TickCount"
+            {
+                // 帧：1 寄存器槽（0x10）
+                _emitter.SubRegImm(2, 4, 0x10)
+                // SysCall GetTickCount64（0 参）：sub rsp,0x30; call [rip+import]; add rsp,0x30
+                _emitter.SubRegImm(2, 4, 0x30)
+                _emitter.CallRip()
+                _emitter.AddRegImm(2, 4, 0x30)
+                // StoreSlot v0：mov [rbp-0x10],eax
+                _emitter.MovMemReg(1, 5, -0x10, 0)
+                // StoreRet：载槽→mov [rbp-0x8],eax
+                _emitter.MovRegMem(1, 0, 5, -0x10)
+                _emitter.MovMemReg(1, 5, -8, 0)
+                // EmitRet：mov eax,[rbp-8]; epilog
+                _emitter.MovRegMem(1, 0, 5, -8)
+                _emitter.MovRegReg(2, 4, 5)
+                _emitter.Pop(5)
+                _emitter.Ret()
+                return
+            }
+
+            // 帧：ExitProcess 1 参槽（0x10）；EmitError 消息指针槽 + 常量 1 槽（0x28）
+            if _fnName == "ExitProcess"
+            {
+                _emitter.SubRegImm(2, 4, 0x10)
+            }
+            else
+            {
+                _emitter.SubRegImm(2, 4, 0x28)
+            }
+
+            if _fnName == "ExitProcess"
+            {
+                // initregarg v0（参数经 rcx 传入）：mov eax,ecx; mov [rbp-0x10],eax
+                _emitter.MovRegReg(1, 0, 1)
+                _emitter.MovMemReg(1, 5, -0x10, 0)
+                // 载参数：mov eax,[rbp-0x10]; mov ecx,eax（rcx=exit code）
+                _emitter.MovRegMem(1, 0, 5, -0x10)
+                _emitter.MovRegReg(1, 1, 0)
+                // SysCall frame：sub rsp,0x30
+                _emitter.SubRegImm(2, 4, 0x30)
+                // SetArg0：mov eax,[rbp-0x10]; mov ecx,eax
+                _emitter.MovRegMem(1, 0, 5, -0x10)
+                _emitter.MovRegReg(1, 1, 0)
+                // CallRip import（rel32 占位，符号化原文保持 00000000）
+                _emitter.CallRip()
+                // add rsp,0x30
+                _emitter.AddRegImm(2, 4, 0x30)
+            }
+            else
+            {
+                // EmitError(msg)：lea rax,[rip+data]; mov [rbp-0x10],rax
+                _emitter.LeaRip(0)
+                _emitter.MovMemReg(2, 5, -0x10, 0)
+                _emitter.MovRegMem(2, 0, 5, -0x10)
+                _emitter.MovRegReg(2, 1, 0)
+                // call PrintString
+                _emitter.Call(AsmLabel(0))
+                RecordRelocAt(_emitter.Position() - 4, "PrintString")
+                // mov eax,1; mov [rbp-0x18],eax; mov eax,[rbp-0x18]; mov ecx,eax; call ExitProcess
+                _emitter.MovRegImm(1, 0, 1)
+                _emitter.MovMemReg(1, 5, -0x18, 0)
+                _emitter.MovRegMem(1, 0, 5, -0x18)
+                _emitter.MovRegReg(1, 1, 0)
+                _emitter.Call(AsmLabel(0))
+                RecordRelocAt(_emitter.Position() - 4, "ExitProcess")
+            }
+
+            // epilog：mov rsp,rbp; pop rbp; ret
+            _emitter.MovRegReg(2, 4, 5)
+            _emitter.Pop(5)
+            _emitter.Ret()
+        }
+
+        private function EmitStackCheck(): void
+        {
+            _emitter.MovGs(1, 0x10)
+            _emitter.AddRegImm(1, 1, 0x10000)
+            _emitter.CmpRegReg(1, 4, 1)
+            _emitter.Jcc(6, AsmLabel(0))
+            RecordRelocAt(_emitter.Position() - 4, "StackOverflow")
+        }
+
+        private function EmitRet(): void
+        {
+            if _isEntry
+            {
+                if _returnSize > 0
+                {
+                    _emitter.MovRegMem(1, 0, 5, -8)
+                    _emitter.MovRegReg(1, 1, 0)
+                }
+                else
+                {
+                    _emitter.XorRegReg(1, 1, 1)
+                }
+
+                _emitter.Call(AsmLabel(0))
+                RecordRelocAt(_emitter.Position() - 4, "ExitProcess")
+                return
+            }
+
+            // 非入口：返回槽装载 + mov rsp, rbp; pop rbp; ret
+            if _returnSize > 0
+            {
+                _emitter.MovRegMem(1, 0, 5, -8)   // mov eax, [rbp-8]
+            }
+
+            _emitter.MovRegReg(2, 4, 5)   // mov rsp, rbp
+            _emitter.Pop(5)               // pop rbp
+            _emitter.Ret()
+        }
+    }
+}

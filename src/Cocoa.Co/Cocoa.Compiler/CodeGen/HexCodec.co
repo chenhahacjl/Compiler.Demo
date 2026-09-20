@@ -1,0 +1,52 @@
+// Cocoa 自举 CodeGen · 十六进制文本编解码统一工具（阶段 7 结构整理 Phase 3）——
+// 收敛 IlMetadataBuilder/MetadataEncode/IlMetadataRoot/IlAssembler/X64Assembler 各自重复的
+// HexByte/HexU16/HexU32（及别名 HexI16/HexI32）。小端 hex 文本；全公开保证三端一致。
+
+namespace Cocoa.CodeGen
+{
+    class HexCodec
+    {
+        public static function HexByte(v: i32): string
+        {
+            let b = v & 0xFF
+            return HexDigit(b >> 4) + HexDigit(b & 0x0F)
+        }
+
+        public static function HexU16(v: i32): string
+        {
+            return HexByte(v) + HexByte(v >> 8)
+        }
+
+        public static function HexU32(v: i32): string
+        {
+            return HexByte(v) + HexByte(v >> 8) + HexByte(v >> 16) + HexByte(v >> 24)
+        }
+
+        /// <summary>别名：IlAssembler 语义名（补码按位一致，实现同 HexU16）。</summary>
+        public static function HexI16(v: i32): string
+        {
+            return HexU16(v)
+        }
+
+        /// <summary>别名：IlAssembler 语义名（补码按位一致，实现同 HexU32）。</summary>
+        public static function HexI32(v: i32): string
+        {
+            return HexU32(v)
+        }
+
+        private static function HexDigit(d: i32): string
+        {
+            if d < 10
+            {
+                return string(d)
+            }
+
+            if d == 10 { return "a" }
+            if d == 11 { return "b" }
+            if d == 12 { return "c" }
+            if d == 13 { return "d" }
+            if d == 14 { return "e" }
+            return "f"
+        }
+    }
+}
