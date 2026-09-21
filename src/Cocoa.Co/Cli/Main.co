@@ -2,7 +2,8 @@
 // 用 C# 编译器把 src/Cocoa.Co 构建为可运行二进制（native 与 IL），
 // 读入文件 → 自举 Lexer 逐 token Describe() 输出 → 自举 Parser 打印规范树 dump 与诊断。
 // M5-a2：新增 `run <file.co>` 子命令——经自举 Interpreter 执行程序（输出 + 退出码）。
-// 用法：cocoa-co <file.co> | cocoa-co run <file.co>
+// M5-a5 批 3：新增 `compile <file.co> [output.dll]` 子命令——自举全链（Binder→IL→元数据→PE）产物理 .dll。
+// 用法：cocoa-co <file.co> | cocoa-co run <file.co> | cocoa-co compile <file.co> [output.dll]
 
 using Cocoa.CodeAnalysis.Syntax
 using Cocoa.CodeAnalysis.Binding
@@ -13,7 +14,7 @@ function Main(args: string[]): i32
 {
     if args.Length < 1
     {
-        Console.WriteLine("usage: cocoa-co <file.co> | cocoa-co run <file.co>")
+        Console.WriteLine("usage: cocoa-co <file.co> | cocoa-co run <file.co> | cocoa-co compile <file.co> [output.dll]")
         return 1
     }
 
@@ -27,6 +28,19 @@ function Main(args: string[]): i32
 
         let src = File.ReadAllText(args[1])
         return RunProgram(src)
+    }
+
+    if args[0] == "compile"
+    {
+        if args.Length < 2
+        {
+            Console.WriteLine("usage: cocoa-co compile <file.co> [output.dll]")
+            return 1
+        }
+
+        let src = File.ReadAllText(args[1])
+        let output = args.Length >= 3 ? args[2] : DefaultOutput(args[1])
+        return CompileProgram(src, output)
     }
 
     let source = File.ReadAllText(args[0])
@@ -83,4 +97,52 @@ function RunProgram(source: string): i32
     }
 
     return value.ToInt()
+}
+
+// M5-a5 批 3：自举全链编译（Binder→IlEmitter→元数据计划→IlMetadataBuilder→ManagedPeWriter）→ 物理 .dll。
+// 写 Min.dll 同目录 runtimeconfig（net9.0 共享框架），`dotnet <dll>` 可直接运行。
+function CompileProgram(source: string, output: string): i32
+{
+    let peHex = Cocoa.CodeGen.IlDriver.BuildDllHex(source)
+    if peHex.StartsWith("ERR:")
+    {
+        Console.WriteLine(peHex)
+        return 1
+    }
+
+    let bytes = Convert.FromHexString(peHex)
+    if bytes.Length == 0
+    {
+        Console.WriteLine("error: PE hex decode failed")
+        return 1
+    }
+
+    File.WriteAllBytes(output, bytes)
+    let rcPath = output.substring(0, output.Length - 4) + ".runtimeconfig.json"
+    File.WriteAllText(rcPath, "{\"runtimeOptions\":{\"tfm\":\"net9.0\",\"framework\":{\"name\":\"Microsoft.NETCore.App\",\"version\":\"9.0.0\"}}}")
+    Console.WriteLine("ok: " + output)
+    return 0
+}
+
+// 缺省输出名 = 输入同目录、扩展名换 .dll。
+function DefaultOutput(path: string): string
+{
+    let slash = path.LastIndexOf("/")
+    let backslash = path.LastIndexOf("\\")
+    let dirEnd = slash > backslash ? slash : backslash
+    let dir = dirEnd >= 0 ? path.substring(0, dirEnd + 1) : ""
+    var rest = path
+    if dirEnd >= 0
+    {
+        rest = path.substring(dirEnd + 1, path.Length - dirEnd - 1)
+    }
+
+    let dot = rest.LastIndexOf(".")
+    var name = rest
+    if dot > 0
+    {
+        name = rest.substring(0, dot)
+    }
+
+    return dir + name + ".dll"
 }
