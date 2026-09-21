@@ -1053,6 +1053,13 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return ParseNewExpression()
             }
 
+            if IsKeywordText("this")
+            {
+                let th = Node.MakeCompound("ThisExpression")
+                th.Add(Match("ThisKeyword"))
+                return th
+            }
+
             // 兜底：单 token 原样消费（非表达式起始 token → 报告后继续错误恢复）
             ReportError("error: L" + string(_cur.Line()) + ":C" + string(_cur.Column()) +
                 " unexpected token " + k + " \"" + _cur.Text() + "\"")

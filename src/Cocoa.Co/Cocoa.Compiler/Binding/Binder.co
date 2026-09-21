@@ -37,6 +37,18 @@ namespace Cocoa.CodeAnalysis.Binding
         private field _loopBreakLabels: string[]
         private field _loopContinueLabels: string[]
         private field _loopDepth: i32
+        private field _classNames: string[]
+        private field _classFieldNames: string[]
+        private field _classFieldTypes: string[]
+        private field _classFieldOffsets: i32[]
+        private field _classFieldCounts: i32[]
+        private field _classMethodNames: string[]
+        private field _classMethodIndexes: i32[]
+        private field _classMethodNodes: Node[]
+        private field _classMethodOffsets: i32[]
+        private field _classMethodCounts: i32[]
+        private field _classCount: i32
+        private field _currentClass: string
 
         public static function Create(source: string): Binder
         {
@@ -57,6 +69,18 @@ namespace Cocoa.CodeAnalysis.Binding
             b._diags = new string[8]
             b._diagCount = 0
             b._boundRoots = new Node[8]
+            b._classNames = new string[8]
+            b._classFieldNames = new string[8]
+            b._classFieldTypes = new string[8]
+            b._classFieldOffsets = new i32[8]
+            b._classFieldCounts = new i32[8]
+            b._classMethodNames = new string[8]
+            b._classMethodIndexes = new i32[8]
+            b._classMethodNodes = new Node[8]
+            b._classMethodOffsets = new i32[8]
+            b._classMethodCounts = new i32[8]
+            b._classCount = 0
+            b._currentClass = ""
             b._mainName = "<none>"
             b._loopBreakLabels = new string[8]
             b._loopContinueLabels = new string[8]
@@ -76,6 +100,10 @@ namespace Cocoa.CodeAnalysis.Binding
                 if kind == "FunctionDeclaration"
                 {
                     BindFunction(member)
+                }
+                else if kind == "ClassDeclaration"
+                {
+                    BindClassDeclaration(member)
                 }
                 else if kind == "GlobalStatement"
                 {
@@ -100,6 +128,25 @@ namespace Cocoa.CodeAnalysis.Binding
                     CheckFunctionBody(member, _functions[fi], fi)
                     fi = fi + 1
                 }
+                else if kind == "ClassDeclaration"
+                {
+                    // 类方法体在 class 收集后按方法序回填（this 已作 param 0）
+                    var cm = 0
+                    while cm < _classCount
+                    {
+                        let off = _classMethodOffsets[cm]
+                        let cnt = _classMethodCounts[cm]
+                        var m = 0
+                        while m < cnt
+                        {
+                            _currentClass = _classNames[cm]
+                            CheckFunctionBody(_classMethodNodes[off + m], _functions[_classMethodIndexes[off + m]], _classMethodIndexes[off + m])
+                            m = m + 1
+                        }
+
+                        cm = cm + 1
+                    }
+                }
                 else if kind == "GlobalStatement"
                 {
                     if member.ChildCount() == 1 && member.Child(0).Kind() == "VariableDeclaration"
@@ -111,6 +158,8 @@ namespace Cocoa.CodeAnalysis.Binding
                 i = i + 1
             }
 
+            _currentClass = ""
+
             // M9-a2：main 函数与全局语句互斥（对齐 C# 端规则，声明序无关；
             // C# 在 GlobalScope 与 Program 两阶段各报一次，条数对齐）
             if _variableCount > 0 && _mainName != "<none>"
@@ -118,6 +167,95 @@ namespace Cocoa.CodeAnalysis.Binding
                 ReportError("Cannot declare main function when global statements are used.")
                 ReportError("Cannot declare main function when global statements are used.")
             }
+        }
+
+        /// <summary>收集类声明：类名 + 实例字段（名/类型）+ 方法（以 `this` 为 param 0 绑成函数，索引记入类）。</summary>
+        private function BindClassDeclaration(node: Node): void
+        {
+            let className = ClassNameOf(node)
+            if className.Length == 0
+            {
+                ReportError("Class declaration missing name.")
+                return
+            }
+
+            let classIndex = _classCount
+            _classNames[classIndex] = className
+            // 字段/方法平铺偏移 = 前序类累计
+            var fieldRun = 0
+            var methodRun = 0
+            var p = 0
+            while p < classIndex
+            {
+                fieldRun = fieldRun + _classFieldCounts[p]
+                methodRun = methodRun + _classMethodCounts[p]
+                p = p + 1
+            }
+
+            _classFieldOffsets[classIndex] = fieldRun
+            _classFieldCounts[classIndex] = 0
+            _classMethodOffsets[classIndex] = methodRun
+            _classMethodCounts[classIndex] = 0
+            _classCount = _classCount + 1
+
+            _currentClass = className
+
+            var i = 0
+            while i < node.ChildCount()
+            {
+                let child = node.Child(i)
+                let k = child.Kind()
+                if k == "ClassFieldDeclaration"
+                {
+                    let fieldName = FieldNameOf(child)
+                    let fieldType = FieldTypeOf(child)
+                    if fieldName.Length > 0
+                    {
+                        _classFieldNames[_classFieldOffsets[classIndex] + _classFieldCounts[classIndex]] = fieldName
+                        _classFieldTypes[_classFieldOffsets[classIndex] + _classFieldCounts[classIndex]] = fieldType
+                        _classFieldCounts[classIndex] = _classFieldCounts[classIndex] + 1
+                    }
+                }
+                else if k == "FunctionDeclaration"
+                {
+                    BindClassMethod(child, classIndex)
+                }
+
+                i = i + 1
+            }
+
+            _currentClass = ""
+        }
+
+        /// <summary>类实例方法 → FunctionSymbol（param 0 = `this`，类型为类名）+ 记录函数索引/节点。</summary>
+        private function BindClassMethod(node: Node, classIndex: i32): void
+        {
+            let className = _classNames[classIndex]
+            let methodName = MethodNameOf(node)
+            let returnType = MethodReturnTypeOf(node)
+
+            let fn = FunctionSymbol.Create(methodName, returnType)
+            fn.AddParameter("this", className)
+
+            var i = 0
+            while i < node.ChildCount()
+            {
+                let child = node.Child(i)
+                if child.Kind() == "Parameter"
+                {
+                    fn.AddParameter(ParameterName(child), ParameterType(child))
+                }
+
+                i = i + 1
+            }
+
+            let methodIndex = _functionCount
+            _classMethodIndexes[_classMethodOffsets[classIndex] + _classMethodCounts[classIndex]] = methodIndex
+            _classMethodNodes[_classMethodOffsets[classIndex] + _classMethodCounts[classIndex]] = node
+            _classMethodNames[_classMethodOffsets[classIndex] + _classMethodCounts[classIndex]] = methodName
+            _classMethodCounts[classIndex] = _classMethodCounts[classIndex] + 1
+
+            AddFunction(fn, methodName)
         }
 
         private function BindFunction(node: Node): void
@@ -668,6 +806,88 @@ namespace Cocoa.CodeAnalysis.Binding
             return "?"
         }
 
+        private function ClassNameOf(node: Node): string
+        {
+            var i = 0
+            while i < node.ChildCount()
+            {
+                if node.Child(i).Kind() == "IdentifierToken"
+                {
+                    return node.Child(i).Text()
+                }
+
+                i = i + 1
+            }
+
+            return ""
+        }
+
+        private function FieldNameOf(node: Node): string
+        {
+            var i = 0
+            while i < node.ChildCount()
+            {
+                if node.Child(i).Kind() == "IdentifierToken"
+                {
+                    return node.Child(i).Text()
+                }
+
+                i = i + 1
+            }
+
+            return ""
+        }
+
+        private function FieldTypeOf(node: Node): string
+        {
+            var i = 0
+            while i < node.ChildCount()
+            {
+                let k = node.Child(i).Kind()
+                if k == "TypeClause" || k == "ArrayTypeClause" || k == "GenericTypeClause"
+                {
+                    return TypeOfClause(node.Child(i))
+                }
+
+                i = i + 1
+            }
+
+            return "int"
+        }
+
+        private function MethodNameOf(node: Node): string
+        {
+            var i = 0
+            while i < node.ChildCount()
+            {
+                if node.Child(i).Kind() == "IdentifierToken"
+                {
+                    return node.Child(i).Text()
+                }
+
+                i = i + 1
+            }
+
+            return ""
+        }
+
+        private function MethodReturnTypeOf(node: Node): string
+        {
+            var i = 0
+            while i < node.ChildCount()
+            {
+                let k = node.Child(i).Kind()
+                if k == "TypeClause" || k == "ArrayTypeClause" || k == "GenericTypeClause"
+                {
+                    return TypeOfClause(node.Child(i))
+                }
+
+                i = i + 1
+            }
+
+            return "void"
+        }
+
         private function ParameterType(node: Node): string
         {
             var i = 0
@@ -840,6 +1060,46 @@ namespace Cocoa.CodeAnalysis.Binding
         public function GetFunctionLocalType(index: i32, localIndex: i32): string
         {
             return _functions[index].Local(localIndex).Type()
+        }
+
+        public function GetClassCount(): i32
+        {
+            return _classCount
+        }
+
+        public function GetClassName(index: i32): string
+        {
+            return _classNames[index]
+        }
+
+        public function GetClassFieldCount(index: i32): i32
+        {
+            return _classFieldCounts[index]
+        }
+
+        public function GetClassFieldName(index: i32, fieldIndex: i32): string
+        {
+            return _classFieldNames[_classFieldOffsets[index] + fieldIndex]
+        }
+
+        public function GetClassFieldType(index: i32, fieldIndex: i32): string
+        {
+            return _classFieldTypes[_classFieldOffsets[index] + fieldIndex]
+        }
+
+        public function GetClassMethodCount(index: i32): i32
+        {
+            return _classMethodCounts[index]
+        }
+
+        public function GetClassMethodName(index: i32, methodIndex: i32): string
+        {
+            return _classMethodNames[_classMethodOffsets[index] + methodIndex]
+        }
+
+        public function GetClassMethodIndex(index: i32, methodIndex: i32): i32
+        {
+            return _classMethodIndexes[_classMethodOffsets[index] + methodIndex]
         }
 
         public function GetFunctionAttributeCount(index: i32): i32
@@ -1503,8 +1763,16 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if k == "NameExpression"
             {
+                let nm = node.Child(0).Text()
+                if nm == "this"
+                {
+                    let th = Node.MakeCompound("ThisExpression")
+                    th.Add(Node.MakeToken("type", _currentClass))
+                    return th
+                }
+
                 let v = Node.MakeCompound("VariableExpression")
-                v.Add(Node.MakeToken("name", node.Child(0).Text()))
+                v.Add(Node.MakeToken("name", nm))
                 return v
             }
 
@@ -1525,6 +1793,44 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
 
                 return c
+            }
+
+            if k == "ThisExpression"
+            {
+                let th = Node.MakeCompound("ThisExpression")
+                th.Add(Node.MakeToken("type", _currentClass))
+                return th
+            }
+
+            if k == "ObjectCreationExpression"
+            {
+                // 解析形状：(NewKeyword IdentifierToken ( args ) )
+                let o = Node.MakeCompound("ObjectCreationExpression")
+                o.Add(Node.MakeToken("type", node.Child(1).Text()))
+                var i = 3
+                while i < node.ChildCount()
+                {
+                    let child = node.Child(i)
+                    if !child.IsToken()
+                    {
+                        let built = BuildBound(child)
+                        if built != null
+                        {
+                            o.Add(built)
+                        }
+                    }
+
+                    i = i + 1
+                }
+
+                return o
+            }
+
+            if k == "ThisExpression"
+            {
+                let t = Node.MakeCompound("ThisExpression")
+                t.Add(Node.MakeToken("this", "this"))
+                return t
             }
 
             if k == "LiteralExpression"
