@@ -1,7 +1,9 @@
-// M5-a5 批 2：自举 IL → 物理 .dll 端到端驱动（受限：单入口 Main，纯算术/简单返回）。
-// 绑定 → IlEmitter/IlAssembler（方法体 hex + maxStack）→ 元数据计划（签名/RVA/flags）→
+// M5-a5 批 2→多函数扩展：自举 IL → 物理 .dll 端到端驱动。
+// 绑定 → 逐函数 IlEmitter/IlAssembler（方法体 hex + maxStack + 局部签名）→ 元数据计划（签名/RVA 累计/flags/token）→
 // IlMetadataBuilder（五流 hex）→ ManagedPeWriter（PE 字节）→ 返回 PE 字节 hex 或 "ERR:…"。
-// C# 侧测试取 hex 落盘 Min.dll 并实跑验证；批 3 由 Cli `compile` 子命令接线（File.WriteAllBytes）。
+// 支持：多顶层函数、参数（Ldarg）、内部调用（Call token 0x06…）、局部变量（StandAloneSig）、
+// 控制流（if/while 已由 lowering → Label/Goto/ConditionalGoto）。
+// C# 侧测试取 hex 落盘并实跑验证；批 3 由 Cli `compile` 子命令接线（File.WriteAllBytes）。
 
 using Cocoa.CodeAnalysis.Binding
 using Cocoa.CodeAnalysis.Syntax
@@ -10,7 +12,7 @@ namespace Cocoa.CodeGen
 {
     class IlDriver
     {
-        /// <summary>编译顶层入口 `Main` 为托管 .dll；返回 PE 字节 hex（小端），失败返回 "ERR:…"。</summary>
+        /// <summary>编译程序为托管 .dll（入口 = 顶层 `Main`）；返回 PE 字节 hex（小端），失败返回 "ERR:…"。</summary>
         public static function BuildDllHex(source: string): string
         {
             let binder = Cocoa.CodeAnalysis.Binding.Binder.Create(source)
@@ -20,76 +22,143 @@ namespace Cocoa.CodeGen
                 return "ERR:" + binder.DiagnosticAt(0)
             }
 
-            // 定位顶层入口 Main
-            var fnIndex = -1
+            let fnCount = binder.GetFunctionCount()
+            if fnCount < 1
+            {
+                return "ERR:no functions"
+            }
+
+            // 定位顶层入口 Main + 函数序索引（token 按序）
+            var mainIndex = -1
             var i = 0
-            while i < binder.GetFunctionCount()
+            while i < fnCount
             {
                 if binder.GetFunctionName(i) == "Main"
                 {
-                    fnIndex = i
+                    mainIndex = i
                 }
 
                 i = i + 1
             }
 
-            if fnIndex < 0
+            if mainIndex < 0
             {
                 return "ERR:no function Main"
             }
 
-            let retType = binder.GetFunctionReturnType(fnIndex)
-            if retType.IndexOf("[") >= 0
+            // 不支持返回/参数为数组（IL 签名编码暂限标量）
+            i = 0
+            while i < fnCount
             {
-                return "ERR:unsupported return type " + retType
+                if binder.GetFunctionReturnType(i).IndexOf("[") >= 0
+                {
+                    return "ERR:unsupported array type in function " + binder.GetFunctionName(i)
+                }
+
+                var p = 0
+                while p < binder.GetFunctionParamCount(i)
+                {
+                    if binder.GetFunctionParamType(i, p).IndexOf("[") >= 0
+                    {
+                        return "ERR:unsupported array type in function " + binder.GetFunctionName(i)
+                    }
+
+                    p = p + 1
+                }
+
+                i = i + 1
             }
 
-            // ---- IL 发射 ----
+            // ---- 方法表：名/token/返回值位 ----
+            var names = new string[fnCount]
+            var tokens = new i32[fnCount]
+            var returnsValue = new bool[fnCount]
+            i = 0
+            while i < fnCount
+            {
+                names[i] = binder.GetFunctionName(i)
+                tokens[i] = 0x06000000 + i + 1
+                returnsValue[i] = binder.GetFunctionReturnType(i) != "void"
+                i = i + 1
+            }
+
             let emitter = new IlEmitter()
-            let names = new string[1]
-            let tokens = new i32[1]
-            let returnsValue = new bool[1]
-            names[0] = "Main"
-            tokens[0] = 0x06000001
-            returnsValue[0] = true
             emitter.SetMethods(names, tokens, returnsValue)
 
-            let asm = new IlAssembler()
-            let paramNames = new string[0]
-            emitter.EmitFunction(asm, binder.GetFunctionBody(fnIndex), paramNames, 0)
-            let bodyHex = asm.Assemble()
-            let maxStack = asm.ComputeMaxStack()
+            // ---- 逐函数发射 ----
+            var bodies = new string[fnCount]
+            var maxStacks = new i32[fnCount]
+            var sigBlobs = new string[fnCount]
+            var sigTokens = new i32[fnCount]
+            var rvas = new i32[fnCount]
+            var sigs = new string[fnCount]
+            var paramCounts = new i32[fnCount]
+            var flags = new i32[fnCount]
+            var methodNames = new string[fnCount]
 
-            // ---- 局部变量签名（StandAloneSig；无局部 → 空）----
-            let localCount = emitter.LocalCount()
-            let localDescs = new string[localCount]
-            var lc = 0
-            while lc < localCount
+            var rva = 0x1048
+            var standAloneSigRow = 0
+            i = 0
+            while i < fnCount
             {
-                localDescs[lc] = binder.GetFunctionLocalType(fnIndex, lc)
-                lc = lc + 1
+                let asm = new IlAssembler()
+                let paramCount = binder.GetFunctionParamCount(i)
+                let paramNames = new string[paramCount]
+                var p = 0
+                while p < paramCount
+                {
+                    paramNames[p] = binder.GetFunctionParamName(i, p)
+                    p = p + 1
+                }
+
+                emitter.EmitFunction(asm, binder.GetFunctionBody(i), paramNames, paramCount)
+                let bodyHex = asm.Assemble()
+                bodies[i] = bodyHex
+                maxStacks[i] = asm.ComputeMaxStack()
+                rvas[i] = rva
+                rva = rva + Align4(12 + bodyHex.Length / 2)
+
+                // 局部变量签名（StandAloneSig；行号按方法序分配）
+                let localCount = emitter.LocalCount()
+                let localDescs = new string[localCount]
+                var lc = 0
+                while lc < localCount
+                {
+                    localDescs[lc] = binder.GetFunctionLocalType(i, lc)
+                    lc = lc + 1
+                }
+
+                sigBlobs[i] = localCount > 0
+                    ? MetadataEncode.EncodeLocalVarSignatureHex(localDescs, localCount)
+                    : ""
+                if localCount > 0
+                {
+                    standAloneSigRow = standAloneSigRow + 1
+                    sigTokens[i] = 0x11000000 + standAloneSigRow
+                }
+                else
+                {
+                    sigTokens[i] = 0
+                }
+
+                // 方法签名（参数类型逐位）
+                let paramDescs = new string[paramCount]
+                p = 0
+                while p < paramCount
+                {
+                    paramDescs[p] = binder.GetFunctionParamType(i, p)
+                    p = p + 1
+                }
+
+                sigs[i] = MetadataEncode.EncodeMethodSignatureHex(
+                    binder.GetFunctionReturnType(i), paramDescs, paramCount, true)
+                paramCounts[i] = paramCount
+                flags[i] = 0x96
+                methodNames[i] = binder.GetFunctionName(i)
+                i = i + 1
             }
 
-            let localSigBlob = localCount > 0
-                ? MetadataEncode.EncodeLocalVarSignatureHex(localDescs, localCount)
-                : ""
-            let localSigToken = localCount > 0 ? 0x11000001 : 0
-
             // ---- 元数据计划 ----
-            let paramDescs = new string[0]
-            let sig = MetadataEncode.EncodeMethodSignatureHex(retType, paramDescs, 0, true)
-
-            var methodNames = new string[1]
-            methodNames[0] = "Main"
-            var methodSigs = new string[1]
-            methodSigs[0] = sig
-            var methodRvas = new i32[1]
-            methodRvas[0] = 0x1048
-            var methodParams = new i32[1]
-            methodParams[0] = 0
-            var methodFlags = new i32[1]
-            methodFlags[0] = 0x96
-
             // AssemblyRef：System.Private.CoreLib（pkt 对齐 C# 差分测试）
             var asmRefNames = new string[1]
             asmRefNames[0] = "System.Private.CoreLib"
@@ -132,17 +201,15 @@ namespace Cocoa.CodeGen
 
             var emptyInts = new i32[0]
             var emptyStrings = new string[0]
-            var localSigBlobs = new string[1]
-            localSigBlobs[0] = localSigBlob
 
             let builder = new IlMetadataBuilder("Min", "Min",
                 typeRefScope, typeRefNs, typeRefName,
                 memberRefParent, memberRefName, memberRefSig,
-                methodNames, methodSigs, methodRvas, methodParams, methodFlags,
+                methodNames, sigs, rvas, paramCounts, flags,
                 asmRefNames, asmRefMajor, asmRefMinor, asmRefBuild, asmRefRev, asmRefFlags, asmRefPk, asmRefCulture,
                 1, emptyInts, emptyInts, emptyStrings,
                 "0102030405060708090a0b0c0d0e0f10", "00",
-                localSigBlobs)
+                sigBlobs)
             let tables = builder.TablesHex()
             let strings = builder.StringsHex()
             let us = builder.UsHex()
@@ -150,14 +217,8 @@ namespace Cocoa.CodeGen
             let blob = builder.BlobHex()
 
             // ---- ManagedPeWriter ----
-            var bodies = new string[1]
-            bodies[0] = bodyHex
-            var localSigs = new i32[1]
-            localSigs[0] = localSigToken
-            var maxStacks = new i32[1]
-            maxStacks[0] = maxStack
-            let pe = ManagedPeWriter.Build("Min", bodies, 1, localSigs, maxStacks,
-                tables, strings, us, guid, blob, 0x06000001)
+            let pe = ManagedPeWriter.Build("Min", bodies, fnCount, sigTokens, maxStacks,
+                tables, strings, us, guid, blob, tokens[mainIndex])
 
             var hex = ""
             var b = 0
@@ -168,6 +229,11 @@ namespace Cocoa.CodeGen
             }
 
             return hex
+        }
+
+        private static function Align4(value: i32): i32
+        {
+            return (value + 3) & ~3
         }
     }
 }

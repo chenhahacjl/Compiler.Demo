@@ -26,6 +26,9 @@ namespace Cocoa.Tests.Compiler
         [InlineData("function Main(): i32 { return 10 - 4 }", 6)]
         [InlineData("function Main(): i32 { return 2 * 3 + 4 }", 10)]
         [InlineData("function Main(): i32 { var x = 5 x = x + 3 return x }", 8)]
+        [InlineData("function Add(a: i32, b: i32): i32 { return a + b } function Main(): i32 { return Add(6, 7) }", 13)]
+        [InlineData("function Main(): i32 { var x = 0 while x < 3 { x = x + 1 } return x }", 3)]
+        [InlineData("function Main(): i32 { if 2 > 1 { return 5 } return 7 }", 5)]
         public void SelfHosted_PureArithmetic_Main_Runs_In_ProducedDll(string source, int expected)
         {
             var dir = Path.Combine(Path.GetTempPath(), "cocoa-e2e", Guid.NewGuid().ToString("N"));
