@@ -128,6 +128,18 @@ namespace Cocoa.CodeGen
             if desc == "nuint" { return "19" }
             if desc == "object" { return "1c" }
 
+            // 自举 Binder 规范名（C# 式 CanonicalType）→ 同义 IL 键（名字化接线：Binder.ReturnType/ParamType 原样传入）
+            if desc == "int" { return EncodeTypeHex("i32") }
+            if desc == "uint" { return EncodeTypeHex("u4") }
+            if desc == "long" { return EncodeTypeHex("i64") }
+            if desc == "ulong" { return EncodeTypeHex("u8") }
+            if desc == "byte" { return EncodeTypeHex("u1") }
+            if desc == "sbyte" { return EncodeTypeHex("i1") }
+            if desc == "short" { return EncodeTypeHex("i2") }
+            if desc == "ushort" { return EncodeTypeHex("u2") }
+            if desc == "float" { return EncodeTypeHex("r4") }
+            if desc == "double" { return EncodeTypeHex("f64") }
+
             if HasPrefix(desc, "byref:")
             {
                 return "10" + EncodeTypeHex(After(desc, 6))

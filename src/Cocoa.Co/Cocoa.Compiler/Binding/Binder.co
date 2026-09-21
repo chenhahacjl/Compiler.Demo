@@ -832,6 +832,16 @@ namespace Cocoa.CodeAnalysis.Binding
             return _functions[index].ReturnType()
         }
 
+        public function GetFunctionLocalCount(index: i32): i32
+        {
+            return _functions[index].LocalCount()
+        }
+
+        public function GetFunctionLocalType(index: i32, localIndex: i32): string
+        {
+            return _functions[index].Local(localIndex).Type()
+        }
+
         public function GetFunctionAttributeCount(index: i32): i32
         {
             return _functions[index].AttributeCount()

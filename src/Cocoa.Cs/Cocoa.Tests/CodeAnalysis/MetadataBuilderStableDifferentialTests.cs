@@ -165,7 +165,7 @@ namespace Cocoa.Tests.CodeAnalysis
             sb.Append("        mrParent, mrName, mrSig,\n");
             sb.Append("        mName, mSig, mRva, mParam, mFlags,\n");
             sb.Append("        aName, aMajor, aMinor, aBuild, aRev, aFlags, aPk, aCulture,\n");
-            sb.Append("        ").Append(debugCtorRow).Append(", new i32[0], new i32[0], new string[0], \"").Append(mvidHex).Append("\", \"").Append(usHex).Append("\")\n");
+            sb.Append("        ").Append(debugCtorRow).Append(", new i32[0], new i32[0], new string[0], \"").Append(mvidHex).Append("\", \"").Append(usHex).Append("\", new string[0]" + ")\n");
             sb.Append("    System.Console.WriteLine(\"T:\" + b.TablesHex())\n");
             sb.Append("    System.Console.WriteLine(\"S:\" + b.StringsHex())\n");
             sb.Append("    System.Console.WriteLine(\"U:\" + b.UsHex())\n");

@@ -61,6 +61,17 @@ namespace Cocoa.CodeGen
             return _error
         }
 
+        /// <summary>已分配的局部变量数/名（供元数据计划经 binder 查类型构建局部变量签名）。</summary>
+        public function LocalCount(): i32
+        {
+            return _localCount
+        }
+
+        public function LocalName(index: i32): string
+        {
+            return _localNames[index]
+        }
+
         private function MethodIndex(name: string): i32
         {
             var i = 0

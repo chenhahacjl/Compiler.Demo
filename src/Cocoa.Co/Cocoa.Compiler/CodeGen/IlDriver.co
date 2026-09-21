@@ -1,0 +1,173 @@
+// M5-a5 批 2：自举 IL → 物理 .dll 端到端驱动（受限：单入口 Main，纯算术/简单返回）。
+// 绑定 → IlEmitter/IlAssembler（方法体 hex + maxStack）→ 元数据计划（签名/RVA/flags）→
+// IlMetadataBuilder（五流 hex）→ ManagedPeWriter（PE 字节）→ 返回 PE 字节 hex 或 "ERR:…"。
+// C# 侧测试取 hex 落盘 Min.dll 并实跑验证；批 3 由 Cli `compile` 子命令接线（File.WriteAllBytes）。
+
+using Cocoa.CodeAnalysis.Binding
+using Cocoa.CodeAnalysis.Syntax
+
+namespace Cocoa.CodeGen
+{
+    class IlDriver
+    {
+        /// <summary>编译顶层入口 `Main` 为托管 .dll；返回 PE 字节 hex（小端），失败返回 "ERR:…"。</summary>
+        public static function BuildDllHex(source: string): string
+        {
+            let binder = Cocoa.CodeAnalysis.Binding.Binder.Create(source)
+            binder.BindCompilationUnit()
+            if binder.DiagnosticCount() > 0
+            {
+                return "ERR:" + binder.DiagnosticAt(0)
+            }
+
+            // 定位顶层入口 Main
+            var fnIndex = -1
+            var i = 0
+            while i < binder.GetFunctionCount()
+            {
+                if binder.GetFunctionName(i) == "Main"
+                {
+                    fnIndex = i
+                }
+
+                i = i + 1
+            }
+
+            if fnIndex < 0
+            {
+                return "ERR:no function Main"
+            }
+
+            let retType = binder.GetFunctionReturnType(fnIndex)
+            if retType.IndexOf("[") >= 0
+            {
+                return "ERR:unsupported return type " + retType
+            }
+
+            // ---- IL 发射 ----
+            let emitter = new IlEmitter()
+            let names = new string[1]
+            let tokens = new i32[1]
+            let returnsValue = new bool[1]
+            names[0] = "Main"
+            tokens[0] = 0x06000001
+            returnsValue[0] = true
+            emitter.SetMethods(names, tokens, returnsValue)
+
+            let asm = new IlAssembler()
+            let paramNames = new string[0]
+            emitter.EmitFunction(asm, binder.GetFunctionBody(fnIndex), paramNames, 0)
+            let bodyHex = asm.Assemble()
+            let maxStack = asm.ComputeMaxStack()
+
+            // ---- 局部变量签名（StandAloneSig；无局部 → 空）----
+            let localCount = emitter.LocalCount()
+            let localDescs = new string[localCount]
+            var lc = 0
+            while lc < localCount
+            {
+                localDescs[lc] = binder.GetFunctionLocalType(fnIndex, lc)
+                lc = lc + 1
+            }
+
+            let localSigBlob = localCount > 0
+                ? MetadataEncode.EncodeLocalVarSignatureHex(localDescs, localCount)
+                : ""
+            let localSigToken = localCount > 0 ? 0x11000001 : 0
+
+            // ---- 元数据计划 ----
+            let paramDescs = new string[0]
+            let sig = MetadataEncode.EncodeMethodSignatureHex(retType, paramDescs, 0, true)
+
+            var methodNames = new string[1]
+            methodNames[0] = "Main"
+            var methodSigs = new string[1]
+            methodSigs[0] = sig
+            var methodRvas = new i32[1]
+            methodRvas[0] = 0x1048
+            var methodParams = new i32[1]
+            methodParams[0] = 0
+            var methodFlags = new i32[1]
+            methodFlags[0] = 0x96
+
+            // AssemblyRef：System.Private.CoreLib（pkt 对齐 C# 差分测试）
+            var asmRefNames = new string[1]
+            asmRefNames[0] = "System.Private.CoreLib"
+            var asmRefMajor = new i32[1]
+            asmRefMajor[0] = 9
+            var asmRefMinor = new i32[1]
+            asmRefMinor[0] = 0
+            var asmRefBuild = new i32[1]
+            asmRefBuild[0] = 0
+            var asmRefRev = new i32[1]
+            asmRefRev[0] = 0
+            var asmRefFlags = new i32[1]
+            asmRefFlags[0] = 0
+            var asmRefPk = new string[1]
+            asmRefPk[0] = "7cec85d7bea7798e"
+            var asmRefCulture = new string[1]
+            asmRefCulture[0] = ""
+
+            // TypeRef：System.Object（行 1）+ System.Diagnostics.DebuggableAttribute（行 2）
+            var typeRefScope = new i32[2]
+            typeRefScope[0] = 1
+            typeRefScope[1] = 1
+            var typeRefNs = new string[2]
+            typeRefNs[0] = "System"
+            typeRefNs[1] = "System.Diagnostics"
+            var typeRefName = new string[2]
+            typeRefName[0] = "Object"
+            typeRefName[1] = "DebuggableAttribute"
+
+            // MemberRef：DebuggableAttribute..ctor(bool,bool)（行 1）
+            var memberRefParent = new i32[1]
+            memberRefParent[0] = 2
+            var memberRefName = new string[1]
+            memberRefName[0] = ".ctor"
+            var boolParams = new string[2]
+            boolParams[0] = "bool"
+            boolParams[1] = "bool"
+            var memberRefSig = new string[1]
+            memberRefSig[0] = MetadataEncode.EncodeMethodSignatureHex("void", boolParams, 2, false)
+
+            var emptyInts = new i32[0]
+            var emptyStrings = new string[0]
+            var localSigBlobs = new string[1]
+            localSigBlobs[0] = localSigBlob
+
+            let builder = new IlMetadataBuilder("Min", "Min",
+                typeRefScope, typeRefNs, typeRefName,
+                memberRefParent, memberRefName, memberRefSig,
+                methodNames, methodSigs, methodRvas, methodParams, methodFlags,
+                asmRefNames, asmRefMajor, asmRefMinor, asmRefBuild, asmRefRev, asmRefFlags, asmRefPk, asmRefCulture,
+                1, emptyInts, emptyInts, emptyStrings,
+                "0102030405060708090a0b0c0d0e0f10", "00",
+                localSigBlobs)
+            let tables = builder.TablesHex()
+            let strings = builder.StringsHex()
+            let us = builder.UsHex()
+            let guid = builder.GuidHex()
+            let blob = builder.BlobHex()
+
+            // ---- ManagedPeWriter ----
+            var bodies = new string[1]
+            bodies[0] = bodyHex
+            var localSigs = new i32[1]
+            localSigs[0] = localSigToken
+            var maxStacks = new i32[1]
+            maxStacks[0] = maxStack
+            let pe = ManagedPeWriter.Build("Min", bodies, 1, localSigs, maxStacks,
+                tables, strings, us, guid, blob, 0x06000001)
+
+            var hex = ""
+            var b = 0
+            while b < pe.Length
+            {
+                hex = hex + HexCodec.HexByte(pe[b])
+                b = b + 1
+            }
+
+            return hex
+        }
+    }
+}

@@ -41,6 +41,7 @@ namespace Cocoa.CodeGen
         private field _attrCount: i32
         private field _mvidHex: string
         private field _usHex: string
+        private field _localSigBlobs: string[]
 
         // 堆
         private field _strings: string[]
@@ -60,7 +61,7 @@ namespace Cocoa.CodeGen
             asmRefName: string[], asmRefMajor: i32[], asmRefMinor: i32[], asmRefBuild: i32[], asmRefRev: i32[],
             asmRefFlags: i32[], asmRefPk: string[], asmRefCulture: string[],
             debugCtorRow: i32, attrParentCoded: i32[], attrCtorCoded: i32[], attrValueBlob: string[],
-            mvidHex: string, usHex: string)
+            mvidHex: string, usHex: string, localSigBlobs: string[])
         {
             _moduleName = moduleName
             _assemblyName = assemblyName
@@ -94,6 +95,7 @@ namespace Cocoa.CodeGen
             _attrCount = attrParentCoded.Length
             _mvidHex = mvidHex
             _usHex = usHex
+            _localSigBlobs = localSigBlobs
 
             _stringCount = 0
             _stringBytes = 0
@@ -124,6 +126,18 @@ namespace Cocoa.CodeGen
             let memberRefCount = _memberRefCount
             let customAttributeCount = _attrCount > 0 ? _attrCount : 1
             let assemblyRefCount = _asmRefCount
+            var standAloneSigCount = 0
+            var sigP = 0
+            while sigP < _methodCount && sigP < _localSigBlobs.Length
+            {
+                if _localSigBlobs[sigP].Length > 0
+                {
+                    standAloneSigCount = standAloneSigCount + 1
+                }
+
+                sigP = sigP + 1
+            }
+
             var paramCount = 0
             var p = 0
             while p < _methodCount
@@ -146,9 +160,21 @@ namespace Cocoa.CodeGen
             t = t + HexCodec.HexByte(0)           // minor
             t = t + HexCodec.HexByte(0)           // heapSizes（small）
             t = t + HexCodec.HexByte(1)           // reserved
-            t = t + HexCodec.HexU32(0x00001547)   // valid low（Module/TypeRef/TypeDef/MethodDef/Param/MemberRef/CustomAttribute/Assembly）
-            t = t + HexCodec.HexU32(0x00000009)   // valid high（bit32=Assembly，bit35=AssemblyRef）
-            t = t + HexCodec.HexU32(0x3325FA00)   // sorted low
+            // valid low/high（按实际行数计算，对齐 C# MetadataBuilder.Serialize 的自定义表号：
+            // Module=0/TypeRef=1/TypeDef=2/MethodDef=6/Param=8/MemberRef=0xA/CustomAttribute=0xC/StandAloneSig=0x11/Assembly=0x20/AssemblyRef=0x23）
+            var validLow = 0x00000001
+            if typeRefCount > 0 { validLow = validLow | 0x00000002 }
+            if typeDefCount > 0 { validLow = validLow | 0x00000004 }
+            if methodDefCount > 0 { validLow = validLow | 0x00000040 }
+            if paramCount > 0 { validLow = validLow | 0x00000100 }
+            if memberRefCount > 0 { validLow = validLow | 0x00000400 }
+            if customAttributeCount > 0 { validLow = validLow | 0x00001000 }
+            if standAloneSigCount > 0 { validLow = validLow | 0x00020000 }
+            var validHigh = 0x00000001
+            if assemblyRefCount > 0 { validHigh = validHigh | 0x00000008 }
+            t = t + HexCodec.HexU32(validLow)
+            t = t + HexCodec.HexU32(validHigh)
+            t = t + HexCodec.HexU32(0x3325FA00)   // sorted low（对齐 ilasm 常量）
             t = t + HexCodec.HexU32(0x00001600)   // sorted high
 
             // 行数（与 Serialize.cs 顺序）
@@ -159,6 +185,7 @@ namespace Cocoa.CodeGen
             if paramCount > 0 { t = t + HexCodec.HexU32(paramCount) }
             if memberRefCount > 0 { t = t + HexCodec.HexU32(memberRefCount) }
             if customAttributeCount > 0 { t = t + HexCodec.HexU32(customAttributeCount) }
+            if standAloneSigCount > 0 { t = t + HexCodec.HexU32(standAloneSigCount) }
             t = t + HexCodec.HexU32(1)            // Assembly
             if assemblyRefCount > 0 { t = t + HexCodec.HexU32(assemblyRefCount) }
 
@@ -262,6 +289,19 @@ namespace Cocoa.CodeGen
                 t = t + HexCodec.HexU16((1 << 5) | 0x0E)
                 t = t + HexCodec.HexU16((_debugCtorRow << 3) | 3)
                 t = t + HexCodec.HexU16(GetOrAddBlob("010002010201"))
+            }
+
+            // ---- StandAloneSig（局部变量签名；行 = #Blob 索引，2B small）----
+            // 行号 = 1 起按方法序；局部变量方法经该 token 挂接（0x11000000 | 行号，Fat 头 InitLocals）。
+            i = 0
+            while i < _methodCount && i < _localSigBlobs.Length
+            {
+                if _localSigBlobs[i].Length > 0
+                {
+                    t = t + HexCodec.HexU16(GetOrAddBlob(_localSigBlobs[i]))
+                }
+
+                i = i + 1
             }
 
             // ---- Assembly（1 行）----
