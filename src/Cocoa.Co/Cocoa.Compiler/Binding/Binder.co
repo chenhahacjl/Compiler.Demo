@@ -652,13 +652,18 @@ namespace Cocoa.CodeAnalysis.Binding
                 return "?"
             }
 
+            if k == "ObjectCreationExpression"
+            {
+                // (NewKeyword IdentifierToken ( args )) → 类名
+                return node.ChildCount() > 1 ? node.Child(1).Text() : "?"
+            }
+
             if k == "BinaryExpression"
             {
                 // [left, opToken, right]：关系/逻辑 → bool；字符串拼接 → string；数值 → double 参与即 double，否则 int
                 var left = "?"
                 var right = "?"
-                var op = ""
-                var b = 0
+                var op = ""                var b = 0
                 while b < node.ChildCount()
                 {
                     let child = node.Child(b)
@@ -1028,6 +1033,34 @@ namespace Cocoa.CodeAnalysis.Binding
         public function GetFunctionCount(): i32
         {
             return _functionCount
+        }
+
+        public function GetTopLevelFunctionCount(): i32
+        {
+            return _topLevelCount
+        }
+
+        /// <summary>第 o 个顶层函数的 `_functions` 索引（声明序）。</summary>
+        public function GetTopLevelFunctionIndex(ordinal: i32): i32
+        {
+            return _topLevelIndexes[ordinal]
+        }
+
+        /// <summary>函数是否顶层声明（类方法 = false）。</summary>
+        public function IsTopLevelFunction(index: i32): bool
+        {
+            var i = 0
+            while i < _topLevelCount
+            {
+                if _topLevelIndexes[i] == index
+                {
+                    return true
+                }
+
+                i = i + 1
+            }
+
+            return false
         }
 
         public function GetFunctionName(index: i32): string

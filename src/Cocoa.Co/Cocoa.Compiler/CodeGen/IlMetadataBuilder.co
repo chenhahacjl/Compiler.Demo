@@ -42,6 +42,14 @@ namespace Cocoa.CodeGen
         private field _mvidHex: string
         private field _usHex: string
         private field _localSigBlobs: string[]
+        private field _fieldCount: i32
+        private field _fieldName: string[]
+        private field _fieldSig: string[]
+        private field _fieldFlags: i32[]
+        private field _userTypeCount: i32
+        private field _userTypeName: string[]
+        private field _userTypeFieldList: i32[]
+        private field _userTypeMethodList: i32[]
 
         // 堆
         private field _strings: string[]
@@ -61,7 +69,9 @@ namespace Cocoa.CodeGen
             asmRefName: string[], asmRefMajor: i32[], asmRefMinor: i32[], asmRefBuild: i32[], asmRefRev: i32[],
             asmRefFlags: i32[], asmRefPk: string[], asmRefCulture: string[],
             debugCtorRow: i32, attrParentCoded: i32[], attrCtorCoded: i32[], attrValueBlob: string[],
-            mvidHex: string, usHex: string, localSigBlobs: string[])
+            mvidHex: string, usHex: string, localSigBlobs: string[],
+            fieldName: string[], fieldSig: string[], fieldFlags: i32[],
+            userTypeName: string[], userTypeFieldList: i32[], userTypeMethodList: i32[])
         {
             _moduleName = moduleName
             _assemblyName = assemblyName
@@ -96,6 +106,14 @@ namespace Cocoa.CodeGen
             _mvidHex = mvidHex
             _usHex = usHex
             _localSigBlobs = localSigBlobs
+            _fieldName = fieldName
+            _fieldSig = fieldSig
+            _fieldFlags = fieldFlags
+            _fieldCount = fieldName.Length
+            _userTypeName = userTypeName
+            _userTypeFieldList = userTypeFieldList
+            _userTypeMethodList = userTypeMethodList
+            _userTypeCount = userTypeName.Length
 
             _stringCount = 0
             _stringBytes = 0
@@ -120,8 +138,9 @@ namespace Cocoa.CodeGen
         public function TablesHex(): string
         {
             var t = ""
-            let typeDefCount = 2
+            let typeDefCount = 2 + _userTypeCount
             let typeRefCount = _typeRefCount
+            let fieldCount = _fieldCount
             let methodDefCount = _methodCount
             let memberRefCount = _memberRefCount
             let customAttributeCount = _attrCount > 0 ? _attrCount : 1
@@ -161,10 +180,11 @@ namespace Cocoa.CodeGen
             t = t + HexCodec.HexByte(0)           // heapSizes（small）
             t = t + HexCodec.HexByte(1)           // reserved
             // valid low/high（按实际行数计算，对齐 C# MetadataBuilder.Serialize 的自定义表号：
-            // Module=0/TypeRef=1/TypeDef=2/MethodDef=6/Param=8/MemberRef=0xA/CustomAttribute=0xC/StandAloneSig=0x11/Assembly=0x20/AssemblyRef=0x23）
+            // Module=0/TypeRef=1/TypeDef=2/Field=4/MethodDef=6/Param=8/MemberRef=0xA/CustomAttribute=0xC/StandAloneSig=0x11/Assembly=0x20/AssemblyRef=0x23）
             var validLow = 0x00000001
             if typeRefCount > 0 { validLow = validLow | 0x00000002 }
             if typeDefCount > 0 { validLow = validLow | 0x00000004 }
+            if fieldCount > 0 { validLow = validLow | 0x00000010 }
             if methodDefCount > 0 { validLow = validLow | 0x00000040 }
             if paramCount > 0 { validLow = validLow | 0x00000100 }
             if memberRefCount > 0 { validLow = validLow | 0x00000400 }
@@ -181,6 +201,7 @@ namespace Cocoa.CodeGen
             t = t + HexCodec.HexU32(1)
             if typeRefCount > 0 { t = t + HexCodec.HexU32(typeRefCount) }
             if typeDefCount > 0 { t = t + HexCodec.HexU32(typeDefCount) }
+            if fieldCount > 0 { t = t + HexCodec.HexU32(fieldCount) }
             if methodDefCount > 0 { t = t + HexCodec.HexU32(methodDefCount) }
             if paramCount > 0 { t = t + HexCodec.HexU32(paramCount) }
             if memberRefCount > 0 { t = t + HexCodec.HexU32(memberRefCount) }
@@ -225,6 +246,29 @@ namespace Cocoa.CodeGen
             t = t + HexCodec.HexU16(5)
             t = t + HexCodec.HexU16(1)
             t = t + HexCodec.HexU16(1)
+            // 用户类 TypeDef 行：flags=Public(1) extends=System.Object TypeRef 行 1（coded=5）
+            // fieldList/methodList 由驱动算好（对齐 <CocoaTopLevel> 方法行在 row 1..T、用户类方法紧随其后）。
+            i = 0
+            while i < _userTypeCount
+            {
+                t = t + HexCodec.HexU32(0x00000001)
+                t = t + HexCodec.HexU16(GetOrAddString(_userTypeName[i]))
+                t = t + HexCodec.HexU16(GetOrAddString(""))
+                t = t + HexCodec.HexU16(5)
+                t = t + HexCodec.HexU16(_userTypeFieldList[i])
+                t = t + HexCodec.HexU16(_userTypeMethodList[i])
+                i = i + 1
+            }
+
+            // ---- FieldDef ----
+            i = 0
+            while i < fieldCount
+            {
+                t = t + HexCodec.HexU16(_fieldFlags[i])
+                t = t + HexCodec.HexU16(GetOrAddString(_fieldName[i]))
+                t = t + HexCodec.HexU16(GetOrAddBlob(_fieldSig[i]))
+                i = i + 1
+            }
 
             // ---- MethodDef ----
             var paramRow = 1

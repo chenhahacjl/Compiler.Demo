@@ -33,6 +33,15 @@ namespace Cocoa.CodeGen
         private field _usTexts: string[]
         private field _usTokens: i32[]
         private field _usCount: i32
+        private field _classMethodKeys: string[]
+        private field _classMethodTokens: i32[]
+        private field _classFieldKeys: string[]
+        private field _classFieldTokens: i32[]
+        private field _classCtorNames: string[]
+        private field _classCtorTokens: i32[]
+        private field _classEntriesCount: i32
+        private field _varTypes: string[]
+        private field _varTypeCount: i32
 
         public constructor()
         {
@@ -58,6 +67,15 @@ namespace Cocoa.CodeGen
             _usTexts = new string[0]
             _usTokens = new i32[0]
             _usCount = 0
+            _classMethodKeys = new string[0]
+            _classMethodTokens = new i32[0]
+            _classFieldKeys = new string[0]
+            _classFieldTokens = new i32[0]
+            _classCtorNames = new string[0]
+            _classCtorTokens = new i32[0]
+            _classEntriesCount = 0
+            _varTypes = new string[0]
+            _varTypeCount = 0
         }
 
         public function SetMethods(names: string[], tokens: i32[], returnsValue: bool[]): void
@@ -82,6 +100,128 @@ namespace Cocoa.CodeGen
             _usTexts = texts
             _usTokens = tokens
             _usCount = count
+        }
+
+        /// <summary>类实例方法表：键 `类名.方法` → MethodDef token（实例调 callvirt 用）。</summary>
+        public function SetClassMethods(keys: string[], tokens: i32[], count: i32): void
+        {
+            _classMethodKeys = keys
+            _classMethodTokens = tokens
+            _classEntriesCount = count
+        }
+
+        /// <summary>类实例字段表：键 `类名.字段` → FieldDef token（ldfld/stfld 用）。</summary>
+        public function SetClassFields(keys: string[], tokens: i32[], count: i32): void
+        {
+            _classFieldKeys = keys
+            _classFieldTokens = tokens
+        }
+
+        /// <summary>类构造器表：键 `类名` → ctor MethodDef token（newobj 用）。</summary>
+        public function SetClassCtors(names: string[], tokens: i32[], count: i32): void
+        {
+            _classCtorNames = names
+            _classCtorTokens = tokens
+        }
+
+        /// <summary>每函数参数/局部类型表：前 paramCount 项=参数，其后=局部（按发射槽序）；thisslot0。</summary>
+        public function SetVarTypes(types: string[], count: i32): void
+        {
+            _varTypes = types
+            _varTypeCount = count
+        }
+
+        private function ClassMethodToken(key: string): i32
+        {
+            var i = 0
+            while i < _classEntriesCount
+            {
+                if _classMethodKeys[i] == key
+                {
+                    return _classMethodTokens[i]
+                }
+
+                i = i + 1
+            }
+
+            return -1
+        }
+
+        private function FieldToken(key: string): i32
+        {
+            var i = 0
+            while i < _classFieldKeys.Length
+            {
+                if _classFieldKeys[i] == key
+                {
+                    return _classFieldTokens[i]
+                }
+
+                i = i + 1
+            }
+
+            return -1
+        }
+
+        private function CtorToken(className: string): i32
+        {
+            var i = 0
+            while i < _classCtorNames.Length
+            {
+                if _classCtorNames[i] == className
+                {
+                    return _classCtorTokens[i]
+                }
+
+                i = i + 1
+            }
+
+            return -1
+        }
+
+        /// <summary>变量类型（参数前段 / 局部后段）；查不到返回空。</summary>
+        private function VarTypeOf(name: string): string
+        {
+            let isParam = ParamIndex(name)
+            if isParam >= 0
+            {
+                return isParam < _varTypeCount ? _varTypes[isParam] : ""
+            }
+
+            let li = LocalIndex(name)
+            var t = ""
+            if li >= 0 && isParam < 0
+            {
+                let ti = _paramCount + li
+                if ti < _varTypeCount
+                {
+                    t = _varTypes[ti]
+                }
+            }
+
+            return t
+        }
+
+        /// <summary>取一个子表达式节点表示的"类型"（this→当前类、变量→类型表、new→类名、字面量→基元名）；否则空。</summary>
+        private function ExprTypeOf(expr: Node): string
+        {
+            let k = expr.Kind()
+            if k == "ThisExpression"
+            {
+                return expr.ChildCount() > 0 ? expr.Child(0).Text() : ""
+            }
+
+            if k == "VariableExpression"
+            {
+                return VarTypeOf(expr.Child(0).Text())
+            }
+
+            if k == "ObjectCreationExpression"
+            {
+                return expr.ChildCount() > 0 ? expr.Child(0).Text() : ""
+            }
+
+            return ""
         }
 
         private function BclToken(name: string): i32
@@ -162,9 +302,15 @@ namespace Cocoa.CodeGen
                 return false
             }
 
-            // BCL 静态调用（当前支持 void 面，如 Console.WriteLine）——表达式语句不弹栈
+            // 实例成员调用产生值（当前类方法面均返回 i32）；BCL 静态调用当前面不产生值（Console.WriteLine）
             if expr.Kind() == "MemberCallExpression"
             {
+                let owner = ExprTypeOf(expr.Child(0))
+                if owner != "" && ClassMethodToken(owner + "." + expr.Child(2).Text()) >= 0
+                {
+                    return true
+                }
+
                 return false
             }
 
@@ -872,19 +1018,80 @@ namespace Cocoa.CodeGen
             }
             else if k == "MemberCallExpression"
             {
-                // 绑定形状：(MemberCallExpression <target> . <name> ( <args> ) ) —— 当前支持 BCL 静态成员（如 Console.WriteLine）
-                let targetName = expr.Child(0).ChildCount() > 0 ? expr.Child(0).Child(0).Text() : ""
-                let fullName = targetName + "." + expr.Child(2).Text()
-                let token = BclToken(fullName)
-                if token < 0
+                let target = expr.Child(0)
+                let owner = ExprTypeOf(target)
+                var methodToken = -1
+                if owner != ""
                 {
-                    _error = "Unresolved bcl member: " + fullName
+                    methodToken = ClassMethodToken(owner + "." + expr.Child(2).Text())
+                }
+
+                if methodToken >= 0
+                {
+                    // 实例方法调用：this.成员() / b.成员() → callvirt（当前实例方法面均返回 i32）
+                    EmitExpression(target)
+                    var argCount = 0
+                    var a = 4
+                    while a < expr.ChildCount() - 1
+                    {
+                        if !expr.Child(a).IsToken()
+                        {
+                            EmitExpression(expr.Child(a))
+                            argCount = argCount + 1
+                        }
+
+                        a = a + 1
+                    }
+
+                    let idx = _assembler.Add("Callvirt", 7, methodToken, -1)
+                    _assembler.SetCallDelta(idx, 1 - (argCount + 1))
+                }
+                else
+                {
+                    // BCL 静态成员（如 Console.WriteLine）：绑定形状 (target . name ( args ))
+                    let targetName = expr.Child(0).ChildCount() > 0 ? expr.Child(0).Child(0).Text() : ""
+                    let fullName = targetName + "." + expr.Child(2).Text()
+                    let token = BclToken(fullName)
+                    if token < 0
+                    {
+                        _error = "Unresolved bcl member: " + fullName
+                        return
+                    }
+
+                    var argCount = 0
+                    var a = 4
+                    while a < expr.ChildCount() - 1
+                    {
+                        if !expr.Child(a).IsToken()
+                        {
+                            EmitExpression(expr.Child(a))
+                            argCount = argCount + 1
+                        }
+
+                        a = a + 1
+                    }
+
+                    let idx = _assembler.Add("Call", 7, token, -1)
+                    _assembler.SetCallDelta(idx, 0 - argCount)
+                }
+            }
+            else if k == "ThisExpression"
+            {
+                _assembler.Add("Ldarg", 12, 0, -1)
+            }
+            else if k == "ObjectCreationExpression"
+            {
+                // 绑定形状：(ObjectCreationExpression type=ClassName <args>)
+                let ctorToken = CtorToken(expr.Child(0).Text())
+                if ctorToken < 0
+                {
+                    _error = "Unresolved class ctor: " + expr.Child(0).Text()
                     return
                 }
 
                 var argCount = 0
-                var a = 4
-                while a < expr.ChildCount() - 1
+                var a = 1
+                while a < expr.ChildCount()
                 {
                     if !expr.Child(a).IsToken()
                     {
@@ -895,8 +1102,29 @@ namespace Cocoa.CodeGen
                     a = a + 1
                 }
 
-                let idx = _assembler.Add("Call", 7, token, -1)
-                _assembler.SetCallDelta(idx, 0 - argCount)
+                let idx = _assembler.Add("Newobj", 7, ctorToken, -1)
+                _assembler.SetCallDelta(idx, 1 - argCount)
+            }
+            else if k == "MemberAccessExpression"
+            {
+                // 字段读：this.v / b.v → <目标> <ldfld token>（绑定形状 (target . name)）
+                let owner = ExprTypeOf(expr.Child(0))
+                if owner == ""
+                {
+                    _error = "Unknown member owner"
+                    return
+                }
+
+                let name = expr.Child(2).Text()
+                let token = FieldToken(owner + "." + name)
+                if token < 0
+                {
+                    _error = "Unresolved field: " + owner + "." + name
+                    return
+                }
+
+                EmitExpression(expr.Child(0))
+                _assembler.Add("Ldfld", 9, token, -1)
             }
             else if k == "UnaryExpression"
             {

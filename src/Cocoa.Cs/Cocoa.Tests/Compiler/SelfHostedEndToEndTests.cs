@@ -110,6 +110,52 @@ namespace Cocoa.Tests.Compiler
             }
         }
 
+        [Theory]
+        [InlineData("class Box { field v: i32 function read(): i32 { return 10 } } " +
+                    "function Main(): i32 { var b = new Box() return b.read() }", 10)]
+        [InlineData("class Box { field v: i32 function read(): i32 { return this.v } } " +
+                    "function Main(): i32 { var b = new Box() return b.read() }", 0)]
+        public void SelfHosted_ClassInstance_New_And_MethodCall_Runs(string source, int expected)
+        {
+            var dir = Path.Combine(Path.GetTempPath(), "cocoa-e2e", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            try
+            {
+                var peHex = RunSelfDriver(source);
+                Assert.False(peHex.StartsWith("ERR:", StringComparison.Ordinal), "自举链报错：" + peHex);
+                Assert.True(peHex.Length > 0 && peHex.Length % 2 == 0, "PE hex 异常长度 " + peHex.Length);
+
+                var dllPath = Path.Combine(dir, "Min.dll");
+                File.WriteAllBytes(dllPath, HexToBytes(peHex));
+
+                // 验证 1：装配加载 + 入口点调用
+                var assembly = Assembly.LoadFile(dllPath);
+                var entryPoint = assembly.EntryPoint;
+                Assert.NotNull(entryPoint);
+                var result = entryPoint!.Invoke(null, null);
+                Assert.Equal(expected, (int)result!);
+
+                // 验证 2：dotnet 子进程实跑
+                File.WriteAllText(Path.Combine(dir, "Min.runtimeconfig.json"),
+                    "{\"runtimeOptions\":{\"tfm\":\"net9.0\",\"framework\":{\"name\":\"Microsoft.NETCore.App\",\"version\":\"9.0.0\"}}}");
+                var psi = new System.Diagnostics.ProcessStartInfo("dotnet", dllPath)
+                {
+                    WorkingDirectory = dir,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                };
+                using var process = System.Diagnostics.Process.Start(psi)!;
+                process.WaitForExit(30000);
+                Assert.True(process.HasExited, "dotnet 未在 30s 内退出");
+                Assert.Equal(expected, process.ExitCode);
+            }
+            finally
+            {
+                try { Directory.Delete(dir, recursive: true); } catch { }
+            }
+        }
+
         // ------------------------------------------------------------------
         // 自举驱动
         // ------------------------------------------------------------------

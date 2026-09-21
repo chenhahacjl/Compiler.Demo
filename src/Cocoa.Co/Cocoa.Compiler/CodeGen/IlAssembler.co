@@ -126,7 +126,7 @@ namespace Cocoa.CodeGen
                 return -1
             }
 
-            if name == "Call"
+            if name == "Call" || name == "Callvirt" || name == "Newobj"
             {
                 return _callDeltas[index]
             }

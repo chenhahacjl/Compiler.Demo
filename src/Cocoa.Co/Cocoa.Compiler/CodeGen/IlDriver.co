@@ -1,9 +1,11 @@
-// M5-a5 批 2→BCL/字符串扩展：自举 IL → 物理 .dll 端到端驱动。
+// M5-a5 批 2→BCL/字符串扩展 + C-2 类支持：自举 IL → 物理 .dll 端到端驱动。
 // 绑定 → 逐函数 IlEmitter/IlAssembler（方法体 hex + maxStack + 局部签名）→ 元数据计划（签名/RVA/flags/token）→
-// IlMetadataBuilder（五流 hex）→ ManagedPeWriter（PE 字节）→ 返回 PE 字节 hex 或 "ERR:…"。
+// IlMetadataBuilder（六流 hex + FieldDef + 用户 TypeDef）→ ManagedPeWriter（PE 字节）→ 返回 PE 字节 hex 或 "ERR:…"。
 // 支持：多顶层函数、参数、内部调用（0x06…）、局部变量（StandAloneSig）、控制流（if/while）、
 // BCL 静态调用（Console.WriteLine(i32|string)，MemberRef 0x0A…）、字符串字面量（Ldstr + #US 0x70…）、
 // 字符串运算（==/!=/+ → String.op_Equality/op_Inequality/Concat，操作数含字符串字面量启发式）。
+// C-2：用户类 TypeDef 行 + FieldDef 表 + 隐式 .ctor（调用 Object::.ctor）+ 实例方法
+// （HAS_THIS 签名 0x86 + callvirt 发射）+ newobj 构造。
 // C# 侧测试取 hex 落盘并实跑验证；批 3 由 Cli `compile` 子命令接线（File.WriteAllBytes）。
 
 using Cocoa.CodeAnalysis.Binding
@@ -23,31 +25,33 @@ namespace Cocoa.CodeGen
                 return "ERR:" + binder.DiagnosticAt(0)
             }
 
+            let topCount = binder.GetTopLevelFunctionCount()
+            let classCount = binder.GetClassCount()
             let fnCount = binder.GetFunctionCount()
-            if fnCount < 1
+            if topCount < 1
             {
                 return "ERR:no functions"
             }
 
-            // 定位顶层入口 Main
-            var mainIndex = -1
+            // 定位顶层入口 Main（仅顶层函数）
+            var mainTop = -1
             var i = 0
-            while i < fnCount
+            while i < topCount
             {
-                if binder.GetFunctionName(i) == "Main"
+                if binder.GetFunctionName(binder.GetTopLevelFunctionIndex(i)) == "Main"
                 {
-                    mainIndex = i
+                    mainTop = i
                 }
 
                 i = i + 1
             }
 
-            if mainIndex < 0
+            if mainTop < 0
             {
                 return "ERR:no function Main"
             }
 
-            // 不支持返回/参数为数组
+            // 不支持数组类型（函数参数/返回 + 类字段）
             i = 0
             while i < fnCount
             {
@@ -70,7 +74,24 @@ namespace Cocoa.CodeGen
                 i = i + 1
             }
 
-            // ---- 收集 BCL 调用（Console.WriteLine / String.op_*/Concat）+ 字符串字面量 ----
+            i = 0
+            while i < classCount
+            {
+                var f = 0
+                while f < binder.GetClassFieldCount(i)
+                {
+                    if binder.GetClassFieldType(i, f).IndexOf("[") >= 0
+                    {
+                        return "ERR:unsupported array field " + binder.GetClassFieldName(i, f)
+                    }
+
+                    f = f + 1
+                }
+
+                i = i + 1
+            }
+
+            // ---- 收集 BCL 调用 + 字符串字面量（所有函数体，含类方法）----
             var bclKeys = new string[32]
             var bclTokens = new i32[32]
             var bclParents = new i32[32]
@@ -93,21 +114,114 @@ namespace Cocoa.CodeGen
                 i = i + 1
             }
 
-            // ---- 方法表：名/token/返回值位 ----
-            var names = new string[fnCount]
-            var tokens = new i32[fnCount]
-            var returnsValue = new bool[fnCount]
-            i = 0
-            while i < fnCount
+            // ---- 方法行规划：顶层（序数序）→ 每类（隐式 .ctor + 实例方法）。
+            // 行号/令牌纯算术：顶层 t → 行 t；类 ci 的 ctor → classStartRow[ci]。
+            // <CocoaTopLevel> methodList=1 覆盖行 1..topCount；用户类 methodList=ctor 行。
+            var classStartRow = new i32[classCount]
+            var fieldStart = new i32[classCount]
+            var totalRows = topCount
+            var totalClassMethods = 0
+            var totalFields = 0
+            var ci = 0
+            while ci < classCount
             {
-                names[i] = binder.GetFunctionName(i)
-                tokens[i] = 0x06000000 + i + 1
-                returnsValue[i] = binder.GetFunctionReturnType(i) != "void"
-                i = i + 1
+                classStartRow[ci] = totalRows
+                fieldStart[ci] = totalFields
+                totalRows = totalRows + 1 + binder.GetClassMethodCount(ci)
+                totalClassMethods = totalClassMethods + binder.GetClassMethodCount(ci)
+                totalFields = totalFields + binder.GetClassFieldCount(ci)
+                ci = ci + 1
             }
 
-            let emitter = new IlEmitter()
-            emitter.SetMethods(names, tokens, returnsValue)
+            var mNames = new string[totalRows]
+            var mSigs = new string[totalRows]
+            var mRvas = new i32[totalRows]
+            var mParamCounts = new i32[totalRows]
+            var mFlags = new i32[totalRows]
+            var mBodies = new string[totalRows]
+            var mMaxStacks = new i32[totalRows]
+            var mSigBlobs = new string[totalRows]
+            var mSigTokens = new i32[totalRows]
+
+            // ---- 令牌表 ----
+            var classKeys = new string[totalClassMethods]
+            var classTokens = new i32[totalClassMethods]
+            var classCtorNames = new string[classCount]
+            var classCtorTokens = new i32[classCount]
+            var fieldNames = new string[totalFields]
+            var fieldSigs = new string[totalFields]
+            var fieldFlags = new i32[totalFields]
+            var fieldKeys = new string[totalFields]
+            var fieldTokens = new i32[totalFields]
+            var userTypeNames = new string[classCount]
+            var userTypeFieldLists = new i32[classCount]
+            var userTypeMethodLists = new i32[classCount]
+
+            var cmc = 0
+            ci = 0
+            while ci < classCount
+            {
+                let className = binder.GetClassName(ci)
+                userTypeNames[ci] = className
+                userTypeMethodLists[ci] = classStartRow[ci] + 1
+                userTypeFieldLists[ci] = totalFields > 0 ? fieldStart[ci] + 1 : 1
+                classCtorNames[ci] = className
+                classCtorTokens[ci] = 0x06000000 + classStartRow[ci] + 1
+
+                var fi = 0
+                while fi < binder.GetClassFieldCount(ci)
+                {
+                    let fr = fieldStart[ci] + fi
+                    fieldNames[fr] = binder.GetClassFieldName(ci, fi)
+                    fieldSigs[fr] = MetadataEncode.EncodeFieldSignatureHex(LocalTypeForSig(binder, binder.GetClassFieldType(ci, fi)))
+                    fieldFlags[fr] = 0x0006
+                    fieldKeys[fr] = className + "." + fieldNames[fr]
+                    fieldTokens[fr] = 0x04000001 + fr
+                    fi = fi + 1
+                }
+
+                var mi = 0
+                while mi < binder.GetClassMethodCount(ci)
+                {
+                    let fidx = binder.GetClassMethodIndex(ci, mi)
+                    classKeys[cmc] = className + "." + binder.GetClassMethodName(ci, mi)
+                    classTokens[cmc] = 0x06000000 + classStartRow[ci] + 2 + mi
+                    cmc = cmc + 1
+                    mi = mi + 1
+                }
+
+                ci = ci + 1
+            }
+
+            var emitter = new IlEmitter()
+            var topNames = new string[topCount]
+            var topTokens = new i32[topCount]
+            var topReturns = new bool[topCount]
+            var t0 = 0
+            while t0 < topCount
+            {
+                topNames[t0] = binder.GetFunctionName(binder.GetTopLevelFunctionIndex(t0))
+                topTokens[t0] = 0x06000000 + t0 + 1
+                topReturns[t0] = binder.GetFunctionReturnType(binder.GetTopLevelFunctionIndex(t0)) != "void"
+                t0 = t0 + 1
+            }
+
+            emitter.SetMethods(topNames, topTokens, topReturns)
+            if totalClassMethods > 0
+            {
+                emitter.SetClassMethods(classKeys, classTokens, totalClassMethods)
+            }
+
+            if totalFields > 0
+            {
+                emitter.SetClassFields(fieldKeys, fieldTokens, totalFields)
+            }
+
+            if classCount > 0
+            {
+                emitter.SetClassCtors(classCtorNames, classCtorTokens, classCount)
+            }
+
             if bclCount[0] > 0
             {
                 let keys = new string[bclCount[0]]
@@ -138,80 +252,73 @@ namespace Cocoa.CodeGen
                 emitter.SetUserStrings(texts, toks, usCount[0])
             }
 
-            // ---- 逐函数发射 ----
-            var bodies = new string[fnCount]
-            var maxStacks = new i32[fnCount]
-            var sigBlobs = new string[fnCount]
-            var sigTokens = new i32[fnCount]
-            var rvas = new i32[fnCount]
-            var sigs = new string[fnCount]
-            var paramCounts = new i32[fnCount]
-            var flags = new i32[fnCount]
-            var methodNames = new string[fnCount]
+            // ---- 逐行发射（RVA / 局部签名计数器贯穿所有行）----
+            let objectCtorToken = 0x0A000000 + 2 + bclCount[0]
+            var rvaState = new i32[1]
+            rvaState[0] = 0x1048
+            var sigState = new i32[1]
+            sigState[0] = 0
 
-            var rva = 0x1048
-            var standAloneSigRow = 0
-            i = 0
-            while i < fnCount
+            // 顶层静态方法
+            var tt = 0
+            while tt < topCount
             {
-                let asm = new IlAssembler()
-                let paramCount = binder.GetFunctionParamCount(i)
-                let paramNames = new string[paramCount]
-                var p = 0
-                while p < paramCount
+                let idx = binder.GetTopLevelFunctionIndex(tt)
+                mNames[tt] = binder.GetFunctionName(idx)
+                mFlags[tt] = 0x96
+                mParamCounts[tt] = binder.GetFunctionParamCount(idx)
+                mSigs[tt] = MethodSig(binder, idx, true, 0)
+                let err = EmitBody(idx, binder, emitter, rvaState, sigState,
+                    mBodies, mMaxStacks, mRvas, mSigBlobs, mSigTokens, tt)
+                if err.Length > 0
                 {
-                    paramNames[p] = binder.GetFunctionParamName(i, p)
-                    p = p + 1
+                    return err
                 }
 
-                emitter.EmitFunction(asm, binder.GetFunctionBody(i), paramNames, paramCount)
-                if emitter.Error().Length > 0
+                tt = tt + 1
+            }
+
+            // 类：隐式 .ctor + 实例方法
+            ci = 0
+            while ci < classCount
+            {
+                let ctorRow = classStartRow[ci]
+                mNames[ctorRow] = ".ctor"
+                mFlags[ctorRow] = 0x1886
+                mParamCounts[ctorRow] = 0
+                mSigs[ctorRow] = MetadataEncode.EncodeMethodSignatureHex("void", new string[0], 0, false)
+                let ctorAsm = new IlAssembler()
+                ctorAsm.Add("Ldarg", 12, 0, -1)
+                let ccall = ctorAsm.Add("Call", 7, objectCtorToken, -1)
+                ctorAsm.SetCallDelta(ccall, 0 - 1)
+                ctorAsm.Add("Ret", 0, 0, -1)
+                mBodies[ctorRow] = ctorAsm.Assemble()
+                mMaxStacks[ctorRow] = ctorAsm.ComputeMaxStack()
+                mRvas[ctorRow] = rvaState[0]
+                rvaState[0] = rvaState[0] + Align4(12 + mBodies[ctorRow].Length / 2)
+                mSigBlobs[ctorRow] = ""
+                mSigTokens[ctorRow] = 0
+
+                var mi2 = 0
+                while mi2 < binder.GetClassMethodCount(ci)
                 {
-                    return "ERR:" + emitter.Error()
+                    let r = classStartRow[ci] + 1 + mi2
+                    let fidx = binder.GetClassMethodIndex(ci, mi2)
+                    mNames[r] = binder.GetClassMethodName(ci, mi2)
+                    mFlags[r] = 0x86
+                    mParamCounts[r] = binder.GetFunctionParamCount(fidx) - 1
+                    mSigs[r] = MethodSig(binder, fidx, false, 1)
+                    let err2 = EmitBody(fidx, binder, emitter, rvaState, sigState,
+                        mBodies, mMaxStacks, mRvas, mSigBlobs, mSigTokens, r)
+                    if err2.Length > 0
+                    {
+                        return err2
+                    }
+
+                    mi2 = mi2 + 1
                 }
 
-                let bodyHex = asm.Assemble()
-                bodies[i] = bodyHex
-                maxStacks[i] = asm.ComputeMaxStack()
-                rvas[i] = rva
-                rva = rva + Align4(12 + bodyHex.Length / 2)
-
-                let localCount = emitter.LocalCount()
-                let localDescs = new string[localCount]
-                var lc = 0
-                while lc < localCount
-                {
-                    localDescs[lc] = binder.GetFunctionLocalType(i, lc)
-                    lc = lc + 1
-                }
-
-                sigBlobs[i] = localCount > 0
-                    ? MetadataEncode.EncodeLocalVarSignatureHex(localDescs, localCount)
-                    : ""
-                if localCount > 0
-                {
-                    standAloneSigRow = standAloneSigRow + 1
-                    sigTokens[i] = 0x11000000 + standAloneSigRow
-                }
-                else
-                {
-                    sigTokens[i] = 0
-                }
-
-                let paramDescs = new string[paramCount]
-                p = 0
-                while p < paramCount
-                {
-                    paramDescs[p] = binder.GetFunctionParamType(i, p)
-                    p = p + 1
-                }
-
-                sigs[i] = MetadataEncode.EncodeMethodSignatureHex(
-                    binder.GetFunctionReturnType(i), paramDescs, paramCount, true)
-                paramCounts[i] = paramCount
-                flags[i] = 0x96
-                methodNames[i] = binder.GetFunctionName(i)
-                i = i + 1
+                ci = ci + 1
             }
 
             // ---- 元数据计划 ----
@@ -284,8 +391,10 @@ namespace Cocoa.CodeGen
                 typeRefName[typeRow] = "String"
             }
 
-            // MemberRef：DebuggableAttribute..ctor(bool,bool)（行 1）+ BCL 成员（行 2..，按收集序）
+            // MemberRef：DebuggableAttribute..ctor(bool,bool)（行 1）+ BCL 成员（行 2..）
+            // + [Object::.ctor（末行，类存在时）；BclToken 行序不受影响]
             var memberRefCount = 1 + bclCount[0]
+            if classCount > 0 { memberRefCount = memberRefCount + 1 }
             var memberRefParent = new i32[memberRefCount]
             var memberRefName = new string[memberRefCount]
             var memberRefSig = new string[memberRefCount]
@@ -305,6 +414,13 @@ namespace Cocoa.CodeGen
                 br = br + 1
             }
 
+            if classCount > 0
+            {
+                memberRefParent[1 + bclCount[0]] = 1
+                memberRefName[1 + bclCount[0]] = ".ctor"
+                memberRefSig[1 + bclCount[0]] = MetadataEncode.EncodeMethodSignatureHex("void", new string[0], 0, false)
+            }
+
             // #US 堆：种子 0 + 各字符串 Utf16Blob
             var usHex = "00"
             var us = 0
@@ -319,11 +435,13 @@ namespace Cocoa.CodeGen
             let builder = new IlMetadataBuilder("Min", "Min",
                 typeRefScope, typeRefNs, typeRefName,
                 memberRefParent, memberRefName, memberRefSig,
-                methodNames, sigs, rvas, paramCounts, flags,
+                mNames, mSigs, mRvas, mParamCounts, mFlags,
                 asmRefNames, asmRefMajor, asmRefMinor, asmRefBuild, asmRefRev, asmRefFlags, asmRefPk, asmRefCulture,
                 1, emptyInts, emptyInts, new string[0],
                 "0102030405060708090a0b0c0d0e0f10", usHex,
-                sigBlobs)
+                mSigBlobs,
+                fieldNames, fieldSigs, fieldFlags,
+                userTypeNames, userTypeFieldLists, userTypeMethodLists)
             let tables = builder.TablesHex()
             let strings = builder.StringsHex()
             let usStream = builder.UsHex()
@@ -331,8 +449,8 @@ namespace Cocoa.CodeGen
             let blob = builder.BlobHex()
 
             // ---- ManagedPeWriter ----
-            let pe = ManagedPeWriter.Build("Min", bodies, fnCount, sigTokens, maxStacks,
-                tables, strings, usStream, guid, blob, tokens[mainIndex])
+            let pe = ManagedPeWriter.Build("Min", mBodies, totalRows, mSigTokens, mMaxStacks,
+                tables, strings, usStream, guid, blob, 0x06000000 + mainTop + 1)
 
             var hex = ""
             var b = 0
@@ -343,6 +461,110 @@ namespace Cocoa.CodeGen
             }
 
             return hex
+        }
+
+        /// <summary>发射单个方法体行（顶层静态/类实例共用）。rvaState/sigState 为 1 格状态单元
+        /// （.co 数组传引用，标量状态改格内元素以持久化）。</summary>
+        private static function EmitBody(
+            fn: i32,
+            binder: Binder,
+            emitter: IlEmitter,
+            rvaState: i32[], sigState: i32[],
+            bodies: string[], maxStacks: i32[], rvas: i32[], sigBlobs: string[], sigTokens: i32[],
+            row: i32): string
+        {
+            let asm = new IlAssembler()
+            let paramCount = binder.GetFunctionParamCount(fn)
+            let paramNames = new string[paramCount]
+            var types = new string[paramCount + binder.GetFunctionLocalCount(fn)]
+            var p = 0
+            while p < paramCount
+            {
+                paramNames[p] = binder.GetFunctionParamName(fn, p)
+                types[p] = binder.GetFunctionParamType(fn, p)
+                p = p + 1
+            }
+
+            var lc = 0
+            while lc < binder.GetFunctionLocalCount(fn)
+            {
+                types[paramCount + lc] = binder.GetFunctionLocalType(fn, lc)
+                lc = lc + 1
+            }
+
+            emitter.SetVarTypes(types, types.Length)
+            emitter.EmitFunction(asm, binder.GetFunctionBody(fn), paramNames, paramCount)
+            if emitter.Error().Length > 0
+            {
+                return "ERR:" + emitter.Error()
+            }
+
+            bodies[row] = asm.Assemble()
+            maxStacks[row] = asm.ComputeMaxStack()
+            rvas[row] = rvaState[0]
+            rvaState[0] = rvaState[0] + Align4(12 + bodies[row].Length / 2)
+
+            let localCount = emitter.LocalCount()
+            var blob = ""
+            if localCount > 0
+            {
+                let localDescs = new string[localCount]
+                var lq = 0
+                while lq < localCount
+                {
+                    localDescs[lq] = LocalTypeForSig(binder, binder.GetFunctionLocalType(fn, lq))
+                    lq = lq + 1
+                }
+
+                blob = MetadataEncode.EncodeLocalVarSignatureHex(localDescs, localCount)
+                sigState[0] = sigState[0] + 1
+                sigTokens[row] = 0x11000000 + sigState[0]
+            }
+            else
+            {
+                sigTokens[row] = 0
+            }
+
+            sigBlobs[row] = blob
+            return ""
+        }
+
+        /// <summary>签名用类型描述：用户类名 → `class:<TypeDef行>:2`（供 EncodeTypeHex 编 ELEMENT_TYPE_CLASS）；其余原样。</summary>
+        private static function LocalTypeForSig(binder: Binder, typeName: string): string
+        {
+            var ci = 0
+            while ci < binder.GetClassCount()
+            {
+                if binder.GetClassName(ci) == typeName
+                {
+                    // TypeDefOrRef coded：TypeDef tag = 0 → "class:<行>:0"
+                    return "class:" + string(3 + ci) + ":0"
+                }
+
+                ci = ci + 1
+            }
+
+            return typeName
+        }
+
+        /// <summary>方法签名：isStatic → 静态 cconv；skipThis>0 → 去掉 param 0（`this`）转实例 HAS_THIS。</summary>
+        private static function MethodSig(
+            binder: Binder, fn: i32, isStatic: bool, skipThis: i32): string
+        {
+            let total = binder.GetFunctionParamCount(fn)
+            let realCount = total - skipThis
+            let params2 = new string[realCount]
+            var k = skipThis
+            var q = 0
+            while q < realCount
+            {
+                params2[q] = LocalTypeForSig(binder, binder.GetFunctionParamType(fn, k))
+                q = q + 1
+                k = k + 1
+            }
+
+            return MetadataEncode.EncodeMethodSignatureHex(
+                LocalTypeForSig(binder, binder.GetFunctionReturnType(fn)), params2, realCount, isStatic)
         }
 
         /// <summary>递归收集：BCL 静态调用（Console.WriteLine(i32|string) + 字符串运算 ==/!=/+）+ 字符串字面量（去重）。</summary>
