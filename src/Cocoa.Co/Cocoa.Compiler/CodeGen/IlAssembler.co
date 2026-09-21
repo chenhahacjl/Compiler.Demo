@@ -110,7 +110,7 @@ namespace Cocoa.CodeGen
         /// <summary>单条指令净栈增量（自举发射子集；Call 用发射器登记的 arity/返回值增量）。</summary>
         private function StackDelta(index: i32, name: string): i32
         {
-            if name == "Ldc_I4" || name == "Ldc_I4_0" || name == "Ldc_I4_1" || name == "Ldarg" || name == "Ldloc" || name == "Dup"
+            if name == "Ldc_I4" || name == "Ldc_I4_0" || name == "Ldc_I4_1" || name == "Ldarg" || name == "Ldloc" || name == "Dup" || name == "Ldstr"
             {
                 return 1
             }

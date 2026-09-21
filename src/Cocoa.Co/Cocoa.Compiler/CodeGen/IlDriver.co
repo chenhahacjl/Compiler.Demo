@@ -1,8 +1,8 @@
-// M5-a5 批 2→多函数扩展：自举 IL → 物理 .dll 端到端驱动。
-// 绑定 → 逐函数 IlEmitter/IlAssembler（方法体 hex + maxStack + 局部签名）→ 元数据计划（签名/RVA 累计/flags/token）→
+// M5-a5 批 2→BCL/字符串扩展：自举 IL → 物理 .dll 端到端驱动。
+// 绑定 → 逐函数 IlEmitter/IlAssembler（方法体 hex + maxStack + 局部签名）→ 元数据计划（签名/RVA/flags/token）→
 // IlMetadataBuilder（五流 hex）→ ManagedPeWriter（PE 字节）→ 返回 PE 字节 hex 或 "ERR:…"。
-// 支持：多顶层函数、参数（Ldarg）、内部调用（Call token 0x06…）、局部变量（StandAloneSig）、
-// 控制流（if/while 已由 lowering → Label/Goto/ConditionalGoto）。
+// 支持：多顶层函数、参数、内部调用（0x06…）、局部变量（StandAloneSig）、控制流（if/while）、
+// BCL 静态调用 Console.WriteLine(i32|string)（MemberRef 0x0A…）+ 字符串字面量（Ldstr + #US 0x70…）。
 // C# 侧测试取 hex 落盘并实跑验证；批 3 由 Cli `compile` 子命令接线（File.WriteAllBytes）。
 
 using Cocoa.CodeAnalysis.Binding
@@ -69,6 +69,30 @@ namespace Cocoa.CodeGen
                 i = i + 1
             }
 
+            // ---- 收集 BCL 静态调用 + 字符串字面量（两遍：先扫全部函数体）----
+            var bclNames = new string[32]
+            var bclTokens = new i32[32]
+            var bclCount = new i32[1]
+            bclCount[0] = 0
+            var usTexts = new string[32]
+            var usTokens = new i32[32]
+            var usCount = new i32[1]
+            usCount[0] = 0
+            var usBytes = new i32[1]
+            usBytes[0] = 1
+            var bclArgType = new string[1]
+            bclArgType[0] = "i32"
+            var usedBcl = new i32[1]
+            usedBcl[0] = 0
+
+            i = 0
+            while i < fnCount
+            {
+                CollectNodes(binder.GetFunctionBody(i), bclNames, bclTokens, bclCount,
+                    usTexts, usTokens, usCount, usBytes, bclArgType, usedBcl)
+                i = i + 1
+            }
+
             // ---- 方法表：名/token/返回值位 ----
             var names = new string[fnCount]
             var tokens = new i32[fnCount]
@@ -84,6 +108,35 @@ namespace Cocoa.CodeGen
 
             let emitter = new IlEmitter()
             emitter.SetMethods(names, tokens, returnsValue)
+            if bclCount[0] > 0
+            {
+                let bclNamesSlice = new string[bclCount[0]]
+                let bclTokensSlice = new i32[bclCount[0]]
+                var bi = 0
+                while bi < bclCount[0]
+                {
+                    bclNamesSlice[bi] = bclNames[bi]
+                    bclTokensSlice[bi] = bclTokens[bi]
+                    bi = bi + 1
+                }
+
+                emitter.SetBclMembers(bclNamesSlice, bclTokensSlice, bclCount[0])
+            }
+
+            if usCount[0] > 0
+            {
+                let usTextsSlice = new string[usCount[0]]
+                let usTokensSlice = new i32[usCount[0]]
+                var ui = 0
+                while ui < usCount[0]
+                {
+                    usTextsSlice[ui] = usTexts[ui]
+                    usTokensSlice[ui] = usTokens[ui]
+                    ui = ui + 1
+                }
+
+                emitter.SetUserStrings(usTextsSlice, usTokensSlice, usCount[0])
+            }
 
             // ---- 逐函数发射 ----
             var bodies = new string[fnCount]
@@ -112,6 +165,11 @@ namespace Cocoa.CodeGen
                 }
 
                 emitter.EmitFunction(asm, binder.GetFunctionBody(i), paramNames, paramCount)
+                if emitter.Error().Length > 0
+                {
+                    return "ERR:" + emitter.Error()
+                }
+
                 let bodyHex = asm.Assemble()
                 bodies[i] = bodyHex
                 maxStacks[i] = asm.ComputeMaxStack()
@@ -159,66 +217,102 @@ namespace Cocoa.CodeGen
             }
 
             // ---- 元数据计划 ----
-            // AssemblyRef：System.Private.CoreLib（pkt 对齐 C# 差分测试）
-            var asmRefNames = new string[1]
+            // AssemblyRef：System.Private.CoreLib（pkt 对齐 C# 差分测试）+ [System.Console（BCL Console 所在程序集）]
+            var asmRefCount = usedBcl[0] > 0 ? 2 : 1
+            var asmRefNames = new string[asmRefCount]
+            var asmRefMajor = new i32[asmRefCount]
+            var asmRefMinor = new i32[asmRefCount]
+            var asmRefBuild = new i32[asmRefCount]
+            var asmRefRev = new i32[asmRefCount]
+            var asmRefFlags = new i32[asmRefCount]
+            var asmRefPk = new string[asmRefCount]
+            var asmRefCulture = new string[asmRefCount]
             asmRefNames[0] = "System.Private.CoreLib"
-            var asmRefMajor = new i32[1]
             asmRefMajor[0] = 9
-            var asmRefMinor = new i32[1]
             asmRefMinor[0] = 0
-            var asmRefBuild = new i32[1]
             asmRefBuild[0] = 0
-            var asmRefRev = new i32[1]
             asmRefRev[0] = 0
-            var asmRefFlags = new i32[1]
             asmRefFlags[0] = 0
-            var asmRefPk = new string[1]
             asmRefPk[0] = "7cec85d7bea7798e"
-            var asmRefCulture = new string[1]
             asmRefCulture[0] = ""
+            if usedBcl[0] > 0
+            {
+                asmRefNames[1] = "System.Console"
+                asmRefMajor[1] = 9
+                asmRefMinor[1] = 0
+                asmRefBuild[1] = 0
+                asmRefRev[1] = 0
+                asmRefFlags[1] = 0
+                asmRefPk[1] = "7cec85d7bea7798e"
+                asmRefCulture[1] = ""
+            }
 
-            // TypeRef：System.Object（行 1）+ System.Diagnostics.DebuggableAttribute（行 2）
-            var typeRefScope = new i32[2]
+            // TypeRef：System.Object（行 1）+ System.Diagnostics.DebuggableAttribute（行 2）+ [Console（行 3，BCL 用）]
+            var typeRefCount = usedBcl[0] > 0 ? 3 : 2
+            var typeRefScope = new i32[typeRefCount]
+            var typeRefNs = new string[typeRefCount]
+            var typeRefName = new string[typeRefCount]
             typeRefScope[0] = 1
-            typeRefScope[1] = 1
-            var typeRefNs = new string[2]
             typeRefNs[0] = "System"
-            typeRefNs[1] = "System.Diagnostics"
-            var typeRefName = new string[2]
             typeRefName[0] = "Object"
+            typeRefScope[1] = 1
+            typeRefNs[1] = "System.Diagnostics"
             typeRefName[1] = "DebuggableAttribute"
+            if usedBcl[0] > 0
+            {
+                typeRefScope[2] = 2
+                typeRefNs[2] = "System"
+                typeRefName[2] = "Console"
+            }
 
-            // MemberRef：DebuggableAttribute..ctor(bool,bool)（行 1）
-            var memberRefParent = new i32[1]
+            // MemberRef：DebuggableAttribute..ctor(bool,bool)（行 1）+ [Console.WriteLine(<argType>)（行 2，BCL 用）]
+            var memberRefCount = usedBcl[0] > 0 ? 2 : 1
+            var memberRefParent = new i32[memberRefCount]
+            var memberRefName = new string[memberRefCount]
+            var memberRefSig = new string[memberRefCount]
             memberRefParent[0] = 2
-            var memberRefName = new string[1]
             memberRefName[0] = ".ctor"
             var boolParams = new string[2]
             boolParams[0] = "bool"
             boolParams[1] = "bool"
-            var memberRefSig = new string[1]
             memberRefSig[0] = MetadataEncode.EncodeMethodSignatureHex("void", boolParams, 2, false)
+            if usedBcl[0] > 0
+            {
+                memberRefParent[1] = 3
+                memberRefName[1] = "WriteLine"
+                var argParams = new string[1]
+                argParams[0] = bclArgType[0]
+                memberRefSig[1] = MetadataEncode.EncodeMethodSignatureHex("void", argParams, 1, true)
+            }
+
+            // #US 堆：种子 0 + 各字符串 Utf16Blob
+            var usHex = "00"
+            var us = 0
+            while us < usCount[0]
+            {
+                usHex = usHex + MetadataEncode.Utf16Blob(usTexts[us])
+                us = us + 1
+            }
 
             var emptyInts = new i32[0]
-            var emptyStrings = new string[0]
 
             let builder = new IlMetadataBuilder("Min", "Min",
                 typeRefScope, typeRefNs, typeRefName,
                 memberRefParent, memberRefName, memberRefSig,
                 methodNames, sigs, rvas, paramCounts, flags,
                 asmRefNames, asmRefMajor, asmRefMinor, asmRefBuild, asmRefRev, asmRefFlags, asmRefPk, asmRefCulture,
-                1, emptyInts, emptyInts, emptyStrings,
-                "0102030405060708090a0b0c0d0e0f10", "00",
+                1, emptyInts, emptyInts, new string[0],
+                "0102030405060708090a0b0c0d0e0f10", usHex,
                 sigBlobs)
             let tables = builder.TablesHex()
             let strings = builder.StringsHex()
-            let us = builder.UsHex()
+            let usStream = builder.UsHex()
             let guid = builder.GuidHex()
             let blob = builder.BlobHex()
 
             // ---- ManagedPeWriter ----
             let pe = ManagedPeWriter.Build("Min", bodies, fnCount, sigTokens, maxStacks,
-                tables, strings, us, guid, blob, tokens[mainIndex])
+                tables, strings, usStream, guid, blob, tokens[mainIndex])
 
             var hex = ""
             var b = 0
@@ -229,6 +323,111 @@ namespace Cocoa.CodeGen
             }
 
             return hex
+        }
+
+        /// <summary>递归收集：BCL 静态调用（当前支持 Console.WriteLine）+ 字符串字面量（去重）。
+        /// 计数以 i32[1]/string[1] 装箱就地更新（.co 无 out 参数）。</summary>
+        private static function CollectNodes(
+            node: Node,
+            bclNames: string[], bclTokens: i32[], bclCount: i32[],
+            usTexts: string[], usTokens: i32[], usCount: i32[], usBytes: i32[],
+            bclArgType: string[], usedBcl: i32[]): void
+        {
+            let k = node.Kind()
+
+            if k == "MemberCallExpression"
+            {
+                let targetName = node.Child(0).ChildCount() > 0 ? node.Child(0).Child(0).Text() : ""
+                let methodName = node.Child(2).Text()
+                if targetName == "Console" && methodName == "WriteLine"
+                {
+                    if usedBcl[0] == 0
+                    {
+                        bclNames[0] = "Console.WriteLine"
+                        bclTokens[0] = 0x0A000002
+                        bclCount[0] = 1
+                        usedBcl[0] = 1
+                        bclArgType[0] = FirstArgType(node)
+                    }
+                }
+            }
+            else if k == "LiteralExpression"
+            {
+                if node.Child(0).Kind() == "StringToken"
+                {
+                    let text = StripQuotes(node.Child(0).Text())
+                    var found = -1
+                    var u = 0
+                    while u < usCount[0]
+                    {
+                        if usTexts[u] == text
+                        {
+                            found = u
+                        }
+
+                        u = u + 1
+                    }
+
+                    if found < 0
+                    {
+                        usTexts[usCount[0]] = text
+                        usTokens[usCount[0]] = 0x70000000 + usBytes[0]
+                        usBytes[0] = usBytes[0] + MetadataEncode.Utf16Blob(text).Length / 2
+                        usCount[0] = usCount[0] + 1
+                    }
+                }
+            }
+
+            var c = 0
+            while c < node.ChildCount()
+            {
+                if !node.Child(c).IsToken()
+                {
+                    CollectNodes(node.Child(c), bclNames, bclTokens, bclCount,
+                        usTexts, usTokens, usCount, usBytes, bclArgType, usedBcl)
+                }
+
+                c = c + 1
+            }
+        }
+
+        /// <summary>BCL 调用首个实参类型（NumberToken → i32 / StringToken → string；缺省 i32）。</summary>
+        private static function FirstArgType(node: Node): string
+        {
+            var a = 4
+            while a < node.ChildCount() - 1
+            {
+                if !node.Child(a).IsToken()
+                {
+                    if node.Child(a).Kind() == "LiteralExpression"
+                    {
+                        let tk = node.Child(a).Child(0).Kind()
+                        if tk == "StringToken"
+                        {
+                            return "string"
+                        }
+                    }
+
+                    return "i32"
+                }
+
+                a = a + 1
+            }
+
+            return "i32"
+        }
+
+        private static function StripQuotes(text: string): string
+        {
+            if text.Length >= 2
+            {
+                if i32(text[0]) == 34 && i32(text[text.Length - 1]) == 34
+                {
+                    return text.substring(1, text.Length - 2)
+                }
+            }
+
+            return text
         }
 
         private static function Align4(value: i32): i32

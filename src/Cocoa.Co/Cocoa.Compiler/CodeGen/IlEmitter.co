@@ -27,6 +27,12 @@ namespace Cocoa.CodeGen
         private field _constantNames: string[]
         private field _constantValues: Value[]
         private field _constantCount: i32
+        private field _bclNames: string[]
+        private field _bclTokens: i32[]
+        private field _bclCount: i32
+        private field _usTexts: string[]
+        private field _usTokens: i32[]
+        private field _usCount: i32
 
         public constructor()
         {
@@ -46,6 +52,12 @@ namespace Cocoa.CodeGen
             _constantNames = new string[16]
             _constantValues = new Value[16]
             _constantCount = 0
+            _bclNames = new string[0]
+            _bclTokens = new i32[0]
+            _bclCount = 0
+            _usTexts = new string[0]
+            _usTokens = new i32[0]
+            _usCount = 0
         }
 
         public function SetMethods(names: string[], tokens: i32[], returnsValue: bool[]): void
@@ -54,6 +66,54 @@ namespace Cocoa.CodeGen
             _methodTokens = tokens
             _methodReturnsValue = returnsValue
             _methodCount = names.Length
+        }
+
+        /// <summary>BCL 静态成员调用表（驱动预解析：`Console.WriteLine` → MemberRef token 0x0A…）。</summary>
+        public function SetBclMembers(names: string[], tokens: i32[], count: i32): void
+        {
+            _bclNames = names
+            _bclTokens = tokens
+            _bclCount = count
+        }
+
+        /// <summary>用户字符串 → #US token（0x70…）；Ldstr 用。</summary>
+        public function SetUserStrings(texts: string[], tokens: i32[], count: i32): void
+        {
+            _usTexts = texts
+            _usTokens = tokens
+            _usCount = count
+        }
+
+        private function BclToken(name: string): i32
+        {
+            var i = 0
+            while i < _bclCount
+            {
+                if _bclNames[i] == name
+                {
+                    return _bclTokens[i]
+                }
+
+                i = i + 1
+            }
+
+            return -1
+        }
+
+        private function UsToken(text: string): i32
+        {
+            var i = 0
+            while i < _usCount
+            {
+                if _usTexts[i] == text
+                {
+                    return _usTokens[i]
+                }
+
+                i = i + 1
+            }
+
+            return 0
         }
 
         public function Error(): string
@@ -99,6 +159,12 @@ namespace Cocoa.CodeGen
                     return _methodReturnsValue[index]
                 }
 
+                return false
+            }
+
+            // BCL 静态调用（当前支持 void 面，如 Console.WriteLine）——表达式语句不弹栈
+            if expr.Kind() == "MemberCallExpression"
+            {
                 return false
             }
 
@@ -614,6 +680,23 @@ namespace Cocoa.CodeGen
                 return count
             }
 
+            if k == "MemberCallExpression"
+            {
+                var count = 1
+                var i = 4
+                while i < expr.ChildCount() - 1
+                {
+                    if !expr.Child(i).IsToken()
+                    {
+                        count = count + CountExpression(expr.Child(i))
+                    }
+
+                    i = i + 1
+                }
+
+                return count
+            }
+
             return 1
         }
 
@@ -698,6 +781,12 @@ namespace Cocoa.CodeGen
                 {
                     EmitConstantValue(folded)
                 }
+                else if expr.Child(0).Kind() == "StringToken"
+                {
+                    // 字符串字面量 → Ldstr <#US token>（token 由驱动预注册）
+                    let token = UsToken(StringLiteralValue(expr.Child(0).Text()))
+                    _assembler.Add("Ldstr", 6, token, -1)
+                }
                 else
                 {
                     let text = expr.Child(0).Text()
@@ -754,6 +843,34 @@ namespace Cocoa.CodeGen
                     let delta = (returnsV ? 1 : 0) - (expr.ChildCount() - 1)
                     _assembler.SetCallDelta(idx, delta)
                 }
+            }
+            else if k == "MemberCallExpression"
+            {
+                // 绑定形状：(MemberCallExpression <target> . <name> ( <args> ) ) —— 当前支持 BCL 静态成员（如 Console.WriteLine）
+                let targetName = expr.Child(0).ChildCount() > 0 ? expr.Child(0).Child(0).Text() : ""
+                let fullName = targetName + "." + expr.Child(2).Text()
+                let token = BclToken(fullName)
+                if token < 0
+                {
+                    _error = "Unresolved bcl member: " + fullName
+                    return
+                }
+
+                var argCount = 0
+                var a = 4
+                while a < expr.ChildCount() - 1
+                {
+                    if !expr.Child(a).IsToken()
+                    {
+                        EmitExpression(expr.Child(a))
+                        argCount = argCount + 1
+                    }
+
+                    a = a + 1
+                }
+
+                let idx = _assembler.Add("Call", 7, token, -1)
+                _assembler.SetCallDelta(idx, 0 - argCount)
             }
             else if k == "UnaryExpression"
             {
@@ -870,6 +987,20 @@ namespace Cocoa.CodeGen
             }
 
             return 0
+        }
+
+        /// <summary>字符串 token 文本去外层引号（自举 StringToken.Text 含引号）。</summary>
+        private static function StringLiteralValue(text: string): string
+        {
+            if text.Length >= 2
+            {
+                if i32(text[0]) == 34 && i32(text[text.Length - 1]) == 34
+                {
+                    return text.substring(1, text.Length - 2)
+                }
+            }
+
+            return text
         }
     }
 }

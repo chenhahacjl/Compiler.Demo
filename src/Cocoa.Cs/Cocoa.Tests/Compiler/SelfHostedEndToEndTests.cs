@@ -70,6 +70,43 @@ namespace Cocoa.Tests.Compiler
             }
         }
 
+        [Theory]
+        [InlineData("function Main(): i32 { Console.WriteLine(42) return 0 }", 0, "42")]
+        [InlineData("function Main(): i32 { Console.WriteLine(\"Hello\") return 0 }", 0, "Hello")]
+        public void SelfHosted_BclCall_WriteLine_PrintsToStdout(string source, int expectedExit, string expectedOutput)
+        {
+            var dir = Path.Combine(Path.GetTempPath(), "cocoa-e2e", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            try
+            {
+                var peHex = RunSelfDriver(source);
+                Assert.False(peHex.StartsWith("ERR:", StringComparison.Ordinal), "自举链报错：" + peHex);
+
+                var dllPath = Path.Combine(dir, "Min.dll");
+                File.WriteAllBytes(dllPath, HexToBytes(peHex));
+                File.WriteAllText(Path.Combine(dir, "Min.runtimeconfig.json"),
+                    "{\"runtimeOptions\":{\"tfm\":\"net9.0\",\"framework\":{\"name\":\"Microsoft.NETCore.App\",\"version\":\"9.0.0\"}}}");
+
+                var psi = new System.Diagnostics.ProcessStartInfo("dotnet", dllPath)
+                {
+                    WorkingDirectory = dir,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                };
+                using var process = System.Diagnostics.Process.Start(psi)!;
+                process.WaitForExit(30000);
+                Assert.True(process.HasExited, "dotnet 未在 30s 内退出");
+                Assert.Equal(expectedExit, process.ExitCode);
+                var stdout = process.StandardOutput.ReadToEnd().Trim();
+                Assert.Contains(expectedOutput, stdout);
+            }
+            finally
+            {
+                try { Directory.Delete(dir, recursive: true); } catch { }
+            }
+        }
+
         // ------------------------------------------------------------------
         // 自举驱动
         // ------------------------------------------------------------------
@@ -85,13 +122,14 @@ namespace Cocoa.Tests.Compiler
                 trees.Add(SyntaxTree.Parse(File.ReadAllText(file)));
             }
 
-            // .co 字符串字面量：内容不含引号/反斜杠（语料源），直接内嵌。
+            // .co 字符串字面量转义：反斜杠 → \\、引号 → \"（源里含字符串字面量时需转义）。
+            var esc = source.Replace("\\", "\\\\").Replace("\"", "\\\"");
             trees.Add(SyntaxTree.Parse($@"using Cocoa.CodeGen
 using System
 
 function Main(): i32
 {{
-    let result = Cocoa.CodeGen.IlDriver.BuildDllHex(""{source}"")
+    let result = Cocoa.CodeGen.IlDriver.BuildDllHex(""{esc}"")
     System.Console.WriteLine(""R:"" + result)
     return 0
 }}"));

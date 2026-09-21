@@ -241,7 +241,7 @@ namespace Cocoa.CodeGen
             return s.substring(start, len)
         }
 
-        private static function Utf16Blob(s: string): string
+        public static function Utf16Blob(s: string): string
         {
             var utf = ""
             var i = 0
