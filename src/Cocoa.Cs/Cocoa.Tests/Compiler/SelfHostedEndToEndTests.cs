@@ -29,6 +29,8 @@ namespace Cocoa.Tests.Compiler
         [InlineData("function Add(a: i32, b: i32): i32 { return a + b } function Main(): i32 { return Add(6, 7) }", 13)]
         [InlineData("function Main(): i32 { var x = 0 while x < 3 { x = x + 1 } return x }", 3)]
         [InlineData("function Main(): i32 { if 2 > 1 { return 5 } return 7 }", 5)]
+        [InlineData("function Main(): i32 { if \"abc\" == \"abc\" { return 1 } return 0 }", 1)]
+        [InlineData("function Main(): i32 { if \"abc\" == \"xyz\" { return 9 } return 2 }", 2)]
         public void SelfHosted_PureArithmetic_Main_Runs_In_ProducedDll(string source, int expected)
         {
             var dir = Path.Combine(Path.GetTempPath(), "cocoa-e2e", Guid.NewGuid().ToString("N"));
@@ -73,6 +75,7 @@ namespace Cocoa.Tests.Compiler
         [Theory]
         [InlineData("function Main(): i32 { Console.WriteLine(42) return 0 }", 0, "42")]
         [InlineData("function Main(): i32 { Console.WriteLine(\"Hello\") return 0 }", 0, "Hello")]
+        [InlineData("function Main(): i32 { Console.WriteLine(\"a\" + \"b\") return 0 }", 0, "ab")]
         public void SelfHosted_BclCall_WriteLine_PrintsToStdout(string source, int expectedExit, string expectedOutput)
         {
             var dir = Path.Combine(Path.GetTempPath(), "cocoa-e2e", Guid.NewGuid().ToString("N"));

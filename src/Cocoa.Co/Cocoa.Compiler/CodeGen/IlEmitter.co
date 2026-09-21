@@ -813,6 +813,32 @@ namespace Cocoa.CodeGen
                 {
                     EmitConstantValue(folded)
                 }
+                else if IsStringBinary(expr)
+                {
+                    // 字符串运算：==/!=/+/…（操作数含字符串字面量 → String.op_*/Concat MemberRef）
+                    let op = expr.Child(0).Text()
+                    var member = ""
+                    if op == "==" { member = "String.op_Equality" }
+                    else if op == "!=" { member = "String.op_Inequality" }
+                    else if op == "+" { member = "String.Concat" }
+                    if member.Length == 0
+                    {
+                        _error = "Unsupported string op: " + op
+                        return
+                    }
+
+                    let token = BclToken(member)
+                    if token < 0
+                    {
+                        _error = "Unresolved bcl member: " + member
+                        return
+                    }
+
+                    EmitExpression(expr.Child(1))
+                    EmitExpression(expr.Child(2))
+                    let idx = _assembler.Add("Call", 7, token, -1)
+                    _assembler.SetCallDelta(idx, -1)
+                }
                 else
                 {
                     EmitExpression(expr.Child(1))
@@ -1001,6 +1027,33 @@ namespace Cocoa.CodeGen
             }
 
             return text
+        }
+
+        /// <summary>字符串运算启发式：==/!=/+ 且任一侧为字符串字面量（无类型信息时的信号）。</summary>
+        private static function IsStringBinary(expr: Node): bool
+        {
+            let op = expr.Child(0).Text()
+            if op != "==" && op != "!=" && op != "+"
+            {
+                return false
+            }
+
+            if IsStringLiteral(expr.Child(1))
+            {
+                return true
+            }
+
+            return IsStringLiteral(expr.Child(2))
+        }
+
+        private static function IsStringLiteral(expr: Node): bool
+        {
+            if expr.Kind() == "LiteralExpression"
+            {
+                return expr.Child(0).Kind() == "StringToken"
+            }
+
+            return false
         }
     }
 }

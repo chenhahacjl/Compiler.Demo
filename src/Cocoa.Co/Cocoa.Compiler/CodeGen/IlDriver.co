@@ -2,7 +2,8 @@
 // 绑定 → 逐函数 IlEmitter/IlAssembler（方法体 hex + maxStack + 局部签名）→ 元数据计划（签名/RVA/flags/token）→
 // IlMetadataBuilder（五流 hex）→ ManagedPeWriter（PE 字节）→ 返回 PE 字节 hex 或 "ERR:…"。
 // 支持：多顶层函数、参数、内部调用（0x06…）、局部变量（StandAloneSig）、控制流（if/while）、
-// BCL 静态调用 Console.WriteLine(i32|string)（MemberRef 0x0A…）+ 字符串字面量（Ldstr + #US 0x70…）。
+// BCL 静态调用（Console.WriteLine(i32|string)，MemberRef 0x0A…）、字符串字面量（Ldstr + #US 0x70…）、
+// 字符串运算（==/!=/+ → String.op_Equality/op_Inequality/Concat，操作数含字符串字面量启发式）。
 // C# 侧测试取 hex 落盘并实跑验证；批 3 由 Cli `compile` 子命令接线（File.WriteAllBytes）。
 
 using Cocoa.CodeAnalysis.Binding
@@ -28,7 +29,7 @@ namespace Cocoa.CodeGen
                 return "ERR:no functions"
             }
 
-            // 定位顶层入口 Main + 函数序索引（token 按序）
+            // 定位顶层入口 Main
             var mainIndex = -1
             var i = 0
             while i < fnCount
@@ -46,7 +47,7 @@ namespace Cocoa.CodeGen
                 return "ERR:no function Main"
             }
 
-            // 不支持返回/参数为数组（IL 签名编码暂限标量）
+            // 不支持返回/参数为数组
             i = 0
             while i < fnCount
             {
@@ -69,9 +70,12 @@ namespace Cocoa.CodeGen
                 i = i + 1
             }
 
-            // ---- 收集 BCL 静态调用 + 字符串字面量（两遍：先扫全部函数体）----
-            var bclNames = new string[32]
+            // ---- 收集 BCL 调用（Console.WriteLine / String.op_*/Concat）+ 字符串字面量 ----
+            var bclKeys = new string[32]
             var bclTokens = new i32[32]
+            var bclParents = new i32[32]
+            var bclSigs = new string[32]
+            var bclNames = new string[32]
             var bclCount = new i32[1]
             bclCount[0] = 0
             var usTexts = new string[32]
@@ -80,16 +84,12 @@ namespace Cocoa.CodeGen
             usCount[0] = 0
             var usBytes = new i32[1]
             usBytes[0] = 1
-            var bclArgType = new string[1]
-            bclArgType[0] = "i32"
-            var usedBcl = new i32[1]
-            usedBcl[0] = 0
 
             i = 0
             while i < fnCount
             {
-                CollectNodes(binder.GetFunctionBody(i), bclNames, bclTokens, bclCount,
-                    usTexts, usTokens, usCount, usBytes, bclArgType, usedBcl)
+                CollectNodes(binder.GetFunctionBody(i), bclKeys, bclTokens, bclParents, bclSigs, bclNames, bclCount,
+                    usTexts, usTokens, usCount, usBytes)
                 i = i + 1
             }
 
@@ -110,32 +110,32 @@ namespace Cocoa.CodeGen
             emitter.SetMethods(names, tokens, returnsValue)
             if bclCount[0] > 0
             {
-                let bclNamesSlice = new string[bclCount[0]]
-                let bclTokensSlice = new i32[bclCount[0]]
+                let keys = new string[bclCount[0]]
+                let toks = new i32[bclCount[0]]
                 var bi = 0
                 while bi < bclCount[0]
                 {
-                    bclNamesSlice[bi] = bclNames[bi]
-                    bclTokensSlice[bi] = bclTokens[bi]
+                    keys[bi] = bclKeys[bi]
+                    toks[bi] = bclTokens[bi]
                     bi = bi + 1
                 }
 
-                emitter.SetBclMembers(bclNamesSlice, bclTokensSlice, bclCount[0])
+                emitter.SetBclMembers(keys, toks, bclCount[0])
             }
 
             if usCount[0] > 0
             {
-                let usTextsSlice = new string[usCount[0]]
-                let usTokensSlice = new i32[usCount[0]]
+                let texts = new string[usCount[0]]
+                let toks = new i32[usCount[0]]
                 var ui = 0
                 while ui < usCount[0]
                 {
-                    usTextsSlice[ui] = usTexts[ui]
-                    usTokensSlice[ui] = usTokens[ui]
+                    texts[ui] = usTexts[ui]
+                    toks[ui] = usTokens[ui]
                     ui = ui + 1
                 }
 
-                emitter.SetUserStrings(usTextsSlice, usTokensSlice, usCount[0])
+                emitter.SetUserStrings(texts, toks, usCount[0])
             }
 
             // ---- 逐函数发射 ----
@@ -176,7 +176,6 @@ namespace Cocoa.CodeGen
                 rvas[i] = rva
                 rva = rva + Align4(12 + bodyHex.Length / 2)
 
-                // 局部变量签名（StandAloneSig；行号按方法序分配）
                 let localCount = emitter.LocalCount()
                 let localDescs = new string[localCount]
                 var lc = 0
@@ -199,7 +198,6 @@ namespace Cocoa.CodeGen
                     sigTokens[i] = 0
                 }
 
-                // 方法签名（参数类型逐位）
                 let paramDescs = new string[paramCount]
                 p = 0
                 while p < paramCount
@@ -217,8 +215,18 @@ namespace Cocoa.CodeGen
             }
 
             // ---- 元数据计划 ----
-            // AssemblyRef：System.Private.CoreLib（pkt 对齐 C# 差分测试）+ [System.Console（BCL Console 所在程序集）]
-            var asmRefCount = usedBcl[0] > 0 ? 2 : 1
+            // AssemblyRef：System.Private.CoreLib（行 1）+ [System.Console（行 2，Console 成员用）]
+            var hasConsole = false
+            var hasString = false
+            var br = 0
+            while br < bclCount[0]
+            {
+                if bclParents[br] == 3 { hasConsole = true }
+                if bclParents[br] == 4 { hasString = true }
+                br = br + 1
+            }
+
+            var asmRefCount = hasConsole ? 2 : 1
             var asmRefNames = new string[asmRefCount]
             var asmRefMajor = new i32[asmRefCount]
             var asmRefMinor = new i32[asmRefCount]
@@ -235,7 +243,7 @@ namespace Cocoa.CodeGen
             asmRefFlags[0] = 0
             asmRefPk[0] = "7cec85d7bea7798e"
             asmRefCulture[0] = ""
-            if usedBcl[0] > 0
+            if hasConsole
             {
                 asmRefNames[1] = "System.Console"
                 asmRefMajor[1] = 9
@@ -247,8 +255,10 @@ namespace Cocoa.CodeGen
                 asmRefCulture[1] = ""
             }
 
-            // TypeRef：System.Object（行 1）+ System.Diagnostics.DebuggableAttribute（行 2）+ [Console（行 3，BCL 用）]
-            var typeRefCount = usedBcl[0] > 0 ? 3 : 2
+            // TypeRef：System.Object（行 1）+ System.Diagnostics.DebuggableAttribute（行 2）+ [System.Console（行 3）] + [System.String（行 4）]
+            var typeRefCount = 2
+            if hasConsole { typeRefCount = typeRefCount + 1 }
+            if hasString { typeRefCount = typeRefCount + 1 }
             var typeRefScope = new i32[typeRefCount]
             var typeRefNs = new string[typeRefCount]
             var typeRefName = new string[typeRefCount]
@@ -258,15 +268,24 @@ namespace Cocoa.CodeGen
             typeRefScope[1] = 1
             typeRefNs[1] = "System.Diagnostics"
             typeRefName[1] = "DebuggableAttribute"
-            if usedBcl[0] > 0
+            var typeRow = 2
+            if hasConsole
             {
-                typeRefScope[2] = 2
-                typeRefNs[2] = "System"
-                typeRefName[2] = "Console"
+                typeRefScope[typeRow] = 2
+                typeRefNs[typeRow] = "System"
+                typeRefName[typeRow] = "Console"
+                typeRow = typeRow + 1
             }
 
-            // MemberRef：DebuggableAttribute..ctor(bool,bool)（行 1）+ [Console.WriteLine(<argType>)（行 2，BCL 用）]
-            var memberRefCount = usedBcl[0] > 0 ? 2 : 1
+            if hasString
+            {
+                typeRefScope[typeRow] = 1
+                typeRefNs[typeRow] = "System"
+                typeRefName[typeRow] = "String"
+            }
+
+            // MemberRef：DebuggableAttribute..ctor(bool,bool)（行 1）+ BCL 成员（行 2..，按收集序）
+            var memberRefCount = 1 + bclCount[0]
             var memberRefParent = new i32[memberRefCount]
             var memberRefName = new string[memberRefCount]
             var memberRefSig = new string[memberRefCount]
@@ -276,13 +295,14 @@ namespace Cocoa.CodeGen
             boolParams[0] = "bool"
             boolParams[1] = "bool"
             memberRefSig[0] = MetadataEncode.EncodeMethodSignatureHex("void", boolParams, 2, false)
-            if usedBcl[0] > 0
+            br = 0
+            while br < bclCount[0]
             {
-                memberRefParent[1] = 3
-                memberRefName[1] = "WriteLine"
-                var argParams = new string[1]
-                argParams[0] = bclArgType[0]
-                memberRefSig[1] = MetadataEncode.EncodeMethodSignatureHex("void", argParams, 1, true)
+                // 实际 TypeRef 行：Console=3（若用）；String= hasConsole ? 4 : 3（无 Console 时前移）
+                memberRefParent[1 + br] = (bclParents[br] == 4 && !hasConsole) ? 3 : bclParents[br]
+                memberRefName[1 + br] = bclNames[br]
+                memberRefSig[1 + br] = bclSigs[br]
+                br = br + 1
             }
 
             // #US 堆：种子 0 + 各字符串 Utf16Blob
@@ -290,7 +310,7 @@ namespace Cocoa.CodeGen
             var us = 0
             while us < usCount[0]
             {
-                usHex = usHex + MetadataEncode.Utf16Blob(usTexts[us])
+                usHex = usHex + MetadataEncode.UsBlobHex(usTexts[us])
                 us = us + 1
             }
 
@@ -325,13 +345,11 @@ namespace Cocoa.CodeGen
             return hex
         }
 
-        /// <summary>递归收集：BCL 静态调用（当前支持 Console.WriteLine）+ 字符串字面量（去重）。
-        /// 计数以 i32[1]/string[1] 装箱就地更新（.co 无 out 参数）。</summary>
+        /// <summary>递归收集：BCL 静态调用（Console.WriteLine(i32|string) + 字符串运算 ==/!=/+）+ 字符串字面量（去重）。</summary>
         private static function CollectNodes(
             node: Node,
-            bclNames: string[], bclTokens: i32[], bclCount: i32[],
-            usTexts: string[], usTokens: i32[], usCount: i32[], usBytes: i32[],
-            bclArgType: string[], usedBcl: i32[]): void
+            bclKeys: string[], bclTokens: i32[], bclParents: i32[], bclSigs: string[], bclNames: string[], bclCount: i32[],
+            usTexts: string[], usTokens: i32[], usCount: i32[], usBytes: i32[]): void
         {
             let k = node.Kind()
 
@@ -341,13 +359,42 @@ namespace Cocoa.CodeGen
                 let methodName = node.Child(2).Text()
                 if targetName == "Console" && methodName == "WriteLine"
                 {
-                    if usedBcl[0] == 0
+                    let argType = FirstArgType(node)
+                    let argParams = new string[1]
+                    argParams[0] = argType
+                    EnsureBcl(bclKeys, bclTokens, bclParents, bclSigs, bclNames, bclCount,
+                        "Console.WriteLine", 3, "WriteLine",
+                        MetadataEncode.EncodeMethodSignatureHex("void", argParams, 1, true))
+                }
+            }
+            else if k == "BinaryExpression"
+            {
+                let op = node.Child(0).Text()
+                if op == "==" || op == "!=" || op == "+"
+                {
+                    if IsStringLiteralNode(node.Child(1)) || IsStringLiteralNode(node.Child(2))
                     {
-                        bclNames[0] = "Console.WriteLine"
-                        bclTokens[0] = 0x0A000002
-                        bclCount[0] = 1
-                        usedBcl[0] = 1
-                        bclArgType[0] = FirstArgType(node)
+                        let stringParams = new string[2]
+                        stringParams[0] = "string"
+                        stringParams[1] = "string"
+                        if op == "=="
+                        {
+                            EnsureBcl(bclKeys, bclTokens, bclParents, bclSigs, bclNames, bclCount,
+                                "String.op_Equality", 4, "op_Equality",
+                                MetadataEncode.EncodeMethodSignatureHex("bool", stringParams, 2, true))
+                        }
+                        else if op == "!="
+                        {
+                            EnsureBcl(bclKeys, bclTokens, bclParents, bclSigs, bclNames, bclCount,
+                                "String.op_Inequality", 4, "op_Inequality",
+                                MetadataEncode.EncodeMethodSignatureHex("bool", stringParams, 2, true))
+                        }
+                        else
+                        {
+                            EnsureBcl(bclKeys, bclTokens, bclParents, bclSigs, bclNames, bclCount,
+                                "String.Concat", 4, "Concat",
+                                MetadataEncode.EncodeMethodSignatureHex("string", stringParams, 2, true))
+                        }
                     }
                 }
             }
@@ -372,7 +419,7 @@ namespace Cocoa.CodeGen
                     {
                         usTexts[usCount[0]] = text
                         usTokens[usCount[0]] = 0x70000000 + usBytes[0]
-                        usBytes[0] = usBytes[0] + MetadataEncode.Utf16Blob(text).Length / 2
+                        usBytes[0] = usBytes[0] + MetadataEncode.UsBlobHex(text).Length / 2
                         usCount[0] = usCount[0] + 1
                     }
                 }
@@ -383,15 +430,39 @@ namespace Cocoa.CodeGen
             {
                 if !node.Child(c).IsToken()
                 {
-                    CollectNodes(node.Child(c), bclNames, bclTokens, bclCount,
-                        usTexts, usTokens, usCount, usBytes, bclArgType, usedBcl)
+                    CollectNodes(node.Child(c), bclKeys, bclTokens, bclParents, bclSigs, bclNames, bclCount,
+                        usTexts, usTokens, usCount, usBytes)
                 }
 
                 c = c + 1
             }
         }
 
-        /// <summary>BCL 调用首个实参类型（NumberToken → i32 / StringToken → string；缺省 i32）。</summary>
+        /// <summary>去重登记 BCL 成员：token = 0x0A000000 + 行号（行 = 登记序 + 1）。</summary>
+        private static function EnsureBcl(
+            bclKeys: string[], bclTokens: i32[], bclParents: i32[], bclSigs: string[], bclNames: string[], bclCount: i32[],
+            key: string, parentRow: i32, memberName: string, sig: string): void
+        {
+            var i = 0
+            while i < bclCount[0]
+            {
+                if bclKeys[i] == key
+                {
+                    return
+                }
+
+                i = i + 1
+            }
+
+            bclKeys[bclCount[0]] = key
+            bclTokens[bclCount[0]] = 0x0A000000 + bclCount[0] + 2
+            bclParents[bclCount[0]] = parentRow
+            bclSigs[bclCount[0]] = sig
+            bclNames[bclCount[0]] = memberName
+            bclCount[0] = bclCount[0] + 1
+        }
+
+        /// <summary>BCL 调用首个实参类型：字符串字面量/字符串拼接 → string；其余 → i32。</summary>
         private static function FirstArgType(node: Node): string
         {
             var a = 4
@@ -399,13 +470,26 @@ namespace Cocoa.CodeGen
             {
                 if !node.Child(a).IsToken()
                 {
-                    if node.Child(a).Kind() == "LiteralExpression"
+                    let arg = node.Child(a)
+                    if arg.Kind() == "LiteralExpression"
                     {
-                        let tk = node.Child(a).Child(0).Kind()
-                        if tk == "StringToken"
+                        if arg.Child(0).Kind() == "StringToken"
                         {
                             return "string"
                         }
+
+                        return "i32"
+                    }
+
+                    if arg.Kind() == "BinaryExpression"
+                    {
+                        let op = arg.Child(0).Text()
+                        if op == "+" && (IsStringLiteralNode(arg.Child(1)) || IsStringLiteralNode(arg.Child(2)))
+                        {
+                            return "string"
+                        }
+
+                        return "i32"
                     }
 
                     return "i32"
@@ -415,6 +499,16 @@ namespace Cocoa.CodeGen
             }
 
             return "i32"
+        }
+
+        private static function IsStringLiteralNode(expr: Node): bool
+        {
+            if expr.Kind() == "LiteralExpression"
+            {
+                return expr.Child(0).Kind() == "StringToken"
+            }
+
+            return false
         }
 
         private static function StripQuotes(text: string): string

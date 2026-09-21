@@ -241,6 +241,22 @@ namespace Cocoa.CodeGen
             return s.substring(start, len)
         }
 
+                /// <summary>#US 堆条目（ECMA-335 II.24.2.4）：压缩长度 = UTF-16 字节数 + 1（尾字节）+ UTF-16 + 尾字节。
+        /// 与 Utf16Blob（自定义属性 SerString，2n）不同——二者长度语义不同。</summary>
+        public static function UsBlobHex(s: string): string
+        {
+            var utf = ""
+            var i = 0
+            while i < s.Length
+            {
+                let c = i32(s[i])
+                utf = utf + HexCodec.HexByte(c) + HexCodec.HexByte(c >> 8)
+                i = i + 1
+            }
+
+            return CompressedHex(utf.Length / 2 + 1) + utf + "00"
+        }
+
         public static function Utf16Blob(s: string): string
         {
             var utf = ""
@@ -252,6 +268,7 @@ namespace Cocoa.CodeGen
                 i = i + 1
             }
 
+            // 自定义属性 SerString：压缩长度 = UTF-16 字节数（2n），后随 null 终止字节（对齐 C# EncodeAttributeBlob）。
             return CompressedHex(utf.Length / 2) + utf + "00"
         }
 
