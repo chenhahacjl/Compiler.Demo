@@ -1050,14 +1050,14 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             if IsKeywordText("new")
             {
-                return ParseNewExpression()
+                return ParsePostfixChain(ParseNewExpression())
             }
 
             if IsKeywordText("this")
             {
                 let th = Node.MakeCompound("ThisExpression")
                 th.Add(Match("ThisKeyword"))
-                return th
+                return ParsePostfixChain(th)
             }
 
             // 兜底：单 token 原样消费（非表达式起始 token → 报告后继续错误恢复）
@@ -1165,7 +1165,14 @@ namespace Cocoa.CodeAnalysis.Syntax
                 result = name
             }
 
-            // 后缀链（左结合）：`.成员` / `.成员(...)` / `[...]`，receiver 即累积结果
+            return ParsePostfixChain(result)
+        }
+
+        /// <summary>后缀链（左结合，C-1）：`.成员` / `.成员(...)` / `[...]` / `++`/`--`——对任意主表达式 receiver
+        /// （标识符 NameExpression / this / new 结果）复用，保证 `this.x`、`b.get()` 等可解析。</summary>
+        private function ParsePostfixChain(receiver: Node): Node
+        {
+            var result = receiver
             while true
             {
                 if KindName() == "DotToken"

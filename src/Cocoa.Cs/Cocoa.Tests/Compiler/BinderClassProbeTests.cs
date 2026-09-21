@@ -56,6 +56,22 @@ function F(): i32 { return 5 }";
             Assert.Contains("read: (BlockStatement", d.ContainsKey("T") ? d["T"] : "");
         }
 
+        [Fact]
+        public void SelfHosted_Binder_Binds_ThisMemberAccess()
+        {
+            var source = @"class Box { field v: i32 function read(): i32 { return this.v } }
+function F(): i32 { return 5 }";
+            var (lines, compileErrors) = RunSelfDriver(source);
+            Assert.True(compileErrors.Count == 0, "COCOMPILE-ERROR: " + string.Join(" | ", compileErrors));
+            var d = ToDict(lines);
+            Assert.Equal("0", d.ContainsKey("D") ? d["D"] : "(no D)");
+            Assert.Equal("1", d.ContainsKey("M") ? d["M"] : "(no M)");
+            var tree = d.ContainsKey("T") ? d["T"] : "";
+            Assert.Contains("read: (BlockStatement", tree);
+            Assert.Contains("ThisExpression", tree);
+            Assert.Contains("MemberAccessExpression", tree);
+        }
+
         private static Dictionary<string, string> ToDict(List<string> lines)
         {
             var dict = new Dictionary<string, string>();
