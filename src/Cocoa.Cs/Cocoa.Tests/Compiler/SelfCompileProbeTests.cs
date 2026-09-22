@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using Xunit;
@@ -11,7 +11,7 @@ namespace Cocoa.Tests.Compiler
         private readonly ITestOutputHelper _out;
         public SelfCompileProbeTests(ITestOutputHelper output) { _out = output; }
 
-        [Fact(Skip = "C-4 自举闭环被阻塞：CheckNode 子递归遇 null 节点（class 方法体解析产 null 子）；下轮需查自举 parser 对编译器源码中某构造产出 null 子，或按行打点定位 CheckNode 具体孩子")]
+        [Fact(Skip = "C-4 自举闭环被阻塞：CheckNode 深层子递归仍有未守卫的裸 .Kind() 子访问（guard 逐层生效 5→4 层）；下轮把 CheckNode 全部子循环/Child(0) 访问改为 null 安全")]
         public void CompileFullSelfCompilerSource()
         {
             var root = AppContext.BaseDirectory;
@@ -40,12 +40,11 @@ namespace Cocoa.Tests.Compiler
             var dllPath = Path.Combine(dir, "B1.dll");
             File.WriteAllBytes(dllPath, SelfHostedEndToEndTests.HexToBytes(hex));
 
-            // 1) 产物 .dll 可加载、入口可运行（B0 发射的完整编译器源码代码执行）
             var asm = System.Reflection.Assembly.LoadFile(dllPath);
             var entry = asm.EntryPoint!.Invoke(null, null);
             _out.WriteLine("B1 entry exit: " + entry);
             Assert.Equal(0, (int)entry!);
-            _out.WriteLine("emitted types: " + asm.GetTypes().Length + " (命名空间内类待 binder 支持后收集)");
+            _out.WriteLine("emitted types: " + asm.GetTypes().Length);
         }
     }
 }

@@ -127,7 +127,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private function WalkMember(node: Node, phase: i32, fiState: i32[]): void
         {
-            if node == null
+            if !(node != null)
             {
                 return
             }
@@ -2229,10 +2229,16 @@ namespace Cocoa.CodeAnalysis.Binding
         /// <summary>语句/表达式递归检查：未定义名、未定义函数、调用 arity、未知类型、局部重复声明。</summary>
         private function CheckNode(node: Node): void
         {
+            if !(node != null)
+            {
+                return
+            }
+
             let k = node.Kind()
             if k == "NameExpression"
             {
-                let name = node.Child(0).Text()
+                let n0 = node.Child(0)
+                let name = n0 != null ? n0.Text() : ""
                 if !IsKnownName(name)
                 {
                     ReportError("Variable '" + name + "' doesn't exist.")
@@ -2249,7 +2255,8 @@ namespace Cocoa.CodeAnalysis.Binding
                 var i = 1
                 while i < node.ChildCount()
                 {
-                    if !node.Child(i).IsToken()
+                    let ac = node.Child(i)
+                    if ac != null && !ac.IsToken()
                     {
                         args = args + 1
                     }
@@ -2274,9 +2281,10 @@ namespace Cocoa.CodeAnalysis.Binding
                 i = 1
                 while i < node.ChildCount()
                 {
-                    if !node.Child(i).IsToken()
+                    let cn = node.Child(i)
+                    if cn != null && !cn.IsToken()
                     {
-                        CheckNode(node.Child(i))
+                        CheckNode(cn)
                     }
 
                     i = i + 1
@@ -2293,7 +2301,8 @@ namespace Cocoa.CodeAnalysis.Binding
                 while i < node.ChildCount()
                 {
                     let child = node.Child(i)
-                    if child.Kind() == "IdentifierToken" && name == ""
+                    let kid = child != null ? child.Kind() : ""
+                    if kid == "IdentifierToken" && name == ""
                     {
                         name = child.Text()
                     }
@@ -2314,16 +2323,16 @@ namespace Cocoa.CodeAnalysis.Binding
                     }
                 }
 
-                i = 0
+i = 0
                 while i < node.ChildCount()
                 {
                     let child = node.Child(i)
-                    let ck = child.Kind()
-                    if ck == "TypeClause" || ck == "ArrayTypeClause"
+                    let ck = child != null ? child.Kind() : ""
+if ck == "TypeClause" || ck == "ArrayTypeClause"
                     {
                         CheckTypeClause(child)
                     }
-                    else if !child.IsToken()
+                    else if child != null && !child.IsToken()
                     {
                         CheckNode(child)
                     }
@@ -2342,7 +2351,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 while s < node.ChildCount()
                 {
                     let child = node.Child(s)
-                    if !child.IsToken()
+                    if child != null && !child.IsToken()
                     {
                         stmt = child
                     }
@@ -2351,14 +2360,14 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
 
                 CheckNode(stmt)
-                if stmt.Kind() == "AssignmentExpression"
+                if stmt != null && stmt.Kind() == "AssignmentExpression"
                 {
                     var left: Node = null
                     var a = 0
                     while a < stmt.ChildCount()
                     {
                         let child = stmt.Child(a)
-                        if !child.IsToken()
+                        if child != null && !child.IsToken()
                         {
                             left = child
                             break
@@ -2367,7 +2376,7 @@ namespace Cocoa.CodeAnalysis.Binding
                         a = a + 1
                     }
 
-                    if left.Kind() == "NameExpression" && !IsKnownName(left.Child(0).Text())
+                    if left != null && left.Kind() == "NameExpression" && !IsKnownName(left.Child(0).Text())
                     {
                         ReportError("Only assignment and call expressions can be used as a statement.")
                     }
