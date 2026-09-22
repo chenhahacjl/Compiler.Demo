@@ -11,7 +11,7 @@ namespace Cocoa.Tests.Compiler
         private readonly ITestOutputHelper _out;
         public SelfCompileProbeTests(ITestOutputHelper output) { _out = output; }
 
-        [Fact(Skip = "C-4 自举闭环被阻塞：CheckNode 深层子递归仍有未守卫的裸 .Kind() 子访问（guard 逐层生效 5→4 层）；下轮把 CheckNode 全部子循环/Child(0) 访问改为 null 安全")]
+        [Fact(Skip = "C-4 自举闭环被阻塞：CheckNode 深层递归仍有 null 子访问（guard 逐层收敛）；下轮把 CheckTypeClause 顶层/递归与剩余 Child(0) 访问全守")]
         public void CompileFullSelfCompilerSource()
         {
             var root = AppContext.BaseDirectory;

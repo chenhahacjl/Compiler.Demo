@@ -2250,7 +2250,8 @@ namespace Cocoa.CodeAnalysis.Binding
             if k == "CallExpression"
             {
                 // (CallExpression IdentifierToken ( args... ))：实参 = 非 token 子
-                let callee = node.Child(0).Text()
+                let cnode = node.Child(0)
+                let callee = cnode != null ? cnode.Text() : ""
                 var args = 0
                 var i = 1
                 while i < node.ChildCount()
@@ -2376,7 +2377,8 @@ if ck == "TypeClause" || ck == "ArrayTypeClause"
                         a = a + 1
                     }
 
-                    if left != null && left.Kind() == "NameExpression" && !IsKnownName(left.Child(0).Text())
+                    let lc0 = left != null ? left.Child(0) : null
+                    if left != null && left.Kind() == "NameExpression" && lc0 != null && !IsKnownName(lc0.Text())
                     {
                         ReportError("Only assignment and call expressions can be used as a statement.")
                     }
@@ -2399,7 +2401,7 @@ if ck == "TypeClause" || ck == "ArrayTypeClause"
                 while i < node.ChildCount()
                 {
                     let child = node.Child(i)
-                    if !child.IsToken()
+                    if child != null && !child.IsToken()
                     {
                         CheckNode(child)
                     }
@@ -2417,7 +2419,8 @@ if ck == "TypeClause" || ck == "ArrayTypeClause"
                 while i < node.ChildCount()
                 {
                     let child = node.Child(i)
-                    if child.Kind() == "IdentifierToken"
+                    let ck0 = child != null ? child.Kind() : ""
+                    if ck0 == "IdentifierToken"
                     {
                         AddLocal(child.Text())
                     }
@@ -2431,8 +2434,8 @@ if ck == "TypeClause" || ck == "ArrayTypeClause"
             while j < node.ChildCount()
             {
                 let child = node.Child(j)
-                let ck = child.Kind()
-                if child.IsToken()
+                let ck = child != null ? child.Kind() : ""
+                if child == null || child.IsToken()
                 {
                     // token 子跳过
                 }
