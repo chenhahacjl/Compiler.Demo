@@ -245,6 +245,7 @@ namespace Cocoa.Tests.Compiler
         [InlineData("function Main(): i32 { var s = \"banana\" var i = s.IndexOf(\"na\") if i == 2 { return 1 } return 0 }", 1)]
         [InlineData("function Main(): i32 { var s = string(42) if s == \"42\" { return 1 } return 0 }", 1)]
         [InlineData("function Main(): i32 { var x = 6 var s = string(x) if s == \"6\" { return 1 } return 0 }", 1)]
+        [InlineData("function Main(): i32\n{\n    var s = string(7)\n    if s == \"7\" { return 1 }\n    return 0\n}", 1)]
         public void SelfHosted_StringMemberSubstringIndexOf_Runs(string source, int expected)
         {
             var dir = Path.Combine(Path.GetTempPath(), "cocoa-e2e", Guid.NewGuid().ToString("N"));
@@ -296,7 +297,7 @@ namespace Cocoa.Tests.Compiler
             }
 
             // .co 字符串字面量转义：反斜杠 → \\、引号 → \"（源里含字符串字面量时需转义）。
-            var esc = source.Replace("\\", "\\\\").Replace("\"", "\\\"");
+            var esc = source.Replace("\\", "\\\\").Replace("\r", "\\r").Replace("\n", "\\n").Replace("\"", "\\\"");
             trees.Add(SyntaxTree.Parse($@"using Cocoa.CodeGen
 using System
 
