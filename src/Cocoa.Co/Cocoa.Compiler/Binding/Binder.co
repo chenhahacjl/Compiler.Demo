@@ -763,6 +763,11 @@ namespace Cocoa.CodeAnalysis.Binding
             if k == "CallExpression"
             {
                 let callee = node.Child(0).Text()
+                if callee == "string"
+                {
+                    return "string"
+                }
+
                 let fi = IndexOfString(_functionNames, _functionCount, callee)
                 if fi >= 0
                 {
@@ -2135,11 +2140,11 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
 
                 let fi = IndexOfString(_functionNames, _functionCount, callee)
-                if fi < 0
+                if fi < 0 && callee != "string"
                 {
                     ReportError("Function '" + callee + "' doesn't exist.")
                 }
-                else
+                else if fi >= 0
                 {
                     let expected = _functions[fi].ParamCount()
                     if expected != args

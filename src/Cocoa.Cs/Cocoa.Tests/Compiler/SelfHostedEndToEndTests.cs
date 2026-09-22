@@ -243,6 +243,8 @@ namespace Cocoa.Tests.Compiler
         [InlineData("function Main(): i32 { var s = \"hello world\" s = s.substring(6) if s == \"world\" { return 1 } return 0 }", 1)]
         [InlineData("function Main(): i32 { var s = \"hello world\" return s.IndexOf(\"o\") }", 4)]
         [InlineData("function Main(): i32 { var s = \"banana\" var i = s.IndexOf(\"na\") if i == 2 { return 1 } return 0 }", 1)]
+        [InlineData("function Main(): i32 { var s = string(42) if s == \"42\" { return 1 } return 0 }", 1)]
+        [InlineData("function Main(): i32 { var x = 6 var s = string(x) if s == \"6\" { return 1 } return 0 }", 1)]
         public void SelfHosted_StringMemberSubstringIndexOf_Runs(string source, int expected)
         {
             var dir = Path.Combine(Path.GetTempPath(), "cocoa-e2e", Guid.NewGuid().ToString("N"));

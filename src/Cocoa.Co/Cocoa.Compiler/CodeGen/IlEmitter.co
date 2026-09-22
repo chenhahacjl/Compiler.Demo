@@ -49,6 +49,8 @@ private field _pendingCount: i32
         private field _arrayElemNames: string[]
         private field _arrayElemTokens: i32[]
         private field _arrayElemCount: i32
+        private field _convertToken: i32
+        private field _boxInt32Token: i32
 
         public constructor()
         {
@@ -151,6 +153,13 @@ private field _pendingCount: i32
             _arrayElemCount = count
         }
 
+        /// <summary>string(x) 转换：Convert.ToString(object) 成员 token + i32 装箱 TypeRef token。</summary>
+        public function SetStringConvert(convertToken: i32, boxInt32Token: i32): void
+        {
+            _convertToken = convertToken
+            _boxInt32Token = boxInt32Token
+        }
+
         private function ArrayElemToken(typeName: string): i32
         {
             var i = 0
@@ -176,6 +185,29 @@ private field _pendingCount: i32
             }
 
             return ""
+        }
+
+        /// <summary>string(x) 实参类型：变量 → 类型表；字面量 → bool/i32；其余 i32。</summary>
+        private function StringArgTypeOf(arg: Node): string
+        {
+            let k = arg.Kind()
+            if k == "VariableExpression"
+            {
+                return VarTypeOf(arg.Child(0).Text())
+            }
+
+            if k == "LiteralExpression"
+            {
+                let tk = arg.Child(0).Kind()
+                if tk == "TrueKeyword" || tk == "FalseKeyword"
+                {
+                    return "bool"
+                }
+
+                return "i32"
+            }
+
+            return "i32"
         }
 
         private function ClassMethodToken(key: string): i32
@@ -1192,20 +1224,38 @@ private field _pendingCount: i32
             }
             else if k == "CallExpression"
             {
-                var i = 1
-                while i < expr.ChildCount()
+                // string(x) 转换：x 非字符串 → Box System.Int32 + Call Convert.ToString(object)（i32 语料）
+                if expr.ChildCount() > 0 && expr.Child(0).Text() == "string"
                 {
-                    EmitExpression(expr.Child(i))
-                    i = i + 1
+                    if expr.ChildCount() > 1
+                    {
+                        EmitExpression(expr.Child(1))
+                        let at = StringArgTypeOf(expr.Child(1))
+                        if at != "string"
+                        {
+                            _assembler.EmitOperand("Box", 8, _boxInt32Token, -1)
+                            let cidx = _assembler.EmitOperand("Call", 7, _convertToken, -1)
+                            _assembler.SetCallDelta(cidx, 0)
+                        }
+                    }
                 }
-
-                let index = MethodIndex(expr.Child(0).Text())
-                if index >= 0
+                else
                 {
-                    let idx = _assembler.EmitOperand("Call", 7, _methodTokens[index], -1)
-                    let returnsV = _methodReturnsValue[index]
-                    let delta = (returnsV ? 1 : 0) - (expr.ChildCount() - 1)
-                    _assembler.SetCallDelta(idx, delta)
+                    var i = 1
+                    while i < expr.ChildCount()
+                    {
+                        EmitExpression(expr.Child(i))
+                        i = i + 1
+                    }
+
+                    let index = MethodIndex(expr.Child(0).Text())
+                    if index >= 0
+                    {
+                        let idx = _assembler.EmitOperand("Call", 7, _methodTokens[index], -1)
+                        let returnsV = _methodReturnsValue[index]
+                        let delta = (returnsV ? 1 : 0) - (expr.ChildCount() - 1)
+                        _assembler.SetCallDelta(idx, delta)
+                    }
                 }
             }
             else if k == "MemberCallExpression"

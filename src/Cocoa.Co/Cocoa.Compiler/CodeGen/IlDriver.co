@@ -87,15 +87,17 @@ namespace Cocoa.CodeGen
                 i = i + 1
             }
 
-            // ---- 数组元素类型扫描（newarr 元素 TypeRef：i32 → System.Int32；string → System.String）----
+            // ---- 数组元素类型扫描（newarr 元素 TypeRef + string() 转换检测）----
             var needsInt32 = new bool[1]
             needsInt32[0] = false
             var needsStringArray = new bool[1]
             needsStringArray[0] = false
+            var usesConvert = new bool[1]
+            usesConvert[0] = false
             i = 0
             while i < fnCount
             {
-                ScanArrayElems(binder.GetFunctionBody(i), needsInt32, needsStringArray)
+                ScanArrayElems(binder.GetFunctionBody(i), needsInt32, needsStringArray, usesConvert)
                 i = i + 1
             }
 
@@ -113,14 +115,22 @@ namespace Cocoa.CodeGen
             var usesString = hasString
             if needsStringArray[0] { usesString = true }
             var usesInt32 = needsInt32[0]
+            if usesConvert[0] { usesInt32 = true }
             var typeRefCount = 2
             if hasConsole { typeRefCount = typeRefCount + 1 }
             if usesString { typeRefCount = typeRefCount + 1 }
             if usesInt32 { typeRefCount = typeRefCount + 1 }
+            if usesConvert[0] { typeRefCount = typeRefCount + 1 }
             var stringTypeRow = 2
             if hasConsole { stringTypeRow = stringTypeRow + 1 }
             stringTypeRow = stringTypeRow + 1
-            var int32TypeRow = typeRefCount
+            var int32TypeRow = 2
+            if hasConsole { int32TypeRow = int32TypeRow + 1 }
+            if usesString { int32TypeRow = int32TypeRow + 1 }
+            if usesInt32 { int32TypeRow = int32TypeRow + 1 }
+            var convertTypeRow = typeRefCount
+            var convertMemberRow = 1 + bclCount[0]
+            if classCount > 0 { convertMemberRow = convertMemberRow + 1 }
 
             // ---- 方法行规划：顶层（序数序）→ 每类（隐式 .ctor + 实例方法）。
             // 行号/令牌纯算术：顶层 t → 行 t；类 ci 的 ctor → classStartRow[ci]。
@@ -237,6 +247,11 @@ namespace Cocoa.CodeGen
             if elemCount > 0
             {
                 emitter.SetArrayElemTypes(elemNames, elemTokens, elemCount)
+            }
+
+            if usesConvert[0]
+            {
+                emitter.SetStringConvert(0x0A000000 + convertMemberRow + 1, 0x01000000 + int32TypeRow)
             }
             if totalClassMethods > 0
             {
@@ -415,12 +430,21 @@ namespace Cocoa.CodeGen
                 typeRefScope[typeRow] = 1
                 typeRefNs[typeRow] = "System"
                 typeRefName[typeRow] = "Int32"
+                typeRow = typeRow + 1
+            }
+
+            if usesConvert[0]
+            {
+                typeRefScope[typeRow] = 1
+                typeRefNs[typeRow] = "System"
+                typeRefName[typeRow] = "Convert"
             }
 
             // MemberRef：DebuggableAttribute..ctor(bool,bool)（行 1）+ BCL 成员（行 2..）
             // + [Object::.ctor（末行，类存在时）；BclToken 行序不受影响]
             var memberRefCount = 1 + bclCount[0]
             if classCount > 0 { memberRefCount = memberRefCount + 1 }
+            if usesConvert[0] { memberRefCount = memberRefCount + 1 }
             var memberRefParent = new i32[memberRefCount]
             var memberRefName = new string[memberRefCount]
             var memberRefSig = new string[memberRefCount]
@@ -445,6 +469,15 @@ namespace Cocoa.CodeGen
                 memberRefParent[1 + bclCount[0]] = 1
                 memberRefName[1 + bclCount[0]] = ".ctor"
                 memberRefSig[1 + bclCount[0]] = MetadataEncode.EncodeMethodSignatureHex("void", new string[0], 0, false)
+            }
+
+            if (usesConvert[0])
+            {
+                let objP = new string[1]
+                objP[0] = "object"
+                memberRefParent[convertMemberRow] = convertTypeRow
+                memberRefName[convertMemberRow] = "ToString"
+                memberRefSig[convertMemberRow] = MetadataEncode.EncodeMethodSignatureHex("string", objP, 1, true)
             }
 
             // #US 堆：种子 0 + 各字符串 Utf16Blob
@@ -599,7 +632,7 @@ namespace Cocoa.CodeGen
         }
 
         /// <summary>递归收集数组创建的元素类型（i32 → Int32 TypeRef；string → String TypeRef）。</summary>
-        private static function ScanArrayElems(node: Node, needsInt32: bool[], needsStringArray: bool[]): void
+        private static function ScanArrayElems(node: Node, needsInt32: bool[], needsStringArray: bool[], usesConvert: bool[]): void
         {
             if node.Kind() == "ArrayCreationExpression"
             {
@@ -613,13 +646,20 @@ namespace Cocoa.CodeGen
                     needsStringArray[0] = true
                 }
             }
+            else if node.Kind() == "CallExpression"
+            {
+                if node.Child(0).Text() == "string"
+                {
+                    usesConvert[0] = true
+                }
+            }
 
             var c = 0
             while c < node.ChildCount()
             {
                 if !node.Child(c).IsToken()
                 {
-                    ScanArrayElems(node.Child(c), needsInt32, needsStringArray)
+                    ScanArrayElems(node.Child(c), needsInt32, needsStringArray, usesConvert)
                 }
 
                 c = c + 1
