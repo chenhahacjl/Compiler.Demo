@@ -96,45 +96,103 @@ namespace Cocoa.CodeAnalysis.Binding
         /// 第二遍做类型/函数体/初始化表达式检查。</summary>
         public function BindCompilationUnit(): void
         {
+            var fiState = new i32[1]
+            fiState[0] = 0
+            WalkTopMembers(1, fiState)
+
+            fiState[0] = 0
+            WalkTopMembers(2, fiState)
+
+            _currentClass = ""
+
+            // M9-a2：main 函数与全局语句互斥（对齐 C# 端规则，声明序无关；
+            // C# 在 GlobalScope 与 Program 两阶段各报一次，条数对齐）
+            if _variableCount > 0 && _mainName != "<none>"
+            {
+                ReportError("Cannot declare main function when global statements are used.")
+                ReportError("Cannot declare main function when global statements are used.")
+            }
+        }
+
+        /// <summary>顶层成员遍历（phase 1=声明 / 2=检查），namespace 剥层下钻，保持声明序。</summary>
+        private function WalkTopMembers(phase: i32, fiState: i32[]): void
+        {
             var i = 0
             while i < _root.ChildCount()
             {
-                let member = _root.Child(i)
-                let kind = member.Kind()
-                if kind == "FunctionDeclaration"
-                {
-                    _topLevelIndexes[_topLevelCount] = BindFunction(member)
-                    _topLevelCount = _topLevelCount + 1
-                }
-                else if kind == "ClassDeclaration"
-                {
-                    BindClassDeclaration(member)
-                }
-                else if kind == "GlobalStatement"
-                {
-                    // GlobalStatement 包裹的顶层语句：仅 var/let 声明产生全局符号
-                    if member.ChildCount() == 1 && member.Child(0).Kind() == "VariableDeclaration"
-                    {
-                        BindGlobalVariable(member.Child(0))
-                    }
-                }
-
+                WalkMember(_root.Child(i), phase, fiState)
                 i = i + 1
             }
+        }
 
-            var fi = 0
-            i = 0
-            while i < _root.ChildCount()
+        private function WalkMember(node: Node, phase: i32, fiState: i32[]): void
+        {
+            if node == null
             {
-                let member = _root.Child(i)
-                let kind = member.Kind()
-                if kind == "FunctionDeclaration"
+                return
+            }
+
+            if node.IsToken()
+            {
+                return
+            }
+
+            let k = node.Kind()
+            if k == "NamespaceDeclaration"
+            {
+                var c = 0
+                while c < node.ChildCount()
                 {
-                    let topIndex = _topLevelIndexes[fi]
-                    CheckFunctionBody(member, _functions[topIndex], topIndex)
-                    fi = fi + 1
+                    let nc = node.Child(c)
+                    if nc != null && !nc.IsToken()
+                    {
+                        WalkMember(nc, phase, fiState)
+                    }
+
+                    c = c + 1
                 }
-                else if kind == "ClassDeclaration"
+
+                return
+            }
+
+            if k == "FunctionDeclaration"
+            {
+                if phase == 1
+                {
+                    if _topLevelCount >= _topLevelIndexes.Length
+                    {
+                        var tg = new i32[_topLevelIndexes.Length * 2]
+                        var tk = 0
+                        while tk < _topLevelCount
+                        {
+                            tg[tk] = _topLevelIndexes[tk]
+                            tk = tk + 1
+                        }
+
+                        _topLevelIndexes = tg
+                    }
+
+                    _topLevelIndexes[_topLevelCount] = BindFunction(node)
+                    _topLevelCount = _topLevelCount + 1
+                }
+                else
+                {
+                    let fi = fiState[0]
+                    let topIndex = _topLevelIndexes[fi]
+                    CheckFunctionBody(node, _functions[topIndex], topIndex)
+                    fiState[0] = fiState[0] + 1
+                }
+
+                return
+            }
+
+            if k == "ClassDeclaration"
+            {
+                if phase == 1
+                {
+                    BindClassDeclaration(node)
+                }
+                else
                 {
                     // 类方法体在 class 收集后按方法序回填（this 已作 param 0）
                     var cm = 0
@@ -153,25 +211,23 @@ namespace Cocoa.CodeAnalysis.Binding
                         cm = cm + 1
                     }
                 }
-                else if kind == "GlobalStatement"
-                {
-                    if member.ChildCount() == 1 && member.Child(0).Kind() == "VariableDeclaration"
-                    {
-                        CheckGlobalVariable(member.Child(0))
-                    }
-                }
 
-                i = i + 1
+                return
             }
 
-            _currentClass = ""
-
-            // M9-a2：main 函数与全局语句互斥（对齐 C# 端规则，声明序无关；
-            // C# 在 GlobalScope 与 Program 两阶段各报一次，条数对齐）
-            if _variableCount > 0 && _mainName != "<none>"
+            if k == "GlobalStatement"
             {
-                ReportError("Cannot declare main function when global statements are used.")
-                ReportError("Cannot declare main function when global statements are used.")
+                if node.ChildCount() == 1 && node.Child(0).Kind() == "VariableDeclaration"
+                {
+                    if phase == 1
+                    {
+                        BindGlobalVariable(node.Child(0))
+                    }
+                    else
+                    {
+                        CheckGlobalVariable(node.Child(0))
+                    }
+                }
             }
         }
 
@@ -186,6 +242,31 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             let classIndex = _classCount
+            if classIndex >= _classNames.Length
+            {
+                var bn = new string[_classNames.Length * 2]
+                var bo = new i32[_classFieldOffsets.Length * 2]
+                var bc = new i32[_classFieldCounts.Length * 2]
+                var mo = new i32[_classMethodOffsets.Length * 2]
+                var mc = new i32[_classMethodCounts.Length * 2]
+                var g = 0
+                while g < classIndex
+                {
+                    bn[g] = _classNames[g]
+                    bo[g] = _classFieldOffsets[g]
+                    bc[g] = _classFieldCounts[g]
+                    mo[g] = _classMethodOffsets[g]
+                    mc[g] = _classMethodCounts[g]
+                    g = g + 1
+                }
+
+                _classNames = bn
+                _classFieldOffsets = bo
+                _classFieldCounts = bc
+                _classMethodOffsets = mo
+                _classMethodCounts = mc
+            }
+
             _classNames[classIndex] = className
             // 字段/方法平铺偏移 = 前序类累计
             var fieldRun = 0
@@ -217,8 +298,25 @@ namespace Cocoa.CodeAnalysis.Binding
                     let fieldType = FieldTypeOf(child)
                     if fieldName.Length > 0
                     {
-                        _classFieldNames[_classFieldOffsets[classIndex] + _classFieldCounts[classIndex]] = fieldName
-                        _classFieldTypes[_classFieldOffsets[classIndex] + _classFieldCounts[classIndex]] = fieldType
+                        let fidx = _classFieldOffsets[classIndex] + _classFieldCounts[classIndex]
+                        if fidx >= _classFieldNames.Length
+                        {
+                            var fg = new string[_classFieldNames.Length * 2]
+                            var ft = new string[_classFieldTypes.Length * 2]
+                            var q = 0
+                            while q < fidx
+                            {
+                                fg[q] = _classFieldNames[q]
+                                ft[q] = _classFieldTypes[q]
+                                q = q + 1
+                            }
+
+                            _classFieldNames = fg
+                            _classFieldTypes = ft
+                        }
+
+                        _classFieldNames[fidx] = fieldName
+                        _classFieldTypes[fidx] = fieldType
                         _classFieldCounts[classIndex] = _classFieldCounts[classIndex] + 1
                     }
                 }
@@ -256,9 +354,29 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             let methodIndex = _functionCount
-            _classMethodIndexes[_classMethodOffsets[classIndex] + _classMethodCounts[classIndex]] = methodIndex
-            _classMethodNodes[_classMethodOffsets[classIndex] + _classMethodCounts[classIndex]] = node
-            _classMethodNames[_classMethodOffsets[classIndex] + _classMethodCounts[classIndex]] = methodName
+            let midx = _classMethodOffsets[classIndex] + _classMethodCounts[classIndex]
+            if midx >= _classMethodIndexes.Length
+            {
+                var mi = new i32[_classMethodIndexes.Length * 2]
+                var mn = new Node[_classMethodNodes.Length * 2]
+                var mg = new string[_classMethodNames.Length * 2]
+                var g2 = 0
+                while g2 < midx
+                {
+                    mi[g2] = _classMethodIndexes[g2]
+                    mn[g2] = _classMethodNodes[g2]
+                    mg[g2] = _classMethodNames[g2]
+                    g2 = g2 + 1
+                }
+
+                _classMethodIndexes = mi
+                _classMethodNodes = mn
+                _classMethodNames = mg
+            }
+
+            _classMethodIndexes[midx] = methodIndex
+            _classMethodNodes[midx] = node
+            _classMethodNames[midx] = methodName
             _classMethodCounts[classIndex] = _classMethodCounts[classIndex] + 1
 
             AddFunction(fn, methodName)
