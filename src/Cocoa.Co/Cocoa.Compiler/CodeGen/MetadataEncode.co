@@ -254,7 +254,8 @@ namespace Cocoa.CodeGen
                 i = i + 1
             }
 
-            return CompressedHex(utf.Length / 2 + 1) + utf + "00"
+            // #US 长度字段 = UTF-16 字节数（不含结尾 0x00；ECMA II.24.2.4）；先前 `+1` 使后续 #US 偏移漂移。
+            return CompressedHex(utf.Length / 2) + utf + "00"
         }
 
         public static function Utf16Blob(s: string): string

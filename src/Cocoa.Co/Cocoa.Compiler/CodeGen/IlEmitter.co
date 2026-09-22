@@ -167,7 +167,7 @@ namespace Cocoa.CodeGen
         /// <summary>数组类型 `T[]` → 元素类型 T；否则空。</summary>
         private function ArrayElemTypeOf(type: string): string
         {
-            if type.IndexOf("[]") == type.Length - 2
+            if type.IndexOf("[]") >= 0 && type.IndexOf("[]") == type.Length - 2
             {
                 return type.substring(0, type.Length - 2)
             }
@@ -375,6 +375,11 @@ namespace Cocoa.CodeGen
                 if owner != "" && ClassMethodToken(owner + "." + expr.Child(2).Text()) >= 0
                 {
                     return ClassMethodReturns(owner + "." + expr.Child(2).Text())
+                }
+
+                if owner == "string"
+                {
+                    return true
                 }
 
                 return false
@@ -939,7 +944,14 @@ namespace Cocoa.CodeGen
 
             if k == "MemberCallExpression"
             {
+                // 实例调用（类/字符串）会发射目标 + 参数 + callvirt；BCL 静态只发射参数 + call
                 var count = 1
+                let owner = ExprTypeOf(expr.Child(0))
+                if owner != ""
+                {
+                    count = count + CountExpression(expr.Child(0))
+                }
+
                 var i = 4
                 while i < expr.ChildCount() - 1
                 {
@@ -1192,6 +1204,34 @@ namespace Cocoa.CodeGen
                     let retV = ClassMethodReturns(owner + "." + expr.Child(2).Text())
                     let idx = _assembler.Add("Callvirt", 7, methodToken, -1)
                     _assembler.SetCallDelta(idx, (retV ? 1 : 0) - (argCount + 1))
+                }
+                else if owner == "string"
+                {
+                    // 字符串实例成员：s.substring(i[,len]) / s.IndexOf(str) → target + args + callvirt（均返回值）
+                    EmitExpression(target)
+                    var argCount = 0
+                    var a = 4
+                    while a < expr.ChildCount() - 1
+                    {
+                        if !expr.Child(a).IsToken()
+                        {
+                            EmitExpression(expr.Child(a))
+                            argCount = argCount + 1
+                        }
+
+                        a = a + 1
+                    }
+
+                    let skey = "String." + expr.Child(2).Text() + string(argCount)
+                    let stok = BclToken(skey)
+                    if stok < 0
+                    {
+                        _error = "Unresolved bcl member: " + skey
+                        return
+                    }
+
+                    let idx = _assembler.Add("Callvirt", 7, stok, -1)
+                    _assembler.SetCallDelta(idx, 1 - (argCount + 1))
                 }
                 else
                 {
