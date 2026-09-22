@@ -154,6 +154,7 @@ namespace Cocoa.CodeGen
             // ---- 令牌表 ----
             var classKeys = new string[totalClassMethods]
             var classTokens = new i32[totalClassMethods]
+            var classReturns = new bool[totalClassMethods]
             var classCtorNames = new string[classCount]
             var classCtorTokens = new i32[classCount]
             var fieldNames = new string[totalFields]
@@ -194,6 +195,7 @@ namespace Cocoa.CodeGen
                     let fidx = binder.GetClassMethodIndex(ci, mi)
                     classKeys[cmc] = className + "." + binder.GetClassMethodName(ci, mi)
                     classTokens[cmc] = 0x06000000 + classStartRow[ci] + 2 + mi
+                    classReturns[cmc] = binder.GetFunctionReturnType(fidx) != "void"
                     cmc = cmc + 1
                     mi = mi + 1
                 }
@@ -238,7 +240,7 @@ namespace Cocoa.CodeGen
             }
             if totalClassMethods > 0
             {
-                emitter.SetClassMethods(classKeys, classTokens, totalClassMethods)
+                emitter.SetClassMethods(classKeys, classTokens, classReturns, totalClassMethods)
             }
 
             if totalFields > 0

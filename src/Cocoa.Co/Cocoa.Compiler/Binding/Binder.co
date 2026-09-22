@@ -1773,7 +1773,9 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if k == "AssignmentExpression"
             {
-                // 元素赋值 a[i] = e → (ElementAssignmentExpression <target> <index> <value>)；普通变量 → (AssignmentExpression name <value>)
+                // 元素赋值 a[i] = e → (ElementAssignmentExpression <target> <index> <value>)；
+                // 字段写 this.v = e / b.v = e → (MemberAssignmentExpression <target> <name> <value>)；
+                // 普通变量 → (AssignmentExpression name <value>)
                 if node.Child(0).Kind() == "ElementAccessExpression"
                 {
                     let ea = node.Child(0)
@@ -1785,6 +1787,18 @@ namespace Cocoa.CodeAnalysis.Binding
                     let val = BuildBound(node.Child(2))
                     if val != null { e.Add(val) } else { e.Add(node.Child(2)) }
                     return e
+                }
+
+                if node.Child(0).Kind() == "MemberAccessExpression"
+                {
+                    let ma = node.Child(0)
+                    let m = Node.MakeCompound("MemberAssignmentExpression")
+                    let tgt = BuildBound(ma.Child(0))
+                    if tgt != null { m.Add(tgt) } else { m.Add(ma.Child(0)) }
+                    m.Add(Node.MakeToken("name", ma.Child(2).Text()))
+                    let val = BuildBound(node.Child(2))
+                    if val != null { m.Add(val) } else { m.Add(node.Child(2)) }
+                    return m
                 }
 
                 let a = Node.MakeCompound("AssignmentExpression")

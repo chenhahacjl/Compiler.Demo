@@ -35,6 +35,7 @@ namespace Cocoa.CodeGen
         private field _usCount: i32
         private field _classMethodKeys: string[]
         private field _classMethodTokens: i32[]
+        private field _classMethodReturns: bool[]
         private field _classFieldKeys: string[]
         private field _classFieldTokens: i32[]
         private field _classCtorNames: string[]
@@ -72,6 +73,7 @@ namespace Cocoa.CodeGen
             _usCount = 0
             _classMethodKeys = new string[0]
             _classMethodTokens = new i32[0]
+            _classMethodReturns = new bool[0]
             _classFieldKeys = new string[0]
             _classFieldTokens = new i32[0]
             _classCtorNames = new string[0]
@@ -108,11 +110,12 @@ namespace Cocoa.CodeGen
             _usCount = count
         }
 
-        /// <summary>类实例方法表：键 `类名.方法` → MethodDef token（实例调 callvirt 用）。</summary>
-        public function SetClassMethods(keys: string[], tokens: i32[], count: i32): void
+        /// <summary>类实例方法表：键 `类名.方法` → MethodDef token（实例调 callvirt 用）+ 是否返回值。</summary>
+        public function SetClassMethods(keys: string[], tokens: i32[], returns: bool[], count: i32): void
         {
             _classMethodKeys = keys
             _classMethodTokens = tokens
+            _classMethodReturns = returns
             _classEntriesCount = count
         }
 
@@ -186,6 +189,22 @@ namespace Cocoa.CodeGen
             }
 
             return -1
+        }
+
+        private function ClassMethodReturns(key: string): bool
+        {
+            var i = 0
+            while i < _classEntriesCount
+            {
+                if _classMethodKeys[i] == key
+                {
+                    return _classMethodReturns[i]
+                }
+
+                i = i + 1
+            }
+
+            return true
         }
 
         private function FieldToken(key: string): i32
@@ -332,8 +351,8 @@ namespace Cocoa.CodeGen
 
         private function ProducesValue(expr: Node): bool
         {
-            // 元素赋值 stelem 不留栈值 → 语句级不弹栈
-            if expr.Kind() == "ElementAssignmentExpression"
+            // 元素/字段赋值（stelem/stfld）不留栈值 → 语句级不弹栈
+            if expr.Kind() == "ElementAssignmentExpression" || expr.Kind() == "MemberAssignmentExpression"
             {
                 return false
             }
@@ -349,13 +368,13 @@ namespace Cocoa.CodeGen
                 return false
             }
 
-            // 实例成员调用产生值（当前类方法面均返回 i32）；BCL 静态调用当前面不产生值（Console.WriteLine）
+            // 实例成员调用产生值按类方法返回值表；BCL 静态调用当前面不产生值（Console.WriteLine）
             if expr.Kind() == "MemberCallExpression"
             {
                 let owner = ExprTypeOf(expr.Child(0))
                 if owner != "" && ClassMethodToken(owner + "." + expr.Child(2).Text()) >= 0
                 {
-                    return true
+                    return ClassMethodReturns(owner + "." + expr.Child(2).Text())
                 }
 
                 return false
@@ -406,6 +425,51 @@ namespace Cocoa.CodeGen
 
                 i = i + 1
             }
+
+            // 方法尾补隐式 ret（若无显式 return 终结；仅看可达语句，尾部不可达 end-label 不影响）
+            var lastNonToken = -1
+            i = foldedBody.ChildCount() - 1
+            while i >= 0
+            {
+                if !foldedBody.Child(i).IsToken() && _statementReachable[i]
+                {
+                    lastNonToken = i
+                    break
+                }
+
+                i = i - 1
+            }
+
+            if lastNonToken >= 0 && !TailEndsWithReturn(foldedBody.Child(lastNonToken))
+            {
+                _assembler.Add("Ret", 0, 0, -1)
+            }
+        }
+
+        private function TailEndsWithReturn(stmt: Node): bool
+        {
+            let k = stmt.Kind()
+            if k == "ReturnStatement"
+            {
+                return true
+            }
+
+            if k == "BlockStatement"
+            {
+                var i = stmt.ChildCount() - 1
+                while i >= 0
+                {
+                    let child = stmt.Child(i)
+                    if !child.IsToken()
+                    {
+                        return TailEndsWithReturn(child)
+                    }
+
+                    i = i - 1
+                }
+            }
+
+            return false
         }
 
         // ── 常量折叠（对齐 C# ConstantFolding i32/bool 子集 + Lowerer 常量条件重写）──
@@ -1110,7 +1174,7 @@ namespace Cocoa.CodeGen
 
                 if methodToken >= 0
                 {
-                    // 实例方法调用：this.成员() / b.成员() → callvirt（当前实例方法面均返回 i32）
+                    // 实例方法调用：this.成员() / b.成员() → callvirt（返回值按表）
                     EmitExpression(target)
                     var argCount = 0
                     var a = 4
@@ -1125,8 +1189,9 @@ namespace Cocoa.CodeGen
                         a = a + 1
                     }
 
+                    let retV = ClassMethodReturns(owner + "." + expr.Child(2).Text())
                     let idx = _assembler.Add("Callvirt", 7, methodToken, -1)
-                    _assembler.SetCallDelta(idx, 1 - (argCount + 1))
+                    _assembler.SetCallDelta(idx, (retV ? 1 : 0) - (argCount + 1))
                 }
                 else
                 {
@@ -1274,6 +1339,22 @@ namespace Cocoa.CodeGen
                 {
                     _assembler.Add("Stelem_Ref", 0, 0, -1)
                 }
+            }
+            else if k == "MemberAssignmentExpression"
+            {
+                // 字段写 this.v = e / b.v = e → <目标> <值> stfld <token>
+                let owner5 = ExprTypeOf(expr.Child(0))
+                let fname = expr.Child(1).Text()
+                let ftoken = FieldToken(owner5 + "." + fname)
+                if ftoken < 0
+                {
+                    _error = "Unresolved field: " + owner5 + "." + fname
+                    return
+                }
+
+                EmitExpression(expr.Child(0))
+                EmitExpression(expr.Child(2))
+                _assembler.Add("Stfld", 9, ftoken, -1)
             }
             else if k == "UnaryExpression"
             {
