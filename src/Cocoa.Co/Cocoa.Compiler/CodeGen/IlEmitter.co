@@ -15,10 +15,13 @@ namespace Cocoa.CodeGen
         private field _paramCount: i32
         private field _localNames: string[]
         private field _localCount: i32
-        private field _labelNames: string[]
+private field _labelNames: string[]
         private field _labelIndexes: i32[]
-        private field _statementReachable: bool[]
         private field _labelCount: i32
+        private field _pendingBranches: i32[]
+        private field _pendingNames: string[]
+private field _pendingCount: i32
+        private field _statementReachable: bool[]
         private field _methodNames: string[]
         private field _methodTokens: i32[]
         private field _methodReturnsValue: bool[]
@@ -401,6 +404,9 @@ namespace Cocoa.CodeGen
             _labelIndexes = new i32[body.ChildCount()]
             _statementReachable = new bool[body.ChildCount()]
             _labelCount = 0
+            _pendingBranches = new i32[body.ChildCount()]
+            _pendingNames = new string[body.ChildCount()]
+            _pendingCount = 0
 
             var p = 0
             while p < paramCount
@@ -414,7 +420,6 @@ namespace Cocoa.CodeGen
             _constantCount = 0
             let foldedBody = FoldBody(body)
             ComputeReachability(foldedBody)
-            ComputeLabels(foldedBody)
 
             var i = 0
             while i < foldedBody.ChildCount()
@@ -429,6 +434,25 @@ namespace Cocoa.CodeGen
                 }
 
                 i = i + 1
+            }
+
+            // 延迟回填前向/后向标签分支（标签在 LabelStatement 时登记真实指令槽）
+            var pi = 0
+            while pi < _pendingCount
+            {
+                let lname = _pendingNames[pi]
+                var li = 0
+                while li < _labelCount
+                {
+                    if _labelNames[li] == lname
+                    {
+                        _assembler.SetTarget(_pendingBranches[pi], _labelIndexes[li])
+                    }
+
+                    li = li + 1
+                }
+
+                pi = pi + 1
             }
 
             // 方法尾补隐式 ret（若无显式 return 终结；仅看可达语句，尾部不可达 end-label 不影响）
@@ -447,7 +471,7 @@ namespace Cocoa.CodeGen
 
             if lastNonToken >= 0 && !TailEndsWithReturn(foldedBody.Child(lastNonToken))
             {
-                _assembler.Add("Ret", 0, 0, -1)
+                _assembler.EmitOperand("Ret", 0, 0, -1)
             }
         }
 
@@ -711,17 +735,17 @@ namespace Cocoa.CodeGen
         {
             if v.Kind() == "int"
             {
-                _assembler.Add("Ldc_I4", 1, v.ToInt(), -1)
+                _assembler.EmitOperand("Ldc_I4", 1, v.ToInt(), -1)
             }
             else if v.Kind() == "bool"
             {
                 if v.ToBool()
                 {
-                    _assembler.Add("Ldc_I4_1", 0, 0, -1)
+                    _assembler.EmitOperand("Ldc_I4_1", 0, 0, -1)
                 }
                 else
                 {
-                    _assembler.Add("Ldc_I4_0", 0, 0, -1)
+                    _assembler.EmitOperand("Ldc_I4_0", 0, 0, -1)
                 }
             }
         }
@@ -1023,7 +1047,7 @@ namespace Cocoa.CodeGen
                 let name = stmt.Child(1).Text()
                 let slot = AllocLocal(name)
                 EmitExpression(stmt.Child(2))
-                _assembler.Add("Stloc", 12, slot, -1)
+                _assembler.EmitOperand("Stloc", 12, slot, -1)
             }
             else if k == "ReturnStatement"
             {
@@ -1035,41 +1059,51 @@ namespace Cocoa.CodeGen
                     }
                 }
 
-                _assembler.Add("Ret", 0, 0, -1)
+                _assembler.EmitOperand("Ret", 0, 0, -1)
             }
             else if k == "ExpressionStatement"
             {
                 EmitExpression(stmt.Child(0))
                 if ProducesValue(stmt.Child(0))
                 {
-                    _assembler.Add("Pop", 0, 0, -1)
+                    _assembler.EmitOperand("Pop", 0, 0, -1)
                 }
             }
             else if k == "NopStatement"
             {
-                _assembler.Add("Nop", 0, 0, -1)
+                _assembler.EmitOperand("Nop", 0, 0, -1)
             }
             else if k == "LabelStatement"
             {
-                _assembler.Add("Nop", 0, 0, -1)
+                let slot = _assembler.EmitOperand("Nop", 0, 0, -1)
+                _labelNames[_labelCount] = stmt.Child(0).Text()
+                _labelIndexes[_labelCount] = slot
+                _labelCount = _labelCount + 1
             }
             else if k == "GotoStatement"
             {
-                let idx = LabelIndex(stmt.Child(0).Text())
-                _assembler.Add("Br", 14, 0, idx)
+                let place = _assembler.EmitOperand("Br", 14, 0, -1)
+                _pendingBranches[_pendingCount] = place
+                _pendingNames[_pendingCount] = stmt.Child(0).Text()
+                _pendingCount = _pendingCount + 1
             }
             else if k == "ConditionalGotoStatement"
             {
                 EmitExpression(stmt.Child(2))
                 let jumpIfTrue = stmt.Child(1).Text() == "True"
-                let idx = LabelIndex(stmt.Child(0).Text())
                 if jumpIfTrue
                 {
-                    _assembler.Add("Brtrue", 14, 0, idx)
+                    let place = _assembler.EmitOperand("Brtrue", 14, 0, -1)
+                    _pendingBranches[_pendingCount] = place
+                    _pendingNames[_pendingCount] = stmt.Child(0).Text()
+                    _pendingCount = _pendingCount + 1
                 }
                 else
                 {
-                    _assembler.Add("Brfalse", 14, 0, idx)
+                    let place = _assembler.EmitOperand("Brfalse", 14, 0, -1)
+                    _pendingBranches[_pendingCount] = place
+                    _pendingNames[_pendingCount] = stmt.Child(0).Text()
+                    _pendingCount = _pendingCount + 1
                 }
             }
         }
@@ -1089,12 +1123,12 @@ namespace Cocoa.CodeGen
                 {
                     // 字符串字面量 → Ldstr <#US token>（token 由驱动预注册）
                     let token = UsToken(StringLiteralValue(expr.Child(0).Text()))
-                    _assembler.Add("Ldstr", 6, token, -1)
+                    _assembler.EmitOperand("Ldstr", 6, token, -1)
                 }
                 else
                 {
                     let text = expr.Child(0).Text()
-                    _assembler.Add("Ldc_I4", 1, EvaluatorRuntime.ParseInt(text), -1)
+                    _assembler.EmitOperand("Ldc_I4", 1, EvaluatorRuntime.ParseInt(text), -1)
                 }
             }
             else if k == "VariableExpression"
@@ -1103,11 +1137,11 @@ namespace Cocoa.CodeGen
                 let isParam = ParamIndex(name)
                 if isParam >= 0
                 {
-                    _assembler.Add("Ldarg", 12, isParam, -1)
+                    _assembler.EmitOperand("Ldarg", 12, isParam, -1)
                 }
                 else
                 {
-                    _assembler.Add("Ldloc", 12, LocalIndex(name), -1)
+                    _assembler.EmitOperand("Ldloc", 12, LocalIndex(name), -1)
                 }
             }
             else if k == "BinaryExpression"
@@ -1140,7 +1174,7 @@ namespace Cocoa.CodeGen
 
                     EmitExpression(expr.Child(1))
                     EmitExpression(expr.Child(2))
-                    let idx = _assembler.Add("Call", 7, token, -1)
+                    let idx = _assembler.EmitOperand("Call", 7, token, -1)
                     _assembler.SetCallDelta(idx, -1)
                 }
                 else
@@ -1153,8 +1187,8 @@ namespace Cocoa.CodeGen
             else if k == "AssignmentExpression"
             {
                 EmitExpression(expr.Child(1))
-                _assembler.Add("Dup", 0, 0, -1)
-                _assembler.Add("Stloc", 12, LocalIndex(expr.Child(0).Text()), -1)
+                _assembler.EmitOperand("Dup", 0, 0, -1)
+                _assembler.EmitOperand("Stloc", 12, LocalIndex(expr.Child(0).Text()), -1)
             }
             else if k == "CallExpression"
             {
@@ -1168,7 +1202,7 @@ namespace Cocoa.CodeGen
                 let index = MethodIndex(expr.Child(0).Text())
                 if index >= 0
                 {
-                    let idx = _assembler.Add("Call", 7, _methodTokens[index], -1)
+                    let idx = _assembler.EmitOperand("Call", 7, _methodTokens[index], -1)
                     let returnsV = _methodReturnsValue[index]
                     let delta = (returnsV ? 1 : 0) - (expr.ChildCount() - 1)
                     _assembler.SetCallDelta(idx, delta)
@@ -1202,7 +1236,7 @@ namespace Cocoa.CodeGen
                     }
 
                     let retV = ClassMethodReturns(owner + "." + expr.Child(2).Text())
-                    let idx = _assembler.Add("Callvirt", 7, methodToken, -1)
+                    let idx = _assembler.EmitOperand("Callvirt", 7, methodToken, -1)
                     _assembler.SetCallDelta(idx, (retV ? 1 : 0) - (argCount + 1))
                 }
                 else if owner == "string"
@@ -1230,7 +1264,7 @@ namespace Cocoa.CodeGen
                         return
                     }
 
-                    let idx = _assembler.Add("Callvirt", 7, stok, -1)
+                    let idx = _assembler.EmitOperand("Callvirt", 7, stok, -1)
                     _assembler.SetCallDelta(idx, 1 - (argCount + 1))
                 }
                 else
@@ -1258,13 +1292,13 @@ namespace Cocoa.CodeGen
                         a = a + 1
                     }
 
-                    let idx = _assembler.Add("Call", 7, token, -1)
+                    let idx = _assembler.EmitOperand("Call", 7, token, -1)
                     _assembler.SetCallDelta(idx, 0 - argCount)
                 }
             }
             else if k == "ThisExpression"
             {
-                _assembler.Add("Ldarg", 12, 0, -1)
+                _assembler.EmitOperand("Ldarg", 12, 0, -1)
             }
             else if k == "ObjectCreationExpression"
             {
@@ -1289,7 +1323,7 @@ namespace Cocoa.CodeGen
                     a = a + 1
                 }
 
-                let idx = _assembler.Add("Newobj", 7, ctorToken, -1)
+                let idx = _assembler.EmitOperand("Newobj", 7, ctorToken, -1)
                 _assembler.SetCallDelta(idx, 1 - argCount)
             }
             else if k == "MemberAccessExpression"
@@ -1300,8 +1334,8 @@ namespace Cocoa.CodeGen
                 if owner.IndexOf("[]") == owner.Length - 2 && memberName == "Length"
                 {
                     EmitExpression(expr.Child(0))
-                    _assembler.Add("Ldlen", 0, 0, -1)
-                    _assembler.Add("Conv_I4", 0, 0, -1)
+                    _assembler.EmitOperand("Ldlen", 0, 0, -1)
+                    _assembler.EmitOperand("Conv_I4", 0, 0, -1)
                 }
                 else
                 {
@@ -1320,7 +1354,7 @@ namespace Cocoa.CodeGen
                     }
 
                     EmitExpression(expr.Child(0))
-                    _assembler.Add("Ldfld", 9, token, -1)
+                    _assembler.EmitOperand("Ldfld", 9, token, -1)
                 }
             }
             else if k == "ArrayCreationExpression"
@@ -1335,16 +1369,16 @@ namespace Cocoa.CodeGen
                 }
 
                 EmitExpression(expr.Child(1))
-                let idx = _assembler.Add("Newarr", 8, elemToken, -1)
+                let idx = _assembler.EmitOperand("Newarr", 8, elemToken, -1)
                 _assembler.SetCallDelta(idx, 0)
                 var a = 2
                 var initSlot = 0
                 while a < expr.ChildCount()
                 {
-                    _assembler.Add("Dup", 0, 0, -1)
-                    _assembler.Add("Ldc_I4", 1, initSlot, -1)
+                    _assembler.EmitOperand("Dup", 0, 0, -1)
+                    _assembler.EmitOperand("Ldc_I4", 1, initSlot, -1)
                     EmitExpression(expr.Child(a))
-                    _assembler.Add("Stelem_Ref", 0, 0, -1)
+                    _assembler.EmitOperand("Stelem_Ref", 0, 0, -1)
                     a = a + 1
                     initSlot = initSlot + 1
                 }
@@ -1357,11 +1391,11 @@ namespace Cocoa.CodeGen
                 let owner3 = ExprTypeOf(expr.Child(0))
                 if ArrayElemTypeOf(owner3) == "i32"
                 {
-                    _assembler.Add("Ldelem_I4", 0, 0, -1)
+                    _assembler.EmitOperand("Ldelem_I4", 0, 0, -1)
                 }
                 else
                 {
-                    _assembler.Add("Ldelem_Ref", 0, 0, -1)
+                    _assembler.EmitOperand("Ldelem_Ref", 0, 0, -1)
                 }
             }
             else if k == "ElementAssignmentExpression"
@@ -1373,11 +1407,11 @@ namespace Cocoa.CodeGen
                 let owner4 = ExprTypeOf(expr.Child(0))
                 if ArrayElemTypeOf(owner4) == "i32"
                 {
-                    _assembler.Add("Stelem_I4", 0, 0, -1)
+                    _assembler.EmitOperand("Stelem_I4", 0, 0, -1)
                 }
                 else
                 {
-                    _assembler.Add("Stelem_Ref", 0, 0, -1)
+                    _assembler.EmitOperand("Stelem_Ref", 0, 0, -1)
                 }
             }
             else if k == "MemberAssignmentExpression"
@@ -1394,7 +1428,7 @@ namespace Cocoa.CodeGen
 
                 EmitExpression(expr.Child(0))
                 EmitExpression(expr.Child(2))
-                _assembler.Add("Stfld", 9, ftoken, -1)
+                _assembler.EmitOperand("Stfld", 9, ftoken, -1)
             }
             else if k == "UnaryExpression"
             {
@@ -1415,47 +1449,47 @@ namespace Cocoa.CodeGen
         {
             if op == "-"
             {
-                _assembler.Add("Neg", 0, 0, -1)
+                _assembler.EmitOperand("Neg", 0, 0, -1)
             }
             else if op == "~"
             {
-                _assembler.Add("Not", 0, 0, -1)
+                _assembler.EmitOperand("Not", 0, 0, -1)
             }
             else if op == "!"
             {
                 // !cond：Ldc_I4_0; Ceq
-                _assembler.Add("Ldc_I4_0", 0, 0, -1)
-                _assembler.Add("Ceq", 0, 0, -1)
+                _assembler.EmitOperand("Ldc_I4_0", 0, 0, -1)
+                _assembler.EmitOperand("Ceq", 0, 0, -1)
             }
         }
 
         private function EmitBinaryOp(op: string): void
         {
-            if op == "+" { _assembler.Add("Add", 0, 0, -1) }
-            else if op == "-" { _assembler.Add("Sub", 0, 0, -1) }
-            else if op == "*" { _assembler.Add("Mul", 0, 0, -1) }
-            else if op == "/" { _assembler.Add("Div", 0, 0, -1) }
-            else if op == "%" { _assembler.Add("Rem", 0, 0, -1) }
-            else if op == "==" { _assembler.Add("Ceq", 0, 0, -1) }
+            if op == "+" { _assembler.EmitOperand("Add", 0, 0, -1) }
+            else if op == "-" { _assembler.EmitOperand("Sub", 0, 0, -1) }
+            else if op == "*" { _assembler.EmitOperand("Mul", 0, 0, -1) }
+            else if op == "/" { _assembler.EmitOperand("Div", 0, 0, -1) }
+            else if op == "%" { _assembler.EmitOperand("Rem", 0, 0, -1) }
+            else if op == "==" { _assembler.EmitOperand("Ceq", 0, 0, -1) }
             else if op == "!="
             {
-                _assembler.Add("Ceq", 0, 0, -1)
-                _assembler.Add("Ldc_I4_0", 0, 0, -1)
-                _assembler.Add("Ceq", 0, 0, -1)
+                _assembler.EmitOperand("Ceq", 0, 0, -1)
+                _assembler.EmitOperand("Ldc_I4_0", 0, 0, -1)
+                _assembler.EmitOperand("Ceq", 0, 0, -1)
             }
-            else if op == "<" { _assembler.Add("Clt", 0, 0, -1) }
+            else if op == "<" { _assembler.EmitOperand("Clt", 0, 0, -1) }
             else if op == "<="
             {
-                _assembler.Add("Cgt", 0, 0, -1)
-                _assembler.Add("Ldc_I4_0", 0, 0, -1)
-                _assembler.Add("Ceq", 0, 0, -1)
+                _assembler.EmitOperand("Cgt", 0, 0, -1)
+                _assembler.EmitOperand("Ldc_I4_0", 0, 0, -1)
+                _assembler.EmitOperand("Ceq", 0, 0, -1)
             }
-            else if op == ">" { _assembler.Add("Cgt", 0, 0, -1) }
+            else if op == ">" { _assembler.EmitOperand("Cgt", 0, 0, -1) }
             else if op == ">="
             {
-                _assembler.Add("Clt", 0, 0, -1)
-                _assembler.Add("Ldc_I4_0", 0, 0, -1)
-                _assembler.Add("Ceq", 0, 0, -1)
+                _assembler.EmitOperand("Clt", 0, 0, -1)
+                _assembler.EmitOperand("Ldc_I4_0", 0, 0, -1)
+                _assembler.EmitOperand("Ceq", 0, 0, -1)
             }
         }
 

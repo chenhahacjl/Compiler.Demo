@@ -319,10 +319,10 @@ namespace Cocoa.CodeGen
                 mParamCounts[ctorRow] = 0
                 mSigs[ctorRow] = MetadataEncode.EncodeMethodSignatureHex("void", new string[0], 0, false)
                 let ctorAsm = new IlAssembler()
-                ctorAsm.Add("Ldarg", 12, 0, -1)
-                let ccall = ctorAsm.Add("Call", 7, objectCtorToken, -1)
+                ctorAsm.EmitOperand("Ldarg", 12, 0, -1)
+                let ccall = ctorAsm.EmitOperand("Call", 7, objectCtorToken, -1)
                 ctorAsm.SetCallDelta(ccall, 0 - 1)
-                ctorAsm.Add("Ret", 0, 0, -1)
+                ctorAsm.EmitOperand("Ret", 0, 0, -1)
                 mBodies[ctorRow] = ctorAsm.Assemble()
                 mMaxStacks[ctorRow] = ctorAsm.ComputeMaxStack()
                 mRvas[ctorRow] = rvaState[0]
