@@ -2455,6 +2455,11 @@ if ck == "TypeClause" || ck == "ArrayTypeClause"
         /// <summary>类型子句未知类型检查（数组递归元素；泛型放行待 M9-a3）。</summary>
         private function CheckTypeClause(node: Node): void
         {
+            if !(node != null)
+            {
+                return
+            }
+
             let k = node.Kind()
             if k == "GenericTypeClause"
             {
