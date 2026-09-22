@@ -658,6 +658,12 @@ namespace Cocoa.CodeAnalysis.Binding
                 return node.ChildCount() > 1 ? node.Child(1).Text() : "?"
             }
 
+            if k == "ArrayCreationExpression"
+            {
+                // (NewKeyword IdentifierToken [ <len> ] ...) → T[]
+                return node.ChildCount() > 1 ? node.Child(1).Text() + "[]" : "?"
+            }
+
             if k == "BinaryExpression"
             {
                 // [left, opToken, right]：关系/逻辑 → bool；字符串拼接 → string；数值 → double 参与即 double，否则 int
@@ -1767,10 +1773,63 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if k == "AssignmentExpression"
             {
+                // 元素赋值 a[i] = e → (ElementAssignmentExpression <target> <index> <value>)；普通变量 → (AssignmentExpression name <value>)
+                if node.Child(0).Kind() == "ElementAccessExpression"
+                {
+                    let ea = node.Child(0)
+                    let e = Node.MakeCompound("ElementAssignmentExpression")
+                    let tgt = BuildBound(ea.Child(0))
+                    if tgt != null { e.Add(tgt) } else { e.Add(ea.Child(0)) }
+                    let idx = BuildBound(ea.Child(2))
+                    if idx != null { e.Add(idx) } else { e.Add(ea.Child(2)) }
+                    let val = BuildBound(node.Child(2))
+                    if val != null { e.Add(val) } else { e.Add(node.Child(2)) }
+                    return e
+                }
+
                 let a = Node.MakeCompound("AssignmentExpression")
                 let target = node.Child(0)
                 a.Add(Node.MakeToken("name", target.Child(0).Text()))
                 a.Add(BuildBound(node.Child(2)))
+                return a
+            }
+
+            if k == "ElementAccessExpression"
+            {
+                // 元素读 a[i] → (ElementAccessExpression <target> <index>)（目标为变量 → VariableExpression）
+                let e = Node.MakeCompound("ElementAccessExpression")
+                let tgt = BuildBound(node.Child(0))
+                if tgt != null { e.Add(tgt) } else { e.Add(node.Child(0)) }
+                let idx = BuildBound(node.Child(2))
+                if idx != null { e.Add(idx) } else { e.Add(node.Child(2)) }
+                return e
+            }
+
+            if k == "ArrayCreationExpression"
+            {
+                // (NewKeyword IdentifierToken [ <len> ] [ { inits } ]) → (ArrayCreationExpression type <len> [inits...])
+                let a = Node.MakeCompound("ArrayCreationExpression")
+                a.Add(Node.MakeToken("type", node.Child(1).Text()))
+                var i = 3
+                while i < node.ChildCount()
+                {
+                    let child = node.Child(i)
+                    if !child.IsToken()
+                    {
+                        let built = BuildBound(child)
+                        if built != null
+                        {
+                            a.Add(built)
+                        }
+                        else
+                        {
+                            a.Add(child)
+                        }
+                    }
+
+                    i = i + 1
+                }
+
                 return a
             }
 

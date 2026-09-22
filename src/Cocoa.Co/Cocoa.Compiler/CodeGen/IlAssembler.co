@@ -126,6 +126,18 @@ namespace Cocoa.CodeGen
                 return -1
             }
 
+            if name == "Ldelem_I4" || name == "Ldelem_Ref" || name == "Ldelem_I1" || name == "Ldelem_U1" ||
+               name == "Ldelem_I2" || name == "Ldelem_U2" || name == "Ldelem_I8" || name == "Ldelem_R4" || name == "Ldelem_R8"
+            {
+                return -1
+            }
+
+            if name == "Stelem_I4" || name == "Stelem_Ref" || name == "Stelem_I1" || name == "Stelem_I2" ||
+               name == "Stelem_I8" || name == "Stelem_R4" || name == "Stelem_R8"
+            {
+                return -3
+            }
+
             if name == "Call" || name == "Callvirt" || name == "Newobj"
             {
                 return _callDeltas[index]

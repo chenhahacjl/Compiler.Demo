@@ -156,11 +156,51 @@ namespace Cocoa.Tests.Compiler
             }
         }
 
+        [Theory]
+        [InlineData("function Main(): i32 { var a = new i32[4] a[0] = 10 return a[0] }", 10)]
+        [InlineData("function Main(): i32 { var a = new i32[4] return a.Length }", 4)]
+        [InlineData("function Main(): i32 { var a = new i32[3] a[0] = 1 a[1] = 2 a[2] = 3 return a[0] + a[1] + a[2] }", 6)]
+        [InlineData("function Main(): i32 { var a = new string[2] a[0] = \"hi\" if a[0] == \"hi\" { return 1 } return 0 }", 1)]
+        public void SelfHosted_Array_Newarr_Index_Length_Runs(string source, int expected)
+        {
+            var dir = Path.Combine(Path.GetTempPath(), "cocoa-e2e", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            try
+            {
+                var peHex = RunSelfDriver(source);
+                Assert.False(peHex.StartsWith("ERR:", StringComparison.Ordinal), "自举链报错：" + peHex);
+                Assert.True(peHex.Length > 0 && peHex.Length % 2 == 0, "PE hex 异常长度 " + peHex.Length);
+
+                var dllPath = Path.Combine(dir, "Min.dll");
+                File.WriteAllBytes(dllPath, HexToBytes(peHex));
+                var assembly = Assembly.LoadFile(dllPath);
+                var result = assembly.EntryPoint!.Invoke(null, null);
+                Assert.Equal(expected, (int)result!);
+
+                File.WriteAllText(Path.Combine(dir, "Min.runtimeconfig.json"),
+                    "{\"runtimeOptions\":{\"tfm\":\"net9.0\",\"framework\":{\"name\":\"Microsoft.NETCore.App\",\"version\":\"9.0.0\"}}}");
+                var psi = new System.Diagnostics.ProcessStartInfo("dotnet", dllPath)
+                {
+                    WorkingDirectory = dir,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                };
+                using var process = System.Diagnostics.Process.Start(psi)!;
+                process.WaitForExit(30000);
+                Assert.True(process.HasExited, "dotnet 未在 30s 内退出");
+                Assert.Equal(expected, process.ExitCode);
+            }
+            finally
+            {
+                try { Directory.Delete(dir, recursive: true); } catch { }
+            }
+        }
+
         // ------------------------------------------------------------------
         // 自举驱动
         // ------------------------------------------------------------------
-
-        private static string RunSelfDriver(string source)
+        public static string RunSelfDriver(string source)
         {
             var root = RepoRoot();
             var compilerDir = Path.Combine(root, "src", "Cocoa.Co", "Cocoa.Compiler");
@@ -208,7 +248,7 @@ function Main(): i32
             }
         }
 
-        private static byte[] HexToBytes(string hex)
+        public static byte[] HexToBytes(string hex)
         {
             var bytes = new byte[hex.Length / 2];
             for (var i = 0; i < bytes.Length; i++)

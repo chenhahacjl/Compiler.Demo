@@ -51,41 +51,14 @@ namespace Cocoa.CodeGen
                 return "ERR:no function Main"
             }
 
-            // 不支持数组类型（函数参数/返回 + 类字段）
+            // 不支持 非数组 类型限制已解除：数组（i32[]/string[]/类[]）→ newarr/ldelem/stelem/ldlen。
             i = 0
             while i < fnCount
             {
-                if binder.GetFunctionReturnType(i).IndexOf("[") >= 0
-                {
-                    return "ERR:unsupported array type in function " + binder.GetFunctionName(i)
-                }
-
                 var p = 0
                 while p < binder.GetFunctionParamCount(i)
                 {
-                    if binder.GetFunctionParamType(i, p).IndexOf("[") >= 0
-                    {
-                        return "ERR:unsupported array type in function " + binder.GetFunctionName(i)
-                    }
-
                     p = p + 1
-                }
-
-                i = i + 1
-            }
-
-            i = 0
-            while i < classCount
-            {
-                var f = 0
-                while f < binder.GetClassFieldCount(i)
-                {
-                    if binder.GetClassFieldType(i, f).IndexOf("[") >= 0
-                    {
-                        return "ERR:unsupported array field " + binder.GetClassFieldName(i, f)
-                    }
-
-                    f = f + 1
                 }
 
                 i = i + 1
@@ -113,6 +86,41 @@ namespace Cocoa.CodeGen
                     usTexts, usTokens, usCount, usBytes)
                 i = i + 1
             }
+
+            // ---- 数组元素类型扫描（newarr 元素 TypeRef：i32 → System.Int32；string → System.String）----
+            var needsInt32 = new bool[1]
+            needsInt32[0] = false
+            var needsStringArray = new bool[1]
+            needsStringArray[0] = false
+            i = 0
+            while i < fnCount
+            {
+                ScanArrayElems(binder.GetFunctionBody(i), needsInt32, needsStringArray)
+                i = i + 1
+            }
+
+            // ---- TypeRef 布局计划（发射前定 token）：Object(1) + Debuggable(2) + [Console(3)] + [String] + [Int32] ----
+            var hasConsole = false
+            var hasString = false
+            var brm = 0
+            while brm < bclCount[0]
+            {
+                if bclParents[brm] == 3 { hasConsole = true }
+                if bclParents[brm] == 4 { hasString = true }
+                brm = brm + 1
+            }
+
+            var usesString = hasString
+            if needsStringArray[0] { usesString = true }
+            var usesInt32 = needsInt32[0]
+            var typeRefCount = 2
+            if hasConsole { typeRefCount = typeRefCount + 1 }
+            if usesString { typeRefCount = typeRefCount + 1 }
+            if usesInt32 { typeRefCount = typeRefCount + 1 }
+            var stringTypeRow = 2
+            if hasConsole { stringTypeRow = stringTypeRow + 1 }
+            stringTypeRow = stringTypeRow + 1
+            var int32TypeRow = typeRefCount
 
             // ---- 方法行规划：顶层（序数序）→ 每类（隐式 .ctor + 实例方法）。
             // 行号/令牌纯算术：顶层 t → 行 t；类 ci 的 ctor → classStartRow[ci]。
@@ -207,6 +215,27 @@ namespace Cocoa.CodeGen
             }
 
             emitter.SetMethods(topNames, topTokens, topReturns)
+            var elemCount = 0
+            var elemNames = new string[2]
+            var elemTokens = new i32[2]
+            if usesInt32
+            {
+                elemNames[elemCount] = "i32"
+                elemTokens[elemCount] = 0x01000000 + int32TypeRow
+                elemCount = elemCount + 1
+            }
+
+            if usesString
+            {
+                elemNames[elemCount] = "string"
+                elemTokens[elemCount] = 0x01000000 + stringTypeRow
+                elemCount = elemCount + 1
+            }
+
+            if elemCount > 0
+            {
+                emitter.SetArrayElemTypes(elemNames, elemTokens, elemCount)
+            }
             if totalClassMethods > 0
             {
                 emitter.SetClassMethods(classKeys, classTokens, totalClassMethods)
@@ -323,16 +352,6 @@ namespace Cocoa.CodeGen
 
             // ---- 元数据计划 ----
             // AssemblyRef：System.Private.CoreLib（行 1）+ [System.Console（行 2，Console 成员用）]
-            var hasConsole = false
-            var hasString = false
-            var br = 0
-            while br < bclCount[0]
-            {
-                if bclParents[br] == 3 { hasConsole = true }
-                if bclParents[br] == 4 { hasString = true }
-                br = br + 1
-            }
-
             var asmRefCount = hasConsole ? 2 : 1
             var asmRefNames = new string[asmRefCount]
             var asmRefMajor = new i32[asmRefCount]
@@ -362,10 +381,7 @@ namespace Cocoa.CodeGen
                 asmRefCulture[1] = ""
             }
 
-            // TypeRef：System.Object（行 1）+ System.Diagnostics.DebuggableAttribute（行 2）+ [System.Console（行 3）] + [System.String（行 4）]
-            var typeRefCount = 2
-            if hasConsole { typeRefCount = typeRefCount + 1 }
-            if hasString { typeRefCount = typeRefCount + 1 }
+            // TypeRef：System.Object（1）+ DebuggableAttribute（2）+ [Console（3）] + [String] + [Int32]
             var typeRefScope = new i32[typeRefCount]
             var typeRefNs = new string[typeRefCount]
             var typeRefName = new string[typeRefCount]
@@ -384,11 +400,19 @@ namespace Cocoa.CodeGen
                 typeRow = typeRow + 1
             }
 
-            if hasString
+            if usesString
             {
                 typeRefScope[typeRow] = 1
                 typeRefNs[typeRow] = "System"
                 typeRefName[typeRow] = "String"
+                typeRow = typeRow + 1
+            }
+
+            if usesInt32
+            {
+                typeRefScope[typeRow] = 1
+                typeRefNs[typeRow] = "System"
+                typeRefName[typeRow] = "Int32"
             }
 
             // MemberRef：DebuggableAttribute..ctor(bool,bool)（行 1）+ BCL 成员（行 2..）
@@ -404,14 +428,14 @@ namespace Cocoa.CodeGen
             boolParams[0] = "bool"
             boolParams[1] = "bool"
             memberRefSig[0] = MetadataEncode.EncodeMethodSignatureHex("void", boolParams, 2, false)
-            br = 0
-            while br < bclCount[0]
+            brm = 0
+            while brm < bclCount[0]
             {
                 // 实际 TypeRef 行：Console=3（若用）；String= hasConsole ? 4 : 3（无 Console 时前移）
-                memberRefParent[1 + br] = (bclParents[br] == 4 && !hasConsole) ? 3 : bclParents[br]
-                memberRefName[1 + br] = bclNames[br]
-                memberRefSig[1 + br] = bclSigs[br]
-                br = br + 1
+                memberRefParent[1 + brm] = (bclParents[brm] == 4 && !hasConsole) ? 3 : bclParents[brm]
+                memberRefName[1 + brm] = bclNames[brm]
+                memberRefSig[1 + brm] = bclSigs[brm]
+                brm = brm + 1
             }
 
             if classCount > 0
@@ -529,9 +553,14 @@ namespace Cocoa.CodeGen
             return ""
         }
 
-        /// <summary>签名用类型描述：用户类名 → `class:<TypeDef行>:2`（供 EncodeTypeHex 编 ELEMENT_TYPE_CLASS）；其余原样。</summary>
+        /// <summary>签名用类型描述：用户类名 → `class:<TypeDef行>:0`；`T[]` → `szarray:T`（递归）；其余原样。</summary>
         private static function LocalTypeForSig(binder: Binder, typeName: string): string
         {
+            if typeName.IndexOf("[]") == typeName.Length - 2
+            {
+                return "szarray:" + LocalTypeForSig(binder, typeName.substring(0, typeName.Length - 2))
+            }
+
             var ci = 0
             while ci < binder.GetClassCount()
             {
@@ -565,6 +594,34 @@ namespace Cocoa.CodeGen
 
             return MetadataEncode.EncodeMethodSignatureHex(
                 LocalTypeForSig(binder, binder.GetFunctionReturnType(fn)), params2, realCount, isStatic)
+        }
+
+        /// <summary>递归收集数组创建的元素类型（i32 → Int32 TypeRef；string → String TypeRef）。</summary>
+        private static function ScanArrayElems(node: Node, needsInt32: bool[], needsStringArray: bool[]): void
+        {
+            if node.Kind() == "ArrayCreationExpression"
+            {
+                let elemType = node.Child(0).Text()
+                if elemType == "i32"
+                {
+                    needsInt32[0] = true
+                }
+                else if elemType == "string"
+                {
+                    needsStringArray[0] = true
+                }
+            }
+
+            var c = 0
+            while c < node.ChildCount()
+            {
+                if !node.Child(c).IsToken()
+                {
+                    ScanArrayElems(node.Child(c), needsInt32, needsStringArray)
+                }
+
+                c = c + 1
+            }
         }
 
         /// <summary>递归收集：BCL 静态调用（Console.WriteLine(i32|string) + 字符串运算 ==/!=/+）+ 字符串字面量（去重）。</summary>
