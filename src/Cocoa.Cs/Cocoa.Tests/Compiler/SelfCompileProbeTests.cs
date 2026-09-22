@@ -11,7 +11,7 @@ namespace Cocoa.Tests.Compiler
         private readonly ITestOutputHelper _out;
         public SelfCompileProbeTests(ITestOutputHelper output) { _out = output; }
 
-        [Fact(Skip = "C-4 自举闭环被阻塞：命名空间下钻后 phase2 检查路径传入 null node 实参（expr=node 的 Kind() 空引用）；下轮在 Evaluator 204 行打点打印调用链定位源头")]
+        [Fact(Skip = "C-4 自举闭环被阻塞：CheckNode 子递归遇 null 节点（class 方法体解析产 null 子）；下轮需查自举 parser 对编译器源码中某构造产出 null 子，或按行打点定位 CheckNode 具体孩子")]
         public void CompileFullSelfCompilerSource()
         {
             var root = AppContext.BaseDirectory;
