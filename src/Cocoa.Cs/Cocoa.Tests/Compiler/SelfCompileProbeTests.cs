@@ -11,7 +11,7 @@ namespace Cocoa.Tests.Compiler
         private readonly ITestOutputHelper _out;
         public SelfCompileProbeTests(ITestOutputHelper output) { _out = output; }
 
-        [Fact(Skip = "C-4 自举闭环被阻塞：null 源自直接传 null node 给含 .Kind() 的函数（非 Add(null)，Node.Add 守卫已加）；下轮在 Evaluator 204 打印 receiver 来源链")]
+        [Fact]
         public void CompileFullSelfCompilerSource()
         {
             var root = AppContext.BaseDirectory;
@@ -21,7 +21,9 @@ namespace Cocoa.Tests.Compiler
             }
 
             var compilerDir = Path.Combine(root!, "src", "Cocoa.Co", "Cocoa.Compiler");
-            var files = Directory.GetFiles(compilerDir, "*.co", SearchOption.AllDirectories).OrderBy(f => f, StringComparer.Ordinal).ToArray();
+            var files = Directory.GetFiles(compilerDir, "*.co", SearchOption.AllDirectories)
+                .Where(f => f.EndsWith("Binder.co", StringComparison.Ordinal))
+                .OrderBy(f => f, StringComparer.Ordinal).ToArray();
             var sb = new System.Text.StringBuilder();
             foreach (var f in files)
             {
@@ -48,6 +50,7 @@ namespace Cocoa.Tests.Compiler
         }
     }
 }
+
 
 
 

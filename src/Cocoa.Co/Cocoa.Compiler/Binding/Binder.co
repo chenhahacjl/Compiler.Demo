@@ -2583,6 +2583,32 @@ if ck == "TypeClause" || ck == "ArrayTypeClause"
                 return true
             }
 
+            // 当前类的实例字段在方法体作用域内（编译器源码直接引用 `_field` 成员）
+            if _currentClass != ""
+            {
+                var ci = 0
+                while ci < _classCount
+                {
+                    if _classNames[ci] == _currentClass
+                    {
+                        var fi2 = 0
+                        while fi2 < _classFieldCounts[ci]
+                        {
+                            if _classFieldNames[_classFieldOffsets[ci] + fi2] == name
+                            {
+                                return true
+                            }
+
+                            fi2 = fi2 + 1
+                        }
+
+                        return false
+                    }
+
+                    ci = ci + 1
+                }
+            }
+
             return false
         }
 
