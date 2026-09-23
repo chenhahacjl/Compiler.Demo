@@ -28,6 +28,7 @@ namespace Cocoa.CodeAnalysis.Binding
         private field _locals: string[]
         private field _localScopes: i32[]
         private field _scopeDepth: i32
+        private field _scopeMarks: i32[]
         private field _localCount: i32
         private field _currentFunction: FunctionSymbol
         private field _boundRoots: Node[]
@@ -72,6 +73,7 @@ namespace Cocoa.CodeAnalysis.Binding
             b._locals = new string[8]
             b._localScopes = new i32[8]
             b._scopeDepth = 0
+            b._scopeMarks = new i32[64]
             b._localCount = 0
             b._diags = new string[8]
             b._diagCount = 0
@@ -2283,7 +2285,8 @@ _localCount = 0
 let k = node.Kind()
             if k == "BlockStatement"
             {
-                // 块作用域：深度 +1 递归（同层重复声明才报；块间复用/遮蔽外层合法，不截断 _locals 保差分稳定）
+                // 块作用域：深度 +1 递归；退出截断 _locals 到块入口（兄弟块复用/遮蔽外层合法，同层内重复仍报）
+                _scopeMarks[_scopeDepth] = _localCount
                 _scopeDepth = _scopeDepth + 1
                 var bi = 0
                 while bi < node.ChildCount()
@@ -2298,6 +2301,7 @@ let k = node.Kind()
                 }
 
                 _scopeDepth = _scopeDepth - 1
+                _localCount = _scopeMarks[_scopeDepth]
                 return
             }
 
