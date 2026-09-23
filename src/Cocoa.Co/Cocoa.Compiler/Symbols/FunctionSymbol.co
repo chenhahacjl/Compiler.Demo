@@ -59,6 +59,11 @@ namespace Cocoa.CodeAnalysis.Symbols
             return _paramCount
         }
 
+        public function Name(): string
+        {
+            return _name
+        }
+
         public function ParamName(index: i32): string
         {
             return _paramNames[index]
