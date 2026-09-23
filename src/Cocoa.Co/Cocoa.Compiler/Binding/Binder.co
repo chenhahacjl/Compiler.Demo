@@ -41,6 +41,8 @@ namespace Cocoa.CodeAnalysis.Binding
         private field _loopContinueLabels: string[]
         private field _loopDepth: i32
         private field _classNames: string[]
+        private field _knownClassNames: string[]
+        private field _knownClassCount: i32
         private field _classFieldNames: string[]
         private field _classFieldTypes: string[]
         private field _classFieldOffsets: i32[]
@@ -79,6 +81,8 @@ namespace Cocoa.CodeAnalysis.Binding
             b._diagCount = 0
             b._boundRoots = new Node[8]
             b._classNames = new string[8]
+            b._knownClassNames = new string[16]
+            b._knownClassCount = 0
             b._classFieldNames = new string[8]
             b._classFieldTypes = new string[8]
             b._classFieldOffsets = new i32[8]
@@ -104,6 +108,8 @@ namespace Cocoa.CodeAnalysis.Binding
         /// 第二遍做类型/函数体/初始化表达式检查。</summary>
         public function BindCompilationUnit(): void
         {
+            WalkClassNames(_root)
+
             var fiState = new i32[1]
             fiState[0] = 0
             WalkTopMembers(1, fiState)
@@ -119,6 +125,61 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 ReportError("Cannot declare main function when global statements are used.")
                 ReportError("Cannot declare main function when global statements are used.")
+            }
+        }
+
+                /// <summary>类名预收集（namespace 剥层）：绑定前先登记全部类名，供 phase 1 类型存在性检查前向解析。</summary>
+        private function WalkClassNames(node: Node): void
+        {
+            if !(node != null)
+            {
+                return
+            }
+
+            if node.IsToken()
+            {
+                return
+            }
+
+            let k = node.Kind()
+            if k == "ClassDeclaration"
+            {
+                let cn = ClassNameOf(node)
+                if cn.Length > 0
+                {
+                    if _knownClassCount >= _knownClassNames.Length
+                    {
+                        var kg = new string[_knownClassNames.Length * 2]
+                        var ki = 0
+                        while ki < _knownClassCount
+                        {
+                            kg[ki] = _knownClassNames[ki]
+                            ki = ki + 1
+                        }
+
+                        _knownClassNames = kg
+                    }
+
+                    _knownClassNames[_knownClassCount] = cn
+                    _knownClassCount = _knownClassCount + 1
+                }
+
+                return
+            }
+
+            if k == "NamespaceDeclaration"
+            {
+                var c = 0
+                while c < node.ChildCount()
+                {
+                    let nc = node.Child(c)
+                    if nc != null ? !nc.IsToken() : false
+                    {
+                        WalkClassNames(nc)
+                    }
+
+                    c = c + 1
+                }
             }
         }
 
@@ -2272,11 +2333,22 @@ _localCount = 0
             if t == "i8" || t == "i16" || t == "i32" || t == "i64" { return true }
             if t == "u8" || t == "u16" || t == "u32" || t == "u64" { return true }
             if t == "r4" || t == "r8" { return true }
-            // 已声明类名是已知类型（编译器源码签名/字段引用自身类与依赖类）
+            // 已声明类名是已知类型（编译器源码签名/字段引用自身类与依赖类；预收集表含前向类）
             var ci = 0
             while ci < _classCount
             {
                 if _classNames[ci] == t
+                {
+                    return true
+                }
+
+                ci = ci + 1
+            }
+
+            ci = 0
+            while ci < _knownClassCount
+            {
+                if _knownClassNames[ci] == t
                 {
                     return true
                 }
