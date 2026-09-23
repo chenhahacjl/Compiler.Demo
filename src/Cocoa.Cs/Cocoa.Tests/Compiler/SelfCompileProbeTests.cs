@@ -11,7 +11,7 @@ namespace Cocoa.Tests.Compiler
         private readonly ITestOutputHelper _out;
         public SelfCompileProbeTests(ITestOutputHelper output) { _out = output; }
 
-        [Fact(Skip = "C-4 自举闭环：同类裸调用 emitter 回退已实现（e2e 绿，44e55b3）；依赖子集下 ReportError 仍 unresolved（当前类表在具体调用点未命中）——下轮在 EmitBody 打印 cfn/类名与 mcnt 判定注入扫描")]
+        [Fact(Skip = "C-4 自举闭环：同类裸方法 emitter 回退已实现（44e55b3 + ProducesValue 先查 cur-class 避 MethodIndex 副作用）；依赖子集 ReportError 仍未命中——cfn 注入扫描对部分函数漏建表，下轮打印 cfn/函数名")]
         public void CompileFullSelfCompilerSource()
         {
             var root = AppContext.BaseDirectory;
@@ -52,6 +52,8 @@ namespace Cocoa.Tests.Compiler
         }
     }
 }
+
+
 
 
 

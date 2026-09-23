@@ -460,16 +460,17 @@ private field _pendingCount: i32
 
             if expr.Kind() == "CallExpression"
             {
-                let index = MethodIndex(expr.Child(0).Text())
-                if index >= 0
-                {
-                    return _methodReturnsValue[index]
-                }
-
+                // 先查当前类裸方法（避免 MethodIndex 对 class 方法的副作用 _error）；再查顶层方法
                 let curIdx = CurClassMethodIndex(expr.Child(0).Text())
                 if curIdx >= 0 ? _curClassReturns[curIdx] : false
                 {
                     return true
+                }
+
+                let index = MethodIndex(expr.Child(0).Text())
+                if index >= 0
+                {
+                    return _methodReturnsValue[index]
                 }
 
                 return false
