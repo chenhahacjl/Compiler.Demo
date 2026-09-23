@@ -2303,7 +2303,13 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
                 else if fi >= 0
                 {
-                    let expected = _functions[fi].ParamCount()
+                    var expected = _functions[fi].ParamCount()
+                    // 实例类方法（param0 = `this`）裸调用省略接收者 → 期望实参 = 参数数 - 1
+                    if expected > 0 && _functions[fi].ParamName(0) == "this"
+                    {
+                        expected = expected - 1
+                    }
+
                     if expected != args
                     {
                         ReportError("Function '" + callee + "' requires " + string(expected) + " arguments but was given " + string(args) + ".")
