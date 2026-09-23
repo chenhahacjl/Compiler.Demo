@@ -26,6 +26,8 @@ namespace Cocoa.CodeAnalysis.Binding
         private field _paramTypes: string[]
         private field _paramCount: i32
         private field _locals: string[]
+        private field _localScopes: i32[]
+        private field _scopeDepth: i32
         private field _localCount: i32
         private field _currentFunction: FunctionSymbol
         private field _boundRoots: Node[]
@@ -68,6 +70,8 @@ namespace Cocoa.CodeAnalysis.Binding
             b._paramTypes = new string[8]
             b._paramCount = 0
             b._locals = new string[8]
+            b._localScopes = new i32[8]
+            b._scopeDepth = 0
             b._localCount = 0
             b._diags = new string[8]
             b._diagCount = 0
@@ -618,7 +622,8 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             _currentFunction = fn
-            _localCount = 0
+_localCount = 0
+            _scopeDepth = 0
             _labelCount = 0
             i = 0
             while i < node.ChildCount()
@@ -2275,8 +2280,27 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 return
             }
+let k = node.Kind()
+            if k == "BlockStatement"
+            {
+                // 块作用域：深度 +1 递归（同层重复声明才报；块间复用/遮蔽外层合法，不截断 _locals 保差分稳定）
+                _scopeDepth = _scopeDepth + 1
+                var bi = 0
+                while bi < node.ChildCount()
+                {
+                    let bc = node.Child(bi)
+                    if bc != null ? !bc.IsToken() : false
+                    {
+                        CheckNode(bc)
+                    }
 
-            let k = node.Kind()
+                    bi = bi + 1
+                }
+
+                _scopeDepth = _scopeDepth - 1
+                return
+            }
+
             if k == "NameExpression"
             {
                 let n0 = node.Child(0)
@@ -2361,7 +2385,19 @@ namespace Cocoa.CodeAnalysis.Binding
 
                 if name != ""
                 {
-                    if IndexOfString(_locals, _localCount, name) >= 0 || IndexOfString(_paramNames, _paramCount, name) >= 0
+                    var dup = IndexOfString(_paramNames, _paramCount, name) >= 0
+                    var di = 0
+                    while di < _localCount
+                    {
+                        if _locals[di] == name && _localScopes[di] == _scopeDepth
+                        {
+                            dup = true
+                        }
+
+                        di = di + 1
+                    }
+
+                    if dup
                     {
                         ReportError("'" + name + "' is already declared.")
                     }
@@ -2628,17 +2664,21 @@ if ck == "TypeClause" || ck == "ArrayTypeClause"
             if _localCount >= _locals.Length
             {
                 var bigger = new string[_locals.Length * 2]
+                var bs = new i32[_localScopes.Length * 2]
                 var i = 0
                 while i < _localCount
                 {
                     bigger[i] = _locals[i]
+                    bs[i] = _localScopes[i]
                     i = i + 1
                 }
 
                 _locals = bigger
+                _localScopes = bs
             }
 
             _locals[_localCount] = name
+            _localScopes[_localCount] = _scopeDepth
             _localCount = _localCount + 1
         }
 
