@@ -2257,6 +2257,17 @@ namespace Cocoa.CodeAnalysis.Binding
             _diagCount = _diagCount + 1
         }
 
+        private function IsPrimitiveTypeName(t: string): bool
+        {
+            if t == "sbyte" || t == "byte" || t == "short" || t == "ushort" || t == "int" || t == "uint" { return true }
+            if t == "long" || t == "ulong" || t == "float" || t == "double" || t == "bool" || t == "char" { return true }
+            if t == "string" || t == "object" || t == "void" { return true }
+            if t == "i8" || t == "i16" || t == "i32" || t == "i64" { return true }
+            if t == "u8" || t == "u16" || t == "u32" || t == "u64" { return true }
+            if t == "r4" || t == "r8" { return true }
+            return false
+        }
+
         /// <summary>语句/表达式递归检查：未定义名、未定义函数、调用 arity、未知类型、局部重复声明。</summary>
         private function CheckNode(node: Node): void
         {
@@ -2297,7 +2308,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
 
                 let fi = IndexOfString(_functionNames, _functionCount, callee)
-                if fi < 0 && callee != "string"
+                if fi < 0 && !IsPrimitiveTypeName(callee)
                 {
                     ReportError("Function '" + callee + "' doesn't exist.")
                 }
