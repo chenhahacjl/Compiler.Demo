@@ -128,7 +128,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
-                /// <summary>类名预收集（namespace 剥层）：绑定前先登记全部类名，供 phase 1 类型存在性检查前向解析。</summary>
+                /// <summary>类名预收集（任意深度下钻，含 namespace）：绑定前登记全部类名，供 phase 1 类型存在性检查前向解析。</summary>
         private function WalkClassNames(node: Node): void
         {
             if !(node != null)
@@ -167,19 +167,16 @@ namespace Cocoa.CodeAnalysis.Binding
                 return
             }
 
-            if k == "NamespaceDeclaration"
+            var c = 0
+            while c < node.ChildCount()
             {
-                var c = 0
-                while c < node.ChildCount()
+                let nc = node.Child(c)
+                if nc != null ? !nc.IsToken() : false
                 {
-                    let nc = node.Child(c)
-                    if nc != null ? !nc.IsToken() : false
-                    {
-                        WalkClassNames(nc)
-                    }
-
-                    c = c + 1
+                    WalkClassNames(nc)
                 }
+
+                c = c + 1
             }
         }
 
@@ -2333,29 +2330,6 @@ _localCount = 0
             if t == "i8" || t == "i16" || t == "i32" || t == "i64" { return true }
             if t == "u8" || t == "u16" || t == "u32" || t == "u64" { return true }
             if t == "r4" || t == "r8" { return true }
-            // 已声明类名是已知类型（编译器源码签名/字段引用自身类与依赖类；预收集表含前向类）
-            var ci = 0
-            while ci < _classCount
-            {
-                if _classNames[ci] == t
-                {
-                    return true
-                }
-
-                ci = ci + 1
-            }
-
-            ci = 0
-            while ci < _knownClassCount
-            {
-                if _knownClassNames[ci] == t
-                {
-                    return true
-                }
-
-                ci = ci + 1
-            }
-
             return false
         }
 
@@ -2693,6 +2667,29 @@ if ck == "TypeClause" || ck == "ArrayTypeClause"
             if t == "i128" { return true }
             if t == "u128" { return true }
             if t == "f128" { return true }
+            // 已声明类名是已知类型（编译器源码签名/字段引用自身类与依赖类；预收集表含前向类）
+            var ci = 0
+            while ci < _classCount
+            {
+                if _classNames[ci] == t
+                {
+                    return true
+                }
+
+                ci = ci + 1
+            }
+
+            ci = 0
+            while ci < _knownClassCount
+            {
+                if _knownClassNames[ci] == t
+                {
+                    return true
+                }
+
+                ci = ci + 1
+            }
+
             return false
         }
 
