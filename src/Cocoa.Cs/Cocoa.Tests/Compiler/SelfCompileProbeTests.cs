@@ -11,7 +11,7 @@ namespace Cocoa.Tests.Compiler
         private readonly ITestOutputHelper _out;
         public SelfCompileProbeTests(ITestOutputHelper output) { _out = output; }
 
-        [Fact(Skip = "C-4 自举闭环：已修 转换豁免(KnownType 类名/块作用域)，现卡 phase1 类型存在性（Node 类按序后绑误报）；bindPhase 方案触差分回归已还原，需改型别检查为 phase2 或类名预收集")]
+        [Fact(Skip = "C-4 自举闭环：已修转换豁免/块作用域/KnownType类名/类名预收集；Type Node 仍报——下轮在 CheckTypeClause 打点打印 raw 与 _knownClassCount 判定限定名/路径")]
         public void CompileFullSelfCompilerSource()
         {
             var root = AppContext.BaseDirectory;
@@ -52,6 +52,8 @@ namespace Cocoa.Tests.Compiler
         }
     }
 }
+
+
 
 
 
