@@ -2272,6 +2272,18 @@ _localCount = 0
             if t == "i8" || t == "i16" || t == "i32" || t == "i64" { return true }
             if t == "u8" || t == "u16" || t == "u32" || t == "u64" { return true }
             if t == "r4" || t == "r8" { return true }
+            // 已声明类名是已知类型（编译器源码签名/字段引用自身类与依赖类）
+            var ci = 0
+            while ci < _classCount
+            {
+                if _classNames[ci] == t
+                {
+                    return true
+                }
+
+                ci = ci + 1
+            }
+
             return false
         }
 
