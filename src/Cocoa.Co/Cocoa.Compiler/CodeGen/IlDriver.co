@@ -654,6 +654,58 @@ var bclKeys = new string[2048]
             }
 
             emitter.SetVarTypes(types, types.Length)
+
+            // 当前类裸方法表：同类裸调用（无 `this.`/类名）按其类解析；fn 非类方法 → 空表
+            var cfn = -1
+            var cfi = 0
+            while cfi < binder.GetClassCount() && cfn < 0
+            {
+                var cfj = 0
+                while cfj < binder.GetClassMethodCount(cfi)
+                {
+                    if binder.GetClassMethodIndex(cfi, cfj) == fn
+                    {
+                        cfn = cfi
+                    }
+
+                    cfj = cfj + 1
+                }
+
+                cfi = cfi + 1
+            }
+
+            if cfn >= 0
+            {
+                var csr = binder.GetTopLevelFunctionCount()
+                var csl = 0
+                while csl < cfn
+                {
+                    csr = csr + 1 + binder.GetClassMethodCount(csl)
+                    csl = csl + 1
+                }
+
+                let mcnt = binder.GetClassMethodCount(cfn)
+                var ck = new string[mcnt]
+                var ct = new i32[mcnt]
+                var ci2 = new bool[mcnt]
+                var cr = new bool[mcnt]
+                var cm4 = 0
+                while cm4 < mcnt
+                {
+                    ck[cm4] = binder.GetClassMethodName(cfn, cm4)
+                    ct[cm4] = 0x06000000 + csr + 2 + cm4
+                    ci2[cm4] = !binder.GetClassMethodIsStatic(cfn, cm4)
+                    cr[cm4] = binder.GetFunctionReturnType(binder.GetClassMethodIndex(cfn, cm4)) != "void"
+                    cm4 = cm4 + 1
+                }
+
+                emitter.SetCurrentClassMethods(ck, ct, ci2, cr, mcnt)
+            }
+            else
+            {
+                emitter.SetCurrentClassMethods(new string[0], new i32[0], new bool[0], new bool[0], 0)
+            }
+
             emitter.EmitFunction(asm, binder.GetFunctionBody(fn), paramNames, paramCount)
             if emitter.Error().Length > 0
             {
