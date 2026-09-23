@@ -32,6 +32,11 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         public function Add(child: Node): void
         {
+            if !(child != null)
+            {
+                return
+            }
+
             if _count >= _items.Length
             {
                 var bigger = new Node[_items.Length * 2]

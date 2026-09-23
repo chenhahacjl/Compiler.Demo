@@ -11,7 +11,7 @@ namespace Cocoa.Tests.Compiler
         private readonly ITestOutputHelper _out;
         public SelfCompileProbeTests(ITestOutputHelper output) { _out = output; }
 
-        [Fact(Skip = "C-4 自举闭环被阻塞：绑定树中某构造经 BuildBound 产 null/扰动 OOB，非解析树 null；需隔离专项（在 BuildBound 各 Add 处守卫并定位首个 null 子父节点）")]
+        [Fact(Skip = "C-4 自举闭环被阻塞：null 源自直接传 null node 给含 .Kind() 的函数（非 Add(null)，Node.Add 守卫已加）；下轮在 Evaluator 204 打印 receiver 来源链")]
         public void CompileFullSelfCompilerSource()
         {
             var root = AppContext.BaseDirectory;
@@ -48,4 +48,6 @@ namespace Cocoa.Tests.Compiler
         }
     }
 }
+
+
 
