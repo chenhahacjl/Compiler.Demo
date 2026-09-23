@@ -45,6 +45,7 @@ namespace Cocoa.CodeAnalysis.Binding
         private field _classMethodNames: string[]
         private field _classMethodIndexes: i32[]
         private field _classMethodNodes: Node[]
+        private field _classMethodStatic: bool[]
         private field _classMethodOffsets: i32[]
         private field _classMethodCounts: i32[]
         private field _classCount: i32
@@ -79,6 +80,7 @@ namespace Cocoa.CodeAnalysis.Binding
             b._classMethodNames = new string[8]
             b._classMethodIndexes = new i32[8]
             b._classMethodNodes = new Node[8]
+            b._classMethodStatic = new bool[8]
             b._classMethodOffsets = new i32[8]
             b._classMethodCounts = new i32[8]
             b._classCount = 0
@@ -339,7 +341,11 @@ namespace Cocoa.CodeAnalysis.Binding
             let returnType = MethodReturnTypeOf(node)
 
             let fn = FunctionSymbol.Create(methodName, returnType)
-            fn.AddParameter("this", className)
+            let isStatic = MethodIsStatic(node)
+            if !isStatic
+            {
+                fn.AddParameter("this", className)
+            }
 
             var i = 0
             while i < node.ChildCount()
@@ -360,23 +366,27 @@ namespace Cocoa.CodeAnalysis.Binding
                 var mi = new i32[_classMethodIndexes.Length * 2]
                 var mn = new Node[_classMethodNodes.Length * 2]
                 var mg = new string[_classMethodNames.Length * 2]
+                var ms = new bool[_classMethodStatic.Length * 2]
                 var g2 = 0
                 while g2 < midx
                 {
                     mi[g2] = _classMethodIndexes[g2]
                     mn[g2] = _classMethodNodes[g2]
                     mg[g2] = _classMethodNames[g2]
+                    ms[g2] = _classMethodStatic[g2]
                     g2 = g2 + 1
                 }
 
                 _classMethodIndexes = mi
                 _classMethodNodes = mn
                 _classMethodNames = mg
+                _classMethodStatic = ms
             }
 
             _classMethodIndexes[midx] = methodIndex
             _classMethodNodes[midx] = node
             _classMethodNames[midx] = methodName
+            _classMethodStatic[midx] = isStatic
             _classMethodCounts[classIndex] = _classMethodCounts[classIndex] + 1
 
             AddFunction(fn, methodName)
@@ -1029,6 +1039,22 @@ namespace Cocoa.CodeAnalysis.Binding
             return ""
         }
 
+        private function MethodIsStatic(node: Node): bool
+        {
+            var i = 0
+            while i < node.ChildCount()
+            {
+                if node.Child(i).Kind() == "StaticKeyword"
+                {
+                    return true
+                }
+
+                i = i + 1
+            }
+
+            return false
+        }
+
         private function MethodReturnTypeOf(node: Node): string
         {
             var i = 0
@@ -1287,6 +1313,11 @@ namespace Cocoa.CodeAnalysis.Binding
         public function GetClassMethodIndex(index: i32, methodIndex: i32): i32
         {
             return _classMethodIndexes[_classMethodOffsets[index] + methodIndex]
+        }
+
+        public function GetClassMethodIsStatic(index: i32, methodIndex: i32): bool
+        {
+            return _classMethodStatic[_classMethodOffsets[index] + methodIndex]
         }
 
         public function GetFunctionAttributeCount(index: i32): i32

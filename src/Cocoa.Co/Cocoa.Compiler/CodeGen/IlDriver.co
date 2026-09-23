@@ -164,6 +164,8 @@ namespace Cocoa.CodeGen
             // ---- 令牌表 ----
             var classKeys = new string[totalClassMethods]
             var classTokens = new i32[totalClassMethods]
+            var staticKeys = new string[totalClassMethods]
+            var staticTokens = new i32[totalClassMethods]
             var classReturns = new bool[totalClassMethods]
             var classCtorNames = new string[classCount]
             var classCtorTokens = new i32[classCount]
@@ -177,6 +179,7 @@ namespace Cocoa.CodeGen
             var userTypeMethodLists = new i32[classCount]
 
             var cmc = 0
+            var sc = 0
             ci = 0
             while ci < classCount
             {
@@ -203,10 +206,20 @@ namespace Cocoa.CodeGen
                 while mi < binder.GetClassMethodCount(ci)
                 {
                     let fidx = binder.GetClassMethodIndex(ci, mi)
-                    classKeys[cmc] = className + "." + binder.GetClassMethodName(ci, mi)
-                    classTokens[cmc] = 0x06000000 + classStartRow[ci] + 2 + mi
-                    classReturns[cmc] = binder.GetFunctionReturnType(fidx) != "void"
-                    cmc = cmc + 1
+                    if binder.GetClassMethodIsStatic(ci, mi)
+                    {
+                        staticKeys[sc] = className + "." + binder.GetClassMethodName(ci, mi)
+                        staticTokens[sc] = 0x06000000 + classStartRow[ci] + 2 + mi
+                        sc = sc + 1
+                    }
+                    else
+                    {
+                        classKeys[cmc] = className + "." + binder.GetClassMethodName(ci, mi)
+                        classTokens[cmc] = 0x06000000 + classStartRow[ci] + 2 + mi
+                        classReturns[cmc] = binder.GetFunctionReturnType(fidx) != "void"
+                        cmc = cmc + 1
+                    }
+
                     mi = mi + 1
                 }
 
@@ -256,6 +269,11 @@ namespace Cocoa.CodeGen
             if totalClassMethods > 0
             {
                 emitter.SetClassMethods(classKeys, classTokens, classReturns, totalClassMethods)
+            }
+
+            if sc > 0
+            {
+                emitter.SetClassStaticMethods(staticKeys, staticTokens, sc)
             }
 
             if totalFields > 0
@@ -350,10 +368,21 @@ namespace Cocoa.CodeGen
                 {
                     let r = classStartRow[ci] + 1 + mi2
                     let fidx = binder.GetClassMethodIndex(ci, mi2)
+                    let isStat = binder.GetClassMethodIsStatic(ci, mi2)
                     mNames[r] = binder.GetClassMethodName(ci, mi2)
-                    mFlags[r] = 0x86
-                    mParamCounts[r] = binder.GetFunctionParamCount(fidx) - 1
-                    mSigs[r] = MethodSig(binder, fidx, false, 1)
+                    if isStat
+                    {
+                        mFlags[r] = 0x96
+                        mParamCounts[r] = binder.GetFunctionParamCount(fidx)
+                        mSigs[r] = MethodSig(binder, fidx, true, 0)
+                    }
+                    else
+                    {
+                        mFlags[r] = 0x86
+                        mParamCounts[r] = binder.GetFunctionParamCount(fidx) - 1
+                        mSigs[r] = MethodSig(binder, fidx, false, 1)
+                    }
+
                     let err2 = EmitBody(fidx, binder, emitter, rvaState, sigState,
                         mBodies, mMaxStacks, mRvas, mSigBlobs, mSigTokens, r)
                     if err2.Length > 0

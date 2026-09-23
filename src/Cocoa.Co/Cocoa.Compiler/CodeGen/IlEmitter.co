@@ -39,6 +39,9 @@ private field _pendingCount: i32
         private field _classMethodKeys: string[]
         private field _classMethodTokens: i32[]
         private field _classMethodReturns: bool[]
+        private field _classStaticKeys: string[]
+        private field _classStaticTokens: i32[]
+        private field _classStaticCount: i32
         private field _classFieldKeys: string[]
         private field _classFieldTokens: i32[]
         private field _classCtorNames: string[]
@@ -79,6 +82,9 @@ private field _pendingCount: i32
             _classMethodKeys = new string[0]
             _classMethodTokens = new i32[0]
             _classMethodReturns = new bool[0]
+            _classStaticKeys = new string[0]
+            _classStaticTokens = new i32[0]
+            _classStaticCount = 0
             _classFieldKeys = new string[0]
             _classFieldTokens = new i32[0]
             _classCtorNames = new string[0]
@@ -208,6 +214,30 @@ private field _pendingCount: i32
             }
 
             return "i32"
+        }
+
+                /// <summary>静态类方法表：键 `类名.方法` → MethodDef token（静态调用 Call 用）。</summary>
+        public function SetClassStaticMethods(keys: string[], tokens: i32[], count: i32): void
+        {
+            _classStaticKeys = keys
+            _classStaticTokens = tokens
+            _classStaticCount = count
+        }
+
+        private function ClassStaticToken(key: string): i32
+        {
+            var i = 0
+            while i < _classStaticCount
+            {
+                if _classStaticKeys[i] == key
+                {
+                    return _classStaticTokens[i]
+                }
+
+                i = i + 1
+            }
+
+            return -1
         }
 
         private function ClassMethodToken(key: string): i32
@@ -1319,9 +1349,30 @@ private field _pendingCount: i32
                 }
                 else
                 {
-                    // BCL 静态成员（如 Console.WriteLine）：绑定形状 (target . name ( args ))
+                    // 静态类方法调用（P.M() → Call，无接收者）或 BCL 静态成员（Console.WriteLine）
                     let targetName = expr.Child(0).ChildCount() > 0 ? expr.Child(0).Child(0).Text() : ""
                     let fullName = targetName + "." + expr.Child(2).Text()
+                    let staticToken = ClassStaticToken(fullName)
+                    if staticToken >= 0
+                    {
+                        var argCount = 0
+                        var a = 4
+                        while a < expr.ChildCount() - 1
+                        {
+                            if !expr.Child(a).IsToken()
+                            {
+                                EmitExpression(expr.Child(a))
+                                argCount = argCount + 1
+                            }
+
+                            a = a + 1
+                        }
+
+                        let idx = _assembler.EmitOperand("Call", 7, staticToken, -1)
+                        _assembler.SetCallDelta(idx, 1 - argCount)
+                        return
+                    }
+
                     let token = BclToken(fullName)
                     if token < 0
                     {

@@ -245,6 +245,7 @@ namespace Cocoa.Tests.Compiler
         [InlineData("function Main(): i32 { var s = \"banana\" var i = s.IndexOf(\"na\") if i == 2 { return 1 } return 0 }", 1)]
         [InlineData("function Main(): i32 { var s = string(42) if s == \"42\" { return 1 } return 0 }", 1)]
         [InlineData("function Main(): i32 { var x = 6 var s = string(x) if s == \"6\" { return 1 } return 0 }", 1)]
+        [InlineData("class P { static function M(): i32 { return 42 } } function Main(): i32 { return P.M() }", 42)]
         [InlineData("function Main(): i32\n{\n    var s = string(7)\n    if s == \"7\" { return 1 }\n    return 0\n}", 1)]
         public void SelfHosted_StringMemberSubstringIndexOf_Runs(string source, int expected)
         {
