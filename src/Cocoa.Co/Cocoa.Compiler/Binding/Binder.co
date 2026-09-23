@@ -859,7 +859,7 @@ _localCount = 0
 
             if k == "MemberCallExpression"
             {
-                // 字符串实例成员返回类型：IndexOf/Length → i32；substring → string（其余 "?"）
+                // 字符串实例成员返回类型：IndexOf/Length → i32；substring → string
                 let m = node.ChildCount() > 2 ? node.Child(2).Text() : ""
                 if m == "Length" || m == "IndexOf"
                 {
@@ -869,6 +869,30 @@ _localCount = 0
                 if m == "substring"
                 {
                     return "string"
+                }
+
+                // 静态类方法（Parser.Create(...)）返回类型：目标为类名 + 成员为静态方法 → 其返回类型
+                let tgt = node.Child(0)
+                let tgtName = tgt != null && tgt.ChildCount() > 0 ? tgt.Child(0).Text() : tgt != null ? tgt.Text() : ""
+                var cii = 0
+                while cii < _classCount
+                {
+                    if _classNames[cii] == tgtName
+                    {
+                        var cmi = 0
+                        while cmi < _classMethodCounts[cii]
+                        {
+                            let off = _classMethodOffsets[cii] + cmi
+                            if _classMethodNames[off] == m && _classMethodStatic[off]
+                            {
+                                return _functions[_classMethodIndexes[off]].ReturnType()
+                            }
+
+                            cmi = cmi + 1
+                        }
+                    }
+
+                    cii = cii + 1
                 }
 
                 return "?"
@@ -2344,6 +2368,19 @@ let k = node.Kind()
             if k == "BlockStatement"
             {
                 // 块作用域：深度 +1 递归；退出截断 _locals 到块入口（兄弟块复用/遮蔽外层合法，同层内重复仍报）
+                if _scopeDepth >= _scopeMarks.Length
+                {
+                    var smg = new i32[_scopeMarks.Length * 2]
+                    var sgi = 0
+                    while sgi < _scopeDepth
+                    {
+                        smg[sgi] = _scopeMarks[sgi]
+                        sgi = sgi + 1
+                    }
+
+                    _scopeMarks = smg
+                }
+
                 _scopeMarks[_scopeDepth] = _localCount
                 _scopeDepth = _scopeDepth + 1
                 var bi = 0

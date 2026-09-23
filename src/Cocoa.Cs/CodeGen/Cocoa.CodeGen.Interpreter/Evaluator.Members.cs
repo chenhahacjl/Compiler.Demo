@@ -145,6 +145,12 @@ namespace Cocoa.CodeGen.Interpreter
                 idx = Convert.ToInt32(indexValue);
             }
 
+            if (idx < 0 || idx >= array.Length)
+            {
+                var e0 = array.Length > 0 ? (array[0]?.GetType().Name ?? "null") : "empty";
+                throw new Exception($"[ARRWRITE len={array.Length} idx={idx} e0={e0} target={node.Target.Target} idxExpr={node.Target.Index}]");
+            }
+
             array[idx] = value;
 
             return value;
@@ -510,7 +516,14 @@ namespace Cocoa.CodeGen.Interpreter
 
             try
             {
-                return EvaluateStatement(_functions[function]);
+                try
+                {
+                    return EvaluateStatement(_functions[function]);
+                }
+                catch (Exception ex) when (function != null)
+                {
+                    throw new Exception("[fn=" + (function.Name ?? "?") + "] " + ex.Message, ex);
+                }
             }
             finally
             {

@@ -65,15 +65,15 @@ namespace Cocoa.CodeGen
             }
 
             // ---- 收集 BCL 调用 + 字符串字面量（所有函数体，含类方法）----
-            var bclKeys = new string[32]
-            var bclTokens = new i32[32]
-            var bclParents = new i32[32]
-            var bclSigs = new string[32]
-            var bclNames = new string[32]
+var bclKeys = new string[2048]
+            var bclTokens = new i32[2048]
+            var bclParents = new i32[2048]
+            var bclSigs = new string[2048]
+            var bclNames = new string[2048]
             var bclCount = new i32[1]
             bclCount[0] = 0
-            var usTexts = new string[32]
-            var usTokens = new i32[32]
+            var usTexts = new string[2048]
+            var usTokens = new i32[2048]
             var usCount = new i32[1]
             usCount[0] = 0
             var usBytes = new i32[1]
@@ -92,12 +92,20 @@ namespace Cocoa.CodeGen
             needsInt32[0] = false
             var needsStringArray = new bool[1]
             needsStringArray[0] = false
+            var needsBool = new bool[1]
+            needsBool[0] = false
+            var needsChar = new bool[1]
+            needsChar[0] = false
             var usesConvert = new bool[1]
             usesConvert[0] = false
+            var classElems = new string[512]
+            var classElemsCount = new i32[1]
+            classElemsCount[0] = 0
             i = 0
             while i < fnCount
             {
-                ScanArrayElems(binder.GetFunctionBody(i), needsInt32, needsStringArray, usesConvert)
+                ScanArrayElems(binder.GetFunctionBody(i), needsInt32, needsStringArray, needsBool, needsChar, usesConvert,
+                    classElems, classElemsCount)
                 i = i + 1
             }
 
@@ -116,10 +124,14 @@ namespace Cocoa.CodeGen
             if needsStringArray[0] { usesString = true }
             var usesInt32 = needsInt32[0]
             if usesConvert[0] { usesInt32 = true }
+            var usesBool = needsBool[0]
+            var usesChar = needsChar[0]
             var typeRefCount = 2
             if hasConsole { typeRefCount = typeRefCount + 1 }
             if usesString { typeRefCount = typeRefCount + 1 }
             if usesInt32 { typeRefCount = typeRefCount + 1 }
+            if usesBool { typeRefCount = typeRefCount + 1 }
+            if usesChar { typeRefCount = typeRefCount + 1 }
             if usesConvert[0] { typeRefCount = typeRefCount + 1 }
             var stringTypeRow = 2
             if hasConsole { stringTypeRow = stringTypeRow + 1 }
@@ -128,6 +140,17 @@ namespace Cocoa.CodeGen
             if hasConsole { int32TypeRow = int32TypeRow + 1 }
             if usesString { int32TypeRow = int32TypeRow + 1 }
             if usesInt32 { int32TypeRow = int32TypeRow + 1 }
+            var boolTypeRow = 2
+            if hasConsole { boolTypeRow = boolTypeRow + 1 }
+            if usesString { boolTypeRow = boolTypeRow + 1 }
+            if usesInt32 { boolTypeRow = boolTypeRow + 1 }
+            if usesBool { boolTypeRow = boolTypeRow + 1 }
+            var charTypeRow = 2
+            if hasConsole { charTypeRow = charTypeRow + 1 }
+            if usesString { charTypeRow = charTypeRow + 1 }
+            if usesInt32 { charTypeRow = charTypeRow + 1 }
+            if usesBool { charTypeRow = charTypeRow + 1 }
+            if usesChar { charTypeRow = charTypeRow + 1 }
             var convertTypeRow = typeRefCount
             var convertMemberRow = 1 + bclCount[0]
             if classCount > 0 { convertMemberRow = convertMemberRow + 1 }
@@ -241,8 +264,8 @@ namespace Cocoa.CodeGen
 
             emitter.SetMethods(topNames, topTokens, topReturns)
             var elemCount = 0
-            var elemNames = new string[2]
-            var elemTokens = new i32[2]
+            var elemNames = new string[516]
+            var elemTokens = new i32[516]
             if usesInt32
             {
                 elemNames[elemCount] = "i32"
@@ -255,6 +278,40 @@ namespace Cocoa.CodeGen
                 elemNames[elemCount] = "string"
                 elemTokens[elemCount] = 0x01000000 + stringTypeRow
                 elemCount = elemCount + 1
+            }
+
+            if usesBool
+            {
+                elemNames[elemCount] = "bool"
+                elemTokens[elemCount] = 0x01000000 + boolTypeRow
+                elemCount = elemCount + 1
+            }
+
+            if usesChar
+            {
+                elemNames[elemCount] = "char"
+                elemTokens[elemCount] = 0x01000000 + charTypeRow
+                elemCount = elemCount + 1
+            }
+
+            var cec = 0
+            while cec < classElemsCount[0]
+            {
+                let cname = classElems[cec]
+                var cii = 0
+                while cii < classCount
+                {
+                    if binder.GetClassName(cii) == cname
+                    {
+                        elemNames[elemCount] = cname
+                        elemTokens[elemCount] = 0x02000000 + 3 + cii
+                        elemCount = elemCount + 1
+                    }
+
+                    cii = cii + 1
+                }
+
+                cec = cec + 1
             }
 
             if elemCount > 0
@@ -462,6 +519,22 @@ namespace Cocoa.CodeGen
                 typeRow = typeRow + 1
             }
 
+            if usesBool
+            {
+                typeRefScope[typeRow] = 1
+                typeRefNs[typeRow] = "System"
+                typeRefName[typeRow] = "Boolean"
+                typeRow = typeRow + 1
+            }
+
+            if usesChar
+            {
+                typeRefScope[typeRow] = 1
+                typeRefNs[typeRow] = "System"
+                typeRefName[typeRow] = "Char"
+                typeRow = typeRow + 1
+            }
+
             if usesConvert[0]
             {
                 typeRefScope[typeRow] = 1
@@ -661,7 +734,8 @@ namespace Cocoa.CodeGen
         }
 
         /// <summary>递归收集数组创建的元素类型（i32 → Int32 TypeRef；string → String TypeRef）。</summary>
-        private static function ScanArrayElems(node: Node, needsInt32: bool[], needsStringArray: bool[], usesConvert: bool[]): void
+        private static function ScanArrayElems(node: Node, needsInt32: bool[], needsStringArray: bool[], needsBool: bool[], needsChar: bool[], usesConvert: bool[],
+            classElems: string[], classElemsCount: i32[]): void
         {
             if node.Kind() == "ArrayCreationExpression"
             {
@@ -673,6 +747,34 @@ namespace Cocoa.CodeGen
                 else if elemType == "string"
                 {
                     needsStringArray[0] = true
+                }
+                else if elemType == "bool"
+                {
+                    needsBool[0] = true
+                }
+                else if elemType == "char"
+                {
+                    needsChar[0] = true
+                }
+                else if elemType.Length > 0
+                {
+                    var found = false
+                    var ce = 0
+                    while ce < classElemsCount[0]
+                    {
+                        if classElems[ce] == elemType
+                        {
+                            found = true
+                        }
+
+                        ce = ce + 1
+                    }
+
+                    if !found && classElemsCount[0] < classElems.Length
+                    {
+                        classElems[classElemsCount[0]] = elemType
+                        classElemsCount[0] = classElemsCount[0] + 1
+                    }
                 }
             }
             else if node.Kind() == "CallExpression"
@@ -688,7 +790,8 @@ namespace Cocoa.CodeGen
             {
                 if !node.Child(c).IsToken()
                 {
-                    ScanArrayElems(node.Child(c), needsInt32, needsStringArray, usesConvert)
+                    ScanArrayElems(node.Child(c), needsInt32, needsStringArray, needsBool, needsChar, usesConvert,
+                    classElems, classElemsCount)
                 }
 
                 c = c + 1
