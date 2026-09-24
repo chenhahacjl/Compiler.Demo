@@ -11,7 +11,7 @@ namespace Cocoa.Tests.Compiler
         private readonly ITestOutputHelper _out;
         public SelfCompileProbeTests(ITestOutputHelper output) { _out = output; }
 
-        [Fact(Skip = "C-4 自举闭环：当前类字段表(名→token/type)+字段实例方法发射已实现（e2e/差分绿）；_root.ChildCount 仍未通——疑 GetClassFieldCount(0)=0 或 this.字段绑定形状，下轮打点字段表 fcnt/首个字段名")]
+        [Fact(Skip = "C-4 自举闭环：字段实例方法调用（this._root.ChildCount()）为本轮 final 阻塞——字段表注入(42)存在但 emitter CurFieldTypeOf 见空，疑 .co 数组按值传递 or 状态被清；下轮在 SetCurrentClassFields 后立即断言 _curFieldCount")]
         public void CompileFullSelfCompilerSource()
         {
             var root = AppContext.BaseDirectory;
@@ -52,6 +52,8 @@ namespace Cocoa.Tests.Compiler
         }
     }
 }
+
+
 
 
 
