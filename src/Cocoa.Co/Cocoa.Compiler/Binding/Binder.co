@@ -1316,6 +1316,22 @@ _localCount = 0
             _variableCount = _variableCount + 1
         }
 
+        /// <summary>全局变量表访问器（驱动/发射用顶层全局数组类型解析）。</summary>
+        public function GetGlobalVariableCount(): i32
+        {
+            return _variableCount
+        }
+
+        public function GetGlobalVariableName(index: i32): string
+        {
+            return _variables[index].Name()
+        }
+
+        public function GetGlobalVariableType(index: i32): string
+        {
+            return _variables[index].Type()
+        }
+
         /// <summary>符号表规范化输出（与 C# SymbolDump 同构）：函数行（+ 局部行缩进 2 空格，仅无诊断时）、变量行、main 行。</summary>
         public function DescribeSymbols(): string
         {

@@ -267,6 +267,21 @@ var bclKeys = new string[2048]
             }
 
             emitter.SetMethods(topNames, topTokens, topReturns)
+            let globalCnt = binder.GetGlobalVariableCount()
+            if globalCnt > 0
+            {
+                var gk = new string[globalCnt]
+                var gv = new string[globalCnt]
+                var gi = 0
+                while gi < globalCnt
+                {
+                    gk[gi] = binder.GetGlobalVariableName(gi)
+                    gv[gi] = binder.GetGlobalVariableType(gi)
+                    gi = gi + 1
+                }
+
+                emitter.SetGlobalTypes(gk, gv, globalCnt)
+            }
             var elemCount = 0
             var elemNames = new string[516]
             var elemTokens = new i32[516]

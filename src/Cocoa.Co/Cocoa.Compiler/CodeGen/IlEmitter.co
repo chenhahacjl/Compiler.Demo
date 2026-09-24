@@ -51,6 +51,9 @@ private field _pendingCount: i32
         private field _curFieldTokens: i32[]
         private field _curFieldTypes: string[]
         private field _curFieldCount: i32
+        private field _globalTypeKeys: string[]
+        private field _globalTypeVals: string[]
+        private field _globalTypeCount: i32
         private field _classStaticKeys: string[]
         private field _classStaticTokens: i32[]
         private field _classStaticCount: i32
@@ -109,6 +112,9 @@ private field _pendingCount: i32
             _curFieldTokens = new i32[0]
             _curFieldTypes = new string[0]
             _curFieldCount = 0
+            _globalTypeKeys = new string[0]
+            _globalTypeVals = new string[0]
+            _globalTypeCount = 0
             _classFieldKeys = new string[0]
             _classFieldTokens = new i32[0]
             _classCtorNames = new string[0]
@@ -281,6 +287,30 @@ private field _pendingCount: i32
             }
 
             return -1
+        }
+
+        /// <summary>全局变量类型表（名 → 类型），供顶层全局数组变量解析（X[i].方法()）。</summary>
+        public function SetGlobalTypes(keys: string[], vals: string[], count: i32): void
+        {
+            _globalTypeKeys = keys
+            _globalTypeVals = vals
+            _globalTypeCount = count
+        }
+
+        private function GlobalTypeOf(name: string): string
+        {
+            var i = 0
+            while i < _globalTypeCount
+            {
+                if _globalTypeKeys[i] == name
+                {
+                    return _globalTypeVals[i]
+                }
+
+                i = i + 1
+            }
+
+            return ""
         }
 
         private function CurFieldTypeOf(name: string): string
@@ -461,7 +491,13 @@ private field _pendingCount: i32
                     return vt
                 }
 
-                return CurFieldTypeOf(vn)
+                let ft = CurFieldTypeOf(vn)
+                if ft.Length > 0
+                {
+                    return ft
+                }
+
+                return GlobalTypeOf(vn)
             }
 
             if k == "ObjectCreationExpression"
