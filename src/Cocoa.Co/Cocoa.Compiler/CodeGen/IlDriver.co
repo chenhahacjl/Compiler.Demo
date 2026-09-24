@@ -700,16 +700,42 @@ var bclKeys = new string[2048]
                 }
 
                 emitter.SetCurrentClassMethods(ck, ct, ci2, cr, mcnt)
+
+                // 当前类字段表（名 → FieldDef token + 类型）
+                var fstart = 0
+                var fsl = 0
+                while fsl < cfn
+                {
+                    fstart = fstart + binder.GetClassFieldCount(fsl)
+                    fsl = fsl + 1
+                }
+
+                let fcnt = binder.GetClassFieldCount(cfn)
+                var fk = new string[fcnt]
+                var ft2 = new i32[fcnt]
+                var fty = new string[fcnt]
+                var fm4 = 0
+                while fm4 < fcnt
+                {
+                    fk[fm4] = binder.GetClassFieldName(cfn, fm4)
+                    ft2[fm4] = 0x04000001 + fstart + fm4
+                    fty[fm4] = binder.GetClassFieldType(cfn, fm4)
+                    fm4 = fm4 + 1
+                }
+
+                emitter.SetCurrentClassFields(fk, ft2, fty, fcnt)
             }
             else
             {
                 emitter.SetCurrentClassMethods(new string[0], new i32[0], new bool[0], new bool[0], 0)
+                emitter.SetCurrentClassFields(new string[0], new i32[0], new string[0], 0)
             }
 
             emitter.EmitFunction(asm, binder.GetFunctionBody(fn), paramNames, paramCount)
             if emitter.Error().Length > 0
             {
-                return "ERR:" + emitter.Error()
+                var mstr = cfn >= 0 ? string(binder.GetClassMethodCount(cfn)) : "-1"
+                return "ERR:[cfn=" + string(cfn) + ":m=" + mstr + "] " + emitter.Error()
             }
 
             bodies[row] = asm.Assemble()

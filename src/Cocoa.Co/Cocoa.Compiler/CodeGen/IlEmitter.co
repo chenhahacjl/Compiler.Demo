@@ -44,6 +44,10 @@ private field _pendingCount: i32
         private field _curClassInstance: bool[]
         private field _curClassReturns: bool[]
         private field _curClassCount: i32
+        private field _curFieldKeys: string[]
+        private field _curFieldTokens: i32[]
+        private field _curFieldTypes: string[]
+        private field _curFieldCount: i32
         private field _classStaticKeys: string[]
         private field _classStaticTokens: i32[]
         private field _classStaticCount: i32
@@ -95,6 +99,10 @@ private field _pendingCount: i32
             _curClassInstance = new bool[0]
             _curClassReturns = new bool[0]
             _curClassCount = 0
+            _curFieldKeys = new string[0]
+            _curFieldTokens = new i32[0]
+            _curFieldTypes = new string[0]
+            _curFieldCount = 0
             _classFieldKeys = new string[0]
             _classFieldTokens = new i32[0]
             _classCtorNames = new string[0]
@@ -244,6 +252,37 @@ private field _pendingCount: i32
             _curClassCount = count
         }
 
+        /// <summary>当前类字段表（名 → FieldDef token + 类型），供 `_root.ChildCount()` 字段实例方法调用解析。</summary>
+        public function SetCurrentClassFields(keys: string[], tokens: i32[], types: string[], count: i32): void
+        {
+            _curFieldKeys = keys
+            _curFieldTokens = tokens
+            _curFieldTypes = types
+            _curFieldCount = count
+        }
+
+        private function CurFieldIndex(name: string): i32
+        {
+            var i = 0
+            while i < _curFieldCount
+            {
+                if _curFieldKeys[i] == name
+                {
+                    return i
+                }
+
+                i = i + 1
+            }
+
+            return -1
+        }
+
+        private function CurFieldTypeOf(name: string): string
+        {
+            let fi = CurFieldIndex(name)
+            return fi >= 0 ? _curFieldTypes[fi] : ""
+        }
+
         private function CurClassMethodIndex(name: string): i32
         {
             var i = 0
@@ -374,12 +413,32 @@ private field _pendingCount: i32
 
             if k == "VariableExpression"
             {
-                return VarTypeOf(expr.Child(0).Text())
+                let vn = expr.Child(0).Text()
+                let vt = VarTypeOf(vn)
+                if vt.Length > 0
+                {
+                    return vt
+                }
+
+                return CurFieldTypeOf(vn)
             }
 
             if k == "ObjectCreationExpression"
             {
                 return expr.ChildCount() > 0 ? expr.Child(0).Text() : ""
+            }
+
+            if k == "MemberAccessExpression"
+            {
+                // this.字段 → 当前类字段类型（_root.ChildCount() 的接收者）
+                let tgt0 = expr.ChildCount() > 0 ? expr.Child(0) : null
+                if tgt0 != null ? tgt0.Kind() == "ThisExpression" : false
+                {
+                    if expr.ChildCount() > 2
+                    {
+                        return CurFieldTypeOf(expr.Child(2).Text())
+                    }
+                }
             }
 
             return ""
@@ -446,12 +505,16 @@ private field _pendingCount: i32
                 i = i + 1
             }
 
-            _error = "Unresolved method: " + name
             return -1
         }
 
         private function ProducesValue(expr: Node): bool
         {
+            if !(expr != null)
+            {
+                return false
+            }
+
             // 元素/字段赋值（stelem/stfld）不留栈值 → 语句级不弹栈
             if expr.Kind() == "ElementAssignmentExpression" || expr.Kind() == "MemberAssignmentExpression"
             {
@@ -1215,6 +1278,12 @@ private field _pendingCount: i32
 
         private function EmitExpression(expr: Node): void
         {
+            if !(expr != null)
+            {
+                _error = "EmitExpression null"
+                return
+            }
+
             let k = expr.Kind()
 
             if k == "LiteralExpression"
@@ -1246,7 +1315,20 @@ private field _pendingCount: i32
                 }
                 else
                 {
-                    _assembler.EmitOperand("Ldloc", 12, LocalIndex(name), -1)
+                    let li = LocalIndex(name)
+                    if li >= 0
+                    {
+                        _assembler.EmitOperand("Ldloc", 12, li, -1)
+                    }
+                    else
+                    {
+                        let fldIdx = CurFieldIndex(name)
+                        if fldIdx >= 0
+                        {
+                            _assembler.EmitOperand("Ldarg", 12, 0, -1)
+                            _assembler.EmitOperand("Ldfld", 9, _curFieldTokens[fldIdx], -1)
+                        }
+                    }
                 }
             }
             else if k == "BinaryExpression"
@@ -1349,6 +1431,10 @@ private field _pendingCount: i32
                             let idx2 = _assembler.EmitOperand("Call", 7, _curClassTokens[curIdx], -1)
                             _assembler.SetCallDelta(idx2, (returnsV ? 1 : 0) - (expr.ChildCount() - 1))
                         }
+                    }
+                    else
+                    {
+                        _error = "Unresolved method: " + expr.Child(0).Text() + " cc=" + string(_curClassCount)
                     }
                 }
             }

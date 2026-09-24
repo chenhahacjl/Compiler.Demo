@@ -11,7 +11,7 @@ namespace Cocoa.Tests.Compiler
         private readonly ITestOutputHelper _out;
         public SelfCompileProbeTests(ITestOutputHelper output) { _out = output; }
 
-        [Fact(Skip = "C-4 自举闭环：同类裸方法 emitter 回退已实现（e2e 绿 0cab961）；依赖子集 ReportError 未命中定位到 fn=1(BindCompilationUnit)/cfn=0(Binder)/m=77 表已建但 emitter 扫描见 cc=0——疑 SetCurrentClassMethods 与 EmitFunction 间 emitter 状态被清，下轮在 EmitFunction 末尾断言 _curClassCount")]
+        [Fact(Skip = "C-4 自举闭环：当前类字段表(名→token/type)+字段实例方法发射已实现（e2e/差分绿）；_root.ChildCount 仍未通——疑 GetClassFieldCount(0)=0 或 this.字段绑定形状，下轮打点字段表 fcnt/首个字段名")]
         public void CompileFullSelfCompilerSource()
         {
             var root = AppContext.BaseDirectory;
@@ -52,6 +52,8 @@ namespace Cocoa.Tests.Compiler
         }
     }
 }
+
+
 
 
 
