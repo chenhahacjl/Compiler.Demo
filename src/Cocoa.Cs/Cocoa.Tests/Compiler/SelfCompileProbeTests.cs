@@ -11,7 +11,7 @@ namespace Cocoa.Tests.Compiler
         private readonly ITestOutputHelper _out;
         public SelfCompileProbeTests(ITestOutputHelper output) { _out = output; }
 
-        [Fact(Skip = "C-4 自举闭环：字段/局部实例方法返回类型推断链已通（_root.ChildCount→child.ChildCount→lv.Type 逐层解锁）；现卡链式实例调用 x.y.Kind()（target=MemberCallExpression 需表达式链类型解析）——下轮 emitter 经 binder 暴露 ExprChainType 或绑定侧解析")]
+        [Fact(Skip = "C-4 自举闭环：链式实例调用类型解析已通（Class.method返回类型表 + ExprTypeOf MemberCall/ElementAccess 递归）；现卡 .Describe 命中疑数组元素类型名与类名判配（_locals[i] 元素类型 vs 基类方法归属）——下轮打点打印 elementType 与 classMethodKeys 首项")]
         public void CompileFullSelfCompilerSource()
         {
             var root = AppContext.BaseDirectory;
@@ -52,6 +52,8 @@ namespace Cocoa.Tests.Compiler
         }
     }
 }
+
+
 
 
 

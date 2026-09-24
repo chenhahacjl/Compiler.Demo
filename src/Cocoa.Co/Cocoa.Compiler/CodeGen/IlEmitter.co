@@ -39,6 +39,9 @@ private field _pendingCount: i32
         private field _classMethodKeys: string[]
         private field _classMethodTokens: i32[]
         private field _classMethodReturns: bool[]
+        private field _classMethodTypeKeys: string[]
+        private field _classMethodTypeVals: string[]
+        private field _classMethodTypeCount: i32
         private field _curClassKeys: string[]
         private field _curClassTokens: i32[]
         private field _curClassInstance: bool[]
@@ -91,6 +94,9 @@ private field _pendingCount: i32
             _classMethodKeys = new string[0]
             _classMethodTokens = new i32[0]
             _classMethodReturns = new bool[0]
+            _classMethodTypeKeys = new string[0]
+            _classMethodTypeVals = new string[0]
+            _classMethodTypeCount = 0
             _classStaticKeys = new string[0]
             _classStaticTokens = new i32[0]
             _classStaticCount = 0
@@ -315,6 +321,30 @@ private field _pendingCount: i32
             return -1
         }
 
+        /// <summary>类方法返回类型表（键 `Class.method` → 返回类型串），供链式实例调用 ExprTypeOf 递归解析。</summary>
+        public function SetClassMethodTypes(keys: string[], vals: string[], count: i32): void
+        {
+            _classMethodTypeKeys = keys
+            _classMethodTypeVals = vals
+            _classMethodTypeCount = count
+        }
+
+        private function ClassMethodType(key: string): string
+        {
+            var i = 0
+            while i < _classMethodTypeCount
+            {
+                if _classMethodTypeKeys[i] == key
+                {
+                    return _classMethodTypeVals[i]
+                }
+
+                i = i + 1
+            }
+
+            return ""
+        }
+
         private function ClassMethodToken(key: string): i32
         {
             var i = 0
@@ -450,6 +480,30 @@ private field _pendingCount: i32
                         return CurFieldTypeOf(expr.Child(2).Text())
                     }
                 }
+            }
+
+            if k == "ElementAccessExpression"
+            {
+                // _locals[i].Describe()：数组元素类型
+                let arrType = expr.ChildCount() > 0 ? ExprTypeOf(expr.Child(0)) : ""
+                return ArrayElemTypeOf(arrType)
+            }
+
+            if k == "MemberCallExpression"
+            {
+                // 链式实例调用返回类型：inner 类型 + 方法 → Class.method 返回类型
+                let innerT = expr.ChildCount() > 2 ? ExprTypeOf(expr.Child(0)) : ""
+                if innerT.Length > 0
+                {
+                    let mt = ClassMethodType(innerT + "." + expr.Child(2).Text())
+                    if mt.Length > 0
+                    {
+                        return mt
+                    }
+                }
+
+                // BCL/类静态（Parser.Create → 其返回类型表；此处保守返回空）
+                return ""
             }
 
             return ""

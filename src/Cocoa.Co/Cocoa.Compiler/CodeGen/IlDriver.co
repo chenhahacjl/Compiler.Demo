@@ -190,6 +190,8 @@ var bclKeys = new string[2048]
             var staticKeys = new string[totalClassMethods]
             var staticTokens = new i32[totalClassMethods]
             var classReturns = new bool[totalClassMethods]
+            var typeKeys = new string[totalClassMethods]
+            var typeVals = new string[totalClassMethods]
             var classCtorNames = new string[classCount]
             var classCtorTokens = new i32[classCount]
             var fieldNames = new string[totalFields]
@@ -240,6 +242,8 @@ var bclKeys = new string[2048]
                         classKeys[cmc] = className + "." + binder.GetClassMethodName(ci, mi)
                         classTokens[cmc] = 0x06000000 + classStartRow[ci] + 2 + mi
                         classReturns[cmc] = binder.GetFunctionReturnType(fidx) != "void"
+                        typeKeys[cmc] = className + "." + binder.GetClassMethodName(ci, mi)
+                        typeVals[cmc] = binder.GetFunctionReturnType(fidx)
                         cmc = cmc + 1
                     }
 
@@ -326,6 +330,7 @@ var bclKeys = new string[2048]
             if totalClassMethods > 0
             {
                 emitter.SetClassMethods(classKeys, classTokens, classReturns, totalClassMethods)
+                emitter.SetClassMethodTypes(typeKeys, typeVals, totalClassMethods)
             }
 
             if sc > 0
