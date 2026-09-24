@@ -11,7 +11,7 @@ namespace Cocoa.Tests.Compiler
         private readonly ITestOutputHelper _out;
         public SelfCompileProbeTests(ITestOutputHelper output) { _out = output; }
 
-        [Fact(Skip = "C-4 自举闭环：链式/元素访问类型解析已通；.Describe 的 ElementAccess 数组目标 et= 为空——需到数组目标（_variables/_functions）的 next-horizon 打点；下轮在 ElementAccess 分支打印 child0.Kind 与其 et2")]
+        [Fact(Skip = "C-4 自举闭环：ElementAccess 链 target=VariableExpression 但 et= 空（参数/局部/字段三路未命中）——疑顶层全局数组变量缺类型表；下轮驱动注入 SetGlobalTypes 或在 Binder 把全局变量类型并入 LocalTypeOrParamOf")]
         public void CompileFullSelfCompilerSource()
         {
             var root = AppContext.BaseDirectory;
@@ -52,6 +52,8 @@ namespace Cocoa.Tests.Compiler
         }
     }
 }
+
+
 
 
 
