@@ -11,7 +11,7 @@ namespace Cocoa.Tests.Compiler
         private readonly ITestOutputHelper _out;
         public SelfCompileProbeTests(ITestOutputHelper output) { _out = output; }
 
-        [Fact(Skip = "C-4 自举闭环：链式实例调用类型解析已通（Class.method返回类型表 + ExprTypeOf MemberCall/ElementAccess 递归）；现卡 .Describe 命中疑数组元素类型名与类名判配（_locals[i] 元素类型 vs 基类方法归属）——下轮打点打印 elementType 与 classMethodKeys 首项")]
+        [Fact(Skip = "C-4 自举闭环：链式/元素访问类型解析已通；.Describe 的 ElementAccess 数组目标 et= 为空——需到数组目标（_variables/_functions）的 next-horizon 打点；下轮在 ElementAccess 分支打印 child0.Kind 与其 et2")]
         public void CompileFullSelfCompilerSource()
         {
             var root = AppContext.BaseDirectory;
@@ -52,6 +52,8 @@ namespace Cocoa.Tests.Compiler
         }
     }
 }
+
+
 
 
 
