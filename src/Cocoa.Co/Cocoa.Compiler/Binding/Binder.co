@@ -825,6 +825,63 @@ _localCount = 0
         }
 
         /// <summary>字面量/一元/二元/名称/调用表达式 → 推断类型名（var 无类型标注时；对齐 C# 绑定）。</summary>
+        private function LocalTypeOrParamOf(name: string): string
+        {
+            var i = 0
+            while i < _paramCount
+            {
+                if _paramNames[i] == name
+                {
+                    return _paramTypes[i]
+                }
+
+                i = i + 1
+            }
+
+            if _currentFunction != null
+            {
+                var j = 0
+                while j < _currentFunction.LocalCount()
+                {
+                    let lv = _currentFunction.Local(j)
+                    if lv.Name() == name
+                    {
+                        return lv.Type()
+                    }
+
+                    j = j + 1
+                }
+            }
+
+            // 当前类实例字段类型（_root → Node；_currentFunction → FunctionSymbol）
+            if _currentClass != ""
+            {
+                var ci2 = 0
+                while ci2 < _classCount
+                {
+                    if _classNames[ci2] == _currentClass
+                    {
+                        var fi3 = 0
+                        while fi3 < _classFieldCounts[ci2]
+                        {
+                            if _classFieldNames[_classFieldOffsets[ci2] + fi3] == name
+                            {
+                                return _classFieldTypes[_classFieldOffsets[ci2] + fi3]
+                            }
+
+                            fi3 = fi3 + 1
+                        }
+
+                        return ""
+                    }
+
+                    ci2 = ci2 + 1
+                }
+            }
+
+            return ""
+        }
+
         private function InferTypeOfExpression(node: Node): string
         {
             let k = node.Kind()
@@ -893,6 +950,40 @@ _localCount = 0
                     }
 
                     cii = cii + 1
+                }
+
+                // 类类型变量的实例方法返回类型（var x = node.Child(i) → x: Node）
+                var vt = ""
+                let tgtVar = tgt != null ? (tgt.ChildCount() > 0 ? tgt.Child(0).Text() : tgt.Text()) : ""
+                if tgtVar.Length > 0
+                {
+                    vt = LocalTypeOrParamOf(tgtVar)
+                }
+
+                if vt == "string"
+                {
+                    return "?"
+                }
+
+                var cvi = 0
+                while cvi < _classCount
+                {
+                    if _classNames[cvi] == vt
+                    {
+                        var cmv = 0
+                        while cmv < _classMethodCounts[cvi]
+                        {
+                            let offv = _classMethodOffsets[cvi] + cmv
+                            if _classMethodNames[offv] == m && !_classMethodStatic[offv]
+                            {
+                                return _functions[_classMethodIndexes[offv]].ReturnType()
+                            }
+
+                            cmv = cmv + 1
+                        }
+                    }
+
+                    cvi = cvi + 1
                 }
 
                 return "?"

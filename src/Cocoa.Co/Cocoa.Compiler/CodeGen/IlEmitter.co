@@ -403,6 +403,17 @@ private field _pendingCount: i32
         }
 
         /// <summary>取一个子表达式节点表示的"类型"（this→当前类、变量→类型表、new→类名、字面量→基元名）；否则空。</summary>
+        private function VarNameOf(expr: Node): string
+        {
+            let n0 = expr.ChildCount() > 0 ? expr.Child(0) : null
+            if n0 != null ? n0.ChildCount() > 0 : false
+            {
+                return n0.Child(0).Text()
+            }
+
+            return n0 != null ? n0.Text() : ""
+        }
+
         private function ExprTypeOf(expr: Node): string
         {
             let k = expr.Kind()
@@ -413,7 +424,7 @@ private field _pendingCount: i32
 
             if k == "VariableExpression"
             {
-                let vn = expr.Child(0).Text()
+                let vn = VarNameOf(expr)
                 let vt = VarTypeOf(vn)
                 if vt.Length > 0
                 {
@@ -1307,7 +1318,7 @@ private field _pendingCount: i32
             }
             else if k == "VariableExpression"
             {
-                let name = expr.Child(0).Text()
+                let name = VarNameOf(expr)
                 let isParam = ParamIndex(name)
                 if isParam >= 0
                 {
@@ -1499,6 +1510,35 @@ private field _pendingCount: i32
                 }
                 else
                 {
+                    // 字段实例方法调用回退：_root.ChildCount()（target 为当前类字段，取其类型按实例成员解析）
+                    let tgtName = target.Kind() == "VariableExpression" ? VarNameOf(target) : ""
+                    let ftype = tgtName.Length > 0 ? CurFieldTypeOf(tgtName) : ""
+                    if ftype.Length > 0
+                    {
+                        let mtok = ClassMethodToken(ftype + "." + expr.Child(2).Text())
+                        if mtok >= 0
+                        {
+                            EmitExpression(target)
+                            var argCount = 0
+                            var a = 4
+                            while a < expr.ChildCount() - 1
+                            {
+                                if !expr.Child(a).IsToken()
+                                {
+                                    EmitExpression(expr.Child(a))
+                                    argCount = argCount + 1
+                                }
+
+                                a = a + 1
+                            }
+
+                            let retV = ClassMethodReturns(ftype + "." + expr.Child(2).Text())
+                            let idx = _assembler.EmitOperand("Callvirt", 7, mtok, -1)
+                            _assembler.SetCallDelta(idx, (retV ? 1 : 0) - (argCount + 1))
+                            return
+                        }
+                    }
+
                     // 静态类方法调用（P.M() → Call，无接收者）或 BCL 静态成员（Console.WriteLine）
                     let targetName = expr.Child(0).ChildCount() > 0 ? expr.Child(0).Child(0).Text() : ""
                     let fullName = targetName + "." + expr.Child(2).Text()
@@ -1526,7 +1566,7 @@ private field _pendingCount: i32
                     let token = BclToken(fullName)
                     if token < 0
                     {
-                        _error = "Unresolved bcl member: " + fullName
+                        _error = "Unresolved bcl member: " + fullName + " fc=" + string(_curFieldCount) + " f0=" + (_curFieldCount > 0 ? _curFieldKeys[0] : "-") + " tk=" + expr.Child(0).Kind()
                         return
                     }
 

@@ -11,7 +11,7 @@ namespace Cocoa.Tests.Compiler
         private readonly ITestOutputHelper _out;
         public SelfCompileProbeTests(ITestOutputHelper output) { _out = output; }
 
-        [Fact(Skip = "C-4 自举闭环：字段实例方法调用（this._root.ChildCount()）为本轮 final 阻塞——字段表注入(42)存在但 emitter CurFieldTypeOf 见空，疑 .co 数组按值传递 or 状态被清；下轮在 SetCurrentClassFields 后立即断言 _curFieldCount")]
+        [Fact(Skip = "C-4 自举闭环：字段/局部实例方法返回类型推断链已通（_root.ChildCount→child.ChildCount→lv.Type 逐层解锁）；现卡链式实例调用 x.y.Kind()（target=MemberCallExpression 需表达式链类型解析）——下轮 emitter 经 binder 暴露 ExprChainType 或绑定侧解析")]
         public void CompileFullSelfCompilerSource()
         {
             var root = AppContext.BaseDirectory;
@@ -52,6 +52,8 @@ namespace Cocoa.Tests.Compiler
         }
     }
 }
+
+
 
 
 
