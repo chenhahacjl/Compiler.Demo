@@ -11,7 +11,7 @@ namespace Cocoa.Tests.Compiler
         private readonly ITestOutputHelper _out;
         public SelfCompileProbeTests(ITestOutputHelper output) { _out = output; }
 
-        [Fact(Skip = "C-4 自举闭环：.Describe 定标=emitter 字段表状态生命周期 bug（fc=42 含 _variables 但查询空）；全局类型已接线；下轮在 SetCurrentClassFields 后与 CurFieldTypeOf 命中处断言 _curFieldCount/_curFieldKeys[0] 对照")]
+        [Fact]
         public void CompileFullSelfCompilerSource()
         {
             var root = AppContext.BaseDirectory;
@@ -52,6 +52,7 @@ namespace Cocoa.Tests.Compiler
         }
     }
 }
+
 
 
 

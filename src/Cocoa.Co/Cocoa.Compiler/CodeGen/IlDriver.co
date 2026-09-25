@@ -117,6 +117,7 @@ var bclKeys = new string[2048]
             {
                 if bclParents[brm] == 3 { hasConsole = true }
                 if bclParents[brm] == 4 { hasString = true }
+                if bclParents[brm] == 7 { needsChar[0] = true }
                 brm = brm + 1
             }
 
@@ -199,6 +200,7 @@ var bclKeys = new string[2048]
             var fieldFlags = new i32[totalFields]
             var fieldKeys = new string[totalFields]
             var fieldTokens = new i32[totalFields]
+            var fieldTypes = new string[totalFields]
             var userTypeNames = new string[classCount]
             var userTypeFieldLists = new i32[classCount]
             var userTypeMethodLists = new i32[classCount]
@@ -224,6 +226,7 @@ var bclKeys = new string[2048]
                     fieldFlags[fr] = 0x0006
                     fieldKeys[fr] = className + "." + fieldNames[fr]
                     fieldTokens[fr] = 0x04000001 + fr
+                    fieldTypes[fr] = binder.GetClassFieldType(ci, fi)
                     fi = fi + 1
                 }
 
@@ -356,6 +359,7 @@ var bclKeys = new string[2048]
             if totalFields > 0
             {
                 emitter.SetClassFields(fieldKeys, fieldTokens, totalFields)
+                emitter.SetGlobalFieldTypes(fieldKeys, fieldTypes, totalFields)
             }
 
             if classCount > 0
@@ -579,8 +583,8 @@ var bclKeys = new string[2048]
             brm = 0
             while brm < bclCount[0]
             {
-                // 实际 TypeRef 行：Console=3（若用）；String= hasConsole ? 4 : 3（无 Console 时前移）
-                memberRefParent[1 + brm] = (bclParents[brm] == 4 && !hasConsole) ? 3 : bclParents[brm]
+                // 实际 TypeRef 行：按各 BCL 类的存在序动态计算（Object=1/Debuggable=2 起，行号 = 3 + 前置存在类数）
+                memberRefParent[1 + brm] = ActualTypeRefRow(bclParents[brm], hasConsole, usesString, usesInt32, usesBool, usesChar)
                 memberRefName[1 + brm] = bclNames[brm]
                 memberRefSig[1 + brm] = bclSigs[brm]
                 brm = brm + 1
@@ -755,7 +759,15 @@ var bclKeys = new string[2048]
             if emitter.Error().Length > 0
             {
                 var mstr = cfn >= 0 ? string(binder.GetClassMethodCount(cfn)) : "-1"
-                return "ERR:[cfn=" + string(cfn) + ":m=" + mstr + "] " + emitter.Error()
+                var flds = "?"
+                if cfn >= 0 && binder.GetClassFieldCount(cfn) > 0
+                {
+                    var fc0 = binder.GetClassFieldName(cfn, 0)
+                    var fc1 = binder.GetClassFieldCount(cfn) > 1 ? binder.GetClassFieldName(cfn, 1) : ""
+                    flds = fc0 + "," + fc1
+                }
+
+                return "ERR:[cfn=" + string(cfn) + ":m=" + mstr + ":fld=" + flds + "] " + emitter.Error()
             }
 
             bodies[row] = asm.Assemble()
@@ -943,6 +955,15 @@ var bclKeys = new string[2048]
                         "String.IndexOf1", 4, "IndexOf",
                         MetadataEncode.EncodeMethodSignatureHex("i32", cp, 1, false))
                 }
+                else if targetName == "Char" && (methodName == "IsLetter" || methodName == "IsDigit" || methodName == "IsLetterOrDigit")
+                {
+                    // Char.IsLetter(c)/IsDigit/IsLetterOrDigit → System.Char 静态方法（char 实参 → bool）
+                    let cp2 = new string[1]
+                    cp2[0] = "char"
+                    EnsureBcl(bclKeys, bclTokens, bclParents, bclSigs, bclNames, bclCount,
+                        "Char." + methodName, 7, methodName,
+                        MetadataEncode.EncodeMethodSignatureHex("bool", cp2, 1, true))
+                }
             }
             else if k == "BinaryExpression"
             {
@@ -973,6 +994,18 @@ var bclKeys = new string[2048]
                                 MetadataEncode.EncodeMethodSignatureHex("string", stringParams, 2, true))
                         }
                     }
+                }
+            }
+            else if k == "MemberAccessExpression"
+            {
+                let memberName2 = node.Child(2).Text()
+                if memberName2 == "Length"
+                {
+                    // s.Length → String::get_Length()（实例，返回 i32）；数组 .Length 由发射端 ldlen 处理
+                    let emptyParams = new string[0]
+                    EnsureBcl(bclKeys, bclTokens, bclParents, bclSigs, bclNames, bclCount,
+                        "String.Length", 4, "get_Length",
+                        MetadataEncode.EncodeMethodSignatureHex("i32", emptyParams, 0, false))
                 }
             }
             else if k == "LiteralExpression"
@@ -1013,6 +1046,19 @@ var bclKeys = new string[2048]
 
                 c = c + 1
             }
+        }
+
+        /// <summary>BCL 类理想行号 → 实际 TypeRef 行（行 = 3 + 前置存在类数量；Object=1/Debuggable=2）。</summary>
+        private static function ActualTypeRefRow(
+            ideal: i32, hasConsole: bool, usesString: bool, usesInt32: bool, usesBool: bool, usesChar: bool): i32
+        {
+            var n = 0
+            if ideal > 3 && hasConsole { n = n + 1 }
+            if ideal > 4 && usesString { n = n + 1 }
+            if ideal > 5 && usesInt32 { n = n + 1 }
+            if ideal > 6 && usesBool { n = n + 1 }
+            if ideal > 7 && usesChar { n = n + 1 }
+            return 3 + n
         }
 
         /// <summary>去重登记 BCL 成员：token = 0x0A000000 + 行号（行 = 登记序 + 1）。</summary>

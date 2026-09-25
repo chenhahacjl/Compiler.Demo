@@ -54,6 +54,9 @@ private field _pendingCount: i32
         private field _globalTypeKeys: string[]
         private field _globalTypeVals: string[]
         private field _globalTypeCount: i32
+        private field _globalFieldKeys: string[]
+        private field _globalFieldVals: string[]
+        private field _globalFieldCount: i32
         private field _classStaticKeys: string[]
         private field _classStaticTokens: i32[]
         private field _classStaticCount: i32
@@ -115,6 +118,9 @@ private field _pendingCount: i32
             _globalTypeKeys = new string[0]
             _globalTypeVals = new string[0]
             _globalTypeCount = 0
+            _globalFieldKeys = new string[0]
+            _globalFieldVals = new string[0]
+            _globalFieldCount = 0
             _classFieldKeys = new string[0]
             _classFieldTokens = new i32[0]
             _classCtorNames = new string[0]
@@ -297,6 +303,14 @@ private field _pendingCount: i32
             _globalTypeCount = count
         }
 
+        /// <summary>全局类字段类型表（键 `类.字段` → 类型），供跨类字段接收者解析（p._lex.Next()）。</summary>
+        public function SetGlobalFieldTypes(keys: string[], vals: string[], count: i32): void
+        {
+            _globalFieldKeys = keys
+            _globalFieldVals = vals
+            _globalFieldCount = count
+        }
+
         private function GlobalTypeOf(name: string): string
         {
             var i = 0
@@ -311,6 +325,38 @@ private field _pendingCount: i32
             }
 
             return ""
+        }
+
+        private function GlobalFieldTypeOf(ownerDotField: string): string
+        {
+            var i = 0
+            while i < _globalFieldCount
+            {
+                if _globalFieldKeys[i] == ownerDotField
+                {
+                    return _globalFieldVals[i]
+                }
+
+                i = i + 1
+            }
+
+            return ""
+        }
+
+        private function VarHasField(name: string): bool
+        {
+            var i = 0
+            while i < _curFieldCount
+            {
+                if _curFieldKeys[i] == name
+                {
+                    return true
+                }
+
+                i = i + 1
+            }
+
+            return false
         }
 
         private function CurFieldTypeOf(name: string): string
@@ -507,13 +553,19 @@ private field _pendingCount: i32
 
             if k == "MemberAccessExpression"
             {
-                // this.字段 → 当前类字段类型（_root.ChildCount() 的接收者）
+                // this.字段 → 当前类字段类型（_root.ChildCount() 的接收者）；X.字段 → 全局字段类型表
                 let tgt0 = expr.ChildCount() > 0 ? expr.Child(0) : null
-                if tgt0 != null ? tgt0.Kind() == "ThisExpression" : false
+                if tgt0 != null && expr.ChildCount() > 2
                 {
-                    if expr.ChildCount() > 2
+                    if tgt0.Kind() == "ThisExpression"
                     {
                         return CurFieldTypeOf(expr.Child(2).Text())
+                    }
+
+                    let ownerType = ExprTypeOf(tgt0)
+                    if ownerType.Length > 0
+                    {
+                        return GlobalFieldTypeOf(ownerType + "." + expr.Child(2).Text())
                     }
                 }
             }
@@ -1480,8 +1532,37 @@ private field _pendingCount: i32
             }
             else if k == "CallExpression"
             {
-                // string(x) 转换：x 非字符串 → Box System.Int32 + Call Convert.ToString(object)（i32 语料）
-                if expr.ChildCount() > 0 && expr.Child(0).Text() == "string"
+                // 类型名转换：char(x)/i32(x)/f64(x)… → 发射实参 + 对应 Conv（数值已在同槽位）
+                if expr.ChildCount() > 1 &&
+                    (expr.Child(0).Text() == "char" || expr.Child(0).Text() == "i8" ||
+                     expr.Child(0).Text() == "i16" || expr.Child(0).Text() == "i32" ||
+                     expr.Child(0).Text() == "i64" || expr.Child(0).Text() == "f64" ||
+                     expr.Child(0).Text() == "bool")
+                {
+                    EmitExpression(expr.Child(1))
+                    let cname = expr.Child(0).Text()
+                    if cname == "char"
+                    {
+                        _assembler.EmitOperand("Conv_U2", 0, 0, -1)
+                    }
+                    else if cname == "i8"
+                    {
+                        _assembler.EmitOperand("Conv_I1", 0, 0, -1)
+                    }
+                    else if cname == "i16"
+                    {
+                        _assembler.EmitOperand("Conv_I2", 0, 0, -1)
+                    }
+                    else if cname == "i64"
+                    {
+                        _assembler.EmitOperand("Conv_I8", 0, 0, -1)
+                    }
+                    else if cname == "f64"
+                    {
+                        _assembler.EmitOperand("Conv_R8", 0, 0, -1)
+                    }
+                }
+                else if expr.ChildCount() > 0 && expr.Child(0).Text() == "string"
                 {
                     if expr.ChildCount() > 1
                     {
@@ -1570,6 +1651,17 @@ private field _pendingCount: i32
                     let idx = _assembler.EmitOperand("Callvirt", 7, methodToken, -1)
                     _assembler.SetCallDelta(idx, (retV ? 1 : 0) - (argCount + 1))
                 }
+                else if expr.Child(2).Text() == "ToString"
+                {
+                    // 值类型 .ToString() → Box Convert.ToString(object)；字符串 → 恒等返回
+                    EmitExpression(target)
+                    if owner != "string"
+                    {
+                        _assembler.EmitOperand("Box", 8, _boxInt32Token, -1)
+                        let cidx = _assembler.EmitOperand("Call", 7, _convertToken, -1)
+                        _assembler.SetCallDelta(cidx, 0)
+                    }
+                }
                 else if owner == "string"
                 {
                     // 字符串实例成员：s.substring(i[,len]) / s.IndexOf(str) → target + args + callvirt（均返回值）
@@ -1656,7 +1748,7 @@ private field _pendingCount: i32
                     let token = BclToken(fullName)
                     if token < 0
                     {
-                        _error = "Unresolved bcl member: " + fullName + " fc=" + string(_curFieldCount) + " f0=" + (_curFieldCount > 0 ? _curFieldKeys[0] : "-") + " tk=" + expr.Child(0).Kind()
+                        _error = "Unresolved bcl member: " + fullName + " tk=" + expr.Child(0).Kind()
                         return
                     }
 
@@ -1717,6 +1809,20 @@ private field _pendingCount: i32
                     EmitExpression(expr.Child(0))
                     _assembler.EmitOperand("Ldlen", 0, 0, -1)
                     _assembler.EmitOperand("Conv_I4", 0, 0, -1)
+                }
+                else if owner == "string" && memberName == "Length"
+                {
+                    // s.Length → callvirt instance int32 System.String::get_Length()
+                    EmitExpression(expr.Child(0))
+                    let stok = BclToken("String.Length")
+                    if stok < 0
+                    {
+                        _error = "Unresolved bcl member: String.Length"
+                        return
+                    }
+
+                    let idx = _assembler.EmitOperand("Callvirt", 7, stok, -1)
+                    _assembler.SetCallDelta(idx, 0)
                 }
                 else
                 {
@@ -1925,7 +2031,7 @@ private field _pendingCount: i32
                 i = i + 1
             }
 
-            return 0
+            return -1
         }
 
         /// <summary>字符串 token 文本去外层引号（自举 StringToken.Text 含引号）。</summary>
