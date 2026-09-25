@@ -2537,7 +2537,38 @@ let k = node.Kind()
                     i = i + 1
                 }
 
-                let fi = IndexOfString(_functionNames, _functionCount, callee)
+                var fi = -1
+                // 当前类方法优先（同类方法遮蔽同名全局/异类方法）
+                if _currentClass != ""
+                {
+                    var ccx = 0
+                    while ccx < _classCount
+                    {
+                        if _classNames[ccx] == _currentClass
+                        {
+                            var cmx = 0
+                            while cmx < _classMethodCounts[ccx]
+                            {
+                                if _classMethodNames[_classMethodOffsets[ccx] + cmx] == callee
+                                {
+                                    fi = _classMethodIndexes[_classMethodOffsets[ccx] + cmx]
+                                }
+
+                                cmx = cmx + 1
+                            }
+
+                            ccx = _classCount
+                        }
+
+                        ccx = ccx + 1
+                    }
+                }
+
+                if fi < 0
+                {
+                    fi = IndexOfString(_functionNames, _functionCount, callee)
+                }
+
                 if fi < 0 && !IsPrimitiveTypeName(callee)
                 {
                     ReportError("Function '" + callee + "' doesn't exist.")
