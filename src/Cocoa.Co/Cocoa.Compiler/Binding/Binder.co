@@ -914,6 +914,17 @@ _localCount = 0
                 return node.ChildCount() > 1 ? node.Child(1).Text() + "[]" : "?"
             }
 
+            if k == "ConditionalExpression"
+            {
+                // a ? b : c → true 分支类型（b 在 idx 2；null 分支保守用另一支）
+                if node.ChildCount() > 2
+                {
+                    return InferTypeOfExpression(node.Child(2))
+                }
+
+                return "?"
+            }
+
             if k == "MemberCallExpression"
             {
                 // 字符串实例成员返回类型：IndexOf/Length → i32；substring → string
@@ -2221,6 +2232,16 @@ _localCount = 0
                 b.Add(BuildBound(node.Child(0)))
                 b.Add(BuildBound(node.Child(2)))
                 return b
+            }
+
+            if k == "ConditionalExpression"
+            {
+                // a ? b : c → [cond, true, false]（token 丢弃，镜像 BinaryExpression 约定）
+                let c = Node.MakeCompound("ConditionalExpression")
+                c.Add(BuildBound(node.Child(0)))
+                c.Add(BuildBound(node.Child(2)))
+                c.Add(BuildBound(node.Child(4)))
+                return c
             }
 
             if k == "UnaryExpression"

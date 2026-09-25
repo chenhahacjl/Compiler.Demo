@@ -914,6 +914,17 @@ namespace Cocoa.CodeAnalysis.Syntax
         private function ParseExpression(): Node
         {
             let left = ParseBinary(0)
+            if KindName() == "QuestionToken"
+            {
+                let cond = Node.MakeCompound("ConditionalExpression")
+                cond.Add(left)
+                cond.Add(Match("QuestionToken"))
+                cond.Add(ParseExpression())
+                cond.Add(Match("ColonToken"))
+                cond.Add(ParseExpression())
+                return cond
+            }
+
             if KindName() == "EqualsToken"
             {
                 let asgn = Node.MakeCompound("AssignmentExpression")

@@ -570,6 +570,31 @@ private field _pendingCount: i32
                 }
             }
 
+            if k == "MemberCallExpression"
+            {
+                // a.b().Text()：接收者为方法调用 → 用被调方法返回类型解析链；裸调用回退当前类
+                let tgt1 = expr.ChildCount() > 0 ? expr.Child(0) : null
+                if tgt1 != null && expr.ChildCount() > 2
+                {
+                    let recvT = ExprTypeOf(tgt1)
+                    if recvT.Length > 0
+                    {
+                        return ClassMethodType(recvT + "." + expr.Child(2).Text())
+                    }
+                }
+
+                if expr.ChildCount() > 2
+                {
+                    let ci3 = CurClassMethodIndex(expr.Child(2).Text())
+                    if ci3 >= 0
+                    {
+                        return ""
+                    }
+                }
+
+                return ""
+            }
+
             if k == "ElementAccessExpression"
             {
                 // _locals[i].Describe()：数组元素类型
@@ -1529,6 +1554,28 @@ private field _pendingCount: i32
                 EmitExpression(expr.Child(1))
                 _assembler.EmitOperand("Dup", 0, 0, -1)
                 _assembler.EmitOperand("Stloc", 12, LocalIndex(expr.Child(0).Text()), -1)
+            }
+            else if k == "ConditionalExpression"
+            {
+                let c0 = expr.Child(0)
+                let c1 = expr.ChildCount() > 1 ? expr.Child(1) : null
+                let c2 = expr.ChildCount() > 2 ? expr.Child(2) : null
+                if c0 == null || c1 == null || c2 == null
+                {
+                    _error = "CEX bad cc=" + string(expr.ChildCount())
+                    return
+                }
+
+                // cond ? a : b → <cond> Brfalse else <a> Br end else: <b> end
+                EmitExpression(c0)
+                let brf = _assembler.EmitOperand("Brfalse", 14, 0, -1)
+                EmitExpression(c1)
+                let br = _assembler.EmitOperand("Br", 14, 0, -1)
+                let elsePos = _assembler.InstructionCount()
+                EmitExpression(c2)
+                let endPos = _assembler.InstructionCount()
+                _assembler.SetTarget(brf, elsePos)
+                _assembler.SetTarget(br, endPos)
             }
             else if k == "CallExpression"
             {
