@@ -918,7 +918,23 @@ var bclKeys = new string[2048]
 
             if k == "MemberCallExpression"
             {
-                let targetName = node.Child(0).ChildCount() > 0 ? node.Child(0).Child(0).Text() : ""
+                var targetName = ""
+                let tg0 = node.Child(0)
+                if tg0 != null
+                {
+                    if tg0.Kind() == "MemberAccessExpression" && tg0.ChildCount() > 2
+                    {
+                        targetName = tg0.Child(2).Text()
+                    }
+                    else if tg0.ChildCount() > 0
+                    {
+                        targetName = tg0.Child(0).Text()
+                    }
+                    else
+                    {
+                        targetName = tg0.Text()
+                    }
+                }
                 let methodName = node.Child(2).Text()
                 if targetName == "Console" && methodName == "WriteLine"
                 {
@@ -1131,6 +1147,21 @@ var bclKeys = new string[2048]
                         }
 
                         return "i32"
+                    }
+
+                    if arg.Kind() == "ElementAccessExpression"
+                    {
+                        return "string"
+                    }
+
+                    if arg.Kind() == "VariableExpression"
+                    {
+                        return "string"
+                    }
+
+                    if arg.Kind() == "MemberCallExpression" || arg.Kind() == "MemberAccessExpression"
+                    {
+                        return "string"
                     }
 
                     return "i32"

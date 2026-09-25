@@ -925,6 +925,37 @@ _localCount = 0
                 return "?"
             }
 
+            if k == "LiteralExpression"
+            {
+                let t = node.ChildCount() > 0 ? node.Child(0).Kind() : ""
+                if t == "StringToken" || t == "VerbatimStringToken" || t == "RawStringToken"
+                {
+                    return "string"
+                }
+
+                if t == "NumberToken"
+                {
+                    return "int"
+                }
+
+                if t == "DoubleToken"
+                {
+                    return "double"
+                }
+
+                if t == "CharToken"
+                {
+                    return "char"
+                }
+
+                if t == "TrueKeyword" || t == "FalseKeyword"
+                {
+                    return "bool"
+                }
+
+                return "?"
+            }
+
             if k == "MemberCallExpression"
             {
                 // 字符串实例成员返回类型：IndexOf/Length → i32；substring → string
@@ -939,9 +970,24 @@ _localCount = 0
                     return "string"
                 }
 
-                // 静态类方法（Parser.Create(...)）返回类型：目标为类名 + 成员为静态方法 → 其返回类型
+                // 静态类方法（Parser.Create(...) / Cocoa.CodeGen.IlDriver.BuildDllHex(...)）返回类型：目标为类名 + 成员为静态方法 → 其返回类型
                 let tgt = node.Child(0)
-                let tgtName = tgt != null && tgt.ChildCount() > 0 ? tgt.Child(0).Text() : tgt != null ? tgt.Text() : ""
+                var tgtName = ""
+                if tgt != null
+                {
+                    if tgt.Kind() == "MemberAccessExpression" && tgt.ChildCount() > 2
+                    {
+                        tgtName = tgt.Child(2).Text()
+                    }
+                    else if tgt.ChildCount() > 0
+                    {
+                        tgtName = tgt.Child(0).Text()
+                    }
+                    else
+                    {
+                        tgtName = tgt.Text()
+                    }
+                }
                 var cii = 0
                 while cii < _classCount
                 {
@@ -1494,6 +1540,12 @@ _localCount = 0
 
         public function GetClassFieldCount(index: i32): i32
         {
+            if index < 0 || index >= _classFieldCounts.Length
+            {
+                System.Console.WriteLine("GCDB:" + string(index) + "/c=" + string(_classCount) + "/len=" + string(_classFieldCounts.Length))
+                return 0
+            }
+
             return _classFieldCounts[index]
         }
 

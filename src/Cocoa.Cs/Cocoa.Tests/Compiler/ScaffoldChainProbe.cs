@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Reflection.Metadata;
 using Xunit;
 
 namespace Cocoa.Tests.Compiler
@@ -89,6 +90,101 @@ namespace Cocoa.Tests.Compiler
             {
                 Console.SetOut(original);
             }
+        }
+    [Fact]
+        public void SelfCompiled_StringArrayMain_LoadsAndRuns()
+        {
+            var root = AppContext.BaseDirectory;
+            while (root != null && !File.Exists(Path.Combine(root, "src", "Cocoa.SDK", "System.Core", "String.co")))
+            {
+                root = Path.GetDirectoryName(root);
+            }
+
+            var compilerDir = Path.Combine(root!, "src", "Cocoa.Co", "Cocoa.Compiler");
+            var files = Directory.GetFiles(compilerDir, "*.co", SearchOption.AllDirectories)
+                .OrderBy(f => f, StringComparer.Ordinal);
+            var trees = ImmutableArray.CreateBuilder<SyntaxTree>();
+            foreach (var f in files)
+            {
+                trees.Add(SyntaxTree.Parse(File.ReadAllText(f)));
+            }
+
+            var tiny = "function Main(args: string[]): i32 {" + Environment.NewLine +
+                "    var s = \"x\"" + Environment.NewLine +
+                "    System.Console.WriteLine(s)" + Environment.NewLine +
+                "    return 0" + Environment.NewLine +
+                "}" + Environment.NewLine;
+            var main = "using System\n" +
+                "function Main(args: string[]): i32\n{\n" +
+                "    let h = Cocoa.CodeGen.IlDriver.BuildDllHex(args[0])\n" +
+                "    System.Console.WriteLine(\"HEX:\" + h)\n" +
+                "    return 0\n}\n";
+            trees.Add(SyntaxTree.Parse(main));
+
+            var original = Console.Out;
+            string hex;
+            try
+            {
+                using var writer = new StringWriter();
+                Console.SetOut(writer);
+                var compilation = Compilation.Create("Main",
+                    new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location },
+                    trees.ToArray());
+                var result = compilation.Evaluate(new[] { tiny }, new Dictionary<VariableSymbol, object>());
+                var output = writer.ToString().Replace("\r\n", "\n");
+                var diag = result.Diagnostics.HasErrors() ? string.Join(" | ", result.Diagnostics.Select(d => d.Message)) : "";
+                Console.SetOut(original);
+                Assert.True(result.Diagnostics.HasErrors() == false, "diag: " + diag);
+                var hl = output.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.StartsWith("HEX:", StringComparison.Ordinal));
+                Assert.NotNull(hl);
+                hex = hl![4..].Trim();
+                Assert.False(hex.StartsWith("ERR:", StringComparison.Ordinal), "自编失败: " + hex);
+            }
+            finally
+            {
+                Console.SetOut(original);
+            }
+
+            var dir = Path.Combine(Path.GetTempPath(), "cocoa-strarr", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            var dll = Path.Combine(dir, "T.dll");
+            File.WriteAllBytes(dll, SelfHostedEndToEndTests.HexToBytes(hex));
+            var asm = System.Reflection.Assembly.LoadFile(dll);
+            var ep = asm.EntryPoint!;
+            var pars = ep.GetParameters();
+            var sigInfo = "paramCount=" + pars.Length +
+                " ret=" + ep.ReturnType.Name +
+                " p0=" + (pars.Length > 0 ? pars[0].ParameterType.ToString() : "-");
+            var mt = ep.GetMethodBody();
+            sigInfo += " locals=" + (mt?.LocalVariables.Count ?? -1) +
+                " lsig=" + (mt?.LocalSignatureMetadataToken ?? 0) +
+                " lv0=" + (mt != null && mt.LocalVariables.Count > 0 ? mt.LocalVariables[0].LocalType.ToString() : "-");
+            System.Console.Error.WriteLine("entry sig: " + sigInfo);
+            object? exit;
+            string? runOut;
+            try
+            {
+                using var writer = new StringWriter();
+                Console.SetOut(writer);
+                try
+                {
+                    exit = asm.EntryPoint!.Invoke(null, new object[] { new[] { "hello" } });
+                }
+                catch (Exception ex)
+                {
+                    throw new Xunit.Sdk.XunitException("sig=" + sigInfo + " err=" + ex.GetType().Name + ":" + ex.Message);
+                }
+
+                Console.SetOut(original);
+                runOut = writer.ToString().Replace("\r\n", "\n").Trim();
+            }
+            finally
+            {
+                Console.SetOut(original);
+            }
+
+            Assert.Equal(0, (int)exit!);
+            Assert.Equal("x", runOut);
         }
     }
 }

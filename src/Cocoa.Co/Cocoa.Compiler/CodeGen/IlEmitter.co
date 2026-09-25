@@ -1768,8 +1768,25 @@ private field _pendingCount: i32
                         }
                     }
 
-                    // 静态类方法调用（P.M() → Call，无接收者）或 BCL 静态成员（Console.WriteLine）
-                    let targetName = expr.Child(0).ChildCount() > 0 ? expr.Child(0).Child(0).Text() : ""
+                    // 静态类方法调用（P.M() → Call，无接收者）或 BCL 静态成员（Console.WriteLine / System.Console.WriteLine）
+                    var targetName = ""
+                    let tgt0 = expr.Child(0)
+                    if tgt0 != null
+                    {
+                        if tgt0.Kind() == "MemberAccessExpression" && tgt0.ChildCount() > 2
+                        {
+                            targetName = tgt0.Child(2).Text()
+                        }
+                        else if tgt0.ChildCount() > 0
+                        {
+                            targetName = tgt0.Child(0).Text()
+                        }
+                        else
+                        {
+                            targetName = tgt0.Text()
+                        }
+                    }
+
                     let fullName = targetName + "." + expr.Child(2).Text()
                     let staticToken = ClassStaticToken(fullName)
                     if staticToken >= 0
