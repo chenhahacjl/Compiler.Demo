@@ -699,6 +699,17 @@ private field _pendingCount: i32
                 return false
             }
 
+            if expr.Kind() == "AssignmentExpression"
+            {
+                // 目标为当前类字段 → 字段赋值不留栈值；局部赋值留 dup
+                let tgta = expr.Child(0)
+                let tname = tgta.ChildCount() > 0 ? tgta.Child(0).Text() : tgta.Text()
+                if tname.Length > 0 && CurFieldIndex(tname) >= 0
+                {
+                    return false
+                }
+            }
+
             if expr.Kind() == "CallExpression"
             {
                 // 先查当前类裸方法（避免 MethodIndex 对 class 方法的副作用 _error）；再查顶层方法
@@ -1556,23 +1567,14 @@ private field _pendingCount: i32
             else if k == "AssignmentExpression"
             {
                 let tgt2 = expr.Child(0)
-                var tgtName2 = ""
-                if tgt2.Kind() == "VariableExpression"
-                {
-                    tgtName2 = VarNameOf(tgt2)
-                }
-                else if tgt2.Kind() == "MemberAccessExpression" && tgt2.ChildCount() > 2
-                {
-                    tgtName2 = tgt2.Child(2).Text()
-                }
+                var tgtName2 = tgt2.ChildCount() > 0 ? tgt2.Child(0).Text() : tgt2.Text()
 
                 let fldIdx2 = tgtName2.Length > 0 ? CurFieldIndex(tgtName2) : -1
                 if fldIdx2 >= 0
                 {
-                    // 字段赋值：this 接收者 + 值 + dup + stfld
+                    // 字段赋值：this 接收者 + 值 + stfld（[obj, value]，无残留值）
                     _assembler.EmitOperand("Ldarg", 12, 0, -1)
                     EmitExpression(expr.Child(1))
-                    _assembler.EmitOperand("Dup", 0, 0, -1)
                     _assembler.EmitOperand("Stfld", 9, _curFieldTokens[fldIdx2], -1)
                 }
                 else
