@@ -1477,6 +1477,10 @@ private field _pendingCount: i32
                     let token = UsToken(StringLiteralValue(expr.Child(0).Text()))
                     _assembler.EmitOperand("Ldstr", 6, token, -1)
                 }
+                else if expr.Child(0).Kind() == "NullKeyword"
+                {
+                    _assembler.EmitOperand("Ldnull", 0, 0, -1)
+                }
                 else
                 {
                     let text = expr.Child(0).Text()
@@ -1551,9 +1555,32 @@ private field _pendingCount: i32
             }
             else if k == "AssignmentExpression"
             {
-                EmitExpression(expr.Child(1))
-                _assembler.EmitOperand("Dup", 0, 0, -1)
-                _assembler.EmitOperand("Stloc", 12, LocalIndex(expr.Child(0).Text()), -1)
+                let tgt2 = expr.Child(0)
+                var tgtName2 = ""
+                if tgt2.Kind() == "VariableExpression"
+                {
+                    tgtName2 = VarNameOf(tgt2)
+                }
+                else if tgt2.Kind() == "MemberAccessExpression" && tgt2.ChildCount() > 2
+                {
+                    tgtName2 = tgt2.Child(2).Text()
+                }
+
+                let fldIdx2 = tgtName2.Length > 0 ? CurFieldIndex(tgtName2) : -1
+                if fldIdx2 >= 0
+                {
+                    // 字段赋值：this 接收者 + 值 + dup + stfld
+                    _assembler.EmitOperand("Ldarg", 12, 0, -1)
+                    EmitExpression(expr.Child(1))
+                    _assembler.EmitOperand("Dup", 0, 0, -1)
+                    _assembler.EmitOperand("Stfld", 9, _curFieldTokens[fldIdx2], -1)
+                }
+                else
+                {
+                    EmitExpression(expr.Child(1))
+                    _assembler.EmitOperand("Dup", 0, 0, -1)
+                    _assembler.EmitOperand("Stloc", 12, LocalIndex(expr.Child(0).Text()), -1)
+                }
             }
             else if k == "ConditionalExpression"
             {

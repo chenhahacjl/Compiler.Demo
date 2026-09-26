@@ -776,6 +776,7 @@ namespace Cocoa.CodeGen
             rvaState[0] = rvaState[0] + Align4(12 + bodies[row].Length / 2)
 
             let localCount = emitter.LocalCount()
+            let binderLocalCount = binder.GetFunctionLocalCount(fn)
             var blob = ""
             if localCount > 0
             {
@@ -783,7 +784,16 @@ namespace Cocoa.CodeGen
                 var lq = 0
                 while lq < localCount
                 {
-                    localDescs[lq] = LocalTypeForSig(binder, binder.GetFunctionLocalType(fn, lq))
+                    if lq < binderLocalCount
+                    {
+                        localDescs[lq] = LocalTypeForSig(binder, binder.GetFunctionLocalType(fn, lq))
+                    }
+                    else
+                    {
+                        // for 降级等引入的额外局部（emitter 已分配但 binder 局部表未计）→ 占位 i32
+                        localDescs[lq] = "i32"
+                    }
+
                     lq = lq + 1
                 }
 

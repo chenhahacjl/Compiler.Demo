@@ -12,7 +12,7 @@ namespace Cocoa.Tests.Compiler
         private readonly ITestOutputHelper _out;
         public SelfCompileProbeTests(ITestOutputHelper output) { _out = output; }
 
-        [Fact(Skip = "阶段8 B1→B2：B1 全量产出（233K）可加载；B1-run InvalidProgram。ilverify 精确定位：UnrecognizedLocalNumber + StackUnexpected[found Int32][expected ref Node/object]——局部签名类型/槽位错配（binder 局部类型表序 vs emitter AllocLocal 序），下轮对 WalkClassNames 等最小方法比对局部表序。EncodeTypeHex 未知类型已回退 object。基建：HuntInvalid/ilverify 就绪")]
+        [Fact(Skip = "阶段8 B1→B2：Ldnull/字段赋值/局部槽位补位后 B1 产出有效可加载；ilverify 错误已从 ~200 降至 100（UnrecognizedLocalNumber 15 / StackUnexpected 35 / ReturnEmpty 28），剩余为特定语料构造发射（ReturnEmpty=方法尾栈残留、StackUnexpected 局部类型错配），下轮逐项修 emitter 栈/局部类型路径。ilverify 工具已接入")]
         public void CompileFullSelfCompilerSource()
         {
             var root = AppContext.BaseDirectory;
