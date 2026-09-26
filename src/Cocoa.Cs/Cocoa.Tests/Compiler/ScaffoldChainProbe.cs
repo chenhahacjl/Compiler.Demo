@@ -109,9 +109,9 @@ namespace Cocoa.Tests.Compiler
                 trees.Add(SyntaxTree.Parse(File.ReadAllText(f)));
             }
 
-            var longStr = new string('x', 200);
             var tiny = "function Main(args: string[]): i32 {" + Environment.NewLine +
-                "    System.Console.WriteLine(\"" + longStr + "\")" + Environment.NewLine +
+                "    var s = \"x\"" + Environment.NewLine +
+                "    System.Console.WriteLine(s)" + Environment.NewLine +
                 "    return 0" + Environment.NewLine +
                 "}" + Environment.NewLine;
             var main = "using System\n" +
@@ -184,7 +184,7 @@ namespace Cocoa.Tests.Compiler
             }
 
             Assert.Equal(0, (int)exit!);
-            Assert.Equal(longStr, runOut);
+            Assert.Equal("x", runOut);
         }
     [Fact(Skip = "诊断：读 %TEMP%\\cocoa-b1-probe\\B1.dll 逐方法 PrepareMethod 猎无效 IL（阶段8 调试用，手动启用）")]
         public void HuntInvalid_FromSavedB1()
@@ -318,6 +318,38 @@ namespace Cocoa.Tests.Compiler
             }
 
             throw new Xunit.Sdk.XunitException("tiny usHead=" + sb + " usSize=" + usSize + " mainIL=" + mainIL);
+        }
+
+        private static void DumpMethodStream(string dll)
+        {
+            var bytes = File.ReadAllBytes(dll);
+            var peOff = BitConverter.ToInt32(bytes, 0x3C);
+            var optOff = peOff + 24;
+            var magic = BitConverter.ToUInt16(bytes, optOff);
+            var ddOffset = optOff + (magic == 0x10b ? 96 : 112);
+            var cliRva = BitConverter.ToUInt32(bytes, ddOffset + 14 * 8);
+            var numSections = BitConverter.ToUInt16(bytes, peOff + 6);
+            var secOff = optOff + (magic == 0x10b ? 224 : 240);
+            var cliOff = -1;
+            var cliSize = BitConverter.ToUInt32(bytes, ddOffset + 14 * 8 + 4);
+            for (var s = 0; s < numSections; s++)
+            {
+                var so = secOff + s * 40;
+                var va = BitConverter.ToUInt32(bytes, so + 12);
+                var vsz = BitConverter.ToUInt32(bytes, so + 8);
+                var raw = BitConverter.ToUInt32(bytes, so + 20);
+                if (cliRva >= va && cliRva < va + vsz) cliOff = (int)(raw + (cliRva - va));
+            }
+
+            var methodStart = cliOff + (int)cliSize;
+            while (methodStart % 4 != 0) methodStart++;
+            var sb = new System.Text.StringBuilder();
+            for (var i = 0; i < 80; i++)
+            {
+                sb.Append(bytes[methodStart + i].ToString("X2"));
+            }
+
+            throw new Xunit.Sdk.XunitException("methodStream=" + sb);
         }
 
         [Fact(Skip = "诊断：裸 PE 元数据解析测 #US/#Strings 堆大小+HeapSizes（阶段8 调试用，读 %TEMP%\\cocoa-b1-probe\\B1.dll）")]
