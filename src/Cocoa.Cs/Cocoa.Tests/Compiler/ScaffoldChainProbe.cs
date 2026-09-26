@@ -109,10 +109,12 @@ namespace Cocoa.Tests.Compiler
                 trees.Add(SyntaxTree.Parse(File.ReadAllText(f)));
             }
 
-            var tiny = "function Main(args: string[]): i32 {" + Environment.NewLine +
-                "    var s = \"x\"" + Environment.NewLine +
-                "    System.Console.WriteLine(s)" + Environment.NewLine +
-                "    return 0" + Environment.NewLine +
+            var tiny = "class E {" + Environment.NewLine +
+                "    private field x: i32" + Environment.NewLine +
+                "}" + Environment.NewLine +
+                "function Main(args: string[]): i32 {" + Environment.NewLine +
+                "    var arr = new E[2]" + Environment.NewLine +
+                "    return arr.Length" + Environment.NewLine +
                 "}" + Environment.NewLine;
             var main = "using System\n" +
                 "function Main(args: string[]): i32\n{\n" +
@@ -183,8 +185,69 @@ namespace Cocoa.Tests.Compiler
                 Console.SetOut(original);
             }
 
-            Assert.Equal(0, (int)exit!);
-            Assert.Equal("x", runOut);
+            Assert.Equal(2, (int)exit!);
+            Assert.Equal("", runOut);
+        }
+    [Fact(Skip = "诊断：读 %TEMP%\\cocoa-b1-probe\\B1.dll 逐方法 PrepareMethod 猎无效 IL（阶段8 调试用，手动启用）")]
+        public void HuntInvalid_FromSavedB1()
+        {
+            var probeDir = Path.Combine(Path.GetTempPath(), "cocoa-b1-probe");
+            var b1 = Path.Combine(probeDir, "B1.dll");
+            Assert.True(File.Exists(b1), "B1.dll 未保存: " + b1 + "（先跑 SelfCompileProbeTests）");
+            var asm = System.Reflection.Assembly.LoadFile(b1);
+            var bad = new System.Text.StringBuilder();
+            var checkedCount = 0;
+            foreach (var type in asm.GetTypes())
+            {
+                foreach (var method in type.GetMethods(System.Reflection.BindingFlags.Public |
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static |
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.DeclaredOnly))
+                {
+                    checkedCount++;
+                    try
+                    {
+                        System.Runtime.CompilerServices.RuntimeHelpers.PrepareMethod(method.MethodHandle);
+                    }
+                    catch (Exception ex)
+                    {
+                        bad.AppendLine(type.Name + "." + method.Name + " => " + ex.GetType().Name + ": " + ex.Message);
+                    }
+                }
+            }
+
+            throw new Xunit.Sdk.XunitException("checked=" + checkedCount + " bad=" + (checkedCount > 0 ? bad.Length : 0) +
+                (bad.Length > 0 ? "\n" + bad.ToString().Substring(0, Math.Min(bad.Length, 2000)) : ""));
+        }
+
+        [Fact(Skip = "诊断：读 %TEMP%\\cocoa-b1-probe\\B1.dll 转储 Main/BindCompilationUnit IL（阶段8 调试用，手动启用）")]
+        public void DumpMainIL_FromSavedB1()
+        {
+            var probeDir = Path.Combine(Path.GetTempPath(), "cocoa-b1-probe");
+            var b1 = Path.Combine(probeDir, "B1.dll");
+            Assert.True(File.Exists(b1), "B1.dll 未保存");
+            var asm = System.Reflection.Assembly.LoadFile(b1);
+            var info = "";
+            foreach (var type in asm.GetTypes())
+            {
+                foreach (var method in type.GetMethods(System.Reflection.BindingFlags.Public |
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static |
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.DeclaredOnly))
+                {
+                    if (method.Name == "BindCompilationUnit" || method.Name == "Main")
+                    {
+                        var body = method.GetMethodBody();
+                        var bytes = body?.GetILAsByteArray() ?? Array.Empty<byte>();
+                        info += method.DeclaringType!.Name + "." + method.Name +
+                            " ilbytes=" + bytes.Length +
+                            " maxstack=" + body?.MaxStackSize +
+                            " locals=" + body?.LocalVariables.Count +
+                            " sigTok=" + body?.LocalSignatureMetadataToken +
+                            " il=" + Convert.ToHexString(bytes.Take(Math.Min(bytes.Length, 128)).ToArray()) + "\n";
+                    }
+                }
+            }
+
+            throw new Xunit.Sdk.XunitException(info);
         }
     }
 }

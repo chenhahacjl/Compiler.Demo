@@ -1043,6 +1043,22 @@ var bclKeys = new string[2048]
 
                     if found < 0
                     {
+                        if usCount[0] >= usTexts.Length
+                        {
+                            var ug2 = new string[usTexts.Length * 2]
+                            var ut2 = new i32[usTokens.Length * 2]
+                            var uq2 = 0
+                            while uq2 < usCount[0]
+                            {
+                                ug2[uq2] = usTexts[uq2]
+                                ut2[uq2] = usTokens[uq2]
+                                uq2 = uq2 + 1
+                            }
+
+                            usTexts = ug2
+                            usTokens = ut2
+                        }
+
                         usTexts[usCount[0]] = text
                         usTokens[usCount[0]] = 0x70000000 + usBytes[0]
                         usBytes[0] = usBytes[0] + MetadataEncode.UsBlobHex(text).Length / 2
@@ -1091,6 +1107,31 @@ var bclKeys = new string[2048]
                 }
 
                 i = i + 1
+            }
+
+            if bclCount[0] >= bclKeys.Length
+            {
+                let bg = new string[bclKeys.Length * 2]
+                let bt = new i32[bclTokens.Length * 2]
+                let bp = new i32[bclParents.Length * 2]
+                let bs = new string[bclSigs.Length * 2]
+                let bn = new string[bclNames.Length * 2]
+                var bq = 0
+                while bq < bclCount[0]
+                {
+                    bg[bq] = bclKeys[bq]
+                    bt[bq] = bclTokens[bq]
+                    bp[bq] = bclParents[bq]
+                    bs[bq] = bclSigs[bq]
+                    bn[bq] = bclNames[bq]
+                    bq = bq + 1
+                }
+
+                bclKeys = bg
+                bclTokens = bt
+                bclParents = bp
+                bclSigs = bs
+                bclNames = bn
             }
 
             bclKeys[bclCount[0]] = key
