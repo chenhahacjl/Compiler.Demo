@@ -110,8 +110,7 @@ namespace Cocoa.Tests.Compiler
             }
 
             var tiny = "function Main(args: string[]): i32 {" + Environment.NewLine +
-                "    var t = args[0]" + Environment.NewLine +
-                "    System.Console.WriteLine(t)" + Environment.NewLine +
+                "    System.Console.WriteLine(\"\u4e2d\u6587\")" + Environment.NewLine +
                 "    return 0" + Environment.NewLine +
                 "}" + Environment.NewLine;
             var main = "using System\n" +
@@ -184,9 +183,9 @@ namespace Cocoa.Tests.Compiler
             }
 
             Assert.Equal(0, (int)exit!);
-            Assert.Equal("hello", runOut);
+            Assert.Equal("\u4e2d\u6587", runOut);
         }
-    [Fact]
+    [Fact(Skip = "诊断：读 %TEMP%\\cocoa-b1-probe\\B1.dll 逐方法 PrepareMethod 猎无效 IL（阶段8 调试用，手动启用）")]
         public void HuntInvalid_FromSavedB1()
         {
             var probeDir = Path.Combine(Path.GetTempPath(), "cocoa-b1-probe");
@@ -217,7 +216,7 @@ namespace Cocoa.Tests.Compiler
                 (bad.Length > 0 ? "\n" + bad.ToString().Substring(0, Math.Min(bad.Length, 2000)) : ""));
         }
 
-        [Fact(Skip = "诊断：读 %TEMP%\\cocoa-b1-probe\\B1.dll 转储 Main/BindCompilationUnit IL（阶段8 调试用，手动启用）")]
+        [Fact(Skip = "诊断：读 %TEMP%\\cocoa-b1-probe\\B1.dll 解析 Main IL token（阶段8 调试用，手动启用）")]
         public void DumpMainIL_FromSavedB1()
         {
             var probeDir = Path.Combine(Path.GetTempPath(), "cocoa-b1-probe");
@@ -231,18 +230,41 @@ namespace Cocoa.Tests.Compiler
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static |
                     System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.DeclaredOnly))
                 {
-                    if (method.Name == "BindCompilationUnit" || method.Name == "Main")
+                    if (method.Name == "Main" || method.Name == "BindCompilationUnit")
                     {
                         var body = method.GetMethodBody();
                         var bytes = body?.GetILAsByteArray() ?? Array.Empty<byte>();
                         info += method.DeclaringType!.Name + "." + method.Name +
                             " ilbytes=" + bytes.Length +
-                            " maxstack=" + body?.MaxStackSize +
-                            " locals=" + body?.LocalVariables.Count +
-                            " sigTok=" + body?.LocalSignatureMetadataToken +
-                            " il=" + Convert.ToHexString(bytes.Take(Math.Min(bytes.Length, 128)).ToArray()) + "\n";
+                            " il=" + Convert.ToHexString(bytes.Take(Math.Min(bytes.Length, 96)).ToArray()) + "\n";
                     }
                 }
+            }
+
+            try
+            {
+                var t = asm.ManifestModule.ResolveMethod(0x060000E0);
+                info += "rowE0=" + (t?.DeclaringType?.Name + "." + t?.Name ?? "null");
+                if (t != null && t is System.Reflection.MethodInfo mi)
+                {
+                    info += " ret=" + mi.ReturnType + " p=" + string.Join(",", t.GetParameters().Select(p => p.ParameterType + ":" + p.Name));
+                }
+            }
+            catch (Exception ex)
+            {
+                info += "rowE0-ERR=" + ex.Message;
+            }
+
+            try
+            {
+                var t2 = asm.ManifestModule.ResolveMember(0x0A000005);
+                info += " row5=" + (t2?.Name ?? "null");
+                var t3 = asm.ManifestModule.ResolveMember(0x0A000006);
+                info += " row6=" + (t3?.Name ?? "null");
+            }
+            catch (Exception ex2)
+            {
+                info += " rowrefs-ERR=" + ex2.Message;
             }
 
             throw new Xunit.Sdk.XunitException(info);
@@ -350,6 +372,83 @@ namespace Cocoa.Tests.Compiler
             }
 
             throw new Xunit.Sdk.XunitException("methodStream=" + sb);
+        }
+
+[Fact]
+        public void TwoClassStaticMethods_Resolve()
+        {
+            var root = AppContext.BaseDirectory;
+            while (root != null && !File.Exists(Path.Combine(root, "src", "Cocoa.SDK", "System.Core", "String.co")))
+            {
+                root = Path.GetDirectoryName(root);
+            }
+
+            var compilerDir = Path.Combine(root!, "src", "Cocoa.Co", "Cocoa.Compiler");
+            var files = Directory.GetFiles(compilerDir, "*.co", SearchOption.AllDirectories)
+                .OrderBy(f => f, StringComparer.Ordinal);
+            var trees = ImmutableArray.CreateBuilder<SyntaxTree>();
+            foreach (var f in files)
+            {
+                trees.Add(SyntaxTree.Parse(File.ReadAllText(f)));
+            }
+
+            var tiny = "class A {" + Environment.NewLine +
+                "    public static function F(): string { return \"x\" }" + Environment.NewLine +
+                "}" + Environment.NewLine +
+                "class B {" + Environment.NewLine +
+                "    public static function F(): i32 { return 7 }" + Environment.NewLine +
+                "}" + Environment.NewLine +
+                "function Main(args: string[]): i32 {" + Environment.NewLine +
+                "    var x = B.F()" + Environment.NewLine +
+                "    return x" + Environment.NewLine +
+                "}" + Environment.NewLine;
+            var main = "using System\n" +
+                "function Main(args: string[]): i32\n{\n" +
+                "    let h = Cocoa.CodeGen.IlDriver.BuildDllHex(args[0])\n" +
+                "    System.Console.WriteLine(\"HEX:\" + h)\n" +
+                "    return 0\n}\n";
+            trees.Add(SyntaxTree.Parse(main));
+
+            var original = Console.Out;
+            string hex;
+            try
+            {
+                using var writer = new StringWriter();
+                Console.SetOut(writer);
+                var compilation = Compilation.Create("Main",
+                    new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location },
+                    trees.ToArray());
+                var result = compilation.Evaluate(new[] { tiny }, new Dictionary<VariableSymbol, object>());
+                var output = writer.ToString().Replace("\r\n", "\n");
+                var diag = result.Diagnostics.HasErrors() ? string.Join(" | ", result.Diagnostics.Select(d => d.Message)) : "";
+                Console.SetOut(original);
+                Assert.True(result.Diagnostics.HasErrors() == false, "diag: " + diag);
+                var hl = output.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.StartsWith("HEX:", StringComparison.Ordinal));
+                Assert.NotNull(hl);
+                hex = hl![4..].Trim();
+                Assert.False(hex.StartsWith("ERR:", StringComparison.Ordinal), "自编失败: " + hex);
+            }
+            finally
+            {
+                Console.SetOut(original);
+            }
+
+            var dir = Path.Combine(Path.GetTempPath(), "cocoa-twocl", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            var dll = Path.Combine(dir, "T.dll");
+            File.WriteAllBytes(dll, SelfHostedEndToEndTests.HexToBytes(hex));
+            var asm = System.Reflection.Assembly.LoadFile(dll);
+            object? exit;
+            try
+            {
+                exit = asm.EntryPoint!.Invoke(null, new object[] { new[] { "hello" } });
+            }
+            catch (Exception ex)
+            {
+                throw new Xunit.Sdk.XunitException("invoke err: " + ex.GetType().Name + ":" + ex.Message);
+            }
+
+            Assert.Equal(7, (int)exit!);
         }
 
         [Fact(Skip = "诊断：裸 PE 元数据解析测 #US/#Strings 堆大小+HeapSizes（阶段8 调试用，读 %TEMP%\\cocoa-b1-probe\\B1.dll）")]
