@@ -167,7 +167,8 @@ namespace Cocoa.CodeGen
                 return "1d" + EncodeTypeHex(After(desc, 8))
             }
 
-            return ""
+            // 未知/未推断类型（"?"）→ 保守回退 object（1c）：防止空字节使签名级联错乱
+            return "1c"
         }
 
         /// <summary>M5-a5 批 2：方法签名（II.23.2.16 MethodDefSig）。
