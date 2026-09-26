@@ -186,7 +186,7 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal(0, (int)exit!);
             Assert.Equal("hello", runOut);
         }
-    [Fact(Skip = "诊断：读 %TEMP%\\cocoa-b1-probe\\B1.dll 逐方法 PrepareMethod 猎无效 IL（阶段8 调试用，手动启用）")]
+    [Fact]
         public void HuntInvalid_FromSavedB1()
         {
             var probeDir = Path.Combine(Path.GetTempPath(), "cocoa-b1-probe");

@@ -65,15 +65,15 @@ namespace Cocoa.CodeGen
             }
 
             // ---- 收集 BCL 调用 + 字符串字面量（所有函数体，含类方法）----
-var bclKeys = new string[2048]
-            var bclTokens = new i32[2048]
-            var bclParents = new i32[2048]
-            var bclSigs = new string[2048]
-            var bclNames = new string[2048]
+            var bclKeys = new string[16384]
+            var bclTokens = new i32[16384]
+            var bclParents = new i32[16384]
+            var bclSigs = new string[16384]
+            var bclNames = new string[16384]
             var bclCount = new i32[1]
             bclCount[0] = 0
-            var usTexts = new string[2048]
-            var usTokens = new i32[2048]
+            var usTexts = new string[16384]
+            var usTokens = new i32[16384]
             var usCount = new i32[1]
             usCount[0] = 0
             var usBytes = new i32[1]
