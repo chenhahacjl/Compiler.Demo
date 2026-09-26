@@ -956,6 +956,19 @@ _localCount = 0
                 return "?"
             }
 
+            if k == "VariableExpression"
+            {
+                // var x = someVar / someField → 参数/局部/当前类字段类型
+                let vn = node.ChildCount() > 0 ? node.Child(0).Text() : node.Text()
+                let vt = LocalTypeOrParamOf(vn)
+                if vt.Length > 0
+                {
+                    return vt
+                }
+
+                return "?"
+            }
+
             if k == "ElementAccessExpression"
             {
                 // x[i]：x 的参数/局部类型为数组 → 元素类型（args[0] → string）
@@ -1057,6 +1070,38 @@ _localCount = 0
                     }
 
                     cvi = cvi + 1
+                }
+
+                // 裸类方法（ClassNameOf 等私有助手）→ 当前类方法的返回类型
+                if _currentClass != ""
+                {
+                    var cci2 = 0
+                    while cci2 < _classCount
+                    {
+                        if _classNames[cci2] == _currentClass
+                        {
+                            var cmi3 = 0
+                            while cmi3 < _classMethodCounts[cci2]
+                            {
+                                let off3 = _classMethodOffsets[cci2] + cmi3
+                                if _classMethodNames[off3] == m
+                                {
+                                    return _functions[_classMethodIndexes[off3]].ReturnType()
+                                }
+
+                                cmi3 = cmi3 + 1
+                            }
+                        }
+
+                        cci2 = cci2 + 1
+                    }
+                }
+
+                // 顶层函数（全局助手）→ 函数返回类型
+                var gfi2 = IndexOfString(_functionNames, _functionCount, m)
+                if gfi2 >= 0
+                {
+                    return _functions[gfi2].ReturnType()
                 }
 
                 return "?"

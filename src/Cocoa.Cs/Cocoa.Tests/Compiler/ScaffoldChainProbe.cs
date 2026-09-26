@@ -216,7 +216,7 @@ namespace Cocoa.Tests.Compiler
                 (bad.Length > 0 ? "\n" + bad.ToString().Substring(0, Math.Min(bad.Length, 2000)) : ""));
         }
 
-        [Fact(Skip = "诊断：读 %TEMP%\\cocoa-b1-probe\\B1.dll 解析 Main IL token（阶段8 调试用，手动启用）")]
+        [Fact]
         public void DumpMainIL_FromSavedB1()
         {
             var probeDir = Path.Combine(Path.GetTempPath(), "cocoa-b1-probe");
@@ -230,7 +230,7 @@ namespace Cocoa.Tests.Compiler
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static |
                     System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.DeclaredOnly))
                 {
-                    if (method.Name == "Main" || method.Name == "BindCompilationUnit")
+                    if (method.Name == "Main" || method.Name == "BindCompilationUnit" || method.Name == "KnownType")
                     {
                         var body = method.GetMethodBody();
                         var bytes = body?.GetILAsByteArray() ?? Array.Empty<byte>();
