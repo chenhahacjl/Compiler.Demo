@@ -230,7 +230,7 @@ namespace Cocoa.Tests.Compiler
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static |
                     System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.DeclaredOnly))
                 {
-                    if (method.Name == "Main" || method.Name == "BindCompilationUnit" || method.Name == "KnownType" || method.Name == "WalkClassNames")
+                    if (method.Name == "Main" || method.Name == "BindCompilationUnit" || method.Name == "KnownType" || method.Name == "WalkClassNames" || method.Name == "BindClassDeclaration")
                     {
                         var body = method.GetMethodBody();
                         var bytes = body?.GetILAsByteArray() ?? Array.Empty<byte>();
