@@ -109,12 +109,10 @@ namespace Cocoa.Tests.Compiler
                 trees.Add(SyntaxTree.Parse(File.ReadAllText(f)));
             }
 
-            var tiny = "class E {" + Environment.NewLine +
-                "    private field x: i32" + Environment.NewLine +
-                "}" + Environment.NewLine +
-                "function Main(args: string[]): i32 {" + Environment.NewLine +
-                "    var arr = new E[2]" + Environment.NewLine +
-                "    return arr.Length" + Environment.NewLine +
+            var longStr = new string('x', 200);
+            var tiny = "function Main(args: string[]): i32 {" + Environment.NewLine +
+                "    System.Console.WriteLine(\"" + longStr + "\")" + Environment.NewLine +
+                "    return 0" + Environment.NewLine +
                 "}" + Environment.NewLine;
             var main = "using System\n" +
                 "function Main(args: string[]): i32\n{\n" +
@@ -185,8 +183,8 @@ namespace Cocoa.Tests.Compiler
                 Console.SetOut(original);
             }
 
-            Assert.Equal(2, (int)exit!);
-            Assert.Equal("", runOut);
+            Assert.Equal(0, (int)exit!);
+            Assert.Equal(longStr, runOut);
         }
     [Fact(Skip = "诊断：读 %TEMP%\\cocoa-b1-probe\\B1.dll 逐方法 PrepareMethod 猎无效 IL（阶段8 调试用，手动启用）")]
         public void HuntInvalid_FromSavedB1()
