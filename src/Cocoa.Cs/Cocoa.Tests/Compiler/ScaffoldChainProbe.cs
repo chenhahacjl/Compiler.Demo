@@ -247,5 +247,166 @@ namespace Cocoa.Tests.Compiler
 
             throw new Xunit.Sdk.XunitException(info);
         }
+
+        private static void DumpUsHead(string dll, string mainIL)
+        {
+            var bytes = File.ReadAllBytes(dll);
+            var peOff = BitConverter.ToInt32(bytes, 0x3C);
+            var optOff = peOff + 24;
+            var magic = BitConverter.ToUInt16(bytes, optOff);
+            var ddOffset = optOff + (magic == 0x10b ? 96 : 112);
+            var cliRva = BitConverter.ToUInt32(bytes, ddOffset + 14 * 8);
+            var numSections = BitConverter.ToUInt16(bytes, peOff + 6);
+            var secOff = optOff + (magic == 0x10b ? 224 : 240);
+            var cliOff = -1;
+            for (var s = 0; s < numSections; s++)
+            {
+                var so = secOff + s * 40;
+                var va = BitConverter.ToUInt32(bytes, so + 12);
+                var vsz = BitConverter.ToUInt32(bytes, so + 8);
+                var raw = BitConverter.ToUInt32(bytes, so + 20);
+                if (cliRva >= va && cliRva < va + vsz) cliOff = (int)(raw + (cliRva - va));
+            }
+
+            if (cliOff < 0) { throw new Xunit.Sdk.XunitException("dump: no cli"); }
+
+            var metaRva = BitConverter.ToUInt32(bytes, cliOff + 8);
+            var metaOff = -1;
+            for (var s = 0; s < numSections; s++)
+            {
+                var so = secOff + s * 40;
+                var va = BitConverter.ToUInt32(bytes, so + 12);
+                var vsz = BitConverter.ToUInt32(bytes, so + 8);
+                var raw = BitConverter.ToUInt32(bytes, so + 20);
+                if (metaRva >= va && metaRva < va + vsz) metaOff = (int)(raw + (metaRva - va));
+            }
+
+            if (metaOff < 0) { throw new Xunit.Sdk.XunitException("dump: no meta"); }
+
+            var verLen = BitConverter.ToUInt32(bytes, metaOff + 12);
+            var sh = metaOff + 16 + (int)verLen;
+            sh++;
+            while (sh % 4 != 0) sh++;
+            var count = BitConverter.ToUInt16(bytes, sh);
+            var sp = sh + 2;
+            var usOff = -1;
+            var usSize = 0;
+            for (var i = 0; i < count; i++)
+            {
+                var so = BitConverter.ToUInt32(bytes, sp);
+                var ss = BitConverter.ToUInt32(bytes, sp + 4);
+                var nameOff = sp + 8;
+                var ne = nameOff;
+                while (bytes[ne] != 0) ne++;
+                var name = System.Text.Encoding.ASCII.GetString(bytes, nameOff, ne - nameOff);
+                if (name == "#US")
+                {
+                    usOff = metaOff + (int)so;
+                    usSize = (int)ss;
+                }
+
+                sp = ne + 1;
+                while (sp % 4 != 0) sp++;
+            }
+
+            if (usOff < 0) { throw new Xunit.Sdk.XunitException("dump: no us"); }
+
+            var sb = new System.Text.StringBuilder();
+            for (var i = 0; i < Math.Min(usSize, 48); i++)
+            {
+                sb.Append(bytes[usOff + i].ToString("X2"));
+            }
+
+            throw new Xunit.Sdk.XunitException("tiny usHead=" + sb + " usSize=" + usSize + " mainIL=" + mainIL);
+        }
+
+        [Fact(Skip = "诊断：裸 PE 元数据解析测 #US/#Strings 堆大小+HeapSizes（阶段8 调试用，读 %TEMP%\\cocoa-b1-probe\\B1.dll）")]
+        public void DumpHeaps_FromSavedB1()
+        {
+            var probeDir = Path.Combine(Path.GetTempPath(), "cocoa-b1-probe");
+            var b1 = Path.Combine(probeDir, "B1.dll");
+            Assert.True(File.Exists(b1), "B1.dll 未保存");
+            var bytes = File.ReadAllBytes(b1);
+            var info = "size=" + bytes.Length;
+            // PE 头：DOS e_lfanew @0x3C
+            var peOff = BitConverter.ToInt32(bytes, 0x3C);
+            var optOff = peOff + 24;
+            var magic = BitConverter.ToUInt16(bytes, optOff);
+            info += " magic=" + magic.ToString("X");
+            var ddOffset = optOff + (magic == 0x10b ? 96 : 112);
+            var corOff = ddOffset + 14 * 8;
+            var cliRva = BitConverter.ToUInt32(bytes, corOff);
+            var cliSize = BitConverter.ToUInt32(bytes, corOff + 4);
+            info += " cliRva=" + cliRva.ToString("X") + " cliSize=" + cliSize;
+            // 节表
+            var numSections = BitConverter.ToUInt16(bytes, peOff + 6);
+            var secOff = optOff + (magic == 0x10b ? 224 : 240);
+            var cliOff = -1;
+            for (var s = 0; s < numSections; s++)
+            {
+                var so = secOff + s * 40;
+                var va = BitConverter.ToUInt32(bytes, so + 12);
+                var vsz = BitConverter.ToUInt32(bytes, so + 8);
+                var raw = BitConverter.ToUInt32(bytes, so + 20);
+                if (cliRva >= va && cliRva < va + vsz)
+                {
+                    cliOff = (int)(raw + (cliRva - va));
+                }
+            }
+
+            info += " cliOff=" + cliOff;
+            if (cliOff >= 0)
+            {
+                // CLI 头：cboffset @8, cbHeader @12... 元数据根 @24
+                var metaRva = BitConverter.ToUInt32(bytes, cliOff + 8);
+                var metaOff = -1;
+                for (var s = 0; s < numSections; s++)
+                {
+                    var so = secOff + s * 40;
+                    var va = BitConverter.ToUInt32(bytes, so + 12);
+                    var vsz = BitConverter.ToUInt32(bytes, so + 8);
+                    var raw = BitConverter.ToUInt32(bytes, so + 20);
+                    if (metaRva >= va && metaRva < va + vsz)
+                    {
+                        metaOff = (int)(raw + (metaRva - va));
+                    }
+                }
+
+                info += " metaOff=" + metaOff;
+                if (metaOff >= 0)
+                {
+                    var sig = BitConverter.ToUInt32(bytes, metaOff);
+                    info += " sig=" + sig.ToString("X");
+                    var verLen = BitConverter.ToUInt32(bytes, metaOff + 12);
+                    var streamHdr = metaOff + 16 + (int)verLen;
+                    streamHdr++;
+                    while (streamHdr % 4 != 0) streamHdr++;
+                    var streamCount = BitConverter.ToUInt16(bytes, streamHdr);
+                    info += " streams=" + streamCount;
+                    var usFileOff = metaOff + 37300;
+                    var usSize = 15056;
+                    {
+                        var head = Math.Min(usSize, 48);
+                        var sb2 = new System.Text.StringBuilder();
+                        for (var i = 0; i < head; i++)
+                        {
+                            sb2.Append(bytes[usFileOff + i].ToString("X2"));
+                        }
+
+                        info += " usHead=" + sb2;
+                        info += " usB2at=" + (usFileOff + 15048).ToString();
+                        var tail = new System.Text.StringBuilder();
+                        for (var i = 15040; i < usSize; i++)
+                        {
+                            tail.Append(bytes[usFileOff + i].ToString("X2"));
+                        }
+
+                        info += " usTail15040=" + tail;
+                    }
+                }
+            }
+
+            throw new Xunit.Sdk.XunitException(info);
+        }
     }
 }
