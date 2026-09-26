@@ -956,6 +956,22 @@ _localCount = 0
                 return "?"
             }
 
+            if k == "ElementAccessExpression"
+            {
+                // x[i]：x 的参数/局部类型为数组 → 元素类型（args[0] → string）
+                if node.ChildCount() > 0
+                {
+                    let tn = node.Child(0).ChildCount() > 0 ? node.Child(0).Child(0).Text() : node.Child(0).Text()
+                    let at = LocalTypeOrParamOf(tn)
+                    if at.Length > 2 && at.IndexOf("[]") == at.Length - 2
+                    {
+                        return at.substring(0, at.Length - 2)
+                    }
+                }
+
+                return "?"
+            }
+
             if k == "MemberCallExpression"
             {
                 // 字符串实例成员返回类型：IndexOf/Length → i32；substring → string

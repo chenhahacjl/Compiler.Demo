@@ -12,7 +12,7 @@ namespace Cocoa.Tests.Compiler
         private readonly ITestOutputHelper _out;
         public SelfCompileProbeTests(ITestOutputHelper output) { _out = output; }
 
-        [Fact(Skip = "阶段8 B1→B2：B1 全量语料自举已产出可加载 DLL（~232K 字节）；B1-run 被系统性元数据 #US/字符串 token 发射问题阻断（PrepareMethod 全方法验证无效，根因待查）。猎错基建：HuntInvalid_FromSavedB1 + DumpMainIL_FromSavedB1（读 %TEMP%\\cocoa-b1-probe\\B1.dll）")]
+        [Fact(Skip = "阶段8 B1→B2：'?' 局部签名修复后 B1（233K 字节）有效产出+保存；B1-run 仍有独立字符串 token 频发 CLR 失败（HuntInvalid 全方法验证无效，规模级 #US 一致性待下轮）。基建：HuntInvalid_FromSavedB1 + DumpMainIL_FromSavedB1 + DumpHeaps_FromSavedB1（读 %TEMP%\\cocoa-b1-probe\\B1.dll）")]
         public void CompileFullSelfCompilerSource()
         {
             var root = AppContext.BaseDirectory;
