@@ -543,6 +543,19 @@ private field _pendingCount: i32
                     return ft
                 }
 
+                // 全局类字段兜底（当前类字段表可能不完整：key = "类.字段" 后缀匹配）
+                var gfv = 0
+                while gfv < _globalFieldCount
+                {
+                    let key = _globalFieldKeys[gfv]
+                    if key.Length > vn.Length && key.substring(key.Length - vn.Length - 1, vn.Length + 1) == "." + vn
+                    {
+                        return _globalFieldVals[gfv]
+                    }
+
+                    gfv = gfv + 1
+                }
+
                 return GlobalTypeOf(vn)
             }
 

@@ -12,7 +12,7 @@ namespace Cocoa.Tests.Compiler
         private readonly ITestOutputHelper _out;
         public SelfCompileProbeTests(ITestOutputHelper output) { _out = output; }
 
-        [Fact(Skip = "阶段8 B1→B2：ilverify 66（StackUnexpected 55 主导，已证非局部签名——WalkMember 局部全正确）。已修：全类字段兜底推断。剩余=具体指令发射错（ilverify 偏移→源码映射，ilverify 工具+转储基建就绪）")]
+        [Fact(Skip = "阶段8 B1→B2：B1 全量产出可加载且 CLR 验证过（Main 曾执行返回 -3）；ilverify 66（StackUnexpected 55，i32[] 字段/参数元素访问已证可用——WalkMember 特定字段表类型错配）。已修链见提交记录；工具链（ilverify/转储/猎错）完备")]
         public void CompileFullSelfCompilerSource()
         {
             var root = AppContext.BaseDirectory;
