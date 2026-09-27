@@ -485,15 +485,20 @@ namespace Cocoa.Tests.Compiler
             }
 
             var tiny = "class F {" + Environment.NewLine +
-                "    private field _n: i32" + Environment.NewLine +
-                "    public function Set(v: i32): i32 {" + Environment.NewLine +
-                "        _n = v" + Environment.NewLine +
-                "        return _n" + Environment.NewLine +
+                "    private field _arr: i32[]" + Environment.NewLine +
+                "    public function Copy(): i32 {" + Environment.NewLine +
+                "        var g = new i32[4]" + Environment.NewLine +
+                "        var i = 0" + Environment.NewLine +
+                "        while i < 2 {" + Environment.NewLine +
+                "            g[i] = _arr[i]" + Environment.NewLine +
+                "            i = i + 1" + Environment.NewLine +
+                "        }" + Environment.NewLine +
+                "        return g[0]" + Environment.NewLine +
                 "    }" + Environment.NewLine +
                 "}" + Environment.NewLine +
                 "function Main(args: string[]): i32 {" + Environment.NewLine +
                 "    var f = new F()" + Environment.NewLine +
-                "    return f.Set(5)" + Environment.NewLine +
+                "    return f.Copy()" + Environment.NewLine +
                 "}" + Environment.NewLine;
             var main = "using System\n" +
                 "function Main(args: string[]): i32\n{\n" +
@@ -558,6 +563,104 @@ namespace Cocoa.Tests.Compiler
             }
 
             Assert.Equal(5, (int)exit!);
+        }
+
+        [Fact]
+        public void IntArrayFieldElementAssign_Works()
+        {
+            var root = AppContext.BaseDirectory;
+            while (root != null && !File.Exists(Path.Combine(root, "src", "Cocoa.SDK", "System.Core", "String.co")))
+            {
+                root = Path.GetDirectoryName(root);
+            }
+
+            var compilerDir = Path.Combine(root!, "src", "Cocoa.Co", "Cocoa.Compiler");
+            var files = Directory.GetFiles(compilerDir, "*.co", SearchOption.AllDirectories)
+                .OrderBy(f => f, StringComparer.Ordinal);
+            var trees = ImmutableArray.CreateBuilder<SyntaxTree>();
+            foreach (var f in files)
+            {
+                trees.Add(SyntaxTree.Parse(File.ReadAllText(f)));
+            }
+
+            var tiny = "class F {" + Environment.NewLine +
+                "    private field _arr: i32[]" + Environment.NewLine +
+                "    public function Copy(): i32 {" + Environment.NewLine +
+                "        var g = new i32[4]" + Environment.NewLine +
+                "        var i = 0" + Environment.NewLine +
+                "        while i < 2 {" + Environment.NewLine +
+                "            g[i] = _arr[i]" + Environment.NewLine +
+                "            i = i + 1" + Environment.NewLine +
+                "        }" + Environment.NewLine +
+                "        return g[0]" + Environment.NewLine +
+                "    }" + Environment.NewLine +
+                "}" + Environment.NewLine +
+                "function Main(args: string[]): i32 {" + Environment.NewLine +
+                "    var f = new F()" + Environment.NewLine +
+                "    return f.Copy()" + Environment.NewLine +
+                "}" + Environment.NewLine;
+            var main = "using System\n" +
+                "function Main(args: string[]): i32\n{\n" +
+                "    let h = Cocoa.CodeGen.IlDriver.BuildDllHex(args[0])\n" +
+                "    System.Console.WriteLine(\"HEX:\" + h)\n" +
+                "    return 0\n}\n";
+            trees.Add(SyntaxTree.Parse(main));
+
+            var original = Console.Out;
+            string hex;
+            try
+            {
+                using var writer = new StringWriter();
+                Console.SetOut(writer);
+                var compilation = Compilation.Create("Main",
+                    new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location },
+                    trees.ToArray());
+                var result = compilation.Evaluate(new[] { tiny }, new Dictionary<VariableSymbol, object>());
+                var output = writer.ToString().Replace("\r\n", "\n");
+                var diag = result.Diagnostics.HasErrors() ? string.Join(" | ", result.Diagnostics.Select(d => d.Message)) : "";
+                Console.SetOut(original);
+                Assert.True(result.Diagnostics.HasErrors() == false, "diag: " + diag);
+                var hl = output.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.StartsWith("HEX:", StringComparison.Ordinal));
+                Assert.NotNull(hl);
+                hex = hl![4..].Trim();
+                Assert.False(hex.StartsWith("ERR:", StringComparison.Ordinal), "自编失败: " + hex);
+            }
+            finally
+            {
+                Console.SetOut(original);
+            }
+
+            var dir = Path.Combine(Path.GetTempPath(), "cocoa-ia");
+            Directory.CreateDirectory(dir);
+            var dll = Path.Combine(dir, "T.dll");
+            File.WriteAllBytes(dll, SelfHostedEndToEndTests.HexToBytes(hex));
+            var asm = System.Reflection.Assembly.LoadFile(dll);
+            var copyIl = "";
+            foreach (var t2 in asm.GetTypes())
+            {
+                foreach (var m2 in t2.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic |
+                    System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.DeclaredOnly))
+                {
+                    if (m2.Name == "Copy")
+                    {
+                        var mb = m2.GetMethodBody();
+                        var bb = mb?.GetILAsByteArray() ?? Array.Empty<byte>();
+                        copyIl = "Copy il=" + Convert.ToHexString(bb);
+                    }
+                }
+            }
+
+            object? exit;
+            try
+            {
+                exit = asm.EntryPoint!.Invoke(null, new object[] { new[] { "hello" } });
+            }
+            catch (Exception ex)
+            {
+                throw new Xunit.Sdk.XunitException(copyIl + " | invoke err: " + ex.GetType().Name + ":" + ex.Message);
+            }
+
+            Assert.Equal(0, (int)exit!);
         }
 
         [Fact(Skip = "诊断：裸 PE 元数据解析测 #US/#Strings 堆大小+HeapSizes（阶段8 调试用，读 %TEMP%\\cocoa-b1-probe\\B1.dll）")]
