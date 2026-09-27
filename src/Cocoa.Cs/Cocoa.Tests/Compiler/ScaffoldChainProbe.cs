@@ -110,7 +110,7 @@ namespace Cocoa.Tests.Compiler
             }
 
             var tiny = "function Main(args: string[]): i32 {" + Environment.NewLine +
-                "    System.Console.WriteLine(\"\u4e2d\u6587\")" + Environment.NewLine +
+                "    System.Console.WriteLine(\"a\" + string(1) + \"b\")" + Environment.NewLine +
                 "    return 0" + Environment.NewLine +
                 "}" + Environment.NewLine;
             var main = "using System\n" +
@@ -183,7 +183,7 @@ namespace Cocoa.Tests.Compiler
             }
 
             Assert.Equal(0, (int)exit!);
-            Assert.Equal("\u4e2d\u6587", runOut);
+            Assert.Equal("a1b", runOut);
         }
     [Fact(Skip = "诊断：读 %TEMP%\\cocoa-b1-probe\\B1.dll 逐方法 PrepareMethod 猎无效 IL（阶段8 调试用，手动启用）")]
         public void HuntInvalid_FromSavedB1()
@@ -263,6 +263,13 @@ namespace Cocoa.Tests.Compiler
                 if (t != null && t is System.Reflection.MethodInfo mi)
                 {
                     info += " ret=" + mi.ReturnType + " p=" + string.Join(",", t.GetParameters().Select(p => p.ParameterType + ":" + p.Name));
+                }
+
+                var wr = asm.ManifestModule.ResolveMethod(0x0A000008);
+                info += " row8=" + (wr?.DeclaringType?.Name + "." + wr?.Name ?? "null");
+                if (wr != null && wr is System.Reflection.MethodInfo mi8)
+                {
+                    info += " ret=" + mi8.ReturnType + " p=" + string.Join(",", wr.GetParameters().Select(p => p.ParameterType + ":" + p.Name));
                 }
             }
             catch (Exception ex)
@@ -669,6 +676,42 @@ namespace Cocoa.Tests.Compiler
             }
 
             Assert.Equal(7, (int)exit!);
+        }
+
+        [Fact]
+        public void RunSavedB1_WithSmallSource()
+        {
+            var probeDir = Path.Combine(Path.GetTempPath(), "cocoa-b1-probe");
+            var b1 = Path.Combine(probeDir, "B1.dll");
+            Assert.True(File.Exists(b1), "B1.dll 未保存");
+            var asm = System.Reflection.Assembly.LoadFile(b1);
+            var ep = asm.EntryPoint!;
+            string output;
+            object? exit;
+            var original = Console.Out;
+            try
+            {
+                using var writer = new StringWriter();
+                Console.SetOut(writer);
+                try
+                {
+                    exit = ep.Invoke(null, new object[] { new[] { "function Main(): i32 { return 0 }\n" } });
+                }
+                catch (Exception ex)
+                {
+                    Console.SetOut(original);
+                    throw new Xunit.Sdk.XunitException("B1 invoke err: " + ex.GetType().Name + ":" + ex.Message + " | ep=" + ep + " | inner=" + ex.InnerException);
+                }
+
+                Console.SetOut(original);
+                output = writer.ToString().Replace("\r\n", "\n");
+            }
+            finally
+            {
+                Console.SetOut(original);
+            }
+
+            throw new Xunit.Sdk.XunitException("B1 exit=" + exit + " out='" + (output.Length <= 200 ? output.Replace("\n", "\\n") : output.Substring(0, 200).Replace("\n", "\\n")) + "'");
         }
 
         [Fact(Skip = "诊断：裸 PE 元数据解析测 #US/#Strings 堆大小+HeapSizes（阶段8 调试用，读 %TEMP%\\cocoa-b1-probe\\B1.dll）")]

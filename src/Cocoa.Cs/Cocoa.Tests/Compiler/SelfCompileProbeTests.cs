@@ -12,7 +12,7 @@ namespace Cocoa.Tests.Compiler
         private readonly ITestOutputHelper _out;
         public SelfCompileProbeTests(ITestOutputHelper output) { _out = output; }
 
-        [Fact(Skip = "阶段8 B1→B2：B1 已过 CLR 验证、Main 曾运行（返回 -3=运行时/入口点行为，非验证失败）。ilverify 66（StackUnexpected 55）。已修链含 substring 崩溃修复。工具链完备")]
+        [Fact(Skip = "阶段8 B1→B2：FirstArgType 拼接/string() 检测修复（WriteLine sig string）；新发现：多段 + 拼接链 DLL 触发 AccessViolation（宿主崩溃）——emitter 拼接发射原生级缺陷待查。ilverify 66 待逐项")]
         public void CompileFullSelfCompilerSource()
         {
             var root = AppContext.BaseDirectory;

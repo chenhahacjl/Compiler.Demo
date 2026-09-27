@@ -1192,7 +1192,7 @@ namespace Cocoa.CodeGen
                     if arg.Kind() == "BinaryExpression"
                     {
                         let op = arg.Child(0).Text()
-                        if op == "+" && (IsStringLiteralNode(arg.Child(1)) || IsStringLiteralNode(arg.Child(2)))
+                        if op == "+" && (IsStringish(arg.Child(1)) || IsStringish(arg.Child(2)))
                         {
                             return "string"
                         }
@@ -1215,6 +1215,17 @@ namespace Cocoa.CodeGen
                         return "string"
                     }
 
+                    if arg.Kind() == "CallExpression"
+                    {
+                        // string(...) 转换 → 字符串
+                        if arg.ChildCount() > 0 && arg.Child(0).Text() == "string"
+                        {
+                            return "string"
+                        }
+
+                        return "i32"
+                    }
+
                     return "i32"
                 }
 
@@ -1222,6 +1233,31 @@ namespace Cocoa.CodeGen
             }
 
             return "i32"
+        }
+
+        /// <summary>表达式是否字符串系（字面量/嵌套拼接/string() 转换）。</summary>
+        private static function IsStringish(expr: Node): bool
+        {
+            if expr.Kind() == "LiteralExpression"
+            {
+                return expr.Child(0).Kind() == "StringToken"
+            }
+
+            if expr.Kind() == "BinaryExpression"
+            {
+                let op = expr.Child(0).Text()
+                if op == "+"
+                {
+                    return IsStringish(expr.Child(1)) || IsStringish(expr.Child(2))
+                }
+            }
+
+            if expr.Kind() == "CallExpression"
+            {
+                return expr.ChildCount() > 0 && expr.Child(0).Text() == "string"
+            }
+
+            return false
         }
 
         private static function IsStringLiteralNode(expr: Node): bool
