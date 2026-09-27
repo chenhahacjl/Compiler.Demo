@@ -645,7 +645,8 @@ namespace Cocoa.Tests.Compiler
                     {
                         var mb = m2.GetMethodBody();
                         var bb = mb?.GetILAsByteArray() ?? Array.Empty<byte>();
-                        copyIl = "Copy il=" + Convert.ToHexString(bb);
+                        var lv = mb?.LocalVariables;
+                        copyIl = "Copy il=" + Convert.ToHexString(bb) + " locals=" + (lv == null ? "-" : string.Join(",", lv.Select(l => l.LocalType.Name)));
                     }
                 }
             }
