@@ -110,7 +110,7 @@ namespace Cocoa.Tests.Compiler
             }
 
             var tiny = "function Main(args: string[]): i32 {" + Environment.NewLine +
-                "    System.Console.WriteLine(\"a\" + string(1) + \"b\")" + Environment.NewLine +
+                "    System.Console.WriteLine(string(1) + string(2))" + Environment.NewLine +
                 "    return 0" + Environment.NewLine +
                 "}" + Environment.NewLine;
             var main = "using System\n" +
@@ -183,7 +183,7 @@ namespace Cocoa.Tests.Compiler
             }
 
             Assert.Equal(0, (int)exit!);
-            Assert.Equal("a1b", runOut);
+            Assert.Equal("12", runOut);
         }
     [Fact(Skip = "诊断：读 %TEMP%\\cocoa-b1-probe\\B1.dll 逐方法 PrepareMethod 猎无效 IL（阶段8 调试用，手动启用）")]
         public void HuntInvalid_FromSavedB1()

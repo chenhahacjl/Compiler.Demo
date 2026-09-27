@@ -996,7 +996,7 @@ namespace Cocoa.CodeGen
                 let op = node.Child(0).Text()
                 if op == "==" || op == "!=" || op == "+"
                 {
-                    if IsStringLiteralNode(node.Child(1)) || IsStringLiteralNode(node.Child(2))
+                    if IsStringish(node.Child(1)) || IsStringish(node.Child(2))
                     {
                         let stringParams = new string[2]
                         stringParams[0] = "string"

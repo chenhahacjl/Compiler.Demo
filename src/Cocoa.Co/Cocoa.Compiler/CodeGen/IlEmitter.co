@@ -2178,12 +2178,22 @@ private field _pendingCount: i32
                 return false
             }
 
-            if IsStringLiteral(expr.Child(1))
+            if IsStringLiteral(expr.Child(1)) || IsStringCall(expr.Child(1))
             {
                 return true
             }
 
-            return IsStringLiteral(expr.Child(2))
+            return IsStringLiteral(expr.Child(2)) || IsStringCall(expr.Child(2))
+        }
+
+        private static function IsStringCall(expr: Node): bool
+        {
+            if expr == null
+            {
+                return false
+            }
+
+            return expr.Kind() == "CallExpression" && expr.ChildCount() > 0 && expr.Child(0).Text() == "string"
         }
 
         private static function IsStringLiteral(expr: Node): bool
