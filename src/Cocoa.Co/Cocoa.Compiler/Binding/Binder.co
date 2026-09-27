@@ -966,6 +966,24 @@ _localCount = 0
                     return vt
                 }
 
+                // 兜底：扫描全部类字段（_currentClass 在局部推断阶段可能为空）
+                var fci2 = 0
+                while fci2 < _classCount
+                {
+                    var ff2 = 0
+                    while ff2 < _classFieldCounts[fci2]
+                    {
+                        if _classFieldNames[_classFieldOffsets[fci2] + ff2] == vn
+                        {
+                            return _classFieldTypes[_classFieldOffsets[fci2] + ff2]
+                        }
+
+                        ff2 = ff2 + 1
+                    }
+
+                    fci2 = fci2 + 1
+                }
+
                 return "?"
             }
 

@@ -12,7 +12,7 @@ namespace Cocoa.Tests.Compiler
         private readonly ITestOutputHelper _out;
         public SelfCompileProbeTests(ITestOutputHelper output) { _out = output; }
 
-        [Fact(Skip = "阶段8 B1→B2：ilverify 错误 200→65（UnrecognizedLocalNumber 全消）。剩余 StackUnexpected(54 局部类型/二元操作数类型错配)+ExpectedNumericType(7)。已修：字段赋值（裸 _f=v 绑定为 name-token 目标，Stfld [obj,value] 顺序+ProducesValue）；探针 Skip")]
+        [Fact(Skip = "阶段8 B1→B2：ilverify 66（StackUnexpected 55 主导，已证非局部签名——WalkMember 局部全正确）。已修：全类字段兜底推断。剩余=具体指令发射错（ilverify 偏移→源码映射，ilverify 工具+转储基建就绪）")]
         public void CompileFullSelfCompilerSource()
         {
             var root = AppContext.BaseDirectory;

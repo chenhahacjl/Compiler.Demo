@@ -230,6 +230,21 @@ namespace Cocoa.Tests.Compiler
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static |
                     System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.DeclaredOnly))
                 {
+                    if (method.Name == "BindClassDeclaration")
+                    {
+                        var bd = method.GetMethodBody();
+                        var lvs = bd?.LocalVariables;
+                        info += method.DeclaringType!.Name + "." + method.Name + " sig='" + method + "' locals=" + (lvs == null ? "-" : string.Join(",", lvs.Select(l => l.LocalType.Name))) + "\n";
+                    }
+
+                    if (method.Name == "WalkMember")
+                    {
+                        var wb = method.GetMethodBody();
+                        var wv = wb?.LocalVariables;
+                        var wbb = wb?.GetILAsByteArray() ?? Array.Empty<byte>();
+                        info += method.DeclaringType!.Name + "." + method.Name + " locals=" + (wv == null ? "-" : string.Join(",", wv.Select(l => l.LocalType.Name))) + " il=" + Convert.ToHexString(wbb.Take(Math.Min(wbb.Length, 360)).ToArray()) + "\n";
+                    }
+
                     if (method.Name == "Main" || method.Name == "BindCompilationUnit" || method.Name == "KnownType" || method.Name == "WalkClassNames" || method.Name == "BindClassDeclaration")
                     {
                         var body = method.GetMethodBody();
