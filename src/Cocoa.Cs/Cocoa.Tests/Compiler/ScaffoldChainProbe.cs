@@ -585,18 +585,25 @@ namespace Cocoa.Tests.Compiler
 
             var tiny = "class F {" + Environment.NewLine +
                 "    private field _arr: i32[]" + Environment.NewLine +
+                "    public function Init(): i32 {" + Environment.NewLine +
+                "        _arr = new i32[2]" + Environment.NewLine +
+                "        _arr[0] = 3" + Environment.NewLine +
+                "        _arr[1] = 4" + Environment.NewLine +
+                "        return 0" + Environment.NewLine +
+                "    }" + Environment.NewLine +
                 "    public function Copy(): i32 {" + Environment.NewLine +
-                "        var g = new i32[4]" + Environment.NewLine +
+                "        var g = new i32[2]" + Environment.NewLine +
                 "        var i = 0" + Environment.NewLine +
                 "        while i < 2 {" + Environment.NewLine +
                 "            g[i] = _arr[i]" + Environment.NewLine +
                 "            i = i + 1" + Environment.NewLine +
                 "        }" + Environment.NewLine +
-                "        return g[0]" + Environment.NewLine +
+                "        return g[0] + g[1]" + Environment.NewLine +
                 "    }" + Environment.NewLine +
                 "}" + Environment.NewLine +
                 "function Main(args: string[]): i32 {" + Environment.NewLine +
                 "    var f = new F()" + Environment.NewLine +
+                "    f.Init()" + Environment.NewLine +
                 "    return f.Copy()" + Environment.NewLine +
                 "}" + Environment.NewLine;
             var main = "using System\n" +
@@ -661,7 +668,7 @@ namespace Cocoa.Tests.Compiler
                 throw new Xunit.Sdk.XunitException(copyIl + " | invoke err: " + ex.GetType().Name + ":" + ex.Message);
             }
 
-            Assert.Equal(0, (int)exit!);
+            Assert.Equal(7, (int)exit!);
         }
 
         [Fact(Skip = "诊断：裸 PE 元数据解析测 #US/#Strings 堆大小+HeapSizes（阶段8 调试用，读 %TEMP%\\cocoa-b1-probe\\B1.dll）")]
