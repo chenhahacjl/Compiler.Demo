@@ -12,7 +12,7 @@ namespace Cocoa.Tests.Compiler
         private readonly ITestOutputHelper _out;
         public SelfCompileProbeTests(ITestOutputHelper output) { _out = output; }
 
-        [Fact(Skip = "阶段8 B1→B2：ArrayElemTypeOf int→i32 规范化（i32[] 字段/局部元素 Ldelem 已正确）；剩余：类方法内 new i32[N] 的 newarr 元素 token 误（0x01000003=Console）——usesInt32 扫描覆盖待查。ilverify 65 待逐项")]
+        [Fact(Skip = "阶段8 B1→B2：B1 已过 CLR 验证、Main 曾运行（返回 -3=运行时/入口点行为，非验证失败）。ilverify 66（StackUnexpected 55）。已修链含 substring 崩溃修复。工具链完备")]
         public void CompileFullSelfCompilerSource()
         {
             var root = AppContext.BaseDirectory;
