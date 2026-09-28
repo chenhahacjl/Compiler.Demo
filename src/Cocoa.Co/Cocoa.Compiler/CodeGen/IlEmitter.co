@@ -26,6 +26,7 @@ private field _pendingCount: i32
         private field _methodNames: string[]
         private field _methodTokens: i32[]
         private field _methodReturnsValue: bool[]
+        private field _topReturnTypes: string[]
         private field _methodCount: i32
         private field _error: string
         private field _constantNames: string[]
@@ -89,6 +90,7 @@ private field _pendingCount: i32
             _methodNames = new string[0]
             _methodTokens = new i32[0]
             _methodReturnsValue = new bool[0]
+            _topReturnTypes = new string[0]
             _methodCount = 0
             _error = ""
             _constantNames = new string[16]
@@ -142,6 +144,40 @@ private field _pendingCount: i32
             _methodTokens = tokens
             _methodReturnsValue = returnsValue
             _methodCount = names.Length
+        }
+
+        /// <summary>顶层函数返回类型表（f(...) 作为链式接收者时需要）。
+        /// 与 SetMethods 分开设置，避免改动既有调用约定。</summary>
+        public function SetTopLevelReturnTypes(returnTypes: string[]): void
+        {
+            _topReturnTypes = returnTypes
+        }
+
+        /// <summary>顶层函数返回类型（Make().Name() 的 Make 返回 Box）。</summary>
+        private function TopMethodType(name: string): string
+        {
+            if _topReturnTypes.Length == 0
+            {
+                return ""
+            }
+
+            var i = 0
+            while i < _methodCount
+            {
+                if _methodNames[i] == name
+                {
+                    if i < _topReturnTypes.Length
+                    {
+                        return _topReturnTypes[i]
+                    }
+
+                    return ""
+                }
+
+                i = i + 1
+            }
+
+            return ""
         }
 
         /// <summary>BCL 静态成员调用表（驱动预解析：`Console.WriteLine` → MemberRef token 0x0A…）。</summary>
@@ -648,7 +684,22 @@ private field _pendingCount: i32
                     return curT
                 }
 
+                let topT = TopMethodType(fn)
+                if topT.Length > 0
+                {
+                    return topT
+                }
+
                 return ClassMethodType(fn)
+            }
+
+            if k == "ElementAccessExpression"
+            {
+                // arr[i] / _functions[i] 的元素类型。缺此分支时接收者类型为空，
+                // 后续 arr[i].m() 会因 ClassMethodToken(".m") 解析失败
+                // （Unresolved bcl member: .Name tk=ElementAccessExpression）。
+                let arrType = expr.ChildCount() > 0 ? ExprTypeOf(expr.Child(0)) : ""
+                return ArrayElemTypeOf(arrType)
             }
 
             if k == "MemberCallExpression"

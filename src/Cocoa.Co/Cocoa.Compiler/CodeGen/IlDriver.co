@@ -281,16 +281,19 @@ namespace Cocoa.CodeGen
             var topNames = new string[topCount]
             var topTokens = new i32[topCount]
             var topReturns = new bool[topCount]
+            var topReturnTypes = new string[topCount]
             var t0 = 0
             while t0 < topCount
             {
                 topNames[t0] = binder.GetFunctionName(binder.GetTopLevelFunctionIndex(t0))
                 topTokens[t0] = 0x06000000 + t0 + 1
                 topReturns[t0] = binder.GetFunctionReturnType(binder.GetTopLevelFunctionIndex(t0)) != "void"
+                topReturnTypes[t0] = binder.GetFunctionReturnType(binder.GetTopLevelFunctionIndex(t0))
                 t0 = t0 + 1
             }
 
             emitter.SetMethods(topNames, topTokens, topReturns)
+            emitter.SetTopLevelReturnTypes(topReturnTypes)
             let globalCnt = binder.GetGlobalVariableCount()
             if globalCnt > 0
             {

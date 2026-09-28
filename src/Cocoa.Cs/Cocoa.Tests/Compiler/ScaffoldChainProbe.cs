@@ -415,6 +415,55 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal("hit", output);
         }
 
+        /// <summary>语料形如 _functions[i].Name() / arr[i].Describe()：接收者是元素访问，
+        /// ExprTypeOf 需返回元素类型，否则 ClassMethodToken(".m") 解析失败
+        /// （Unresolved bcl member: .Name tk=ElementAccessExpression）。</summary>
+        [Fact]
+        public void SelfCompiled_ElementAccess_CallMethod_Runs()
+        {
+            var nl = Environment.NewLine;
+            var (exit, output) = RunTinyMain(
+                "class Node {" + nl +
+                "    private field _n: string" + nl +
+                "    public constructor(n: string) {" + nl +
+                "        _n = n" + nl +
+                "    }" + nl +
+                "    public function Name(): string { return _n }" + nl +
+                "}" + nl +
+                "function Main(args: string[]): i32 {" + nl +
+                "    var arr = new Node[1]" + nl +
+                "    arr[0] = new Node(\"fromElem\")" + nl +
+                "    System.Console.WriteLine(arr[0].Name())" + nl +
+                "    System.Console.WriteLine(new Node(\"fromNew\").Name())" + nl +
+                "    return 0" + nl +
+                "}" + nl);
+            Assert.Equal(0, exit);
+            Assert.Equal("fromElem\nfromNew", output);
+        }
+
+        /// <summary>顶层函数返回对象后立即取其方法：Make().Name()
+        /// （需要顶层函数返回类型表，SetMethods 当前只传 returnsValue: bool）。</summary>
+        [Fact]
+        public void SelfCompiled_TopLevelFnResult_CallMethod_Runs()
+        {
+            var nl = Environment.NewLine;
+            var (exit, output) = RunTinyMain(
+                "class Box {" + nl +
+                "    private field _v: string" + nl +
+                "    public constructor(v: string) {" + nl +
+                "        _v = v" + nl +
+                "    }" + nl +
+                "    public function Name(): string { return _v }" + nl +
+                "}" + nl +
+                "function Make(): Box { return new Box(\"fromCall\") }" + nl +
+                "function Main(args: string[]): i32 {" + nl +
+                "    System.Console.WriteLine(Make().Name())" + nl +
+                "    return 0" + nl +
+                "}" + nl);
+            Assert.Equal(0, exit);
+            Assert.Equal("fromCall", output);
+        }
+
         /// <summary>用户类名作为参数类型（function F(n: N)）。</summary>
         [Fact]
         public void SelfCompiled_UserClassAsParameterType_Runs()
