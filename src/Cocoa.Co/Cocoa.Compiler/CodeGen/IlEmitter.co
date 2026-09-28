@@ -782,15 +782,15 @@ private field _pendingCount: i32
             _paramCount = paramCount
             _localNames = new string[16]
             _localCount = 0
-            // 短路标签与 pending 分支会超出语句数，按语句数 + 表达式规模冗余
-            var slotCap = body.ChildCount() * 4 + 64
-            _labelNames = new string[slotCap]
-            _labelIndexes = new i32[slotCap]
+            // 短路标签与 pending 分支数量由表达式结构决定（嵌套 && 密集的函数可远超语句数），
+            // 固定容量会在长函数上耗尽；用 EnsureSlotCapacity 在写入点按需扩容。
+            _labelNames = new string[16]
+            _labelIndexes = new i32[16]
             _statementReachable = new bool[body.ChildCount()]
             _labelCount = 0
             _shortCircuitCount = 0
-            _pendingBranches = new i32[slotCap]
-            _pendingNames = new string[slotCap]
+            _pendingBranches = new i32[16]
+            _pendingNames = new string[16]
             _pendingCount = 0
 
             var p = 0
@@ -1461,16 +1461,14 @@ private field _pendingCount: i32
             else if k == "LabelStatement"
             {
                 let slot = _assembler.EmitOperand("Nop", 0, 0, -1)
+                EnsureLabelCapacity()
                 _labelNames[_labelCount] = stmt.Child(0).Text()
                 _labelIndexes[_labelCount] = slot
                 _labelCount = _labelCount + 1
             }
             else if k == "GotoStatement"
             {
-                let place = _assembler.EmitOperand("Br", 14, 0, -1)
-                _pendingBranches[_pendingCount] = place
-                _pendingNames[_pendingCount] = stmt.Child(0).Text()
-                _pendingCount = _pendingCount + 1
+                AddPendingBranch("Br", stmt.Child(0).Text())
             }
             else if k == "ConditionalGotoStatement"
             {
@@ -1478,17 +1476,11 @@ private field _pendingCount: i32
                 let jumpIfTrue = stmt.Child(1).Text() == "True"
                 if jumpIfTrue
                 {
-                    let place = _assembler.EmitOperand("Brtrue", 14, 0, -1)
-                    _pendingBranches[_pendingCount] = place
-                    _pendingNames[_pendingCount] = stmt.Child(0).Text()
-                    _pendingCount = _pendingCount + 1
+                    AddPendingBranch("Brtrue", stmt.Child(0).Text())
                 }
                 else
                 {
-                    let place = _assembler.EmitOperand("Brfalse", 14, 0, -1)
-                    _pendingBranches[_pendingCount] = place
-                    _pendingNames[_pendingCount] = stmt.Child(0).Text()
-                    _pendingCount = _pendingCount + 1
+                    AddPendingBranch("Brfalse", stmt.Child(0).Text())
                 }
             }
         }
@@ -2090,6 +2082,52 @@ private field _pendingCount: i32
             return op == "&&" || op == "||"
         }
 
+        /// <summary>按需扩容标签槽（_labelNames/_labelIndexes）。</summary>
+        private function EnsureLabelCapacity(): void
+        {
+            if _labelCount < _labelNames.Length
+            {
+                return
+            }
+
+            var cap = _labelNames.Length * 2
+            var nn = new string[cap]
+            var ni = new i32[cap]
+            var i = 0
+            while i < _labelCount
+            {
+                nn[i] = _labelNames[i]
+                ni[i] = _labelIndexes[i]
+                i = i + 1
+            }
+
+            _labelNames = nn
+            _labelIndexes = ni
+        }
+
+        /// <summary>按需扩容 pending 分支槽（_pendingBranches/_pendingNames）。</summary>
+        private function EnsurePendingCapacity(): void
+        {
+            if _pendingCount < _pendingBranches.Length
+            {
+                return
+            }
+
+            var cap = _pendingBranches.Length * 2
+            var nb = new i32[cap]
+            var np = new string[cap]
+            var i = 0
+            while i < _pendingCount
+            {
+                nb[i] = _pendingBranches[i]
+                np[i] = _pendingNames[i]
+                i = i + 1
+            }
+
+            _pendingBranches = nb
+            _pendingNames = np
+        }
+
         /// <summary>短路布尔运算：&&/|| 用 brtrue/brfalse 跳到短路值，避免求值右侧（对齐 C# 语义）。
         /// a && b：lhs；brfalse Lfalse；rhs；br Lend；Lfalse: ldc.i4.0；Lend:
         /// a || b：lhs；brtrue Ltrue；rhs；br Lend；Ltrue: ldc.i4.1；Lend:</summary>
@@ -2104,41 +2142,45 @@ private field _pendingCount: i32
             EmitExpression(expr.Child(1))
             if op == "&&"
             {
-                let p0 = _assembler.EmitOperand("Brfalse", 14, 0, -1)
-                _pendingBranches[_pendingCount] = p0
-                _pendingNames[_pendingCount] = lFalse
-                _pendingCount = _pendingCount + 1
+                AddPendingBranch("Brfalse", lFalse)
             }
             else
             {
-                let p0b = _assembler.EmitOperand("Brtrue", 14, 0, -1)
-                _pendingBranches[_pendingCount] = p0b
-                _pendingNames[_pendingCount] = lTrue
-                _pendingCount = _pendingCount + 1
+                AddPendingBranch("Brtrue", lTrue)
             }
 
             EmitExpression(expr.Child(2))
-            let pEnd = _assembler.EmitOperand("Br", 14, 0, -1)
-            _pendingBranches[_pendingCount] = pEnd
-            _pendingNames[_pendingCount] = lEnd
-            _pendingCount = _pendingCount + 1
+            AddPendingBranch("Br", lEnd)
             // 短路值：短路标签指向该 ldc，end 标签指向其下一条
             if op == "&&"
             {
-                _labelNames[_labelCount] = lFalse
-                _labelIndexes[_labelCount] = _assembler.InstructionCount()
-                _labelCount = _labelCount + 1
+                AddSyntheticLabel(lFalse)
                 _assembler.EmitOperand("Ldc_I4_0", 0, 0, -1)
             }
             else
             {
-                _labelNames[_labelCount] = lTrue
-                _labelIndexes[_labelCount] = _assembler.InstructionCount()
-                _labelCount = _labelCount + 1
+                AddSyntheticLabel(lTrue)
                 _assembler.EmitOperand("Ldc_I4_1", 0, 0, -1)
             }
 
-            _labelNames[_labelCount] = lEnd
+            AddSyntheticLabel(lEnd)
+        }
+
+        /// <summary>登记一条待回填分支（op = Br/Brtrue/Brfalse）。</summary>
+        private function AddPendingBranch(op: string, label: string): void
+        {
+            EnsurePendingCapacity()
+            let place = _assembler.EmitOperand(op, 14, 0, -1)
+            _pendingBranches[_pendingCount] = place
+            _pendingNames[_pendingCount] = label
+            _pendingCount = _pendingCount + 1
+        }
+
+        /// <summary>登记合成标签（指向即将发射的下一条指令槽）。</summary>
+        private function AddSyntheticLabel(name: string): void
+        {
+            EnsureLabelCapacity()
+            _labelNames[_labelCount] = name
             _labelIndexes[_labelCount] = _assembler.InstructionCount()
             _labelCount = _labelCount + 1
         }
