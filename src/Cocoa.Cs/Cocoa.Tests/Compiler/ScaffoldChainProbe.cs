@@ -269,6 +269,32 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal("GCDB:1/c=5/len=3", output);
         }
 
+        /// <summary>&amp;&amp;/|| 短路：右侧为越界 substring 时不得抛异常（对齐 C# 短路语义）。
+        /// 非短路（位运算）会算出负 startIndex → startIndex 异常。</summary>
+        [Fact]
+        public void ShortCircuit_AndOr_SkipsRightSide()
+        {
+            var nl = Environment.NewLine;
+            var (exit, output) = RunTinyMain(
+                "function Main(args: string[]): i32 {" + nl +
+                "    var k = \"ab\"" + nl +
+                "    if k.Length > 9 && k.substring(k.Length - 9, 9) == \"x\"" + nl +
+                "    {" + nl +
+                "        System.Console.WriteLine(\"BAD\")" + nl +
+                "        return 1" + nl +
+                "    }" + nl +
+                "    if k.Length > 1 || k.substring(k.Length - 9, 9) == \"x\"" + nl +
+                "    {" + nl +
+                "        System.Console.WriteLine(\"OR\")" + nl +
+                "    }" + nl +
+                "    System.Console.WriteLine(\"OK\")" + nl +
+                "    return 0" + nl +
+                "}" + nl);
+            Assert.Equal(0, exit);
+            // || 左侧为真 → 右侧越界 substring 不求值（C# 语义）
+            Assert.Equal("OR\nOK", output);
+        }
+
         /// <summary>同一程序内 Console.WriteLine(int) 与 WriteLine(string) 共存：
         /// 两个调用点需要各自的 MemberRef sig（收集侧 key 与 emitter 侧查找都必须带实参类型）。</summary>
         [Fact]

@@ -15,9 +15,10 @@ namespace Cocoa.CodeGen
         private field _paramCount: i32
         private field _localNames: string[]
         private field _localCount: i32
-private field _labelNames: string[]
+        private field _labelNames: string[]
         private field _labelIndexes: i32[]
         private field _labelCount: i32
+        private field _shortCircuitCount: i32
         private field _pendingBranches: i32[]
         private field _pendingNames: string[]
 private field _pendingCount: i32
@@ -554,9 +555,14 @@ private field _pendingCount: i32
                 while gfv < _globalFieldCount
                 {
                     let key = _globalFieldKeys[gfv]
-                    if key.Length > vn.Length && key.substring(key.Length - vn.Length - 1, vn.Length + 1) == "." + vn
+                    // 长度守卫必须独立成 if：自举路径把 && 发射为 And（无短路），
+                    // 合并写会在 key 短于名字时算出负 startIndex。
+                    if key.Length > vn.Length
                     {
-                        return _globalFieldVals[gfv]
+                        if key.substring(key.Length - vn.Length - 1, vn.Length + 1) == "." + vn
+                        {
+                            return _globalFieldVals[gfv]
+                        }
                     }
 
                     gfv = gfv + 1
@@ -776,12 +782,15 @@ private field _pendingCount: i32
             _paramCount = paramCount
             _localNames = new string[16]
             _localCount = 0
-            _labelNames = new string[body.ChildCount()]
-            _labelIndexes = new i32[body.ChildCount()]
+            // 短路标签与 pending 分支会超出语句数，按语句数 + 表达式规模冗余
+            var slotCap = body.ChildCount() * 4 + 64
+            _labelNames = new string[slotCap]
+            _labelIndexes = new i32[slotCap]
             _statementReachable = new bool[body.ChildCount()]
             _labelCount = 0
-            _pendingBranches = new i32[body.ChildCount()]
-            _pendingNames = new string[body.ChildCount()]
+            _shortCircuitCount = 0
+            _pendingBranches = new i32[slotCap]
+            _pendingNames = new string[slotCap]
             _pendingCount = 0
 
             var p = 0
@@ -1576,6 +1585,12 @@ private field _pendingCount: i32
                     let idx = _assembler.EmitOperand("Call", 7, token, -1)
                     _assembler.SetCallDelta(idx, -1)
                 }
+                else if IsShortCircuitOp(expr.Child(0).Text())
+                {
+                    // 短路求值（对齐 C#）：&&/|| 右侧可能越界/抛异常（如 substring 负 startIndex），
+                    // 位运算 And/Or 无短路，必须走分支：lhs(==0?/!=0?) → 短路值 → rhs。
+                    EmitShortCircuit(expr)
+                }
                 else
                 {
                     EmitExpression(expr.Child(1))
@@ -2068,6 +2083,64 @@ private field _pendingCount: i32
                 _assembler.EmitOperand("Ldc_I4_0", 0, 0, -1)
                 _assembler.EmitOperand("Ceq", 0, 0, -1)
             }
+        }
+
+        private static function IsShortCircuitOp(op: string): bool
+        {
+            return op == "&&" || op == "||"
+        }
+
+        /// <summary>短路布尔运算：&&/|| 用 brtrue/brfalse 跳到短路值，避免求值右侧（对齐 C# 语义）。
+        /// a && b：lhs；brfalse Lfalse；rhs；br Lend；Lfalse: ldc.i4.0；Lend:
+        /// a || b：lhs；brtrue Ltrue；rhs；br Lend；Ltrue: ldc.i4.1；Lend:</summary>
+        private function EmitShortCircuit(expr: Node): void
+        {
+            let op = expr.Child(0).Text()
+            let sc = _shortCircuitCount
+            _shortCircuitCount = sc + 1
+            let lFalse = "sc$false$" + string(sc)
+            let lTrue = "sc$true$" + string(sc)
+            let lEnd = "sc$end$" + string(sc)
+            EmitExpression(expr.Child(1))
+            if op == "&&"
+            {
+                let p0 = _assembler.EmitOperand("Brfalse", 14, 0, -1)
+                _pendingBranches[_pendingCount] = p0
+                _pendingNames[_pendingCount] = lFalse
+                _pendingCount = _pendingCount + 1
+            }
+            else
+            {
+                let p0b = _assembler.EmitOperand("Brtrue", 14, 0, -1)
+                _pendingBranches[_pendingCount] = p0b
+                _pendingNames[_pendingCount] = lTrue
+                _pendingCount = _pendingCount + 1
+            }
+
+            EmitExpression(expr.Child(2))
+            let pEnd = _assembler.EmitOperand("Br", 14, 0, -1)
+            _pendingBranches[_pendingCount] = pEnd
+            _pendingNames[_pendingCount] = lEnd
+            _pendingCount = _pendingCount + 1
+            // 短路值：短路标签指向该 ldc，end 标签指向其下一条
+            if op == "&&"
+            {
+                _labelNames[_labelCount] = lFalse
+                _labelIndexes[_labelCount] = _assembler.InstructionCount()
+                _labelCount = _labelCount + 1
+                _assembler.EmitOperand("Ldc_I4_0", 0, 0, -1)
+            }
+            else
+            {
+                _labelNames[_labelCount] = lTrue
+                _labelIndexes[_labelCount] = _assembler.InstructionCount()
+                _labelCount = _labelCount + 1
+                _assembler.EmitOperand("Ldc_I4_1", 0, 0, -1)
+            }
+
+            _labelNames[_labelCount] = lEnd
+            _labelIndexes[_labelCount] = _assembler.InstructionCount()
+            _labelCount = _labelCount + 1
         }
 
         private function EmitBinaryOp(op: string): void
