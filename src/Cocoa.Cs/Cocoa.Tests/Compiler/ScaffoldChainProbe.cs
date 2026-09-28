@@ -533,6 +533,85 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal("fromCall", output);
         }
 
+        /// <summary>显式接收者的两层链：node.Child(i).Kind()（Binder.FieldTypeOf / DeclWordOf /
+        /// MethodReturnTypeOf / BinaryGlyphOf / UnaryGlyphOf 的实际形状）。
+        /// 接收者是 CallExpression，其 Child(0) 是 MemberAccessExpression 而非 IdentifierToken，
+        /// 类型推断需据此解出 Node 才能查到 Kind 的返回类型 string。</summary>
+        [Fact]
+        public void SelfCompiled_ExplicitReceiver_TwoLevelChain_InferString_Runs()
+        {
+            var nl = Environment.NewLine;
+            var (exit, output) = RunTinyMain(
+                "class Node {" + nl +
+                "    private field _k: string" + nl +
+                "    public constructor(k: string) {" + nl +
+                "        _k = k" + nl +
+                "    }" + nl +
+                "    public function Child(i: i32): Node { return this }" + nl +
+                "    public function Kind(): string { return _k }" + nl +
+                "}" + nl +
+                "function FieldTypeOf(node: Node): string {" + nl +
+                "    var i = 0" + nl +
+                "    while i < 1" + nl +
+                "    {" + nl +
+                "        let k = node.Child(i).Kind()" + nl +
+                "        if k == \"TypeClause\" || k == \"ArrayTypeClause\" || k == \"GenericTypeClause\"" + nl +
+                "        {" + nl +
+                "            return \"hit\"" + nl +
+                "        }" + nl +
+                "        i = i + 1" + nl +
+                "    }" + nl +
+                "    return \"int\"" + nl +
+                "}" + nl +
+                "function Main(args: string[]): i32 {" + nl +
+                "    System.Console.WriteLine(FieldTypeOf(new Node(\"TypeClause\")))" + nl +
+                "    return 0" + nl +
+                "}" + nl);
+            Assert.Equal(0, exit);
+            Assert.Equal("hit", output);
+        }
+
+        /// <summary>类私有方法内的显式接收者两层链 node.Child(i).Kind()：
+        /// Binder.FieldTypeOf / DeclWordOf 的实际上下文（_currentClass = 宿主类，
+        /// 回退路径会先查宿主类的方法名）。</summary>
+        [Fact]
+        public void SelfCompiled_PrivateClassMethod_TwoLevelChain_InferString_Runs()
+        {
+            var nl = Environment.NewLine;
+            var (exit, output) = RunTinyMain(
+                "class Node {" + nl +
+                "    private field _k: string" + nl +
+                "    public constructor(k: string) {" + nl +
+                "        _k = k" + nl +
+                "    }" + nl +
+                "    public function Child(i: i32): Node { return this }" + nl +
+                "    public function Kind(): string { return _k }" + nl +
+                "}" + nl +
+                "class Binder {" + nl +
+                "    private function FieldTypeOf(node: Node): string {" + nl +
+                "        var i = 0" + nl +
+                "        while i < 1" + nl +
+                "        {" + nl +
+                "            let k = node.Child(i).Kind()" + nl +
+                "            if k == \"TypeClause\" || k == \"ArrayTypeClause\" || k == \"GenericTypeClause\"" + nl +
+                "            {" + nl +
+                "                return \"hit\"" + nl +
+                "            }" + nl +
+                "            i = i + 1" + nl +
+                "        }" + nl +
+                "        return \"int\"" + nl +
+                "    }" + nl +
+                "    public function Run(node: Node): string { return FieldTypeOf(node) }" + nl +
+                "}" + nl +
+                "function Main(args: string[]): i32 {" + nl +
+                "    var b = new Binder()" + nl +
+                "    System.Console.WriteLine(b.Run(new Node(\"TypeClause\")))" + nl +
+                "    return 0" + nl +
+                "}" + nl);
+            Assert.Equal(0, exit);
+            Assert.Equal("hit", output);
+        }
+
         /// <summary>用户类名作为参数类型（function F(n: N)）。</summary>
         [Fact]
         public void SelfCompiled_UserClassAsParameterType_Runs()
