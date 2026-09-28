@@ -342,6 +342,89 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal("let", output);
         }
 
+        /// <summary>静态工厂方法里的多分支 return new X(...)（BoundBinaryOperator.Bind / BoundUnaryOperator.Bind 形状：
+        /// 按类型与操作符组合分派，每支 return new，最后 return 默认值。</summary>
+        [Fact]
+        public void SelfCompiled_StaticFactory_MultiBranchReturnNew_Runs()
+        {
+            var nl = Environment.NewLine;
+            var (exit, output) = RunTinyMain(
+                "class Op {" + nl +
+                "    private field _kind: i32" + nl +
+                "    public constructor(kind: i32) {" + nl +
+                "        _kind = kind" + nl +
+                "    }" + nl +
+                "    public function Kind(): i32 { return _kind }" + nl +
+                "}" + nl +
+                "function Make(kind: i32, lt: string, rt: string): i32 {" + nl +
+                "    if lt == \"int\" && rt == \"int\"" + nl +
+                "    {" + nl +
+                "        if kind == 0 || kind == 1 || kind == 2 || kind == 3 || kind == 4" + nl +
+                "        {" + nl +
+                "            return new Op(kind).Kind()" + nl +
+                "        }" + nl +
+                "        if kind == 10 || kind == 11 || kind == 12 || kind == 13 || kind == 14 || kind == 15" + nl +
+                "        {" + nl +
+                "            return new Op(1).Kind()" + nl +
+                "        }" + nl +
+                "    }" + nl +
+                "    if lt == \"double\" && rt == \"double\"" + nl +
+                "    {" + nl +
+                "        return new Op(2).Kind()" + nl +
+                "    }" + nl +
+                "    if lt == \"string\" && rt == \"string\"" + nl +
+                "    {" + nl +
+                "        return new Op(3).Kind()" + nl +
+                "    }" + nl +
+                "    return 0" + nl +
+                "}" + nl +
+                "function Main(args: string[]): i32 {" + nl +
+                "    System.Console.WriteLine(string(Make(0, \"int\", \"int\")))" + nl +
+                "    return 0" + nl +
+                "}" + nl);
+            Assert.Equal(0, exit);
+            Assert.Equal("0", output);
+        }
+
+        /// <summary>Binder.InferTypeOfExpression 形状：三元表达式 `?`、块表达式尾值、
+        /// 元素访问与成员访问的返回类型推断。</summary>
+        [Fact]
+        public void SelfCompiled_Ternary_AndBlockTail_InferTypes_Runs()
+        {
+            var nl = Environment.NewLine;
+            var (exit, output) = RunTinyMain(
+                "function Pick(b: bool, a: string, c: string): string {" + nl +
+                "    return b ? a : c" + nl +
+                "}" + nl +
+                "function TailBlock(b: bool, a: string, c: string): string {" + nl +
+                "    if b" + nl +
+                "    {" + nl +
+                "        return a" + nl +
+                "    }" + nl +
+                "    else" + nl +
+                "    {" + nl +
+                "        return c" + nl +
+                "    }" + nl +
+                "}" + nl +
+                "class Bag {" + nl +
+                "    private field _items: string[]" + nl +
+                "    public constructor(n: i32) {" + nl +
+                "        _items = new string[n]" + nl +
+                "    }" + nl +
+                "    public function At(i: i32): string { return _items[i] }" + nl +
+                "    public function Len(): i32 { return _items.Length }" + nl +
+                "}" + nl +
+                "function Main(args: string[]): i32 {" + nl +
+                "    System.Console.WriteLine(Pick(true, \"A\", \"B\"))" + nl +
+                "    System.Console.WriteLine(TailBlock(false, \"C\", \"D\"))" + nl +
+                "    var bag = new Bag(2)" + nl +
+                "    System.Console.WriteLine(string(bag.Len()))" + nl +
+                "    return 0" + nl +
+                "}" + nl);
+            Assert.Equal(0, exit);
+            Assert.Equal("A\nD\n2", output);
+        }
+
         [Fact]
         public void SelfCompiled_WriteLine_IntAndString_SigsCoexist()
         {
