@@ -12,7 +12,7 @@ namespace Cocoa.Tests.Compiler
         private readonly ITestOutputHelper _out;
         public SelfCompileProbeTests(ITestOutputHelper output) { _out = output; }
 
-        [Fact(Skip = "阶段8 B1→B2：FirstArgType 拼接/string() 检测修复（WriteLine sig string）；新发现：多段 + 拼接链 DLL 触发 AccessViolation（宿主崩溃）——emitter 拼接发射原生级缺陷待查。ilverify 66 待逐项")]
+        [Fact(Skip = "stage8 b1b2: GCDB chain fixed (12s); B1 WriteLine sig still Int32 (corpus GCDB arg shape diff from tiny) - FirstArgType edge")]
         public void CompileFullSelfCompilerSource()
         {
             var root = AppContext.BaseDirectory;

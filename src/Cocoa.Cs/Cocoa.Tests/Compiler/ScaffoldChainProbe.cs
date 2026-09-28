@@ -110,7 +110,7 @@ namespace Cocoa.Tests.Compiler
             }
 
             var tiny = "function Main(args: string[]): i32 {" + Environment.NewLine +
-                "    System.Console.WriteLine(string(1) + string(2))" + Environment.NewLine +
+                "    System.Console.WriteLine(\"GCDB:\" + string(1) + \"/c=\" + string(2) + \"/len=\" + string(3))" + Environment.NewLine +
                 "    return 0" + Environment.NewLine +
                 "}" + Environment.NewLine;
             var main = "using System\n" +
@@ -183,7 +183,7 @@ namespace Cocoa.Tests.Compiler
             }
 
             Assert.Equal(0, (int)exit!);
-            Assert.Equal("12", runOut);
+            Assert.Equal("GCDB:1/c=2/len=3", runOut);
         }
     [Fact(Skip = "诊断：读 %TEMP%\\cocoa-b1-probe\\B1.dll 逐方法 PrepareMethod 猎无效 IL（阶段8 调试用，手动启用）")]
         public void HuntInvalid_FromSavedB1()
