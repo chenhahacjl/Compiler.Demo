@@ -378,6 +378,37 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal("let\nother\nvar\nCtor", output);
         }
 
+        /// <summary>let 局部在紧随其后的 if 条件里与多个字面量比较（Binder.FieldTypeOf /
+        /// MethodReturnTypeOf 形状：`let k = ...; if k == "A" || k == "B" || k == "C"`）。</summary>
+        [Fact]
+        public void SelfCompiled_LetLocal_ThenOrChainCompare_Runs()
+        {
+            var nl = Environment.NewLine;
+            var (exit, output) = RunTinyMain(
+                "class N {" + nl +
+                "    public function Kind(): string { return \"TypeClause\" }" + nl +
+                "}" + nl +
+                "function FieldTypeOf(k0: string): string {" + nl +
+                "    var i = 0" + nl +
+                "    while i < 1" + nl +
+                "    {" + nl +
+                "        var k = k0" + nl +
+                "        if k == \"TypeClause\" || k == \"ArrayTypeClause\" || k == \"GenericTypeClause\"" + nl +
+                "        {" + nl +
+                "            return \"hit\"" + nl +
+                "        }" + nl +
+                "        i = i + 1" + nl +
+                "    }" + nl +
+                "    return \"int\"" + nl +
+                "}" + nl +
+                "function Main(args: string[]): i32 {" + nl +
+                "    System.Console.WriteLine(FieldTypeOf(new N().Kind()))" + nl +
+                "    return 0" + nl +
+                "}" + nl);
+            Assert.Equal(0, exit);
+            Assert.Equal("hit", output);
+        }
+
         /// <summary>静态工厂方法里的多分支 return new X(...)（BoundBinaryOperator.Bind / BoundUnaryOperator.Bind 形状：
         /// 按类型与操作符组合分派，每支 return new，最后 return 默认值。</summary>
         [Fact]
