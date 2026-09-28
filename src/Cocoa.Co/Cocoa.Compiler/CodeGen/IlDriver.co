@@ -123,6 +123,20 @@ namespace Cocoa.CodeGen
 
             var usesString = hasString
             if needsStringArray[0] { usesString = true }
+            // 签名类型扫描：参数/返回/字段/local 里的 string|i32|bool|char 也需要对应 TypeRef 行。
+            // 此前只由 BCL 成员与数组创建推导，方法签名用到的原始类型会被漏掉
+            // （例：function Pick(a: string, b: string): string → TypeRef 表缺 String → CLR 校验失败）。
+            var sigTypes = SignatureTypes(binder, classCount, classElems, classElemsCount[0])
+            var sti = 0
+            while sti < sigTypes.Length
+            {
+                if sigTypes[sti] == "string" { usesString = true }
+                else if sigTypes[sti] == "i32" { needsInt32[0] = true }
+                else if sigTypes[sti] == "bool" { needsBool[0] = true }
+                else if sigTypes[sti] == "char" { needsChar[0] = true }
+                sti = sti + 1
+            }
+
             var usesInt32 = needsInt32[0]
             if usesConvert[0] { usesInt32 = true }
             var usesBool = needsBool[0]
@@ -1257,6 +1271,96 @@ namespace Cocoa.CodeGen
             return 1 + nonCtor
         }
 
+        /// <summary>收集所有函数签名（返回/参数/local）与类字段类型里出现的原始类型名
+        /// （string / i32 / bool / char；含数组元素类型），去重返回。</summary>
+        private static function SignatureTypes(binder: Binder, classCount: i32,
+            classElems: string[], classElemCount: i32): string[]
+        {
+            var acc = new string[64]
+            var cnt = new i32[1]
+            cnt[0] = 0
+
+            var fnCount = binder.GetFunctionCount()
+            var f = 0
+            while f < fnCount
+            {
+                AddType(acc, cnt, binder.GetFunctionReturnType(f))
+                var pc = binder.GetFunctionParamCount(f)
+                var p = 0
+                while p < pc
+                {
+                    AddType(acc, cnt, binder.GetFunctionParamType(f, p))
+                    p = p + 1
+                }
+
+                var lc = binder.GetFunctionLocalCount(f)
+                while lc > 0
+                {
+                    lc = lc - 1
+                    AddType(acc, cnt, binder.GetFunctionLocalType(f, lc))
+                }
+
+                f = f + 1
+            }
+
+            var c = 0
+            while c < classCount
+            {
+                var fc = binder.GetClassFieldCount(c)
+                var fi = 0
+                while fi < fc
+                {
+                    AddType(acc, cnt, binder.GetClassFieldType(c, fi))
+                    fi = fi + 1
+                }
+
+                c = c + 1
+            }
+
+            var result = new string[cnt[0]]
+            var o = 0
+            while o < cnt[0]
+            {
+                result[o] = acc[o]
+                o = o + 1
+            }
+
+            return result
+        }
+
+        /// <summary>把类型名（含数组后缀）拆出的元素类型去重加入 acc（cnt[0] 为计数）。</summary>
+        private static function AddType(acc: string[], cnt: i32[], typeName: string): void
+        {
+            if typeName.Length == 0
+            {
+                return
+            }
+
+            var base2 = typeName
+            if base2.IndexOf("[]") >= 0 && base2.IndexOf("[]") == base2.Length - 2
+            {
+                base2 = base2.substring(0, base2.Length - 2)
+            }
+
+            var n = cnt[0]
+            var i = 0
+            while i < n
+            {
+                if acc[i] == base2
+                {
+                    return
+                }
+
+                i = i + 1
+            }
+
+            if n < acc.Length
+            {
+                acc[n] = base2
+                cnt[0] = n + 1
+            }
+        }
+
         private static function ArgCountOf(node: Node): i32
         {
             var n = 0
@@ -1327,7 +1431,10 @@ namespace Cocoa.CodeGen
                             return "string"
                         }
 
-                        return "i32"
+                        // 其余函数调用的返回类型在此处不可知（FirstArgType 为 static 且无 binder 表）。
+                        // 保守按 string 处理：sig 失配的代价是调用点校验失败，
+                        // 而 Console.WriteLine 的 string 重载覆盖面最广。
+                        return "string"
                     }
 
                     return "i32"

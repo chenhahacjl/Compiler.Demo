@@ -209,7 +209,20 @@ namespace Cocoa.Tests.Compiler
                 }
                 catch (Exception ex)
                 {
-                    throw new Xunit.Sdk.XunitException("B1 形状复刻 invoke 失败 err=" + ex.GetType().Name + ": " + ex.Message +
+                    var dump = "";
+                    foreach (var t in asm.GetTypes())
+                    {
+                        foreach (var m in t.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic |
+                            System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.DeclaredOnly))
+                        {
+                            var mb = m.GetMethodBody();
+                            var il = mb?.GetILAsByteArray() ?? Array.Empty<byte>();
+                            var loc = mb?.LocalVariables == null ? "" : string.Join(",", mb.LocalVariables.Select(l => l.LocalIndex + ":" + l.LocalType.Name));
+                            dump += "IL " + t.Name + "." + m.Name + " locals=[" + loc + "] " + Convert.ToHexString(il) + " | ";
+                        }
+                    }
+
+                    throw new Xunit.Sdk.XunitException(dump + "invoke err=" + ex.GetType().Name + ": " + ex.Message +
                         " inner=" + ex.InnerException);
                 }
 
@@ -295,8 +308,40 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal("OR\nOK", output);
         }
 
-        /// <summary>同一程序内 Console.WriteLine(int) 与 WriteLine(string) 共存：
-        /// 两个调用点需要各自的 MemberRef sig（收集侧 key 与 emitter 侧查找都必须带实参类型）。</summary>
+        /// <summary>局部变量持有字符串，在 while 循环内与多个字面量做 || 比较后 return 字面量
+        /// （Binder.DeclWordOf / FieldTypeOf / MethodReturnTypeOf 的形状）；
+        /// 且返回 string 的函数调用作为 Console.WriteLine 实参（sig 收集须判为 string）。</summary>
+        [Fact]
+        public void SelfCompiled_LocalStringSwitch_OrChain_InWhile_Runs()
+        {
+            var nl = Environment.NewLine;
+            var (exit, output) = RunTinyMain(
+                "function Pick(a: string, b: string, c: string): string {" + nl +
+                "    var i = 0" + nl +
+                "    while i < 3 {" + nl +
+                "        var k = a" + nl +
+                "        if k == \"TypeClause\" || k == \"ArrayTypeClause\" || k == \"GenericTypeClause\"" + nl +
+                "        {" + nl +
+                "            return \"hit\"" + nl +
+                "        }" + nl +
+                "        var m = b" + nl +
+                "        if m == \"LetKeyword\"" + nl +
+                "        {" + nl +
+                "            return \"let\"" + nl +
+                "        }" + nl +
+                "        i = i + 1" + nl +
+                "    }" + nl +
+                "    return \"none\"" + nl +
+                "}" + nl +
+                "function Main(args: string[]): i32 {" + nl +
+                "    System.Console.WriteLine(Pick(args[0], \"LetKeyword\", \"x\"))" + nl +
+                "    return 0" + nl +
+                "}" + nl);
+            Assert.Equal(0, exit);
+            // args[0]=="hello" 不匹配三个 TypeClause → 落到 LetKeyword 分支
+            Assert.Equal("let", output);
+        }
+
         [Fact]
         public void SelfCompiled_WriteLine_IntAndString_SigsCoexist()
         {
