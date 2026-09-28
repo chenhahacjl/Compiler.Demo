@@ -171,7 +171,7 @@ namespace Cocoa.Tests.Compiler
                 }
                 catch (Exception ex)
                 {
-                    throw new Xunit.Sdk.XunitException("sig=" + sigInfo + " err=" + ex.GetType().Name + ":" + ex.Message);
+                    throw new Xunit.Sdk.XunitException("sig=" + sigInfo + " err=" + ex.GetType().Name + ":" + ex.Message + " inner=" + ex.InnerException);
                 }
 
                 Console.SetOut(original);
