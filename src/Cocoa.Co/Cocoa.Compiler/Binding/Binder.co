@@ -390,6 +390,10 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     BindClassMethod(child, classIndex)
                 }
+                else if k == "ConstructorDeclaration"
+                {
+                    BindClassConstructor(child, classIndex)
+                }
 
                 i = i + 1
             }
@@ -454,6 +458,59 @@ namespace Cocoa.CodeAnalysis.Binding
             _classMethodCounts[classIndex] = _classMethodCounts[classIndex] + 1
 
             AddFunction(fn, methodName)
+        }
+
+        /// <summary>类构造器 ConstructorDeclaration → FunctionSymbol（名 `.ctor`，param 0 = this，返回 void）。
+        /// 与 BindClassMethod 同构：登记到 class method 序列，方法体由 phase 2 的 CheckFunctionBody 回填。</summary>
+        private function BindClassConstructor(node: Node, classIndex: i32): void
+        {
+            let className = _classNames[classIndex]
+            let fn = FunctionSymbol.Create(".ctor", "void")
+            fn.AddParameter("this", className)
+
+            var i = 0
+            while i < node.ChildCount()
+            {
+                let child = node.Child(i)
+                if child.Kind() == "Parameter"
+                {
+                    fn.AddParameter(ParameterName(child), ParameterType(child))
+                }
+
+                i = i + 1
+            }
+
+            let methodIndex = _functionCount
+            let midx = _classMethodOffsets[classIndex] + _classMethodCounts[classIndex]
+            if midx >= _classMethodIndexes.Length
+            {
+                var mi = new i32[_classMethodIndexes.Length * 2]
+                var mn = new Node[_classMethodNodes.Length * 2]
+                var mg = new string[_classMethodNames.Length * 2]
+                var ms = new bool[_classMethodStatic.Length * 2]
+                var g2 = 0
+                while g2 < midx
+                {
+                    mi[g2] = _classMethodIndexes[g2]
+                    mn[g2] = _classMethodNodes[g2]
+                    mg[g2] = _classMethodNames[g2]
+                    ms[g2] = _classMethodStatic[g2]
+                    g2 = g2 + 1
+                }
+
+                _classMethodIndexes = mi
+                _classMethodNodes = mn
+                _classMethodNames = mg
+                _classMethodStatic = ms
+            }
+
+            _classMethodIndexes[midx] = methodIndex
+            _classMethodNodes[midx] = node
+            _classMethodNames[midx] = ".ctor"
+            _classMethodStatic[midx] = false
+            _classMethodCounts[classIndex] = _classMethodCounts[classIndex] + 1
+
+            AddFunction(fn, ".ctor")
         }
 
         private function BindFunction(node: Node): i32

@@ -1910,6 +1910,8 @@ private field _pendingCount: i32
                     return
                 }
 
+                // newobj 弹出实参、分配对象并压入新引用；this 由 newobj 隐式传入 ctor，
+                // 故调用点不得预压 this（否则栈多一个值 → CLR 校验失败）。
                 var argCount = 0
                 var a = 1
                 while a < expr.ChildCount()

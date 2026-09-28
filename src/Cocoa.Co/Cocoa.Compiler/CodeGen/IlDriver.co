@@ -156,8 +156,9 @@ namespace Cocoa.CodeGen
             var convertMemberRow = 1 + bclCount[0]
             if classCount > 0 { convertMemberRow = convertMemberRow + 1 }
 
-            // ---- 方法行规划：顶层（序数序）→ 每类（隐式 .ctor + 实例方法）。
-            // 行号/令牌纯算术：顶层 t → 行 t；类 ci 的 ctor → classStartRow[ci]。
+            // ---- 方法行规划：顶层（序数序）→ 每类（ctor 行 + 实例方法）。
+            // 行号/令牌纯算术：顶层 t → 行 t；类 ci 的 ctor → classStartRow[ci]；
+            // 非 ctor 方法依次 classStartRow[ci]+1, +2, …（源码 .ctor 复用 ctor 行，不额外占行）。
             // <CocoaTopLevel> methodList=1 覆盖行 1..topCount；用户类 methodList=ctor 行。
             var classStartRow = new i32[classCount]
             var fieldStart = new i32[classCount]
@@ -169,8 +170,9 @@ namespace Cocoa.CodeGen
             {
                 classStartRow[ci] = totalRows
                 fieldStart[ci] = totalFields
-                totalRows = totalRows + 1 + binder.GetClassMethodCount(ci)
-                totalClassMethods = totalClassMethods + binder.GetClassMethodCount(ci)
+                // 行数 = 1(ctor) + 非 ctor 方法数
+                totalRows = totalRows + 1 + binder.GetClassMethodCount(ci) - (ClassCtorMethodIndex(binder, ci) >= 0 ? 1 : 0)
+                totalClassMethods = totalClassMethods + binder.GetClassMethodCount(ci) - (ClassCtorMethodIndex(binder, ci) >= 0 ? 1 : 0)
                 totalFields = totalFields + binder.GetClassFieldCount(ci)
                 ci = ci + 1
             }
@@ -215,6 +217,7 @@ namespace Cocoa.CodeGen
                 userTypeMethodLists[ci] = classStartRow[ci] + 1
                 userTypeFieldLists[ci] = totalFields > 0 ? fieldStart[ci] + 1 : 1
                 classCtorNames[ci] = className
+                // MethodDef token 行号 = 数组索引 + 1（ctor 在数组索引 classStartRow[ci]）
                 classCtorTokens[ci] = 0x06000000 + classStartRow[ci] + 1
 
                 var fi = 0
@@ -233,21 +236,25 @@ namespace Cocoa.CodeGen
                 var mi = 0
                 while mi < binder.GetClassMethodCount(ci)
                 {
-                    let fidx = binder.GetClassMethodIndex(ci, mi)
-                    if binder.GetClassMethodIsStatic(ci, mi)
+                    // .ctor 不进方法查找表（只能经 newobj 调用）
+                    if binder.GetClassMethodName(ci, mi) != ".ctor"
                     {
-                        staticKeys[sc] = className + "." + binder.GetClassMethodName(ci, mi)
-                        staticTokens[sc] = 0x06000000 + classStartRow[ci] + 2 + mi
-                        sc = sc + 1
-                    }
-                    else
-                    {
-                        classKeys[cmc] = className + "." + binder.GetClassMethodName(ci, mi)
-                        classTokens[cmc] = 0x06000000 + classStartRow[ci] + 2 + mi
-                        classReturns[cmc] = binder.GetFunctionReturnType(fidx) != "void"
-                        typeKeys[cmc] = className + "." + binder.GetClassMethodName(ci, mi)
-                        typeVals[cmc] = binder.GetFunctionReturnType(fidx)
-                        cmc = cmc + 1
+                        let fidx = binder.GetClassMethodIndex(ci, mi)
+                        if binder.GetClassMethodIsStatic(ci, mi)
+                        {
+                            staticKeys[sc] = className + "." + binder.GetClassMethodName(ci, mi)
+                            staticTokens[sc] = 0x06000000 + classStartRow[ci] + ClassMethodRowOffset(binder, ci, mi) + 1
+                            sc = sc + 1
+                        }
+                        else
+                        {
+                            classKeys[cmc] = className + "." + binder.GetClassMethodName(ci, mi)
+                            classTokens[cmc] = 0x06000000 + classStartRow[ci] + ClassMethodRowOffset(binder, ci, mi) + 1
+                            classReturns[cmc] = binder.GetFunctionReturnType(fidx) != "void"
+                            typeKeys[cmc] = className + "." + binder.GetClassMethodName(ci, mi)
+                            typeVals[cmc] = binder.GetFunctionReturnType(fidx)
+                            cmc = cmc + 1
+                        }
                     }
 
                     mi = mi + 1
@@ -423,34 +430,53 @@ namespace Cocoa.CodeGen
                 tt = tt + 1
             }
 
-            // 类：隐式 .ctor + 实例方法
+            // 类：ctor 行 + 实例方法
             ci = 0
             while ci < classCount
             {
                 let ctorRow = classStartRow[ci]
-                mNames[ctorRow] = ".ctor"
-                mFlags[ctorRow] = 0x1886
-                mParamCounts[ctorRow] = 0
-                mSigs[ctorRow] = MetadataEncode.EncodeMethodSignatureHex("void", new string[0], 0, false)
-                let ctorAsm = new IlAssembler()
-                ctorAsm.EmitOperand("Ldarg", 12, 0, -1)
-                let ccall = ctorAsm.EmitOperand("Call", 7, objectCtorToken, -1)
-                ctorAsm.SetCallDelta(ccall, 0 - 1)
-                ctorAsm.EmitOperand("Ret", 0, 0, -1)
-                mBodies[ctorRow] = ctorAsm.Assemble()
-                mMaxStacks[ctorRow] = ctorAsm.ComputeMaxStack()
-                mRvas[ctorRow] = rvaState[0]
-                rvaState[0] = rvaState[0] + Align4(12 + mBodies[ctorRow].Length / 2)
-                mSigBlobs[ctorRow] = ""
-                mSigTokens[ctorRow] = 0
+                if ClassCtorMethodIndex(binder, ci) < 0
+                {
+                    // 无源码 ctor：生成隐式无参 .ctor（ldarg.0 → base..ctor → ret）
+                    mNames[ctorRow] = ".ctor"
+                    mFlags[ctorRow] = 0x1886
+                    mParamCounts[ctorRow] = 0
+                    mSigs[ctorRow] = MetadataEncode.EncodeMethodSignatureHex("void", new string[0], 0, false)
+                    let ctorAsm = new IlAssembler()
+                    ctorAsm.EmitOperand("Ldarg", 12, 0, -1)
+                    let ccall = ctorAsm.EmitOperand("Call", 7, objectCtorToken, -1)
+                    ctorAsm.SetCallDelta(ccall, 0 - 1)
+                    ctorAsm.EmitOperand("Ret", 0, 0, -1)
+                    mBodies[ctorRow] = ctorAsm.Assemble()
+                    mMaxStacks[ctorRow] = ctorAsm.ComputeMaxStack()
+                    mRvas[ctorRow] = rvaState[0]
+                    rvaState[0] = rvaState[0] + Align4(12 + mBodies[ctorRow].Length / 2)
+                    mSigBlobs[ctorRow] = ""
+                    mSigTokens[ctorRow] = 0
+                }
+                else
+                {
+                    // 源码带参 ctor：真身在下方 mi2 循环按 ClassMethodRowOffset 落到 ctorRow 生成。
+                    // 此处只清字段，不写 body/rva（占位会与真身 RVA 区间冲突 → Bad IL range）。
+                    mNames[ctorRow] = ".ctor"
+                    mFlags[ctorRow] = 0x1886
+                    mParamCounts[ctorRow] = 0
+                    mSigs[ctorRow] = MetadataEncode.EncodeMethodSignatureHex("void", new string[0], 0, true)
+                    mBodies[ctorRow] = ""
+                    mMaxStacks[ctorRow] = 0
+                    mRvas[ctorRow] = 0
+                    mSigBlobs[ctorRow] = ""
+                    mSigTokens[ctorRow] = 0
+                }
 
                 var mi2 = 0
                 while mi2 < binder.GetClassMethodCount(ci)
                 {
-                    let r = classStartRow[ci] + 1 + mi2
+                    let r = classStartRow[ci] + ClassMethodRowOffset(binder, ci, mi2)
                     let fidx = binder.GetClassMethodIndex(ci, mi2)
                     let isStat = binder.GetClassMethodIsStatic(ci, mi2)
-                    mNames[r] = binder.GetClassMethodName(ci, mi2)
+                    let mname = binder.GetClassMethodName(ci, mi2)
+                    mNames[r] = mname
                     if isStat
                     {
                         mFlags[r] = 0x96
@@ -459,7 +485,7 @@ namespace Cocoa.CodeGen
                     }
                     else
                     {
-                        mFlags[r] = 0x86
+                        mFlags[r] = mname == ".ctor" ? 0x1886 : 0x86
                         mParamCounts[r] = binder.GetFunctionParamCount(fidx) - 1
                         mSigs[r] = MethodSig(binder, fidx, false, 1)
                     }
@@ -469,6 +495,20 @@ namespace Cocoa.CodeGen
                     if err2.Length > 0
                     {
                         return err2
+                    }
+
+                    if mname == ".ctor"
+                    {
+                        rvaState[0] = mRvas[r]
+                        let baseAsm = new IlAssembler()
+                        baseAsm.EmitOperand("Ldarg", 12, 0, -1)
+                        let baseCall = baseAsm.EmitOperand("Call", 7, objectCtorToken, -1)
+                        baseAsm.SetCallDelta(baseCall, 0 - 1)
+                        mBodies[r] = baseAsm.Assemble() + mBodies[r]
+                        // base 前缀自身峰值 1（ldarg.0），其后紧接原体 → 峰值取二者较大
+                        let baseMax = baseAsm.ComputeMaxStack()
+                        if baseMax > mMaxStacks[r] { mMaxStacks[r] = baseMax }
+                        rvaState[0] = rvaState[0] + Align4(12 + mBodies[r].Length / 2)
                     }
 
                     mi2 = mi2 + 1
@@ -704,22 +744,30 @@ namespace Cocoa.CodeGen
                 var csl = 0
                 while csl < cfn
                 {
-                    csr = csr + 1 + binder.GetClassMethodCount(csl)
+                    csr = csr + 1 + binder.GetClassMethodCount(csl) - (ClassCtorMethodIndex(binder, csl) >= 0 ? 1 : 0)
                     csl = csl + 1
                 }
 
-                let mcnt = binder.GetClassMethodCount(cfn)
+                // 当前类方法表跳过 .ctor（只能经 newobj 调用）
+                let mcnt = binder.GetClassMethodCount(cfn) - (ClassCtorMethodIndex(binder, cfn) >= 0 ? 1 : 0)
                 var ck = new string[mcnt]
                 var ct = new i32[mcnt]
                 var ci2 = new bool[mcnt]
                 var cr = new bool[mcnt]
                 var cm4 = 0
+                var srcMi = 0
                 while cm4 < mcnt
                 {
-                    ck[cm4] = binder.GetClassMethodName(cfn, cm4)
-                    ct[cm4] = 0x06000000 + csr + 2 + cm4
-                    ci2[cm4] = !binder.GetClassMethodIsStatic(cfn, cm4)
-                    cr[cm4] = binder.GetFunctionReturnType(binder.GetClassMethodIndex(cfn, cm4)) != "void"
+                    while srcMi < binder.GetClassMethodCount(cfn) && binder.GetClassMethodName(cfn, srcMi) == ".ctor"
+                    {
+                        srcMi = srcMi + 1
+                    }
+
+                    ck[cm4] = binder.GetClassMethodName(cfn, srcMi)
+                    ct[cm4] = 0x06000000 + csr + ClassMethodRowOffset(binder, cfn, srcMi) + 1
+                    ci2[cm4] = !binder.GetClassMethodIsStatic(cfn, srcMi)
+                    cr[cm4] = binder.GetFunctionReturnType(binder.GetClassMethodIndex(cfn, srcMi)) != "void"
+                    srcMi = srcMi + 1
                     cm4 = cm4 + 1
                 }
 
@@ -1155,6 +1203,60 @@ namespace Cocoa.CodeGen
         }
 
         /// <summary>MemberCall 实参数（跳过 `(`/`)` 等 token）。</summary>
+        /// <summary>带参 ctor 的方法体前缀：ldarg.0 → call Object::.ctor（hex）。
+        /// newobj 传 this + 实参，base ctor 需弹掉 this；栈深度回到进入 ctor 时的状态。</summary>
+        private static function BaseCtorPrefix(objectCtorToken: i32): string
+        {
+            let a = new IlAssembler()
+            a.EmitOperand("Ldarg", 12, 0, -1)
+            let callIdx = a.EmitOperand("Call", 7, objectCtorToken, -1)
+            a.SetCallDelta(callIdx, 0 - 1)
+            return a.Assemble()
+        }
+
+        /// <summary>类内源码 `.ctor` 在 binder class method 序列中的下标；无则 -1。</summary>
+        private static function ClassCtorMethodIndex(binder: Binder, classIndex: i32): i32
+        {
+            var mi = 0
+            while mi < binder.GetClassMethodCount(classIndex)
+            {
+                if binder.GetClassMethodName(classIndex, mi) == ".ctor"
+                {
+                    return mi
+                }
+
+                mi = mi + 1
+            }
+
+            return -1
+        }
+
+        /// <summary>第 mi 个 class method 相对 classStartRow 的行偏移。
+        /// 布局：+0 = ctor 行（源码 ctor 或隐式）；非 ctor 方法依次 +1, +2, …。</summary>
+        private static function ClassMethodRowOffset(binder: Binder, classIndex: i32, methodIndex: i32): i32
+        {
+            let ctorMi = ClassCtorMethodIndex(binder, classIndex)
+            if methodIndex == ctorMi
+            {
+                return 0
+            }
+
+            // 非 ctor 方法行号 = 1 + (它在非 ctor 序列中的序号)
+            var nonCtor = 0
+            var mi = 0
+            while mi < methodIndex
+            {
+                if mi != ctorMi
+                {
+                    nonCtor = nonCtor + 1
+                }
+
+                mi = mi + 1
+            }
+
+            return 1 + nonCtor
+        }
+
         private static function ArgCountOf(node: Node): i32
         {
             var n = 0

@@ -473,6 +473,42 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return f
             }
 
+            if IsKeywordText("constructor")
+            {
+                let c = Node.MakeCompound("ConstructorDeclaration")
+                if attrs.ChildCount() > 0
+                {
+                    c.Add(attrs)
+                }
+
+                var i = 0
+                while i < modCount
+                {
+                    c.Add(mods[i])
+                    i = i + 1
+                }
+
+                c.Add(Match("ConstructorKeyword"))
+                c.Add(Match("OpenParenthesisToken"))
+                if KindName() != "CloseParenthesisToken"
+                {
+                    c.Add(ParseParameter())
+                    while KindName() == "CommaToken"
+                    {
+                        c.Add(Match("CommaToken"))
+                        c.Add(ParseParameter())
+                    }
+                }
+
+                c.Add(Match("CloseParenthesisToken"))
+                if KindName() == "OpenBraceToken"
+                {
+                    c.Add(ParseBlockStatement())
+                }
+
+                return c
+            }
+
             if IsKeywordText("property")
             {
                 let p = Node.MakeCompound("PropertyDeclaration")
@@ -511,42 +547,6 @@ namespace Cocoa.CodeAnalysis.Syntax
                 }
 
                 return p
-            }
-
-            if IsKeywordText("constructor")
-            {
-                let c = Node.MakeCompound("ConstructorDeclaration")
-                if attrs.ChildCount() > 0
-                {
-                    c.Add(attrs)
-                }
-
-                var i = 0
-                while i < modCount
-                {
-                    c.Add(mods[i])
-                    i = i + 1
-                }
-
-                c.Add(Match("ConstructorKeyword"))
-                c.Add(Match("OpenParenthesisToken"))
-                if KindName() != "CloseParenthesisToken"
-                {
-                    c.Add(ParseParameter())
-                    while KindName() == "CommaToken"
-                    {
-                        c.Add(Match("CommaToken"))
-                        c.Add(ParseParameter())
-                    }
-                }
-
-                c.Add(Match("CloseParenthesisToken"))
-                if KindName() == "OpenBraceToken"
-                {
-                    c.Add(ParseBlockStatement())
-                }
-
-                return c
             }
 
             // 兜底：按语句解析（GlobalStatement 由调用方决定）
