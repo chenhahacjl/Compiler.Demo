@@ -378,6 +378,43 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal("let\nother\nvar\nCtor", output);
         }
 
+        /// <summary>类内私有助手的返回类型用于 let 局部声明（Binder.DeclWordOf 形状：
+        /// `let k = node.Child(i).Kind()`，Kind 为当前类实例方法），
+        /// 随后在 || 链里与字面量比较。</summary>
+        [Fact]
+        public void SelfCompiled_ClassHelperReturn_InferLocalType_Runs()
+        {
+            var nl = Environment.NewLine;
+            var (exit, output) = RunTinyMain(
+                "class Node {" + nl +
+                "    private field _k: string" + nl +
+                "    public constructor(k: string) {" + nl +
+                "        _k = k" + nl +
+                "    }" + nl +
+                "    public function Child(i: i32): Node { return this }" + nl +
+                "    private function Kind(): string { return _k }" + nl +
+                "    public function DeclWord(): string {" + nl +
+                "        var i = 0" + nl +
+                "        while i < 1" + nl +
+                "        {" + nl +
+                "            let k = Child(i).Kind()" + nl +
+                "            if k == \"TypeClause\" || k == \"ArrayTypeClause\" || k == \"GenericTypeClause\"" + nl +
+                "            {" + nl +
+                "                return \"hit\"" + nl +
+                "            }" + nl +
+                "            i = i + 1" + nl +
+                "        }" + nl +
+                "        return \"var\"" + nl +
+                "    }" + nl +
+                "}" + nl +
+                "function Main(args: string[]): i32 {" + nl +
+                "    System.Console.WriteLine(new Node(\"TypeClause\").DeclWord())" + nl +
+                "    return 0" + nl +
+                "}" + nl);
+            Assert.Equal(0, exit);
+            Assert.Equal("hit", output);
+        }
+
         /// <summary>用户类名作为参数类型（function F(n: N)）。</summary>
         [Fact]
         public void SelfCompiled_UserClassAsParameterType_Runs()
@@ -400,21 +437,27 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal("0", output);
         }
 
-        /// <summary>let 局部在紧随其后的 if 条件里与多个字面量比较（Binder.FieldTypeOf /
-        /// MethodReturnTypeOf 形状：`let k = ...; if k == "A" || k == "B" || k == "C"`）。</summary>
+        /// <summary>let 局部在紧随其后的 if 条件里与多个字面量比较（Binder.DeclWordOf / FieldTypeOf
+        /// / MethodReturnTypeOf / BinaryGlyphOf / UnaryGlyphOf 共同形状：
+        /// `let k = ...; if k == "A" || k == "B" || k == "C"`）。</summary>
         [Fact]
         public void SelfCompiled_LetLocal_ThenOrChainCompare_Runs()
         {
             var nl = Environment.NewLine;
             var (exit, output) = RunTinyMain(
-                "class N {" + nl +
-                "    public function Kind(): string { return \"TypeClause\" }" + nl +
+                "class Node {" + nl +
+                "    private field _k: string" + nl +
+                "    public constructor(k: string) {" + nl +
+                "        _k = k" + nl +
+                "    }" + nl +
+                "    public function Child(i: i32): Node { return this }" + nl +
+                "    public function Kind(): string { return _k }" + nl +
                 "}" + nl +
-                "function FieldTypeOf(k0: string): string {" + nl +
+                "function FieldTypeOf(node: Node): string {" + nl +
                 "    var i = 0" + nl +
                 "    while i < 1" + nl +
                 "    {" + nl +
-                "        var k = k0" + nl +
+                "        let k = node.Child(i).Kind()" + nl +
                 "        if k == \"TypeClause\" || k == \"ArrayTypeClause\" || k == \"GenericTypeClause\"" + nl +
                 "        {" + nl +
                 "            return \"hit\"" + nl +
@@ -424,7 +467,7 @@ namespace Cocoa.Tests.Compiler
                 "    return \"int\"" + nl +
                 "}" + nl +
                 "function Main(args: string[]): i32 {" + nl +
-                "    System.Console.WriteLine(FieldTypeOf(new N().Kind()))" + nl +
+                "    System.Console.WriteLine(FieldTypeOf(new Node(\"TypeClause\")))" + nl +
                 "    return 0" + nl +
                 "}" + nl);
             Assert.Equal(0, exit);

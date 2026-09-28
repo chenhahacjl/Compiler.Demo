@@ -48,6 +48,8 @@ private field _pendingCount: i32
         private field _curClassInstance: bool[]
         private field _curClassReturns: bool[]
         private field _curClassCount: i32
+        private field _curClassName: string
+        private field _curClassReturnTypes: string[]
         private field _curFieldKeys: string[]
         private field _curFieldTokens: i32[]
         private field _curFieldTypes: string[]
@@ -268,13 +270,16 @@ private field _pendingCount: i32
         }
 
         /// <summary>当前类裸方法表（同类实例/静态方法裸调用无 `this.`/类名时按其类解析；key = 裸方法名）。</summary>
-        public function SetCurrentClassMethods(keys: string[], tokens: i32[], instance: bool[], returns: bool[], count: i32): void
+        public function SetCurrentClassMethods(keys: string[], tokens: i32[], instance: bool[], returns: bool[], count: i32,
+            className: string, returnTypes: string[]): void
         {
             _curClassKeys = keys
             _curClassTokens = tokens
             _curClassInstance = instance
             _curClassReturns = returns
             _curClassCount = count
+            _curClassName = className
+            _curClassReturnTypes = returnTypes
         }
 
         /// <summary>当前类字段表（名 → FieldDef token + 类型），供 `_root.ChildCount()` 字段实例方法调用解析。</summary>
@@ -412,8 +417,29 @@ private field _pendingCount: i32
             _classMethodTypeCount = count
         }
 
-        private function ClassMethodType(key: string): string
+        /// <summary>当前类实例方法的返回类型（f(...) 接收者类型解析用）。</summary>
+        private function CurClassReturnType(name: string): string
         {
+            if _curClassReturnTypes == null || _curClassName == ""
+            {
+                return ""
+            }
+
+            var i = 0
+            while i < _curClassCount
+            {
+                if _curClassKeys[i] == name
+                {
+                    return i < _curClassReturnTypes.Length ? _curClassReturnTypes[i] : ""
+                }
+
+                i = i + 1
+            }
+
+            return ""
+        }
+
+        private function ClassMethodType(key: string): string        {
             var i = 0
             while i < _classMethodTypeCount
             {
@@ -595,36 +621,34 @@ private field _pendingCount: i32
                 }
             }
 
-            if k == "MemberCallExpression"
+            if k == "CallExpression"
             {
-                // a.b().Text()：接收者为方法调用 → 用被调方法返回类型解析链；裸调用回退当前类
-                let tgt1 = expr.ChildCount() > 0 ? expr.Child(0) : null
-                if tgt1 != null && expr.ChildCount() > 2
+                // f(...) 的类型 = 被调函数返回类型。当前类实例方法优先（Child(i).Kind() 这类
+                // 链式接收者），其次顶层函数。缺此分支时接收者类型为空，
+                // 后续 a.b().c() 会因 ClassMethodToken(".c") 解析失败（Unresolved bcl member）。
+                if expr.ChildCount() == 0
                 {
-                    let recvT = ExprTypeOf(tgt1)
-                    if recvT.Length > 0
-                    {
-                        return ClassMethodType(recvT + "." + expr.Child(2).Text())
-                    }
+                    return ""
                 }
 
-                if expr.ChildCount() > 2
+                var fn = expr.Child(0).Text()
+                if expr.Child(0).Kind() == "MemberAccessExpression" && expr.Child(0).ChildCount() > 2
                 {
-                    let ci3 = CurClassMethodIndex(expr.Child(2).Text())
-                    if ci3 >= 0
-                    {
-                        return ""
-                    }
+                    fn = expr.Child(0).Child(2).Text()
                 }
 
-                return ""
-            }
+                if fn == "string" || fn == "i32" || fn == "f64" || fn == "bool" || fn == "char"
+                {
+                    return ExprTypeOf(expr.ChildCount() > 1 ? expr.Child(1) : expr)
+                }
 
-            if k == "ElementAccessExpression"
-            {
-                // _locals[i].Describe()：数组元素类型
-                let arrType = expr.ChildCount() > 0 ? ExprTypeOf(expr.Child(0)) : ""
-                return ArrayElemTypeOf(arrType)
+                let curT = CurClassReturnType(fn)
+                if curT.Length > 0
+                {
+                    return curT
+                }
+
+                return ClassMethodType(fn)
             }
 
             if k == "MemberCallExpression"

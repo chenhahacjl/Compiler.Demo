@@ -768,6 +768,7 @@ namespace Cocoa.CodeGen
                 var ct = new i32[mcnt]
                 var ci2 = new bool[mcnt]
                 var cr = new bool[mcnt]
+                var crt = new string[mcnt]
                 var cm4 = 0
                 var srcMi = 0
                 while cm4 < mcnt
@@ -781,11 +782,12 @@ namespace Cocoa.CodeGen
                     ct[cm4] = 0x06000000 + csr + ClassMethodRowOffset(binder, cfn, srcMi) + 1
                     ci2[cm4] = !binder.GetClassMethodIsStatic(cfn, srcMi)
                     cr[cm4] = binder.GetFunctionReturnType(binder.GetClassMethodIndex(cfn, srcMi)) != "void"
+                    crt[cm4] = binder.GetFunctionReturnType(binder.GetClassMethodIndex(cfn, srcMi))
                     srcMi = srcMi + 1
                     cm4 = cm4 + 1
                 }
 
-                emitter.SetCurrentClassMethods(ck, ct, ci2, cr, mcnt)
+                emitter.SetCurrentClassMethods(ck, ct, ci2, cr, mcnt, binder.GetClassName(cfn), crt)
 
                 // 当前类字段表（名 → FieldDef token + 类型）
                 var fstart = 0
@@ -813,7 +815,7 @@ namespace Cocoa.CodeGen
             }
             else
             {
-                emitter.SetCurrentClassMethods(new string[0], new i32[0], new bool[0], new bool[0], 0)
+                emitter.SetCurrentClassMethods(new string[0], new i32[0], new bool[0], new bool[0], 0, "", new string[0])
                 emitter.SetCurrentClassFields(new string[0], new i32[0], new string[0], 0)
             }
 
