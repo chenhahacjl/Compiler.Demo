@@ -45,12 +45,47 @@ namespace Cocoa.Tests.Compiler
             }
 
             var compilerDir = Path.Combine(root!, "src", "Cocoa.Co", "Cocoa.Compiler");
-            return Directory.GetFiles(compilerDir, "*.co", SearchOption.AllDirectories)
+            var files = Directory.GetFiles(compilerDir, "*.co", SearchOption.AllDirectories)
                 .OrderBy(f => f, StringComparer.Ordinal).ToArray();
+
+            // 语料子集档：环境变量 COCOA_CORPUS_SLICE=目录相对路径[,...]（如 "Syntax,Symbols"）
+            // 或 COCOA_CORPUS_EXCLUDE=文件名[,...]（如 "NativeEmitter.co,X64Assembler.co"）。
+            // 用于分钟级验证 Binder/Emitter 内部修复；不设则用全量语料（慢档，约 30m）。
+            var slice = Environment.GetEnvironmentVariable("COCOA_CORPUS_SLICE");
+            if (!string.IsNullOrEmpty(slice))
+            {
+                var dirs = slice!.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                files = files
+                    .Where(f => dirs.Any(d => f.Replace('\\', '/').Contains("/Cocoa.Compiler/" + d.Replace('\\', '/') + "/")))
+                    .ToArray();
+            }
+
+            var exclude = Environment.GetEnvironmentVariable("COCOA_CORPUS_EXCLUDE");
+            if (!string.IsNullOrEmpty(exclude))
+            {
+                var names = exclude!.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                files = files.Where(f => !names.Any(n => f.EndsWith(n, StringComparison.Ordinal))).ToArray();
+            }
+
+            return files;
         }
 
         private static string CorpusSource(string[] files) =>
             string.Join(Environment.NewLine, files.Select(f => File.ReadAllText(f)));
+
+        /// <summary>stamp 的语料档位后缀（全量语料为空串）。
+        /// 切片/排除档产出的 B1 与全量 B1 语义不同，必须靠后缀区分，避免拿它做全量 fixpoint。</summary>
+        private static string StampSliceSuffix()
+        {
+            var slice = Environment.GetEnvironmentVariable("COCOA_CORPUS_SLICE");
+            if (!string.IsNullOrEmpty(slice))
+            {
+                return "|slice=" + slice!.Trim();
+            }
+
+            var exclude = Environment.GetEnvironmentVariable("COCOA_CORPUS_EXCLUDE");
+            return string.IsNullOrEmpty(exclude) ? "" : "|exclude=" + exclude!.Trim();
+        }
 
         private static string CurrentHead()
         {
@@ -149,7 +184,7 @@ namespace Cocoa.Tests.Compiler
             var b1Path = Path.Combine(ProbeDir, "B1.dll");
             File.WriteAllBytes(b1Path, b1Bytes);
             _out.WriteLine("B1 saved: " + b1Path);
-            File.WriteAllText(Path.Combine(ProbeDir, "B1.stamp"), CurrentHead());
+            File.WriteAllText(Path.Combine(ProbeDir, "B1.stamp"), CurrentHead() + StampSliceSuffix());
 
             // 独立目录副本 + 立即冒烟：加载 + ilverify 门禁（不跑 27m 的 B2）
             var dir = Path.Combine(Path.GetTempPath(), "cocoa-b1", Guid.NewGuid().ToString("N"));
@@ -176,7 +211,7 @@ namespace Cocoa.Tests.Compiler
             }
 
             var stampPath = Path.Combine(ProbeDir, "B1.stamp");
-            var head = CurrentHead();
+            var head = CurrentHead() + StampSliceSuffix();
             var stamp = File.Exists(stampPath) ? File.ReadAllText(stampPath).Trim() : "";
             if (stamp.Length == 0)
             {
