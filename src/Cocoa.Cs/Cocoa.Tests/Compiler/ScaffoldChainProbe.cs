@@ -92,7 +92,7 @@ namespace Cocoa.Tests.Compiler
             }
         }
     [Fact]
-        public void SelfCompiled_StringArrayMain_LoadsAndRuns()
+        public void SelfCompiled_EmptyStringWriteLine_LoadsAndRuns()
         {
             var root = AppContext.BaseDirectory;
             while (root != null && !File.Exists(Path.Combine(root, "src", "Cocoa.SDK", "System.Core", "String.co")))
@@ -185,6 +185,106 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal(0, (int)exit!);
             Assert.Equal("", runOut);
         }
+
+        private static (int exit, string output) RunTinyMain(string source)
+        {
+            var hex = SelfHostedEndToEndTests.RunSelfDriver(source);
+            Assert.False(hex.StartsWith("ERR:", StringComparison.Ordinal) || hex.StartsWith("ERR:", StringComparison.Ordinal),
+                "自编失败: " + hex);
+            var dir = Path.Combine(Path.GetTempPath(), "cocoa-mshape", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            var dll = Path.Combine(dir, "T.dll");
+            File.WriteAllBytes(dll, SelfHostedEndToEndTests.HexToBytes(hex));
+            var asm = System.Reflection.Assembly.LoadFile(dll);
+            var original = Console.Out;
+            object? exit;
+            string runOut;
+            try
+            {
+                using var writer = new StringWriter();
+                Console.SetOut(writer);
+                try
+                {
+                    exit = asm.EntryPoint!.Invoke(null, new object[] { new[] { "hello" } });
+                }
+                catch (Exception ex)
+                {
+                    throw new Xunit.Sdk.XunitException("B1 形状复刻 invoke 失败 err=" + ex.GetType().Name + ": " + ex.Message +
+                        " inner=" + ex.InnerException);
+                }
+
+                Console.SetOut(original);
+                runOut = writer.ToString().Replace("\r\n", "\n").Trim();
+            }
+            finally
+            {
+                Console.SetOut(original);
+            }
+
+            return ((int)exit!, runOut);
+        }
+
+        /// <summary>探针追加 Main 的精确形状：let h = ...; WriteLine("B2:" + h)。
+        /// 若 BCL MemberRef 收集把该实参判成 i32（stale B1 的 row8=WriteLine(Int32) 症状），
+        /// JIT 会抛 InvalidProgramException，此测试即挂。</summary>
+        [Fact]
+        public void SelfCompiled_ProbeMainShape_LocalStringConcat_WriteLine_Runs()
+        {
+            var (exit, output) = RunTinyMain(
+                "function Main(args: string[]): i32 {" + Environment.NewLine +
+                "    let h = \"a\" + string(1)" + Environment.NewLine +
+                "    System.Console.WriteLine(\"B2:\" + h)" + Environment.NewLine +
+                "    return 0" + Environment.NewLine +
+                "}" + Environment.NewLine);
+            Assert.Equal(0, exit);
+            Assert.Equal("B2:a1", output);
+        }
+
+        /// <summary>语料 Binder.co:1624 GCDB 诊断链的类方法上下文同构复刻（含空串 return）。</summary>
+        [Fact]
+        public void SelfCompiled_ClassMethod_GcdbChain_Runs()
+        {
+            var nl = Environment.NewLine;
+            var (exit, output) = RunTinyMain(
+                "class F {" + nl +
+                "    private field _classCount: i32" + nl +
+                "    private field _classFieldCounts: i32[]" + nl +
+                "    public function Init(): i32 {" + nl +
+                "        _classCount = 5" + nl +
+                "        _classFieldCounts = new i32[3]" + nl +
+                "        return 0" + nl +
+                "    }" + nl +
+                "    public function G(index: i32): string {" + nl +
+                "        System.Console.WriteLine(\"GCDB:\" + string(index) + \"/c=\" + string(_classCount) + \"/len=\" + string(_classFieldCounts.Length))" + nl +
+                "        return \"\"" + nl +
+                "    }" + nl +
+                "}" + nl +
+                "function Main(args: string[]): i32 {" + nl +
+                "    var f = new F()" + nl +
+                "    f.Init()" + nl +
+                "    f.G(1)" + nl +
+                "    return 0" + nl +
+                "}" + nl);
+            Assert.Equal(0, exit);
+            Assert.Equal("GCDB:1/c=5/len=3", output);
+        }
+
+        /// <summary>同一程序内 Console.WriteLine(int) 与 WriteLine(string) 共存：
+        /// 两个调用点需要各自的 MemberRef sig（收集侧 key 与 emitter 侧查找都必须带实参类型）。</summary>
+        [Fact]
+        public void SelfCompiled_WriteLine_IntAndString_SigsCoexist()
+        {
+            var nl = Environment.NewLine;
+            var (exit, output) = RunTinyMain(
+                "function Main(args: string[]): i32 {" + nl +
+                "    System.Console.WriteLine(42)" + nl +
+                "    System.Console.WriteLine(\"s\")" + nl +
+                "    return 0" + nl +
+                "}" + nl);
+            Assert.Equal(0, exit);
+            Assert.Equal("42\ns", output);
+        }
+
     [Fact(Skip = "诊断：读 %TEMP%\\cocoa-b1-probe\\B1.dll 逐方法 PrepareMethod 猎无效 IL（阶段8 调试用，手动启用）")]
         public void HuntInvalid_FromSavedB1()
         {
@@ -216,7 +316,7 @@ namespace Cocoa.Tests.Compiler
                 (bad.Length > 0 ? "\n" + bad.ToString().Substring(0, Math.Min(bad.Length, 2000)) : ""));
         }
 
-        [Fact]
+        [Fact(Skip = "诊断：读 %TEMP%\\cocoa-b1-probe\\B1.dll dump Main IL + BCL MemberRef sig（需新鲜 B1，手动启用）")]
         public void DumpMainIL_FromSavedB1()
         {
             var probeDir = Path.Combine(Path.GetTempPath(), "cocoa-b1-probe");
@@ -473,8 +573,9 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal(7, (int)exit!);
         }
 
-[Fact]
-        public void BareFieldAssignment_Works()
+        /// <summary>类字段数组在 while 循环内做元素读写（g[i] = _arr[i]）：字段读取 + 元素赋值 + 计数递增。</summary>
+        [Fact]
+        public void ElementAssign_FromFieldArray_While_Runs()
         {
             var root = AppContext.BaseDirectory;
             while (root != null && !File.Exists(Path.Combine(root, "src", "Cocoa.SDK", "System.Core", "String.co")))
@@ -493,6 +594,12 @@ namespace Cocoa.Tests.Compiler
 
             var tiny = "class F {" + Environment.NewLine +
                 "    private field _arr: i32[]" + Environment.NewLine +
+                "    public function Init(): i32 {" + Environment.NewLine +
+                "        _arr = new i32[4]" + Environment.NewLine +
+                "        _arr[0] = 11" + Environment.NewLine +
+                "        _arr[1] = 22" + Environment.NewLine +
+                "        return 0" + Environment.NewLine +
+                "    }" + Environment.NewLine +
                 "    public function Copy(): i32 {" + Environment.NewLine +
                 "        var g = new i32[4]" + Environment.NewLine +
                 "        var i = 0" + Environment.NewLine +
@@ -500,11 +607,12 @@ namespace Cocoa.Tests.Compiler
                 "            g[i] = _arr[i]" + Environment.NewLine +
                 "            i = i + 1" + Environment.NewLine +
                 "        }" + Environment.NewLine +
-                "        return g[0]" + Environment.NewLine +
+                "        return g[0] + g[1]" + Environment.NewLine +
                 "    }" + Environment.NewLine +
                 "}" + Environment.NewLine +
                 "function Main(args: string[]): i32 {" + Environment.NewLine +
                 "    var f = new F()" + Environment.NewLine +
+                "    f.Init()" + Environment.NewLine +
                 "    return f.Copy()" + Environment.NewLine +
                 "}" + Environment.NewLine;
             var main = "using System\n" +
@@ -543,21 +651,6 @@ namespace Cocoa.Tests.Compiler
             var dll = Path.Combine(dir, "T.dll");
             File.WriteAllBytes(dll, SelfHostedEndToEndTests.HexToBytes(hex));
             var asm = System.Reflection.Assembly.LoadFile(dll);
-            var setIl = "";
-            foreach (var t2 in asm.GetTypes())
-            {
-                foreach (var m2 in t2.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic |
-                    System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.DeclaredOnly))
-                {
-                    if (m2.Name == "Set")
-                    {
-                        var mb = m2.GetMethodBody();
-                        var bb = mb?.GetILAsByteArray() ?? Array.Empty<byte>();
-                        setIl = "Set sig='" + m2 + "' attr=" + m2.Attributes + " ps=" + string.Join(",", m2.GetParameters().Select(p => p.ParameterType.Name)) +
-                            " ilbytes=" + bb.Length + " il=" + Convert.ToHexString(bb.Take(Math.Min(bb.Length, 120)).ToArray());
-                    }
-                }
-            }
 
             object? exit;
             try
@@ -566,10 +659,25 @@ namespace Cocoa.Tests.Compiler
             }
             catch (Exception ex)
             {
-                throw new Xunit.Sdk.XunitException(setIl + " | invoke err: " + ex.GetType().Name + ":" + ex.Message);
+                var dump = "";
+                foreach (var t2 in asm.GetTypes())
+                {
+                    foreach (var m2 in t2.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic |
+                        System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.DeclaredOnly))
+                    {
+                        var mb2 = m2.GetMethodBody();
+                        var bb2 = mb2?.GetILAsByteArray() ?? Array.Empty<byte>();
+                        dump += "M " + t2.Name + "." + m2.Name + " locals=[" +
+                            (mb2?.LocalVariables == null ? "" : string.Join(",", mb2.LocalVariables.Select(l => l.LocalIndex + ":" + l.LocalType.Name))) +
+                            "] il=" + Convert.ToHexString(bb2.Take(Math.Min(bb2.Length, 120)).ToArray()) + "; ";
+                    }
+                }
+
+                throw new Xunit.Sdk.XunitException(dump + "| invoke err: " + ex.GetType().Name + ":" + ex.Message +
+                    " inner=" + (ex.InnerException == null ? "-" : ex.InnerException.GetType().Name + ": " + ex.InnerException.Message));
             }
 
-            Assert.Equal(5, (int)exit!);
+            Assert.Equal(33, (int)exit!);
         }
 
         [Fact]
@@ -678,7 +786,7 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal(7, (int)exit!);
         }
 
-        [Fact]
+        [Fact(Skip = "诊断：跑 %TEMP%\\cocoa-b1-probe\\B1.dll 的 Main 于小源（需新鲜 B1，手动启用）")]
         public void RunSavedB1_WithSmallSource()
         {
             var probeDir = Path.Combine(Path.GetTempPath(), "cocoa-b1-probe");

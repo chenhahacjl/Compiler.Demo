@@ -951,8 +951,10 @@ namespace Cocoa.CodeGen
                     let argType = FirstArgType(node)
                     let argParams = new string[1]
                     argParams[0] = argType
+                    // key 带实参类型：同一程序内 WriteLine(i32) 与 WriteLine(string) 需各自 MemberRef sig，
+                    // 否则按方法名去重会让两个调用点共用一个 sig → CLR 校验 InvalidProgram。
                     EnsureBcl(bclKeys, bclTokens, bclParents, bclSigs, bclNames, bclCount,
-                        "Console.WriteLine", 3, "WriteLine",
+                        "Console.WriteLine(" + argType + ")", 3, "WriteLine",
                         MetadataEncode.EncodeMethodSignatureHex("void", argParams, 1, true))
                 }
                 else if methodName == "substring"
@@ -1171,7 +1173,7 @@ namespace Cocoa.CodeGen
         }
 
         /// <summary>BCL 调用首个实参类型：字符串字面量/字符串拼接 → string；其余 → i32。</summary>
-        private static function FirstArgType(node: Node): string
+        public static function FirstArgType(node: Node): string
         {
             var a = 4
             while a < node.ChildCount() - 1

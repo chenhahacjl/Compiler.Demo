@@ -7,13 +7,36 @@ using Xunit.Abstractions;
 
 namespace Cocoa.Tests.Compiler
 {
+    /// <summary>
+    /// 阶段 8 自举探针（B1 → B2 fixpoint）。
+    ///
+    /// 迭代成本分层（避免每轮 27m）：
+    ///   - <see cref="B1_Bootstrap_ReferenceEnd"/>：慢档。参考端（解释执行 .co 编译器）编译 545K 全量语料产 B1，约 27m。
+    ///     仅当环境变量 COCOA_SLOW_PROBE=1 时运行；产出 B1.hex（抗中断）→ B1.dll → B1.stamp（git HEAD）。
+    ///   - <see cref="B2_Fixpoint_ViaSavedB1"/>：快档。读盘上 B1（编译后 IL，比解释器快约两个数量级），
+    ///     跑全量语料产 B2，断言 B2 与 B1 字节相等。秒级门禁，日常迭代用这个。
+    /// </summary>
     public class SelfCompileProbeTests
     {
         private readonly ITestOutputHelper _out;
         public SelfCompileProbeTests(ITestOutputHelper output) { _out = output; }
 
-        [Fact(Skip = "stage8 b1b2: GCDB chain fixed (12s); B1 WriteLine sig still Int32 (corpus GCDB arg shape diff from tiny) - FirstArgType edge")]
-        public void CompileFullSelfCompilerSource()
+        private const string ProbeDirName = "cocoa-b1-probe";
+
+        private static bool SlowEnabled =>
+            Environment.GetEnvironmentVariable("COCOA_SLOW_PROBE") == "1";
+
+        private static string ProbeDir
+        {
+            get
+            {
+                var dir = Path.Combine(Path.GetTempPath(), ProbeDirName);
+                Directory.CreateDirectory(dir);
+                return dir;
+            }
+        }
+
+        private static string[] CorpusFiles()
         {
             var root = AppContext.BaseDirectory;
             while (root != null && !File.Exists(Path.Combine(root, "src", "Cocoa.SDK", "System.Core", "String.co")))
@@ -22,9 +45,47 @@ namespace Cocoa.Tests.Compiler
             }
 
             var compilerDir = Path.Combine(root!, "src", "Cocoa.Co", "Cocoa.Compiler");
-            var allFiles = Directory.GetFiles(compilerDir, "*.co", SearchOption.AllDirectories)
+            return Directory.GetFiles(compilerDir, "*.co", SearchOption.AllDirectories)
                 .OrderBy(f => f, StringComparer.Ordinal).ToArray();
-            var allSrc = string.Join(Environment.NewLine, allFiles.Select(f => File.ReadAllText(f)));
+        }
+
+        private static string CorpusSource(string[] files) =>
+            string.Join(Environment.NewLine, files.Select(f => File.ReadAllText(f)));
+
+        private static string CurrentHead()
+        {
+            var root = AppContext.BaseDirectory;
+            while (root != null && !File.Exists(Path.Combine(root, "src", "Cocoa.SDK", "System.Core", "String.co")))
+            {
+                root = Path.GetDirectoryName(root);
+            }
+
+            try
+            {
+                return (File.ReadAllText(Path.Combine(root!, ".git", "HEAD")).Trim() is var h && h.StartsWith("ref:", StringComparison.Ordinal))
+                    ? File.ReadAllText(Path.Combine(root!, ".git", h[4..].Trim())).Trim()
+                    : File.ReadAllText(Path.Combine(root!, ".git", "HEAD")).Trim();
+            }
+            catch
+            {
+                return "unknown";
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // 慢档：参考端自举（B1 生产）。仅 COCOA_SLOW_PROBE=1。
+        // ------------------------------------------------------------------
+        [Fact]
+        public void B1_Bootstrap_ReferenceEnd()
+        {
+            if (!SlowEnabled)
+            {
+                _out.WriteLine("SKIP slow: 设置 COCOA_SLOW_PROBE=1 运行（约 27m）；日常迭代请跑 B2_Fixpoint_ViaSavedB1。");
+                return;
+            }
+
+            var allFiles = CorpusFiles();
+            var allSrc = CorpusSource(allFiles);
             _out.WriteLine("full corpus chars: " + allSrc.Length);
 
             // B1 = 全量编译器自举产物：语料 + Main(args){ BuildDllHex(args[0]) }（自包含编译器 DLL）
@@ -79,16 +140,66 @@ namespace Cocoa.Tests.Compiler
             Assert.True(b1Hex.Length > 200000, "B1 hex 过短 (" + b1Hex.Length + ")");
             _out.WriteLine("B1 hex length: " + (b1Hex.Length / 2));
 
-            // B2：运行 B1 可执行 DLL（自包含编译器）→ 以 args=[allSrc] 再编全量语料 → B2 == B1（确定性）
+            var b1Bytes = SelfHostedEndToEndTests.HexToBytes(b1Hex);
+
+            // 抗中断：先落 hex，再转 dll，最后写 stamp。中途被杀不丢 27m 成果。
+            var hexPath = Path.Combine(ProbeDir, "B1.hex");
+            File.WriteAllText(hexPath, b1Hex);
+            _out.WriteLine("B1 hex saved: " + hexPath);
+            var b1Path = Path.Combine(ProbeDir, "B1.dll");
+            File.WriteAllBytes(b1Path, b1Bytes);
+            _out.WriteLine("B1 saved: " + b1Path);
+            File.WriteAllText(Path.Combine(ProbeDir, "B1.stamp"), CurrentHead());
+
+            // 独立目录副本 + 立即冒烟：加载 + ilverify 门禁（不跑 27m 的 B2）
             var dir = Path.Combine(Path.GetTempPath(), "cocoa-b1", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(dir);
-            var b1Path = Path.Combine(dir, "B1.dll");
-            File.WriteAllBytes(b1Path, SelfHostedEndToEndTests.HexToBytes(b1Hex));
-            var probeDir = Path.Combine(Path.GetTempPath(), "cocoa-b1-probe");
-            Directory.CreateDirectory(probeDir);
-            File.WriteAllBytes(Path.Combine(probeDir, "B1.dll"), SelfHostedEndToEndTests.HexToBytes(b1Hex));
-            _out.WriteLine("B1 saved: " + Path.Combine(probeDir, "B1.dll"));
+            var b1Copy = Path.Combine(dir, "B1.dll");
+            File.WriteAllBytes(b1Copy, b1Bytes);
+            var b1Asm = System.Reflection.Assembly.LoadFile(b1Copy);
+            Assert.NotNull(b1Asm.EntryPoint);
+            _out.WriteLine("B1 loads; entry: " + b1Asm.EntryPoint!.Name);
+            _out.WriteLine("B1 types: " + b1Asm.GetTypes().Length);
+        }
+
+        // ------------------------------------------------------------------
+        // 快档：B1 驱动全量 fixpoint（B2 == B1）。读盘上 B1，秒级。
+        // ------------------------------------------------------------------
+        [Fact]
+        public void B2_Fixpoint_ViaSavedB1()
+        {
+            var b1Path = Path.Combine(ProbeDir, "B1.dll");
+            if (!File.Exists(b1Path))
+            {
+                _out.WriteLine("SKIP: 无 " + b1Path + "；先跑 COCOA_SLOW_PROBE=1 的 B1_Bootstrap_ReferenceEnd。");
+                return;
+            }
+
+            var stampPath = Path.Combine(ProbeDir, "B1.stamp");
+            var head = CurrentHead();
+            var stamp = File.Exists(stampPath) ? File.ReadAllText(stampPath).Trim() : "";
+            if (stamp.Length == 0)
+            {
+                _out.WriteLine("SKIP: 无 B1.stamp（无法确认 B1 是否对应当前源码）；先跑 COCOA_SLOW_PROBE=1 的 bootstrap。");
+                return;
+            }
+
+            if (stamp != head)
+            {
+                _out.WriteLine($"SKIP: B1 为旧源码产物（stamp={stamp}，HEAD={head}）；跑 bootstrap 取新鲜 B1 后再做全量 fixpoint。");
+                return;
+            }
+
+            _out.WriteLine("B1 stamp matches HEAD: " + head);
+
+            var allFiles = CorpusFiles();
+            var allSrc = CorpusSource(allFiles);
+            _out.WriteLine("full corpus chars: " + allSrc.Length);
+
+            var b1Bytes = File.ReadAllBytes(b1Path);
             var b1Asm = System.Reflection.Assembly.LoadFile(b1Path);
+
+            var original = Console.Out;
             object? b1Exit;
             string? b2Line;
             try
@@ -111,11 +222,20 @@ namespace Cocoa.Tests.Compiler
             var b2Hex = b2Line![3..].Trim();
             _out.WriteLine("B2 hex length: " + (b2Hex.Length / 2));
 
-            Assert.Equal(b1Hex, b2Hex);
+            var b2Bytes = SelfHostedEndToEndTests.HexToBytes(b2Hex);
+            if (b1Bytes.Length != b2Bytes.Length)
+            {
+                var n = Math.Min(b1Bytes.Length, b2Bytes.Length);
+                var firstDiff = Enumerable.Range(0, n).FirstOrDefault(i => b1Bytes[i] != b2Bytes[i], n);
+                Assert.True(false, $"B2 != B1：长度 {b2Bytes.Length} vs {b1Bytes.Length}；首个差异偏移 0x{firstDiff:X}" +
+                    $"（B1={(firstDiff < n ? b1Bytes[firstDiff].ToString("X2") : "-")} B2={(firstDiff < n ? b2Bytes[firstDiff].ToString("X2") : "-")}）");
+            }
+            Assert.Equal(b1Bytes, b2Bytes);
 
             // B2 可加载可运行（Main(args) → 0）
-            var b2Path = Path.Combine(dir, "B2.dll");
-            File.WriteAllBytes(b2Path, SelfHostedEndToEndTests.HexToBytes(b2Hex));
+            var b2Path = Path.Combine(Path.GetTempPath(), "cocoa-b1", Guid.NewGuid().ToString("N"), "B2.dll");
+            Directory.CreateDirectory(Path.GetDirectoryName(b2Path)!);
+            File.WriteAllBytes(b2Path, b2Bytes);
             var b2Asm = System.Reflection.Assembly.LoadFile(b2Path);
             Assert.Equal(0, (int)b2Asm.EntryPoint!.Invoke(null, new object[] { new[] { "function Main(args: string[]): i32 { return 0 }\n" } })!);
             _out.WriteLine("B2 types: " + b2Asm.GetTypes().Length);

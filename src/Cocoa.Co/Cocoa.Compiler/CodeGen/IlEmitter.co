@@ -1857,10 +1857,18 @@ private field _pendingCount: i32
                         return
                     }
 
-                    let token = BclToken(fullName)
+                    // 收集侧 key 带实参类型（Console.WriteLine(string) / (i32) 各一份 MemberRef sig），
+                    // 此处必须用同一约定查找，否则两种实参会撞 sig → CLR 校验 InvalidProgram。
+                    var bclName = fullName
+                    if fullName == "Console.WriteLine" || fullName == "Console.Write"
+                    {
+                        bclName = fullName + "(" + IlDriver.FirstArgType(expr) + ")"
+                    }
+
+                    let token = BclToken(bclName)
                     if token < 0
                     {
-                        _error = "Unresolved bcl member: " + fullName + " tk=" + expr.Child(0).Kind()
+                        _error = "Unresolved bcl member: " + bclName + " tk=" + expr.Child(0).Kind()
                         return
                     }
 
