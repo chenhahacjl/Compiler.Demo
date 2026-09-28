@@ -378,6 +378,28 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal("let\nother\nvar\nCtor", output);
         }
 
+        /// <summary>用户类名作为参数类型（function F(n: N)）。</summary>
+        [Fact]
+        public void SelfCompiled_UserClassAsParameterType_Runs()
+        {
+            var nl = Environment.NewLine;
+            var (exit, output) = RunTinyMain(
+                "class N {" + nl +
+                "    private field _v: i32" + nl +
+                "    public function Get(): i32 { return _v }" + nl +
+                "}" + nl +
+                "function Use(n: N): i32 {" + nl +
+                "    return n.Get()" + nl +
+                "}" + nl +
+                "function Main(args: string[]): i32 {" + nl +
+                "    var n = new N()" + nl +
+                "    System.Console.WriteLine(string(Use(n)))" + nl +
+                "    return 0" + nl +
+                "}" + nl);
+            Assert.Equal(0, exit);
+            Assert.Equal("0", output);
+        }
+
         /// <summary>let 局部在紧随其后的 if 条件里与多个字面量比较（Binder.FieldTypeOf /
         /// MethodReturnTypeOf 形状：`let k = ...; if k == "A" || k == "B" || k == "C"`）。</summary>
         [Fact]

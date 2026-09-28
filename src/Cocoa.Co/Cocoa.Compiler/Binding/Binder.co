@@ -3025,13 +3025,18 @@ if ck == "TypeClause" || ck == "ArrayTypeClause"
         private function KnownType(name: string): bool
         {
             var t = name
-            if t.Length > 2 && t.substring(t.Length - 2, 2) == "[]"
+            // 剥数组后缀：长度守卫与 substring 分开成嵌套 if，不依赖 && 短路
+            // （自举路径对 && 发射为分支，但嵌套写法对任何实现都安全；
+            //   单字符类名如 `function F(n: N)` 曾算出 startIndex -1）
+            if t.Length > 2
             {
-                t = t.substring(0, t.Length - 2)
+                if t.substring(t.Length - 2, 2) == "[]"
+                {
+                    t = t.substring(0, t.Length - 2)
+                }
             }
 
-            if t == "sbyte" { return true }
-            if t == "byte" { return true }
+            if t == "sbyte" { return true }            if t == "byte" { return true }
             if t == "short" { return true }
             if t == "ushort" { return true }
             if t == "int" { return true }

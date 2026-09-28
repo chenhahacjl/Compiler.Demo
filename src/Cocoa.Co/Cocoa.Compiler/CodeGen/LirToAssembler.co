@@ -240,7 +240,13 @@ namespace Cocoa.CodeGen
 
         private function StartsWithV(text: string): bool
         {
-            return text.Length > 0 && i32(text[0]) == 118
+            if text.Length > 0
+            {
+                // 长度守卫独立成 if：自举路径对 && 发射为分支，但嵌套写法不依赖短路
+                return i32(text[0]) == 118
+            }
+
+            return false
         }
 
         private function CondFromName(name: string): i32
