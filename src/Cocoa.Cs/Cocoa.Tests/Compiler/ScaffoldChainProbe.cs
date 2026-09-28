@@ -612,6 +612,118 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal("hit", output);
         }
 
+        /// <summary>宿主类声明在被调用类之前（语料按路径排序：Binding/Binder.co 早于 Syntax/Node.co，
+        /// 故 Binder 里的 node.Child(i).Kind() 推断时 Node 的类方法尚未就绪）。</summary>
+        [Fact]
+        public void SelfCompiled_ForwardDeclaredCallee_TwoLevelChain_InferString_Runs()
+        {
+            var nl = Environment.NewLine;
+            var (exit, output) = RunTinyMain(
+                "class Binder {" + nl +
+                "    private function FieldTypeOf(node: Node): string {" + nl +
+                "        var i = 0" + nl +
+                "        while i < 1" + nl +
+                "        {" + nl +
+                "            let k = node.Child(i).Kind()" + nl +
+                "            if k == \"TypeClause\" || k == \"ArrayTypeClause\" || k == \"GenericTypeClause\"" + nl +
+                "            {" + nl +
+                "                return \"hit\"" + nl +
+                "            }" + nl +
+                "            i = i + 1" + nl +
+                "        }" + nl +
+                "        return \"int\"" + nl +
+                "    }" + nl +
+                "    public function Run(node: Node): string { return FieldTypeOf(node) }" + nl +
+                "}" + nl +
+                "class Node {" + nl +
+                "    private field _k: string" + nl +
+                "    public constructor(k: string) {" + nl +
+                "        _k = k" + nl +
+                "    }" + nl +
+                "    public function Child(i: i32): Node { return this }" + nl +
+                "    public function Kind(): string { return _k }" + nl +
+                "}" + nl +
+                "function Main(args: string[]): i32 {" + nl +
+                "    var b = new Binder()" + nl +
+                "    System.Console.WriteLine(b.Run(new Node(\"TypeClause\")))" + nl +
+                "    return 0" + nl +
+                "}" + nl);
+            Assert.Equal(0, exit);
+            Assert.Equal("hit", output);
+        }
+
+        /// <summary>扩大规模的复刻：多类 + 被调用类有多个方法/字段，逼近语料里
+        /// _classMethodOffsets / _classMethodCounts 的实际形状。</summary>
+        [Fact]
+        public void SelfCompiled_MultiClassScale_TwoLevelChain_InferString_Runs()
+        {
+            var nl = Environment.NewLine;
+            var (exit, output) = RunTinyMain(
+                "class Alpha {" + nl +
+                "    private field _x: i32" + nl +
+                "    public function Get(): i32 { return _x }" + nl +
+                "    public function Put(v: i32): i32 { return 0 }" + nl +
+                "}" + nl +
+                "class Beta {" + nl +
+                "    private field _y: string" + nl +
+                "    public function Name(): string { return _y }" + nl +
+                "}" + nl +
+                "class Binder {" + nl +
+                "    private field _root: Node" + nl +
+                "    private function Walk(root: Node): i32 {" + nl +
+                "        var i = 0" + nl +
+                "        while i < 1" + nl +
+                "        {" + nl +
+                "            let k = root.Child(i).Kind()" + nl +
+                "            if k == \"TypeClause\" || k == \"ArrayTypeClause\" || k == \"GenericTypeClause\"" + nl +
+                "            {" + nl +
+                "                return 1" + nl +
+                "            }" + nl +
+                "            i = i + 1" + nl +
+                "        }" + nl +
+                "        return 0" + nl +
+                "    }" + nl +
+                "    public function Run(node: Node): i32 { return Walk(node) }" + nl +
+                "}" + nl +
+                "class Node {" + nl +
+                "    private field _k: string" + nl +
+                "    public constructor(k: string) {" + nl +
+                "        _k = k" + nl +
+                "    }" + nl +
+                "    public function Text(): string { return _k }" + nl +
+                "    public function Kind(): string { return _k }" + nl +
+                "    public function IsToken(): bool { return false }" + nl +
+                "    public function ChildCount(): i32 { return 1 }" + nl +
+                "    public function Child(index: i32): Node { return this }" + nl +
+                "    private function Escape(t: string): string { return t }" + nl +
+                "}" + nl +
+                "function Main(args: string[]): i32 {" + nl +
+                "    var b = new Binder()" + nl +
+                "    System.Console.WriteLine(string(b.Run(new Node(\"TypeClause\"))))" + nl +
+                "    return 0" + nl +
+                "}" + nl);
+            Assert.Equal(0, exit);
+            Assert.Equal("1", output);
+        }
+
+        /// <summary>三元表达式作为函数实参的求值（诊断用：.co 侧三元在表达式上下文的求值核一致性）。</summary>
+        [Fact]
+        public void SelfCompiled_TernaryAsArgument_Evaluates()
+        {
+            var nl = Environment.NewLine;
+            var (exit, output) = RunTinyMain(
+                "function Pick(b: bool): string {" + nl +
+                "    if b { return \"ChildCount\" }" + nl +
+                "    return \"-\"" + nl +
+                "}" + nl +
+                "function Main(args: string[]): i32 {" + nl +
+                "    System.Console.WriteLine(Pick(true))" + nl +
+                "    return 0" + nl +
+                "}" + nl);
+            Assert.Equal(0, exit);
+            Assert.Equal("ChildCount", output);
+        }
+
         /// <summary>用户类名作为参数类型（function F(n: N)）。</summary>
         [Fact]
         public void SelfCompiled_UserClassAsParameterType_Runs()

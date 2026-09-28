@@ -939,6 +939,44 @@ _localCount = 0
             return ""
         }
 
+        /// <summary>取「裸调用接收者」的变量名：node.Child(i) → "node"（MemberAccessExpression 的首 token）。
+        /// Token.Text() 仅对 token 有效，compound 返回 ""，故必须逐层下钻。</summary>
+        private function ReceiverVarNameOf(tgt: Node): string
+        {
+            if tgt == null
+            {
+                return ""
+            }
+
+            let k = tgt.Kind()
+            if k == "CallExpression"
+            {
+                if tgt.ChildCount() == 0
+                {
+                    return ""
+                }
+
+                return ReceiverVarNameOf(tgt.Child(0))
+            }
+
+            if k == "MemberAccessExpression"
+            {
+                if tgt.ChildCount() == 0
+                {
+                    return ""
+                }
+
+                return ReceiverVarNameOf(tgt.Child(0))
+            }
+
+            if k == "IdentifierToken" || k == "VariableExpression"
+            {
+                return tgt.Text()
+            }
+
+            return ""
+        }
+
         private function InferTypeOfExpression(node: Node): string
         {
             let k = node.Kind()
@@ -1121,11 +1159,25 @@ _localCount = 0
                     vt = LocalTypeOrParamOf(tgtVar)
                 }
 
+                // 裸调用的接收者是 MemberAccessExpression（Token.Text() 对 compound 为 ""），
+                // 上面的取名会落空 → 这里只补这一种形态，不改动既有取值顺序。
+                if vt.Length == 0
+                {
+                    let recv = ReceiverVarNameOf(tgt)
+                    if recv.Length > 0
+                    {
+                        let rv = LocalTypeOrParamOf(recv)
+                        if rv.Length > 0
+                        {
+                            vt = rv
+                        }
+                    }
+                }
+
                 if vt == "string"
                 {
                     return "?"
                 }
-
                 var cvi = 0
                 while cvi < _classCount
                 {
