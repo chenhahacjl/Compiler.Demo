@@ -342,6 +342,42 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal("let", output);
         }
 
+        /// <summary>string 局部/参数与字面量的比较必须走 String.op_Equality（Binder.DeclWordOf 等形状）。
+        /// 若退化为整数 Ceq，CLR 校验报 string/int 错配。</summary>
+        [Fact]
+        public void SelfCompiled_StringLocalVsLiteral_UsesStringEquality_Runs()
+        {
+            var nl = Environment.NewLine;
+            var (exit, output) = RunTinyMain(
+                "class Res {" + nl +
+                "    private field _v: string" + nl +
+                "    public constructor(v: string) {" + nl +
+                "        _v = v" + nl +
+                "    }" + nl +
+                "    public function V(): string { return _v }" + nl +
+                "}" + nl +
+                "function Pick(k: string): string {" + nl +
+                "    if k == \"LetKeyword\"" + nl +
+                "    {" + nl +
+                "        return \"let\"" + nl +
+                "    }" + nl +
+                "    if k != \"VarKeyword\"" + nl +
+                "    {" + nl +
+                "        return \"other\"" + nl +
+                "    }" + nl +
+                "    return \"var\"" + nl +
+                "}" + nl +
+                "function Main(args: string[]): i32 {" + nl +
+                "    System.Console.WriteLine(Pick(\"LetKeyword\"))" + nl +
+                "    System.Console.WriteLine(Pick(\"zzz\"))" + nl +
+                "    System.Console.WriteLine(Pick(\"VarKeyword\"))" + nl +
+                "    System.Console.WriteLine(new Res(\"Ctor\").V())" + nl +
+                "    return 0" + nl +
+                "}" + nl);
+            Assert.Equal(0, exit);
+            Assert.Equal("let\nother\nvar\nCtor", output);
+        }
+
         /// <summary>静态工厂方法里的多分支 return new X(...)（BoundBinaryOperator.Bind / BoundUnaryOperator.Bind 形状：
         /// 按类型与操作符组合分派，每支 return new，最后 return 默认值。</summary>
         [Fact]

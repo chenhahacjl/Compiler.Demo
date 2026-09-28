@@ -778,7 +778,8 @@ private field _pendingCount: i32
         {
             _assembler = assembler
             _error = ""
-            _paramNames = new string[16]
+            // 参数/局部槽位按需扩容：语料存在参数数 > 16 的函数，固定容量会越界。
+            _paramNames = new string[paramCount + 16]
             _paramCount = paramCount
             _localNames = new string[16]
             _localCount = 0
@@ -2295,7 +2296,7 @@ private field _pendingCount: i32
         }
 
         /// <summary>字符串运算启发式：==/!=/+ 且任一侧为字符串字面量（无类型信息时的信号）。</summary>
-        private static function IsStringBinary(expr: Node): bool
+        private function IsStringBinary(expr: Node): bool
         {
             let op = expr.Child(0).Text()
             if op != "==" && op != "!=" && op != "+"
@@ -2308,7 +2309,23 @@ private field _pendingCount: i32
                 return true
             }
 
-            return IsStringLiteral(expr.Child(2)) || IsStringCall(expr.Child(2))
+            if IsStringLiteral(expr.Child(2)) || IsStringCall(expr.Child(2))
+            {
+                return true
+            }
+
+            // 任一侧为 string 局部/参数/字段/方法返回值时走 String.op_*。
+            // 语料 Binder.DeclWordOf / FieldTypeOf / MethodReturnTypeOf 等形如
+            // `k == "LetKeyword"`（k 为 string 局部），仅靠字面量无法识别 →
+            // 会退化成整数 Ceq → CLR 校验 string/int 错配。
+            let t1 = ExprTypeOf(expr.Child(1))
+            if t1 == "string"
+            {
+                return true
+            }
+
+            let t2 = ExprTypeOf(expr.Child(2))
+            return t2 == "string"
         }
 
         private static function IsStringCall(expr: Node): bool
