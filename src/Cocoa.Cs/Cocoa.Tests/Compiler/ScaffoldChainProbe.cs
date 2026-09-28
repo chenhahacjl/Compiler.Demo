@@ -441,6 +441,75 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal("fromElem\nfromNew", output);
         }
 
+        /// <summary>字符串数组与多个 int32 数组混排声明（Binder.BindClassDeclaration 扩容块形状：
+        /// `new string[n]` 紧跟多个 `new i32[m]`，各自的 newarr 元素类型 TypeRef 不能串位）。</summary>
+        [Fact]
+        public void SelfCompiled_MixedStringAndInt32ArrayDecls_Runs()
+        {
+            var nl = Environment.NewLine;
+            var (exit, output) = RunTinyMain(
+                "function Grow(n: i32): i32 {" + nl +
+                "    var a = new string[n]" + nl +
+                "    var b = new i32[n]" + nl +
+                "    var c = new i32[n * 2]" + nl +
+                "    var d = new i32[n + 1]" + nl +
+                "    var e = new i32[n - 1]" + nl +
+                "    a[0] = \"x\"" + nl +
+                "    b[0] = 3" + nl +
+                "    c[0] = 4" + nl +
+                "    d[0] = 5" + nl +
+                "    e[0] = 6" + nl +
+                "    System.Console.WriteLine(a[0])" + nl +
+                "    System.Console.WriteLine(string(b[0] + c[0] + d[0] + e[0]))" + nl +
+                "    return b.Length" + nl +
+                "}" + nl +
+                "function Main(args: string[]): i32 {" + nl +
+                "    System.Console.WriteLine(string(Grow(2)))" + nl +
+                "    return 0" + nl +
+                "}" + nl);
+            Assert.Equal(0, exit);
+            Assert.Equal("x\n18\n2", output);
+        }
+
+        /// <summary>类方法内的多数组扩容块（Binder.BindClassDeclaration / BindClassMethod 形状）：
+        /// 同一方法内 `new string[n]` 与多个 `new i32[m]`，并把数组赋给类字段。</summary>
+        [Fact]
+        public void SelfCompiled_ClassMethod_MultipleArrayGrowth_Runs()
+        {
+            var nl = Environment.NewLine;
+            var (exit, output) = RunTinyMain(
+                "class Store {" + nl +
+                "    private field _names: string[]" + nl +
+                "    private field _a: i32[]" + nl +
+                "    private field _b: i32[]" + nl +
+                "    public constructor(n: i32) {" + nl +
+                "        var bn = new string[n]" + nl +
+                "        var bo = new i32[n]" + nl +
+                "        var bc = new i32[n * 2]" + nl +
+                "        var mo = new i32[n + 1]" + nl +
+                "        var mc = new i32[n - 1]" + nl +
+                "        bn[0] = \"s\"" + nl +
+                "        bo[0] = 1" + nl +
+                "        bc[0] = 2" + nl +
+                "        mo[0] = 3" + nl +
+                "        mc[0] = 4" + nl +
+                "        _names = bn" + nl +
+                "        _a = bo" + nl +
+                "        _b = mc" + nl +
+                "    }" + nl +
+                "    public function Sum(): i32 { return _a[0] + _b[0] }" + nl +
+                "    public function Name(): string { return _names[0] }" + nl +
+                "}" + nl +
+                "function Main(args: string[]): i32 {" + nl +
+                "    var s = new Store(2)" + nl +
+                "    System.Console.WriteLine(s.Name())" + nl +
+                "    System.Console.WriteLine(string(s.Sum()))" + nl +
+                "    return 0" + nl +
+                "}" + nl);
+            Assert.Equal(0, exit);
+            Assert.Equal("s\n5", output);
+        }
+
         /// <summary>顶层函数返回对象后立即取其方法：Make().Name()
         /// （需要顶层函数返回类型表，SetMethods 当前只传 returnsValue: bool）。</summary>
         [Fact]
