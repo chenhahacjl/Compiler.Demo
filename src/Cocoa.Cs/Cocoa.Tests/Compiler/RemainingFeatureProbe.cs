@@ -401,6 +401,77 @@ namespace Cocoa.Tests.Compiler
         }
 
         [Fact]
+        public void LocalSig_LetInsideLoopInClassMethod_KeepsStringType()
+        {
+            // B 类根因（阶段 8 自举经 ilverify + metadata dump 定位）：
+            // B1 中 DeclWordOf / BinaryGlyphOf / UnaryGlyphOf / MethodReturnTypeOf /
+            // FieldTypeOf 的 IL 序列完全一致，且 callvirt token 经验证**正确**
+            // （0x060002BA = Node::Child、0x060002B6 = Node::Kind，返回 String）——
+            // 唯一错误是 locals 签名写成 Int32,Int32：循环体内的 String 局部量
+            // 被声明成 Int32。三个已排除的变量：
+            //   · 顶层函数中的 let      → 正确
+            //   · 顶层函数循环体内的 let → 正确（LocalSig_LetInsideLoop）
+            //   · 形参而非局部量         → 正确
+            // 本用例补上最后一个未测变量：**类方法**内循环体中的 let。
+            var result = RunMain(
+                "class Node {" + Nl +
+                "    public function ChildCount(): i32 { return 2 }" + Nl +
+                "    public function Child(i: i32): Node { return this }" + Nl +
+                "    public function Kind(): string { return \"TypeClause\" }" + Nl +
+                "}" + Nl +
+                "class Finder {" + Nl +
+                "    private function Scan(node: Node): string {" + Nl +
+                "        var i = 0" + Nl +
+                "        while i < node.ChildCount() {" + Nl +
+                "            let k = node.Child(i).Kind()" + Nl +
+                "            if k == \"TypeClause\" { return k }" + Nl +
+                "            i = i + 1" + Nl +
+                "        }" + Nl +
+                "        return \"\"" + Nl +
+                "    }" + Nl +
+                "    public function Run(n: Node): string { return Scan(n) }" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    if new Finder().Run(new Node()) == \"TypeClause\" { return 1 }" + Nl +
+                "    return 0" + Nl +
+                "}", "LocalSigLoopMethod");
+
+            Assert.Equal(1, result);
+        }
+
+        [Fact]
+        public void LocalSig_LetInsideLoop_KeepsStringType()
+        {
+            // 回归护栏（阶段 8 自举经 ilverify + metadata dump 暴露）：
+            // B1 中 DeclWordOf / BinaryGlyphOf / UnaryGlyphOf / MethodReturnTypeOf /
+            // FieldTypeOf 五个方法形状完全一致——
+            //   ldarg.1 / ldloc.0 / callvirt(Node 方法) / callvirt(Node 方法)
+            //   / stloc.1 / ldloc.1 / ldstr / call String::op_Equality
+            // 而 locals 签名是 Int32,Int32：**loop 体内 let 声明的 String 局部量
+            // 被声明成 Int32**。函数顶层的同类 let 是正确的（见
+            // LocalSig_MethodCallReturningString_NotMarkedInt32），
+            // 差别就在于它位于循环体内。
+            var result = RunMain(
+                "class Node {" + Nl +
+                "    public function ChildCount(): i32 { return 2 }" + Nl +
+                "    public function Child(i: i32): Node { return this }" + Nl +
+                "    public function Kind(): string { return \"TypeClause\" }" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    let node = new Node()" + Nl +
+                "    var i = 0" + Nl +
+                "    while i < node.ChildCount() {" + Nl +
+                "        let k = node.Child(i).Kind()" + Nl +
+                "        if k == \"TypeClause\" { return 1 }" + Nl +
+                "        i = i + 1" + Nl +
+                "    }" + Nl +
+                "    return 0" + Nl +
+                "}", "LocalSigLoop");
+
+            Assert.Equal(1, result);
+        }
+
+        [Fact]
         public void MemberCall_ResolvesOnReceiverType_NotEnclosingClass()
         {
             // 回归护栏（阶段 8 自举经 ilverify + metadata dump 暴露）：
