@@ -261,11 +261,15 @@ namespace Cocoa.Tests.Compiler
                 trees.Add(Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(File.ReadAllText(f)));
             }
 
-            // 入口点与 bootstrap 一致：由 .co 的 IlDriver.BuildDllHex 产出自举 DLL 的十六进制
+            // 入口点与 bootstrap 一致：由 .co 的 IlDriver.BuildDllHex 产出自举 DLL 的十六进制。
+            // BuildDllHex(source) 的参数是**源码文本**（IlDriver.co:21 直接 Binder.Create(source)，
+            // Binder.co:62-66 并不读文件），所以这里先按路径读文件再传入——
+            // 全量语料约 600KB，直接走命令行参数会撞 32KB 上限。
             trees.Add(Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(
                 "using System\n" +
                 "function Main(args: string[]): i32\n{\n" +
-                "    let h = Cocoa.CodeGen.IlDriver.BuildDllHex(args[0])\n" +
+                "    let src = System.IO.File.ReadAllText(args[0])\n" +
+                "    let h = Cocoa.CodeGen.IlDriver.BuildDllHex(src)\n" +
                 "    System.Console.WriteLine(\"HEX:\" + h)\n" +
                 "    return 0\n}\n"));
 
@@ -285,11 +289,23 @@ namespace Cocoa.Tests.Compiler
                 Path.Combine(runner, "FastSelfHost.runtimeconfig.json"),
                 "{\n  \"runtimeOptions\": {\n    \"tfm\": \"net9.0\",\n    \"framework\": {\n      \"name\": \"Microsoft.NETCore.App\",\n      \"version\": \"" + Environment.Version.ToString() + "\"\n    }\n  }\n}\n");
 
-            // 喂一个待编译的源码文件给自举编译器
-            var inputCo = Path.Combine(runner, "input.co");
-            File.WriteAllText(inputCo,
-                "class V { public function Twice(x: i32): i32 { return x * 2 } }\n" +
-                "function Main(args: string[]): i32 { return new V().Twice(21) }\n");
+            // 待自举编译的源码。COCOA_SELFHOST_FULL=1 时喂**全量语料**，且 Main 必须与
+            // bootstrap 的 master **逐字一致**（BuildDllHex + WriteLine("B2:"+h)）——
+            // 否则被编译的源码不同，产出的 IL/字符串堆自然不同，无法与 B1 做 fixpoint 比对。
+            // 小冒烟输入则用自己的 Main，此时只验证回路连通，不做 fixpoint 比对。
+            var selfHostSource = Environment.GetEnvironmentVariable("COCOA_SELFHOST_FULL") == "1"
+                ? string.Join(Environment.NewLine, files.Select(f => File.ReadAllText(f)))
+                    + Environment.NewLine
+                    + "function Main(args: string[]): i32 {" + Environment.NewLine
+                    + "    let h = Cocoa.CodeGen.IlDriver.BuildDllHex(args[0])" + Environment.NewLine
+                    + "    System.Console.WriteLine(\"B2:\" + h)" + Environment.NewLine
+                    + "    return 0" + Environment.NewLine
+                    + "}" + Environment.NewLine
+                : "class V { public function Twice(x: i32): i32 { return x * 2 } }\n"
+                    + "function Main(args: string[]): i32 { return new V().Twice(21) }\n";
+            var inputPath = Path.Combine(runner, "input.co");
+            File.WriteAllText(inputPath, selfHostSource);
+            _out.WriteLine("self-host input: " + selfHostSource.Length + " chars -> " + inputPath);
 
             var psi = new System.Diagnostics.ProcessStartInfo("dotnet")
             {
@@ -299,7 +315,7 @@ namespace Cocoa.Tests.Compiler
                 UseShellExecute = false,
             };
             psi.ArgumentList.Add(runnerDll);
-            psi.ArgumentList.Add(inputCo);
+            psi.ArgumentList.Add(inputPath);
             using var proc = System.Diagnostics.Process.Start(psi)!;
             var stdout = proc.StandardOutput.ReadToEnd();
             var stderr = proc.StandardError.ReadToEnd();
@@ -321,6 +337,33 @@ namespace Cocoa.Tests.Compiler
             File.WriteAllBytes(b2Path, b2);
             _out.WriteLine("B2.fast.dll: " + b2.Length + " B -> " + b2Path);
             _out.WriteLine("HEAD: " + CurrentHead());
+
+            // Fixpoint 比对（仅全量档有意义：源码必须与 bootstrap 的 master 逐字一致）。
+            // 判据沿用 B2_Fixpoint_ViaSavedB1 的定义：**字节级相等**。
+            if (Environment.GetEnvironmentVariable("COCOA_SELFHOST_FULL") == "1")
+            {
+                var b1Path = Path.Combine(ProbeDir, "B1.dll");
+                if (File.Exists(b1Path))
+                {
+                    var b1 = File.ReadAllBytes(b1Path);
+                    if (b1.Length != b2.Length)
+                    {
+                        _out.WriteLine($"B2 != B1：长度 {b2.Length} vs {b1.Length}");
+                    }
+                    else
+                    {
+                        var n = b1.Length;
+                        var firstDiff = Enumerable.Range(0, n).FirstOrDefault(i => b1[i] != b2[i], n);
+                        _out.WriteLine(firstDiff == n
+                            ? "B2 == B1：字节级一致，fixpoint 达成"
+                            : $"B2 != B1：首个差异偏移 0x{firstDiff:X}（B1={b1[firstDiff]:X2} B2={b2[firstDiff]:X2}）");
+                    }
+                }
+                else
+                {
+                    _out.WriteLine("无 B1.dll，跳过 fixpoint 比对");
+                }
+            }
 
             // 产出 B2 的 IL 由 .co 轨写出，故这里的 ilverify 才是阶段 8 错误的来源
             if (Environment.GetEnvironmentVariable("COCOA_RUN_ILVERIFY") == "1")
