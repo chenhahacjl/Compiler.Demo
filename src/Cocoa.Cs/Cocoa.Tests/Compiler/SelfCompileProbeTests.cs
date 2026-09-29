@@ -232,13 +232,31 @@ namespace Cocoa.Tests.Compiler
         // **不经过 Evaluate 执行**，所以不需要语料里有可跑的 Main/IlDriver。
         // 这一点是它比 COCOA_CORPUS_EXCLUDE 排除档（~7m）快两个数量级的原因。
         // ------------------------------------------------------------------
+        // ------------------------------------------------------------------
+        // 快档：C# 发射器（Compilation.Emit 路径）在语料子集上的 locals 签名探针。
+        //
+        // ⚠️ 重要：**这个探针与阶段 8 的 22 个 ilverify 错配无关。**
+        // B1.dll 的 IL 由 .co 轨产出（IlDriver.BuildDllHex 接收源码文本，用 .co 的
+        // Binder 绑定，再由 .co 自带的 IlMetadataBuilder/PeImage 写 PE 字节）；
+        // C# 轨的 IlEmitter 在 B1 生成过程中不参与，bootstrap 的 Evaluate 只是
+        // 解释执行那段 .co 程序。所以本探针测的是**另一个发射器**，
+        // 结论不可用来推断 B1 的行为。
+        //
+        // 它的价值在于两点：
+        //  1. 锁住 C# 发射器自身的正确行为（回归护栏）
+        //  2. 8 秒即可跑完，可用于裁剪子集排查 C# 发射器自身的问题
+        //
+        // 已知：全量子集（含 CodeGen）在本路径下抛
+        // KeyNotFound('usTexts: string[]')，那是 C# 发射器的独立缺陷，
+        // 与阶段 8 无关，修它不应占用阶段 8 的时间。
+        // ------------------------------------------------------------------
         [Theory]
         [InlineData("DeclWordOf", "Int32", "String")]
         [InlineData("BinaryGlyphOf", "Int32", "String")]
         [InlineData("UnaryGlyphOf", "Int32", "String")]
         [InlineData("FieldTypeOf", "Int32", "String")]
         [InlineData("MethodReturnTypeOf", "Int32", "String")]
-        public void BindingSlice_LocalsSignature_ReportsActualTypes(string method, string expected0, string expected1)
+        public void CorpusSlice_LocalsSignature_ReportsActualTypes(string method, string expected0, string expected1)
         {
             // 子集可配：默认 Binding+Syntax+Symbols；COCOA_SLICE_DIRS 可指定别的目录组合，
             // 用于二分定位「哪个 CodeGen 文件一进来，locals 就从 Int32,String 翻成 Int32,Int32」。
