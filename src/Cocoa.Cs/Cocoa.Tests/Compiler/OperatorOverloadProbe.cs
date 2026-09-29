@@ -442,6 +442,63 @@ namespace Cocoa.Tests.Compiler
         }
 
         [Fact]
+        public void ImplicitConversion_IsAppliedInImplicitContext_EndToEnd()
+        {
+            // Vec → i32 隐式转换在「赋值/传参/算术」等隐式位置自动生效：a + 1 应得 10
+            var result = RunMain(
+                "class Vec {" + Nl +
+                "    public field X: i32" + Nl +
+                "    public static function implicit operator int(v: Vec): i32 { return v.X }" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var a = new Vec()" + Nl +
+                "    a.X = 9" + Nl +
+                "    var s: i32 = a" + Nl +
+                "    return s + 1" + Nl +
+                "}", "OpImplicitUse");
+
+            Assert.Equal(10, result);
+        }
+
+        [Fact]
+        public void ExplicitConversion_IsAppliedInCastContext_EndToEnd()
+        {
+            // i32 → Vec 显式转换在强制转换位置生效：Var b = (Vec)5 取 X = 5
+            var result = RunMain(
+                "class Vec {" + Nl +
+                "    public field X: i32" + Nl +
+                "    public static function explicit operator Vec(v: i32): Vec {" + Nl +
+                "        var r = new Vec()" + Nl +
+                "        r.X = v" + Nl +
+                "        return r" + Nl +
+                "    }" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var b: Vec = (Vec)5" + Nl +
+                "    return b.X" + Nl +
+                "}", "OpExplicitUse");
+
+            Assert.Equal(5, result);
+        }
+
+        [Fact]
+        public void ExplicitConversion_RejectedInImplicitContext()
+        {
+            // 只有 op_Explicit 时，隐式位置不得使用
+            var diagnostics = Diagnostics(
+                "class Vec {" + Nl +
+                "    public field X: i32" + Nl +
+                "    public static function explicit operator Vec(v: i32): Vec { return new Vec() }" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var b: Vec = 5" + Nl +
+                "    return 0" + Nl +
+                "}");
+
+            Assert.Contains(diagnostics, d => d.IsError);
+        }
+
+        [Fact]
         public void ImplicitConversion_IsEmittedWithOpImplicitName()
         {
             // 转换运算符以 op_Implicit / op_Explicit 出现在元数据中（转换调用的接线见转换运算测试）

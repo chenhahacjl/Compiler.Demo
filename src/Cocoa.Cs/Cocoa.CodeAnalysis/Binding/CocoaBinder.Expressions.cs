@@ -2677,6 +2677,13 @@ namespace Cocoa.CodeAnalysis.Binding
             var conversion = Conversion.Classify(expression.Type, type);
             if (!conversion.Exists)
             {
+                // 内建转换表未命中 → 回落用户定义转换运算符（C# §10.5 用户转换）：
+                // 隐式位置只认 op_Implicit；显式位置（显式转换/强制转换/显式构造）额外认 op_Explicit。
+                if (TryBindUserDefinedConversion(expression, type, allowExplicit, out var userDefined))
+                {
+                    return userDefined!;
+                }
+
                 if (expression.Type != TypeSymbol.Error && type != TypeSymbol.Error)
                 {
                     _diagnostics.ReportCannotConvert(diagnosticLocation, expression.Type, type);
@@ -2715,6 +2722,42 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundConversionExpression(expression.Syntax, type, expression);
+        }
+
+        /// <summary>
+        /// 用户定义转换运算符回落：查 <see cref="OperatorRegistry"/> 的 <c>op_Implicit</c>，
+        /// 显式位置（<paramref name="allowExplicit"/>）再查 <c>op_Explicit</c>。
+        /// 命中即产出一个 <see cref="BoundCallExpression"/>（转换运算符恒 static，无接收者）。
+        /// </summary>
+        private bool TryBindUserDefinedConversion(
+            BoundExpression expression,
+            TypeSymbol target,
+            bool allowExplicit,
+            out BoundExpression? result)
+        {
+            result = null;
+
+            if (expression.Type == TypeSymbol.Error || target == TypeSymbol.Error)
+            {
+                return false;
+            }
+
+            // 恒等/继承关系不走转换运算符（内建表已覆盖）
+            var method = _operators.ResolveConversion(OperatorKind.ImplicitConversion, expression.Type, target)
+                         ?? (allowExplicit
+                             ? _operators.ResolveConversion(OperatorKind.ExplicitConversion, expression.Type, target)
+                             : null);
+
+            if (method == null)
+            {
+                return false;
+            }
+
+            result = new BoundCallExpression(
+                expression.Syntax!,
+                method,
+                ImmutableArray.Create<BoundExpression>(expression));
+            return true;
         }
 
         private VariableSymbol BindVariableDeclaration(CoreSyntax.SyntaxToken identifier, bool isReadOnly, TypeSymbol type, BoundConstant? constant = null)
