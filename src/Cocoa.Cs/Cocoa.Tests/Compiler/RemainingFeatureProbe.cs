@@ -401,6 +401,32 @@ namespace Cocoa.Tests.Compiler
         }
 
         [Fact]
+        public void MemberCall_ResolvesOnReceiverType_NotEnclosingClass()
+        {
+            // 回归护栏（阶段 8 自举经 ilverify + metadata dump 暴露）：
+            // B1 中 Binder::FieldTypeOf 的 callvirt 落到了 Binder 自己的方法
+            // （MethodReturnTypeOf / FieldNameOf），而源码此处调的是 Node::Child / Node::Kind。
+            // 即「类间成员调用」疑似按名串到了**外层类**的方法上。
+            // 本用例让外层类与接收者类**方法同名但签名不同**，看解析落在哪个。
+            var result = RunMain(
+                "class Node {" + Nl +
+                "    public function Kind(): string { return \"NodeKind\" }" + Nl +
+                "}" + Nl +
+                "class Binder {" + Nl +
+                "    public function Kind(): string { return \"BinderKind\" }" + Nl +
+                "    public static function Probe(n: Node): string {" + Nl +
+                "        return n.Kind()" + Nl +
+                "    }" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    if Binder.Probe(new Node()) == \"NodeKind\" { return 1 }" + Nl +
+                "    return 0" + Nl +
+                "}", "MemberRecv");
+
+            Assert.Equal(1, result);
+        }
+
+        [Fact]
         public void LocalSig_MethodCallReturningString_NotMarkedInt32()
         {
             // 回归护栏（阶段 8 自举经 ilverify 暴露）：发射器曾把「方法调用返回的 String」
