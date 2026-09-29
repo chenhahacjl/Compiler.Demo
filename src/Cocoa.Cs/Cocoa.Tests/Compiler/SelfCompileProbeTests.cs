@@ -1,4 +1,5 @@
 ﻿using Cocoa.CodeAnalysis;
+using Cocoa.Targeting;
 using System;
 using System.IO;
 using System.Linq;
@@ -36,6 +37,19 @@ namespace Cocoa.Tests.Compiler
                 Directory.CreateDirectory(dir);
                 return dir;
             }
+        }
+
+        /// <summary>仓库根（含 src/Cocoa.SDK/System.Core/String.co 的那层）。</summary>
+        private static string CorpusRoot()
+        {
+            var root = AppContext.BaseDirectory;
+            while (root != null && !File.Exists(Path.Combine(root, "src", "Cocoa.SDK", "System.Core", "String.co")))
+            {
+                root = Path.GetDirectoryName(root);
+            }
+
+            Assert.NotNull(root);
+            return root!;
         }
 
         private static string[] CorpusFiles()
@@ -206,6 +220,105 @@ namespace Cocoa.Tests.Compiler
             Assert.NotNull(b1Asm.EntryPoint);
             _out.WriteLine("B1 loads; entry: " + b1Asm.EntryPoint!.Name);
             _out.WriteLine("B1 types: " + b1Asm.GetTypes().Length);
+        }
+
+        // ------------------------------------------------------------------
+        // 快档：只编译 Binding+Syntax+Symbols（约 250KB，无 CodeGen），检查关键方法的
+        // locals 签名。目的是把「A/B/C 三类只在全量语料下出现」这个现象拆开——
+        // 若 Binding 子集单独就能复现，就说明与 CodeGen 无关，可秒级迭代；
+        // 若不能，则证明确实是「全量」而非「某个子集」触发。
+        //
+        // 关键点：用 Compilation.Emit(..., emitLibrary: true) 直接出 DLL，
+        // **不经过 Evaluate 执行**，所以不需要语料里有可跑的 Main/IlDriver。
+        // 这一点是它比 COCOA_CORPUS_EXCLUDE 排除档（~7m）快两个数量级的原因。
+        // ------------------------------------------------------------------
+        [Theory]
+        [InlineData("DeclWordOf", "Int32", "String")]
+        [InlineData("BinaryGlyphOf", "Int32", "String")]
+        [InlineData("UnaryGlyphOf", "Int32", "String")]
+        [InlineData("FieldTypeOf", "Int32", "String")]
+        [InlineData("MethodReturnTypeOf", "Int32", "String")]
+        public void BindingSlice_LocalsSignature_ReportsActualTypes(string method, string expected0, string expected1)
+        {
+            // 子集可配：默认 Binding+Syntax+Symbols；COCOA_SLICE_DIRS 可指定别的目录组合，
+            // 用于二分定位「哪个 CodeGen 文件一进来，locals 就从 Int32,String 翻成 Int32,Int32」。
+            var dirs = Environment.GetEnvironmentVariable("COCOA_SLICE_DIRS");
+            var dirList = string.IsNullOrEmpty(dirs)
+                ? new[] { "Binding", "Syntax", "Symbols" }
+                : dirs!.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var root = CorpusRoot();
+            var files = dirList
+                .SelectMany(d => Directory.GetFiles(Path.Combine(root, "src", "Cocoa.Co", "Cocoa.Compiler", d), "*.co", SearchOption.AllDirectories))
+                .OrderBy(f => f, StringComparer.Ordinal)
+                .ToArray();
+            _out.WriteLine("slice dirs: " + string.Join("+", dirList) + "  files=" + files.Length);
+
+            var trees = new System.Collections.Generic.List<Cocoa.CodeAnalysis.Syntax.SyntaxTree>();
+            foreach (var f in files)
+            {
+                trees.Add(Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(File.ReadAllText(f)));
+            }
+
+            // 语料本身没有 Main。加一个最小入口点：emitLibrary:true（无入口点）时
+            // 某些类型注册会被跳过，CodeGen 子集下会抛 KeyNotFound（'xxx: string[]'）。
+            trees.Add(Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(
+                "using System\nfunction Main(args: string[]): i32 { return 0 }\n"));
+
+            var compilation = Cocoa.CodeAnalysis.Compilation.Create(
+                "Main",
+                new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location },
+                trees.ToArray());
+            var outPath = Path.Combine(Path.GetTempPath(), "cocoa-slice-" + method + ".dll");
+            var diags = compilation.Emit("Slice", outPath, IlTarget.Default, emitLibrary: false);
+            Assert.False(diags.HasErrors(), "slice 编译错误: " + string.Join(" | ", diags.Select(d => d.Message).Take(8)));
+
+            using var fs = File.OpenRead(outPath);
+            using var pe = new PEReader(fs);
+            var md = pe.GetMetadataReader();
+            foreach (var th in md.TypeDefinitions)
+            {
+                var td = md.GetTypeDefinition(th);
+                var tn = md.GetString(td.Name);
+                foreach (var mh in td.GetMethods())
+                {
+                    var mdf = md.GetMethodDefinition(mh);
+                    if (md.GetString(mdf.Name) != method || mdf.RelativeVirtualAddress == 0)
+                    {
+                        continue;
+                    }
+
+                    var body = pe.GetMethodBody(mdf.RelativeVirtualAddress);
+                    var locals = body.LocalSignature.IsNil
+                        ? "<none>"
+                        : string.Join(",", md.GetStandaloneSignature(body.LocalSignature).DecodeLocalSignature(
+                            new SliceSigProvider(), null));
+                    _out.WriteLine($"{tn}::{method}  locals=[{locals}]  maxstack={body.MaxStack}");
+                    // 断言当前实际值，缺陷修复后此断言会失败并显示新的 locals —— 这是刻意的：
+                    // 它把「期望」与「实际」并列记录下来，避免用错误断言掩盖问题。
+                    Assert.Equal($"{expected0},{expected1}", locals);
+                    return;
+                }
+            }
+
+            Assert.True(false, "未找到方法 " + method);
+        }
+
+        private sealed class SliceSigProvider : ISignatureTypeProvider<string, object?>
+        {
+            public string GetArrayType(string e, ArrayShape s) => e + "[]";
+            public string GetByReferenceType(string e) => e + "&";
+            public string GetFunctionPointerType(MethodSignature<string> si) => "fnptr";
+            public string GetGenericInstantiation(string g, System.Collections.Immutable.ImmutableArray<string> a) => g + "<" + string.Join(",", a) + ">";
+            public string GetGenericMethodParameter(object? gc, int i) => "!!" + i;
+            public string GetGenericTypeParameter(object? gc, int i) => "!" + i;
+            public string GetModifiedType(string mod, string un, bool isRequired) => un;
+            public string GetPinnedType(string e) => e;
+            public string GetPointerType(string e) => e + "*";
+            public string GetPrimitiveType(PrimitiveTypeCode c) => c.ToString();
+            public string GetSZArrayType(string e) => e + "[]";
+            public string GetTypeFromDefinition(MetadataReader r, TypeDefinitionHandle h, byte k) { var t = r.GetTypeDefinition(h); return r.GetString(t.Name); }
+            public string GetTypeFromReference(MetadataReader r, TypeReferenceHandle h, byte k) { var t = r.GetTypeReference(h); return r.GetString(t.Name); }
+            public string GetTypeFromSpecification(MetadataReader r, object? gc, TypeSpecificationHandle h, byte k) => r.GetTypeSpecification(h).DecodeSignature(this, gc);
         }
 
         // ------------------------------------------------------------------
