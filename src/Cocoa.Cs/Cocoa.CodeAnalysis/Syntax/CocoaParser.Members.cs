@@ -120,37 +120,137 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             var recordToken = MatchToken(SyntaxKind.IdentifierToken);
             var nameToken = MatchToken(SyntaxKind.IdentifierToken);
-            var openParen = MatchToken(SyntaxKind.OpenParenthesisToken);
+
+            // record 只支持位置参数形式 `record Name(params)`。
+            // 缺括号时若继续走，MatchToken 不消费 token，参数列表会把 `{ … }` 当参数吃掉，
+            // 随后成员循环在已消费的 token 上原地打转 → parser 死循环（挂死远重于报错）。故显式拒绝并收尾。
+            if (Current.Kind != SyntaxKind.OpenParenthesisToken)
+            {
+                ReportError(Current.Location,
+                    "record 声明须为位置参数形式，如 `record Point(x: i32, y: i32)`。");
+
+                var badOpen = SyntheticToken(SyntaxKind.OpenParenthesisToken, Current.Position, "(");
+                var badClose = SyntheticToken(SyntaxKind.CloseParenthesisToken, Current.Position, ")");
+                var members = ImmutableArray.CreateBuilder<MemberSyntax>();
+                ParseRecordBodyMembers(members, out var bodyOpen, out var bodyClose, out _);
+                return new ClassDeclarationSyntax(_syntaxTree, ImmutableArray<AttributeSyntax>.Empty, modifiers,
+                    SyntheticToken(SyntaxKind.ClassKeyword, recordToken.Span.Start, "class"), nameToken, null,
+                    ImmutableArray<TypeClauseSyntax>.Empty, ImmutableArray<WhereClauseSyntax>.Empty,
+                    bodyOpen, members.ToImmutable(), bodyClose);
+            }
+
+            var openParen = NextToken();
             var parameters = ParseParameterList();
             var closeParen = MatchToken(SyntaxKind.CloseParenthesisToken);
 
-            var members = ImmutableArray.CreateBuilder<MemberSyntax>();
-            ExpandRecordPositionalMembers(nameToken, parameters, members);
+            var positionalMembers = ImmutableArray.CreateBuilder<MemberSyntax>();
+            ExpandRecordPositionalMembers(nameToken, parameters, positionalMembers);
+            ParseRecordBodyMembers(positionalMembers, out var openBrace, out var closeBrace, out _);
 
-            SyntaxToken openBrace;
-            SyntaxToken closeBrace;
+            var classKeyword = SyntheticToken(SyntaxKind.ClassKeyword, recordToken.Span.Start, "class");
+            return new ClassDeclarationSyntax(_syntaxTree, ImmutableArray<AttributeSyntax>.Empty, modifiers, classKeyword, nameToken, null, ImmutableArray<TypeClauseSyntax>.Empty, ImmutableArray<WhereClauseSyntax>.Empty, openBrace, positionalMembers.ToImmutable(), closeBrace);
+        }
+
+        /// <summary>
+        /// record 体（`{ … }`，可省略）：逐成员解析。带**不推进兜底**——
+        /// <c>ParseMember</c> 若在某些 token 上不消费 token，循环会原地打转导致 parser 死循环。
+        /// </summary>
+        private void ParseRecordBodyMembers(
+            ImmutableArray<MemberSyntax>.Builder members,
+            out SyntaxToken openBrace,
+            out SyntaxToken closeBrace,
+            out bool hadBody)
+        {
             if (Current.Kind == SyntaxKind.OpenBraceToken)
             {
-                openBrace = MatchToken(SyntaxKind.OpenBraceToken);
+                openBrace = NextToken();
                 while (Current.Kind != SyntaxKind.CloseBraceToken && Current.Kind != SyntaxKind.EndOfFileToken)
                 {
+                    var before = Current;
                     members.Add(ParseMember());
+                    if (Current == before)
+                    {
+                        // 不推进则强制前进一个 token，避免死循环
+                        NextToken();
+                    }
                 }
 
                 closeBrace = MatchToken(SyntaxKind.CloseBraceToken);
-            }
-            else
-            {
-                openBrace = SyntheticToken(SyntaxKind.OpenBraceToken, recordToken.Span.End, "{");
-                closeBrace = SyntheticToken(SyntaxKind.CloseBraceToken, recordToken.Span.End, "}");
+                hadBody = true;
+                return;
             }
 
-            var classKeyword = SyntheticToken(SyntaxKind.ClassKeyword, recordToken.Span.Start, "class");
-            return new ClassDeclarationSyntax(_syntaxTree, ImmutableArray<AttributeSyntax>.Empty, modifiers, classKeyword, nameToken, null, ImmutableArray<TypeClauseSyntax>.Empty, ImmutableArray<WhereClauseSyntax>.Empty, openBrace, members.ToImmutable(), closeBrace);
+            var synthetic = SyntheticToken(SyntaxKind.OpenBraceToken, Current.Position, "{");
+            openBrace = synthetic;
+            closeBrace = SyntheticToken(SyntaxKind.CloseBraceToken, Current.Position, "}");
+            hadBody = false;
         }
 
         private SyntaxToken SyntheticToken(SyntaxKind kind, int position, string text, object? value = null)
             => new SyntaxToken(_syntaxTree, kind, position, text, value, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+
+        /// <summary>
+        /// 为 record 合成 <c>operator ==</c> / <c>operator !=</c> 声明（逐字段比较）。
+        /// 形态为标准的 <c>public static function operator ==(a: P, b: P): bool</c>——
+        /// 复用既有运算符绑定/发射管线（OperatorRegistry + <c>op_Equality</c>/<c>op_Inequality</c>），
+        /// 故 <c>a == b</c> 会优先命中它而非类引用相等。
+        /// </summary>
+        private FunctionDeclarationSyntax BuildRecordComparisonOperator(
+            int pos,
+            ImmutableArray<SyntaxToken> publicMods,
+            SyntaxToken nameToken,
+            SeparatedSyntaxList<ParameterSyntax> parameters,
+            bool isEquals)
+        {
+            var selfType = new TypeClauseSyntax(_syntaxTree, null, nameToken);
+            var aParam = new ParameterSyntax(_syntaxTree, null,
+                SyntheticToken(SyntaxKind.IdentifierToken, pos, "a"), selfType);
+            var bParam = new ParameterSyntax(_syntaxTree, null,
+                SyntheticToken(SyntaxKind.IdentifierToken, pos, "b"), selfType);
+
+            // a.f == b.f && …
+            ExpressionSyntax? chain = null;
+            foreach (var p in parameters)
+            {
+                var left = new MemberAccessExpressionSyntax(_syntaxTree,
+                    new NameExpressionSyntax(_syntaxTree, aParam.Identifier), SyntheticToken(SyntaxKind.DotToken, pos, "."), p.Identifier);
+                var right = new MemberAccessExpressionSyntax(_syntaxTree,
+                    new NameExpressionSyntax(_syntaxTree, bParam.Identifier), SyntheticToken(SyntaxKind.DotToken, pos, "."), p.Identifier);
+                var eq = new BinaryExpressionSyntax(_syntaxTree, left, SyntheticToken(SyntaxKind.EqualsEqualsToken, pos, "=="), right);
+                chain = chain == null ? eq : new BinaryExpressionSyntax(_syntaxTree, chain, SyntheticToken(SyntaxKind.AmpersandAmpersandToken, pos, "&&"), eq);
+            }
+
+            // != 取反：!(a.f == b.f && …)
+            ExpressionSyntax? result = chain;
+            if (!isEquals && result != null)
+            {
+                result = new UnaryExpressionSyntax(_syntaxTree, SyntheticToken(SyntaxKind.BangToken, pos, "!"), result);
+            }
+
+            var body = new BlockStatementSyntax(_syntaxTree,
+                SyntheticToken(SyntaxKind.OpenBraceToken, pos, "{"),
+                ImmutableArray.Create<StatementSyntax>(new ReturnStatementSyntax(
+                    _syntaxTree, SyntheticToken(SyntaxKind.ReturnKeyword, pos, "return"), result)),
+                SyntheticToken(SyntaxKind.CloseBraceToken, pos, "}"));
+
+            var staticMods = publicMods.Add(SyntheticToken(SyntaxKind.StaticKeyword, pos, "static"));
+            // SeparatedSyntaxList 是「项/分隔符交错」布局：[a, ',', b]
+            var paramList = new SeparatedSyntaxList<ParameterSyntax>(ImmutableArray.Create<SyntaxNode>(
+                aParam,
+                SyntheticToken(SyntaxKind.CommaToken, pos, ","),
+                bParam));
+
+            return new FunctionDeclarationSyntax(
+                _syntaxTree, ImmutableArray<AttributeSyntax>.Empty, staticMods,
+                SyntheticToken(SyntaxKind.OperatorKeyword, pos, "operator"),
+                SyntheticToken(isEquals ? SyntaxKind.EqualsEqualsToken : SyntaxKind.BangEqualsToken, pos,
+                    isEquals ? "==" : "!="),
+                null,
+                SyntheticToken(SyntaxKind.OpenParenthesisToken, pos, "("), paramList,
+                SyntheticToken(SyntaxKind.CloseParenthesisToken, pos, ")"),
+                new TypeClauseSyntax(_syntaxTree, null, SyntheticToken(SyntaxKind.IdentifierToken, pos, "bool")),
+                body);
+        }
 
         private void ExpandRecordPositionalMembers(SyntaxToken nameToken, SeparatedSyntaxList<ParameterSyntax> parameters, ImmutableArray<MemberSyntax>.Builder members)
         {
@@ -201,6 +301,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                     SyntheticToken(SyntaxKind.OpenParenthesisToken, pos, "("), otherList,
                     SyntheticToken(SyntaxKind.CloseParenthesisToken, pos, ")"),
                     new TypeClauseSyntax(_syntaxTree, null, SyntheticToken(SyntaxKind.IdentifierToken, pos, "bool")), equalsBody));
+
+                // record 的值相等：生成 == / != 运算符（逐字段比较）。
+                // 此前只生成 Equals，于是 `a == b` 落到类引用相等分支 → 值相等的两个 record 判为不等（C# 语义不符）。
+                // 走运算符机制而非改 == 的绑定规则：用户可显式声明 operator ==，行为与 C# 一致。
+                members.Add(BuildRecordComparisonOperator(pos, publicMods, nameToken, parameters, isEquals: true));
+                members.Add(BuildRecordComparisonOperator(pos, publicMods, nameToken, parameters, isEquals: false));
             }
 
             var toStringExpr = BuildRecordToString(nameToken, parameters, pos);
