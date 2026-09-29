@@ -391,10 +391,14 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.BaseKeyword:
                     return new BaseExpressionSyntax(_syntaxTree, NextToken());
 
-                case SyntaxKind.NameofKeyword:
-                    return ParseNameofExpression();
+                    case SyntaxKind.NameofKeyword:
+                        return ParseNameofExpression();
 
-                case SyntaxKind.IdentifierToken:
+                    case SyntaxKind.TypeofKeyword:
+                    case SyntaxKind.SizeofKeyword:
+                        return ParseTypeOperatorExpression();
+
+                    case SyntaxKind.IdentifierToken:
                 default:
                     return ParseNameOrCallExpression();
             }
@@ -743,6 +747,16 @@ namespace Cocoa.CodeAnalysis.Syntax
             var argument = ParseExpression();
             var closeParen = MatchToken(SyntaxKind.CloseParenthesisToken);
             return new NameofExpressionSyntax(_syntaxTree, nameofKeyword, openParen, argument, closeParen);
+        }
+
+        /// <summary>类型运算：<c>typeof(T)</c> / <c>sizeof(T)</c>——括号内是**前缀类型**（非 <c>名称: 类型</c> 形态）。</summary>
+        private ExpressionSyntax ParseTypeOperatorExpression()
+        {
+            var operatorToken = NextToken();
+            var openParen = MatchToken(SyntaxKind.OpenParenthesisToken);
+            var type = ParsePrefixTypeClause();
+            var closeParen = MatchToken(SyntaxKind.CloseParenthesisToken);
+            return new TypeOperatorExpressionSyntax(_syntaxTree, operatorToken, openParen, type, closeParen);
         }
 
         private ExpressionSyntax ParseNumberLiteral()

@@ -486,8 +486,16 @@ namespace Cocoa.CodeGen.Native
                 case BoundNodeKind.IsExpression:
                     return EmitIsExpression((BoundIsExpression)node);
 
-                case BoundNodeKind.AsExpression:
-                    return EmitAsExpression((BoundAsExpression)node);
+  case BoundNodeKind.AsExpression:
+    return EmitAsExpression((BoundAsExpression)node);
+
+   case BoundNodeKind.TypeOperatorExpression:
+     // native 后端无 System.Type / RuntimeTypeHandle 运行时设施；
+     // 静默给个错值比报错更糟，明确报不支持
+     var typeOperator = (BoundTypeOperatorExpression)node;
+     throw new Exception(
+   "native 后端暂不支持 " + (typeOperator.IsTypeOf ? "typeof" : "sizeof") +
+    $"({typeOperator.TypeArgument.Name})。");
 
                 // 6e-M22 C4-c：函数值对象与间接调用
                 case BoundNodeKind.FunctionValueExpression:

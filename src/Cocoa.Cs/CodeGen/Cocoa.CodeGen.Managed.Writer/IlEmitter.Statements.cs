@@ -401,6 +401,9 @@ namespace Cocoa.CodeGen.Managed.Writer
                 case BoundNodeKind.AsExpression:
                     EmitAsExpression(il, (BoundAsExpression)node);
                     break;
+                case BoundNodeKind.TypeOperatorExpression:
+                    EmitTypeOperatorExpression(il, (BoundTypeOperatorExpression)node);
+                    break;
 
                 // 6e-M22 C4-b：函数值构造（ldnull/接收者; ldftn; newobj Func`N::.ctor）与间接调用（callvirt Invoke）
                 case BoundNodeKind.FunctionValueExpression:
@@ -647,6 +650,26 @@ namespace Cocoa.CodeGen.Managed.Writer
         }
 
         /// <summary>6e-M19 M5-b：as → isinst（失败栈上即 null，与 C# 语义一致）。</summary>
+        /// <summary>
+        /// <c>sizeof(T)</c> → <c>sizeof T</c>（基元/枚举已在绑定期折叠为常量，走不到这里）。
+        /// <c>typeof(T)</c> → 暂不支持：按 C# 应发 <c>ldtoken T; call System.Type::GetTypeFromHandle</c>，
+        /// 实发字节为 <c>D0 &lt;TypeDef token&gt; 28 &lt;MemberRef token&gt;</c>、形式正确且 token 解析无误，
+        /// 但产出程序仍被 CLR 判 InvalidProgramException，且 <c>typeof</c> 是本方法唯一新增指令
+        /// （同程序去掉 typeof 即有效），根因需 peverify 级诊断（进程内不可得）。
+        /// 产出非法二进制比报错危险得多，故明确报不支持。
+        /// </summary>
+        private void EmitTypeOperatorExpression(IlAssembler il, BoundTypeOperatorExpression node)
+        {
+            if (node.IsTypeOf)
+            {
+                throw new System.Exception(
+                    $"typeof({node.TypeArgument.Name}) 的 IL 发射待修：ldtoken + Type::GetTypeFromHandle " +
+                    "产出程序被判 InvalidProgramException，根因未定位。");
+            }
+
+            il.Emit(IlOpCodeTable.Get("Sizeof"), ToIlType(node.TypeArgument));
+        }
+
         private void EmitAsExpression(IlAssembler il, BoundAsExpression node)
         {
             EmitExpression(il, node.Expression);

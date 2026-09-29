@@ -235,6 +235,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.LockKeyword;
                 case "checked":
                     return SyntaxKind.CheckedKeyword;
+                case "typeof":
+                    return SyntaxKind.TypeofKeyword;
+                case "sizeof":
+                    return SyntaxKind.SizeofKeyword;
                 case "unchecked":
                     return SyntaxKind.UncheckedKeyword;
                 case "yield":
@@ -531,6 +535,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "lock";
                 case SyntaxKind.CheckedKeyword:
                     return "checked";
+                case SyntaxKind.TypeofKeyword:
+                    return "typeof";
+                case SyntaxKind.SizeofKeyword:
+                    return "sizeof";
                 case SyntaxKind.UncheckedKeyword:
                     return "unchecked";
                 case SyntaxKind.YieldKeyword:

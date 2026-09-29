@@ -236,6 +236,10 @@ namespace Cocoa.CodeGen.Managed.Structure
             Define("Stind_R4", 0x56, IlOperandType.InlineNone);
             Define("Stind_R8", 0x57, IlOperandType.InlineNone);
             Define("Ldelema", 0x8F, IlOperandType.InlineType);
+            // typeof(T) → ldtoken T; call System.Type::GetTypeFromHandle(RuntimeTypeHandle)
+            Define("Ldtoken", 0xD0, IlOperandType.InlineType);
+            // sizeof(T)：非托管类型大小（C# 对基元类型编译期求值，故本指令仅用于用户值类型）
+            Define("Sizeof", 0x1C, IlOperandType.InlineType);
 
             // 字符串
             Define("Ldstr", 0x72, IlOperandType.InlineString);

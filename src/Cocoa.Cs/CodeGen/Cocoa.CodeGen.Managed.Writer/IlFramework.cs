@@ -40,6 +40,8 @@ namespace Cocoa.CodeGen.Managed.Writer
             DelegateRemove = RequireMethod("System.Delegate", "Remove", new[] { "System.Delegate", "System.Delegate" });
             // net9 CoreLib 的 System.Type 无 get_Name（Name 属性非虚实现），Type.Name 经 FullName+切分组合
             TypeGetFullName = RequireMethod("System.Type", "get_FullName", Array.Empty<string>());
+            // typeof(T) → ldtoken T; call Type::GetTypeFromHandle(RuntimeTypeHandle)
+            TypeGetTypeFromHandle = RequireMethod("System.Type", "GetTypeFromHandle", new[] { "System.RuntimeTypeHandle" });
             StringLastIndexOfChar = RequireMethod("System.String", "LastIndexOf", new[] { "System.Char" });
             StringSubstringFrom = RequireMethod("System.String", "Substring", new[] { "System.Int32" });
             ConsoleReadLine = RequireMethod("System.Console", "ReadLine", Array.Empty<string>());
@@ -119,6 +121,7 @@ namespace Cocoa.CodeGen.Managed.Writer
 
         /// <summary>6e-M19 M3-b：System.Type 只读属性（Type.Name 经 FullName 切分；Type.FullName 直取）。</summary>
         public IlMethodRef TypeGetFullName { get; }
+        public IlMethodRef TypeGetTypeFromHandle { get; }
         public IlMethodRef StringLastIndexOfChar { get; }
         public IlMethodRef StringSubstringFrom { get; }
         public IlMethodRef ConsoleReadLine { get; }

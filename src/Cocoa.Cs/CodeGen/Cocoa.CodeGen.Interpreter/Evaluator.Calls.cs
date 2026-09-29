@@ -806,8 +806,39 @@ namespace Cocoa.CodeGen.Interpreter
         }
 
         /// <summary>6e-M19 M5-b：as 运行时转换——命中返回原引用，失败得 null。</summary>
-        private object? EvaluateAsExpression(BoundAsExpression node)
+        /// <summary>
+        /// <c>typeof(T)</c>：返回宿主真实 <see cref="System.Type"/>（解释器跑在 CLR 上，可直接取）。
+        /// <c>sizeof(T)</c>：基元/枚举已在绑定期折叠为常量，走到这里说明是用户值类型——
+        /// 解释器无托管布局信息，明确报不支持而非猜一个尺寸。
+        /// </summary>
+        private object? EvaluateTypeOperatorExpression(BoundTypeOperatorExpression node)
         {
+            if (node.IsTypeOf)
+            {
+                return ClrTypeOf(node.TypeArgument);
+            }
+
+            throw new Exception(
+                $"sizeof({node.TypeArgument.Name})：解释器不支持用户值类型的大小查询（需托管布局信息）。");
+        }
+
+        /// <summary>类型符号 → 宿主 <see cref="System.Type"/>：按全名解析，解析不到回退 <see cref="object"/>。</summary>
+        private static System.Type ClrTypeOf(Symbols.TypeSymbol type)
+        {
+            if (type is Symbols.NamedTypeSymbol named && named.Namespace.Length > 0)
+            {
+                var resolved = System.Type.GetType(named.FullName + ", System.Private.CoreLib")
+                               ?? System.Type.GetType(named.FullName);
+                if (resolved != null)
+                {
+                    return resolved;
+                }
+            }
+
+            return System.Type.GetType("System." + type.Name, throwOnError: false) ?? typeof(object);
+        }
+
+        private object? EvaluateAsExpression(BoundAsExpression node)        {
             var value = EvaluateExpression(node.Expression);
 
             if (value == null)

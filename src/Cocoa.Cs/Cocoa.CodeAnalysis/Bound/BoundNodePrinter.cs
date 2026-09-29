@@ -109,6 +109,9 @@ namespace Cocoa.CodeAnalysis.Binding
                 case BoundNodeKind.AsExpression:
                     WriteAsExpression((BoundAsExpression)node, writer);
                     break;
+                case BoundNodeKind.TypeOperatorExpression:
+                    WriteTypeOperatorExpression((BoundTypeOperatorExpression)node, writer);
+                    break;
                 case BoundNodeKind.ArrayCreationExpression:
                     WriteArrayCreationExpression((BoundArrayCreationExpression)node, writer);
                     break;
@@ -298,6 +301,14 @@ namespace Cocoa.CodeAnalysis.Binding
             writer.WriteKeyword(node.IsChecked ? "checked" : "unchecked");
             writer.WriteLine();
             node.Body.WriteTo(writer);
+        }
+
+        private static void WriteTypeOperatorExpression(BoundTypeOperatorExpression node, IndentedTextWriter writer)
+        {
+            writer.WriteKeyword(node.IsTypeOf ? "typeof" : "sizeof");
+            writer.Write("(");
+            writer.Write(node.TypeArgument.Name);
+            writer.WriteLine(")");
         }
 
         private static void WriteVariableDeclaration(BoundVariableDeclaration node, IndentedTextWriter writer)

@@ -382,6 +382,11 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     return RewriteAsExpression((BoundAsExpression)node);
                 }
+                case BoundNodeKind.TypeOperatorExpression:
+                {
+                    // 叶子节点（类型实参已在绑定期解析为 TypeSymbol），无可下探的子表达式
+                    return node;
+                }
                 case BoundNodeKind.ByRefArgument:
                 {
                     return RewriteByRefArgument((BoundByRefArgument)node);

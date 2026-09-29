@@ -1,4 +1,4 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
     /// 语法类型
@@ -254,5 +254,8 @@ ColonToken,               // :
         ImplicitKeyword = 235, // implicit（隐式转换运算符：`implicit operator T`）
         ExplicitKeyword = 236, // explicit（显式转换运算符：`explicit operator T`）
         WhenPattern = 237,     // when 子句模式：`is <pattern> when <cond>`（包装内层模式）
+        TypeofKeyword = 238,   // typeof：`typeof(T)`
+        SizeofKeyword = 239,   // sizeof：`sizeof(T)`
+        TypeOperatorExpression = 240,   // 类型运算表达式：typeof(T) / sizeof(T)
     }
 }

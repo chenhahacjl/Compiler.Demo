@@ -742,6 +742,44 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundLiteralExpression(syntax, name, TypeSymbol.String);
         }
 
+        /// <summary>
+        /// <c>typeof(T)</c> → <see cref="NamedTypeSymbol.SystemType"/>；
+        /// <c>sizeof(T)</c> → 字节数（基元类型编译期折叠为常量，C# 同；其余类型交发射层发 <c>sizeof T</c>）。
+        /// </summary>
+        private BoundExpression BindTypeOperatorExpression(TypeOperatorExpressionSyntax syntax)
+        {
+            var type = BindTypeClause(syntax.Type);
+            if (type == null || type == TypeSymbol.Error)
+            {
+                return new BoundErrorExpression(syntax);
+            }
+
+            if (syntax.IsTypeOf)
+            {
+                return new BoundTypeOperatorExpression(syntax, isTypeOf: true, type, NamedTypeSymbol.SystemType);
+            }
+
+            // sizeof：基元按宽度折叠为编译期常量（C# sizeof(int) 即编译期常量）。
+            // bool/char 不在 TypeSymbol.BitWidth 的枚举里（该属性只覆盖 8/16/32/64/128 位数值型），故单列。
+            var primitiveSize = type == TypeSymbol.Boolean ? 1
+                : type == TypeSymbol.Char ? 2
+                : type.BitWidth > 0 ? type.BitWidth / 8
+                : 0;
+
+            if (primitiveSize > 0)
+            {
+                return new BoundLiteralExpression(syntax, primitiveSize, TypeSymbol.Int32);
+            }
+
+            if (type is NamedTypeSymbol { TypeKind: TypeKind.Enum })
+            {
+                // 枚举底层固定为 i32（NamedTypeSymbol 无显式底层类型字段）
+                return new BoundLiteralExpression(syntax, 4, TypeSymbol.Int32);
+            }
+
+            return new BoundTypeOperatorExpression(syntax, isTypeOf: false, type, TypeSymbol.Int32);
+        }
+
         private static string ExtractName(ExpressionSyntax expression)
         {
             return expression switch
@@ -2447,6 +2485,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 case CoreSyntax.SyntaxKind.IsExpression: return BindIsExpression((IsExpressionSyntax)syntax);
                 case CoreSyntax.SyntaxKind.AsExpression: return BindAsExpression((AsExpressionSyntax)syntax);
                 case CoreSyntax.SyntaxKind.NameofExpression: return BindNameofExpression((NameofExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.TypeOperatorExpression: return BindTypeOperatorExpression((TypeOperatorExpressionSyntax)syntax);
                 case CoreSyntax.SyntaxKind.ConditionalAccessExpression: return BindConditionalAccessExpression((ConditionalAccessExpressionSyntax)syntax);
                 case CoreSyntax.SyntaxKind.LambdaExpression: return BindLambdaExpression((LambdaExpressionSyntax)syntax, expectedType: null);
                 case CoreSyntax.SyntaxKind.ByRefArgument: return BindByRefArgument((ByRefArgumentExpressionSyntax)syntax);

@@ -302,6 +302,8 @@ namespace Cocoa.CodeGen.Interpreter
                     return EvaluateIsExpression((BoundIsExpression)node);
                 case BoundNodeKind.AsExpression:
                     return EvaluateAsExpression((BoundAsExpression)node);
+                case BoundNodeKind.TypeOperatorExpression:
+                    return EvaluateTypeOperatorExpression((BoundTypeOperatorExpression)node);
                 case BoundNodeKind.DeclarationPattern:
                     return EvaluateDeclarationPattern((BoundDeclarationPattern)node);
                 case BoundNodeKind.RelationalPattern:

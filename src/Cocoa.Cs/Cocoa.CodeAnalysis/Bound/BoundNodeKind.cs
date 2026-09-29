@@ -1,4 +1,4 @@
-namespace Cocoa.CodeAnalysis.Binding
+﻿namespace Cocoa.CodeAnalysis.Binding
 {
     /// <summary>
     /// 绑定节点类型
@@ -9,6 +9,7 @@ namespace Cocoa.CodeAnalysis.Binding
         BlockStatement,
         NopStatement,
   CheckedStatement,
+  TypeOperatorExpression,
         VariableDeclaration,
         IfStatement,
         WhileStatement,
