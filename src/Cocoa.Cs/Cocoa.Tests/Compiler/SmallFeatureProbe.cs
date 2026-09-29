@@ -38,6 +38,12 @@ namespace Cocoa.Tests.Compiler
             return (int)asm.EntryPoint!.Invoke(null, new object[] { new[] { "x" } })!;
         }
 
+        /// <summary>解析 + 绑定的全部诊断（<c>Compilation.GetDiagnostics</c> 口径，含函数体错误）。</summary>
+        private static System.Collections.Generic.IEnumerable<Diagnostic> Diagnostics(string source)
+        {
+            return Compilation.Create(SyntaxTree.Parse(source)).GetDiagnostics();
+        }
+
         // ------------------------------------------------------------------
         // out var
         // ------------------------------------------------------------------
@@ -117,13 +123,124 @@ namespace Cocoa.Tests.Compiler
         // 索引器
         // ------------------------------------------------------------------
 
-        [Fact(Skip = "索引器未实现：元素访问仅支持数组/字符串（报 Cannot index a value of type X）。parser 侧虽有 ParseIndexerDeclaration，但类成员的 this[...] 语义未接线。")]
-        public void Indexer_ThisIndexer()
+        [Fact]
+        public void Indexer_ReadOnly_HasNoSetter()
         {
+            // 只读索引器：写操作应报诊断（不得静默丢弃）
+            var result = RunMain(
+                "class Counter {" + Nl +
+                "    private field _n: i32" + Nl +
+                "    public property this[i: i32]: i32 { get { return _n } }" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var c = new Counter()" + Nl +
+                "    return c[0]" + Nl +
+                "}", "IndexerRO");
+
+            Assert.Equal(0, result);
+        }
+
+        [Fact]
+        public void Indexer_StrIndex_ConvertsToParameterType()
+        {
+            // 索引参数走形参类型转换：传 i32 字面量到 i64 形参
+            var result = RunMain(
+                "class M {" + Nl +
+                "    public property this[i: i64]: i32 { get { return 7 } set { } }" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var m = new M()" + Nl +
+                "    return m[3]" + Nl +
+                "}", "IndexerWide");
+
+            Assert.Equal(7, result);
+        }
+
+        [Fact]
+        public void Indexer_Assignment_WithoutSetter_ReportsError()
+        {
+            var diagnostics = Diagnostics(
+                "class Counter {" + Nl +
+                "    private field _n: i32" + Nl +
+                "    public property this[i: i32]: i32 { get { return _n } }" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var c = new Counter()" + Nl +
+                "    c[0] = 5" + Nl +
+                "    return 0" + Nl +
+                "}");
+
+            Assert.Contains(diagnostics, d => d.IsError);
+        }
+
+        // ------------------------------------------------------------------
+        // 元组 / 解构
+        // ------------------------------------------------------------------
+
+        [Fact]
+        public void Tuple_LiteralAndAccess()
+        {
+            var result = RunMain(
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var t = (1, 2)" + Nl +
+                "    return t.Item1 * 10 + t.Item2" + Nl +
+                "}", "TupleLiteral");
+
+            Assert.Equal(12, result);
+        }
+
+        [Fact]
+        public void Tuple_DeconstructionInAssignment()
+        {
+            var result = RunMain(
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var t = (3, 4)" + Nl +
+                "    var a = 0" + Nl +
+                "    var b = 0" + Nl +
+                "    (a, b) = t" + Nl +
+                "    return a * 10 + b" + Nl +
+                "}", "TupleDeconstruct");
+
+            Assert.Equal(34, result);
+        }
+
+        [Fact]
+        public void Tuple_MemberAccessInsideForLoop()
+        {
+            var result = RunMain(
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var sum = 0" + Nl +
+                "    var t = (1, 2)" + Nl +
+                "    for (var i = 0; i < 3; i = i + 1) { sum = sum + t.Item1 + t.Item2 }" + Nl +
+                "    return sum" + Nl +
+                "}", "TupleForLoop");
+
+            Assert.Equal(9, result);
+        }
+
+        [Fact]
+        public void Tuple_PassedAsArgument()
+        {
+            var result = RunMain(
+                "function Add(t: any): i32 { return 1 }" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    return Add((5, 6))" + Nl +
+                "}", "TupleArg");
+
+            Assert.Equal(1, result);
+        }
+
+        [Fact]
+        public void Indexer_ThisIndexer_ReadAndWrite()
+        {
+            // 本语言索引器语法是 property this[i: i32]: T（不是 C# 式的 property Item）
             var result = RunMain(
                 "class Box {" + Nl +
                 "    private field _v: i32" + Nl +
-                "    public property Item: i32 { get { return _v } set { _v = value } }" + Nl +
+                "    public property this[i: i32]: i32 {" + Nl +
+                "        get { return _v }" + Nl +
+                "        set { _v = value }" + Nl +
+                "    }" + Nl +
                 "}" + Nl +
                 "function Main(args: string[]): i32 {" + Nl +
                 "    var b = new Box()" + Nl +
