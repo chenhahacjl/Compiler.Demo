@@ -104,6 +104,38 @@ namespace Cocoa.Tests.CodeAnalysis
         /// 且不得出现 0xFE 0xD6 的两字节形式——那个编码未分配，CLR 会判 InvalidProgramException。
         /// 本例是该坑的回归护栏：曾把 ovf 误按本仓两字节约定写成 0xFED6。
         /// </summary>
+        [Theory]
+        [InlineData("Ldtoken", "ldtoken")]
+        [InlineData("Sizeof", "sizeof")]
+        [InlineData("Box", "box")]
+        [InlineData("Isinst", "isinst")]
+        [InlineData("Unbox_Any", "unbox.any")]
+        public void TypeTokenOpcodes_MatchClrEncodings(string ours, string clrName)
+        {
+            // 类型 token 类指令：操作数是 4 字节元数据 token，编码同样以 CLR 为准
+            var clr = ClrValues();
+            Assert.True(clr.ContainsKey(clrName), $"CLR 无 {clrName}");
+
+            int actual = IlOpCodeTable.Get(ours).Value;
+            int expected = clr[clrName];
+            if (expected < 0)
+            {
+                // ClrValues() 把两字节指令（0xFE 前缀）存成有符号 16 位，统一到 0xFE00|b
+                expected = 0xFE00 | (expected & 0xFF);
+            }
+
+            _out.WriteLine($"{clrName,-10} 本仓={ours} 0x{actual:X4} CLR=0x{expected:X4}");
+            Assert.True(expected == actual, $"{clrName} 编码不一致：本仓 0x{actual:X4}，CLR 0x{expected:X4}");
+        }
+
+        [Fact]
+        public void Ldtoken_IsDeclaredAsTypeOperand()
+        {
+            // ldtoken 的操作数语义是「类型 token」，与 isinst/box 同类——
+            // 曾误声明为 InlineTok（IL 未定义该操作数类型），也在 StackDelta 中漏了 +1
+            Assert.Equal(IlOperandType.InlineType, IlOpCodeTable.Get("Ldtoken").OperandType);
+        }
+
         [Fact]
         public void GeneratedAssembly_CheckedContext_EmitsSingleByteAddOvf()
         {

@@ -340,9 +340,25 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal(1, result);
         }
 
-        [Fact(Skip = "反射面只到 System.Type 的 Name/FullName 两个 getter + GetType。"
-                        + "完整面（Assembly / Type 成员 / MemberInfo 子集 / GetTypeFromHandle）未实现，"
-                        + "且 typeof 的 IL 发射本身尚有未定位问题（见 typeof 用例），两者需一并推进。")]
+        [Fact]
+        public void Reflection_TypeofYieldsSystemType()
+        {
+            // typeof 是获取 System.Type 的入口（前置能力已就位）
+            var result = RunMain(
+                "class V { public field X: i32 }" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var a = typeof(V)" + Nl +
+                "    var b = new V().GetType()" + Nl +
+                "    if a == b { return 1 }" + Nl +
+                "    return 0" + Nl +
+                "}", "ReflTypeof");
+
+            Assert.Equal(1, result);
+        }
+
+        [Fact(Skip = "反射完整面待补：目前只有 System.Type 的 Name/FullName 两个 getter + GetType，"
+                        + "typeof（获取 Type 的入口）已就位。缺 Assembly / Type 成员（GetMethods 等）/"
+                        + "MemberInfo 子集 / Activator / Enum.GetValues / Attribute.GetCustomAttribute。")]
         public void Reflection_AssemblySurface()
         {
         }

@@ -213,7 +213,29 @@ namespace Cocoa.CodeGen.Managed.Writer
                         _ => 0,     // Ldfld（净 0）/Stfld（弹 2 但保守 0）
                     };
                 case IlOperandType.InlineType:
-                    return instruction.OpCode.Value == 0x8F ? -1 : 0; // Ldelema 弹数组+索引压地址；其余净 0
+                    // InlineType 这一族并非净 0：
+                    //   Ldelema  弹「数组+索引」压「元素地址」   净 -1
+                    //   Ldtoken  压一个 RuntimeTypeHandle          净 +1
+                    //   Sizeof   压一个原生尺寸常量                净 +1
+                    //   其余（Box/Castclass/Isinst/Unbox_Any/Initobj/Constrained）净 0
+                    // 这两条 +1 曾各自漏算一次，症状都是「MaxStack 声明偏小 → CLR 判 InvalidProgram」，
+                    // 故按名字判定（而非再堆 opcode 魔数）并由 IlOpCodeTableTests 锁住编码。
+                    if (instruction.OpCode.IsTwoByte)
+                    {
+                        return instruction.OpCode.Value == 0xFE1C ? 1 : 0; // Sizeof
+                    }
+
+                    if (instruction.OpCode.Value == 0x8F)
+                    {
+                        return -1; // Ldelema
+                    }
+
+                    if (instruction.OpCode.Value == 0xD0)
+                    {
+                        return 1; // Ldtoken
+                    }
+
+                    return 0;
                 case IlOperandType.InlineBrTarget:
                 case IlOperandType.ShortInlineBrTarget:
                     return 0; // Br/Leave 不动栈；Brtrue/Brfalse 见 InlineNone 分派

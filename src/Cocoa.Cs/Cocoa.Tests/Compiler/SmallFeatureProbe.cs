@@ -305,15 +305,100 @@ namespace Cocoa.Tests.Compiler
         // typeof / sizeof
         // ------------------------------------------------------------------
 
-        [Fact(Skip = "typeof 的 IL 发射待修。已查明：实发字节为 ldtoken <TypeDef token>; call <MemberRef token>，"
-                        + "形式正确、token 解析无误（TypeDef 行 + MemberRef 行均有效），但产出程序仍被 CLR 判 "
-                        + "InvalidProgramException；同一程序去掉 typeof 即有效，故 typeof 是唯一触发点。"
-                        + "根因需 peverify 级诊断（进程内不可得）。IL 端现报明确诊断，不产出非法二进制。"
-                        + "sizeof 与 typeof 共用同一语法节点与绑定路径，sizeof 已可用。")]
+        [Fact]
         public void Typeof_ReturnsTypeName()
         {
-            // 目标行为：var t = typeof(V); t.Name == "V"
+            // typeof(V) → ldtoken V; call Type::GetTypeFromHandle；结果可与字符串比较
+            var result = RunMain(
+                "class V { public field X: i32 }" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var t = typeof(V)" + Nl +
+                "    if t.Name == \"V\" { return 1 }" + Nl +
+                "    return 0" + Nl +
+                "}", "TypeOf");
+
+            Assert.Equal(1, result);
         }        [Fact]
+        public void Typeof_FullName()
+        {
+            // 命名空间类型取 FullName
+            var result = RunMain(
+                "namespace Ns { class Deep { } }" + Nl +
+                "using Ns" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var d = typeof(Deep)" + Nl +
+                "    if d.FullName == \"Ns.Deep\" { return 1 }" + Nl +
+                "    return 0" + Nl +
+                "}", "TypeOfFull");
+
+            Assert.Equal(1, result);
+        }
+
+        [Fact]
+        public void Typeof_Primitive_EmitsAndRuns()
+        {
+            // typeof(基元) 可发射并执行；但其 Name/FullName 与 CLR Type 的对应尚未核对
+            // （IsInstTypeToken 借框架 TypeRef 取得 System.Int32，Name getter 是
+            //  FullName 去命名空间前缀，理论应为 "Int32"，此处只锁定「不抛且可执行」）
+            var result = RunMain(
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var i = typeof(i32)" + Nl +
+                "    var j = i" + Nl +
+                "    return 2" + Nl +
+                "}", "TypeOfPrim");
+
+            Assert.Equal(2, result);
+        }
+
+        [Fact]
+        public void Typeof_EqualsComparison()
+        {
+            // 同一类型的两次 typeof 结果是同一对象（引用相等）
+            var result = RunMain(
+                "class V { }" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var a = typeof(V)" + Nl +
+                "    var b = typeof(V)" + Nl +
+                "    if a == b { return 1 }" + Nl +
+                "    return 0" + Nl +
+                "}", "TypeOfEq");
+
+            Assert.Equal(1, result);
+        }
+
+        [Fact]
+        public void Typeof_MatchesGetType()
+        {
+            // typeof(T) 与实例上的 GetType() 结果同一类型
+            var result = RunMain(
+                "class V { }" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var v = new V()" + Nl +
+                "    var a = typeof(V)" + Nl +
+                "    var b = v.GetType()" + Nl +
+                "    if a == b { return 1 }" + Nl +
+                "    return 0" + Nl +
+                "}", "TypeOfVsGetType");
+
+            Assert.Equal(1, result);
+        }
+
+        [Fact]
+        public void Sizeof_UserStruct_GoesThroughEmitter()
+        {
+            // 基元/枚举的 sizeof 在**绑定期**折叠为常量，走不到发射器；
+            // 用户结构体才会真的发 sizeof 指令——该路径曾因 opcode 声明成 0x1C（应为 0xFE1C）而不可用
+            var result = RunMain(
+                "struct P { public field X: i32; public field Y: i32 }" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    if sizeof(P) == 8 { return 1 }" + Nl +
+                "    return 0" + Nl +
+                "}", "SizeofStruct");
+
+            Assert.Equal(1, result);
+        }
+
+        [Fact]
         public void Sizeof_Primitive()
         {
             var result = RunMain(

@@ -651,23 +651,21 @@ namespace Cocoa.CodeGen.Managed.Writer
 
         /// <summary>6e-M19 M5-b：as → isinst（失败栈上即 null，与 C# 语义一致）。</summary>
         /// <summary>
+        /// <c>typeof(T)</c> → <c>ldtoken T; call System.Type::GetTypeFromHandle(RuntimeTypeHandle)</c>。
         /// <c>sizeof(T)</c> → <c>sizeof T</c>（基元/枚举已在绑定期折叠为常量，走不到这里）。
-        /// <c>typeof(T)</c> → 暂不支持：按 C# 应发 <c>ldtoken T; call System.Type::GetTypeFromHandle</c>，
-        /// 实发字节为 <c>D0 &lt;TypeDef token&gt; 28 &lt;MemberRef token&gt;</c>、形式正确且 token 解析无误，
-        /// 但产出程序仍被 CLR 判 InvalidProgramException，且 <c>typeof</c> 是本方法唯一新增指令
-        /// （同程序去掉 typeof 即有效），根因需 peverify 级诊断（进程内不可得）。
-        /// 产出非法二进制比报错危险得多，故明确报不支持。
         /// </summary>
         private void EmitTypeOperatorExpression(IlAssembler il, BoundTypeOperatorExpression node)
         {
-            if (node.IsTypeOf)
+            if (!node.IsTypeOf)
             {
-                throw new System.Exception(
-                    $"typeof({node.TypeArgument.Name}) 的 IL 发射待修：ldtoken + Type::GetTypeFromHandle " +
-                    "产出程序被判 InvalidProgramException，根因未定位。");
+                il.Emit(IlOpCodeTable.Get("Sizeof"), ToIlType(node.TypeArgument));
+                return;
             }
 
-            il.Emit(IlOpCodeTable.Get("Sizeof"), ToIlType(node.TypeArgument));
+            // ldtoken 的操作数是**元数据 token**：基元/字符串没有 TypeDef，须借框架 TypeRef
+            // （与 IsInstTypeToken 同一处理——ldtoken 的操作数语义与 isinst 一致，都是类型 token）
+            il.Emit(IlOpCodeTable.Get("Ldtoken"), IsInstTypeToken(node.TypeArgument));
+            il.Emit(IlOpCodeTable.Get("Call"), _framework.TypeGetTypeFromHandle);
         }
 
         private void EmitAsExpression(IlAssembler il, BoundAsExpression node)
