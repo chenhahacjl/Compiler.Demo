@@ -357,6 +357,29 @@ namespace Cocoa.Tests.Compiler
         }
 
         [Fact]
+        public void LocalSig_MethodCallReturningString_NotMarkedInt32()
+        {
+            // 回归护栏（阶段 8 自举经 ilverify 暴露）：发射器曾把「方法调用返回的 String」
+            // 局部量在 locals 签名里写成 Int32，随后 String.op_Equality 收到 Int32 操作数，
+            // CLR 判 InvalidProgramException。
+            // 最小复现：局部量类型必须来自方法调用的**实际返回类型**，而非字面量 0 的类型。
+            var result = RunMain(
+                "class Node {" + Nl +
+                "    public function Child(i: i32): Node { return this }" + Nl +
+                "    public function Kind(): string { return \"TypeClause\" }" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var node = new Node()" + Nl +
+                "    var i = 0" + Nl +
+                "    let k = node.Child(i).Kind()" + Nl +
+                "    if k == \"TypeClause\" { return 1 }" + Nl +
+                "    return 0" + Nl +
+                "}", "LocSigStr");
+
+            Assert.Equal(1, result);
+        }
+
+        [Fact]
         public void TypeCheck_IntComparedToString_IsError()
         {
             // 回归护栏：C# 前端曾**静默接受** `int == string`，发出
