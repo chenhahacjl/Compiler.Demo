@@ -1,0 +1,44 @@
+// Cocoa 系统标准库 · System.ObsoleteAttribute
+// 标记成员已过时。编译器在**调用点**消费（见 CocoaBinder.ReportObsoleteUsage）：
+//   [Obsolete]                     → 警告「已过时」
+//   [Obsolete("说明")]              → 警告并带说明
+//   [Obsolete("说明", true)]        → 错误（C# CS0619 语义：不可再用）
+// 语义对齐 C# System.ObsoleteAttribute。
+
+namespace System
+{
+    public class ObsoleteAttribute extends Attribute
+    {
+        private field _message: string
+        private field _error: bool
+
+        public constructor()
+        {
+            _message = ""
+            _error = false
+        }
+
+        public constructor(message: string)
+        {
+            _message = message
+            _error = false
+        }
+
+        public constructor(message: string, error: bool)
+        {
+            _message = message
+            _error = error
+        }
+
+        public property Message: string
+        {
+            get { return _message }
+        }
+
+        /// <summary>true 时使用该成员是**错误**而非警告。</summary>
+        public property IsError: bool
+        {
+            get { return _error }
+        }
+    }
+}

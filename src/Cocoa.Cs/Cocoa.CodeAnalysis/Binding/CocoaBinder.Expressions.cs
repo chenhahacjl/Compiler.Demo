@@ -1373,6 +1373,7 @@ namespace Cocoa.CodeAnalysis.Binding
                         arguments.Add(BindConversion(syntax.Arguments[i].Location, staticArguments[i], staticMethod.Parameters[i].Type));
                     }
 
+                    ReportObsoleteUsage(syntax.IdentifierToken.Location, staticMethod);
                     return new BoundMemberCallExpression(syntax, new BoundStaticTypeExpression(syntax.Expression, staticType), identifier, arguments.ToImmutable(), staticMethod.ReturnType, staticMethod);
                 }
             }
@@ -1429,6 +1430,7 @@ namespace Cocoa.CodeAnalysis.Binding
                         arguments.Add(reorderedArgument);
                     }
 
+                    ReportObsoleteUsage(syntax.IdentifierToken.Location, method);
                     return new BoundMemberCallExpression(syntax, boundExpression, identifier, arguments.ToImmutable(), method.ReturnType, method, isBase);
                 }
 
@@ -2246,7 +2248,7 @@ namespace Cocoa.CodeAnalysis.Binding
                     reordered.Add(new BoundLiteralExpression(syntax, parameter.DefaultValue!, parameter.Type));
                 }
             }
-
+            ReportObsoleteUsage(syntax.Location, function);
             return new BoundCallExpression(syntax, function, reordered.ToImmutable());
         }
 

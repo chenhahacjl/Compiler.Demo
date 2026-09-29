@@ -47,7 +47,9 @@ namespace Cocoa.Tests.Compiler
 
         private static IEnumerable<Diagnostic> Diagnostics(string source)
         {
-            return Compilation.Create(SyntaxTree.Parse(source)).GetDiagnostics();
+            // 须传 references：属性类解析（ResolveAttributeClass → LookupType）依赖全局作用域，
+            // 缺 BCL 引用时连 System.ObsoleteAttribute 都查不到
+            return Compilation.Create(References, SyntaxTree.Parse(source)).GetDiagnostics();
         }
 
         // ------------------------------------------------------------------
@@ -163,13 +165,124 @@ namespace Cocoa.Tests.Compiler
         // ------------------------------------------------------------------
         // Attribute 语义消费
         // ------------------------------------------------------------------
+        // Attribute 语义消费
+        //
+        // 注：本语言的属性类由**用户声明**（`class XAttribute extends Attribute`），
+        // 属性类解析走全局作用域 LookupType，不查 BCL 引用——与既有 CustomAttributeEmitTests 同模式。
+        // System.ObsoleteAttribute 的规范定义见 src/Cocoa.SDK/System.Core/ObsoleteAttribute.co。
+        // ------------------------------------------------------------------
 
-        [Fact(Skip = "Attribute 语义消费待补：属性能被解析、绑定并写进 PE 的 CustomAttribute 表"
-                        + "（见 Attribute_IsEmittedOnClassMember），但编译器不消费任何属性——"
-                        + "调用 [Obsolete] 成员不产生任何诊断。需在调用点查 AttributeSymbol 并报诊断。")]
-        public void Attribute_Obsolete_IsConsumedByCompiler()
+        private static string ObsoleteDecl(string ctor) =>
+            "class ObsoleteAttribute extends Attribute {" + Nl +
+            "    public constructor(" + ctor + ") { }" + Nl +
+            "}" + Nl;
+
+        [Fact]
+        public void Attribute_Obsolete_ProducesWarningAtCallSite()
         {
+            var diagnostics = Diagnostics(
+                ObsoleteDecl("") +
+                "class C {" + Nl +
+                "    [Obsolete] public function Old(): i32 { return 1 }" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var c = new C()" + Nl +
+                "    return c.Old()" + Nl +
+                "}");
+
+            Assert.Contains(diagnostics, d => d.IsWarning && d.Message.Contains("已过时"));
         }
+
+        [Fact]
+        public void Attribute_Obsolete_CarriesMessage()
+        {
+            var diagnostics = Diagnostics(
+                ObsoleteDecl("message: string") +
+                "class C {" + Nl +
+                "    [Obsolete(\"改用 New()\")] public function Old(): i32 { return 1 }" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var c = new C()" + Nl +
+                "    return c.Old()" + Nl +
+                "}");
+
+            Assert.Contains(diagnostics, d => d.IsWarning && d.Message.Contains("改用 New()"));
+        }
+
+        [Fact]
+        public void Attribute_Obsolete_WithErrorFlag_IsError()
+        {
+            // [Obsolete(msg, true)] → 错误而非警告（C# CS0619 语义）
+            var diagnostics = Diagnostics(
+                ObsoleteDecl("message: string, error: bool") +
+                "class C {" + Nl +
+                "    [Obsolete(\"已移除\", true)] public function Old(): i32 { return 1 }" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var c = new C()" + Nl +
+                "    return c.Old()" + Nl +
+                "}");
+
+            Assert.Contains(diagnostics, d => d.IsError && d.Message.Contains("已移除"));
+        }
+
+        [Fact]
+        public void Attribute_Obsolete_NoDiagnosticWhenNotCalled()
+        {
+            // 声明处不得报诊断——只在**调用点**报
+            var diagnostics = Diagnostics(
+                ObsoleteDecl("") +
+                "class C {" + Nl +
+                "    [Obsolete] public function Old(): i32 { return 1 }" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 { return 0 }");
+
+            Assert.DoesNotContain(diagnostics, d => d.Message.Contains("已过时"));
+        }
+
+        [Fact]
+        public void Attribute_Obsolete_OnStaticMethod()
+        {
+            var diagnostics = Diagnostics(
+                ObsoleteDecl("") +
+                "class C {" + Nl +
+                "    [Obsolete] public static function Old(): i32 { return 1 }" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    return C.Old()" + Nl +
+                "}");
+
+            Assert.Contains(diagnostics, d => d.IsWarning && d.Message.Contains("已过时"));
+        }
+
+        [Fact]
+        public void Attribute_Obsolete_OnTopLevelFunction()
+        {
+            var diagnostics = Diagnostics(
+                ObsoleteDecl("") +
+                "[Obsolete] function Old(): i32 { return 1 }" + Nl +
+                "function Main(args: string[]): i32 { return Old() }");
+
+            Assert.Contains(diagnostics, d => d.IsWarning && d.Message.Contains("已过时"));
+        }
+
+        [Fact]
+        public void Attribute_Obsolete_DoesNotBlockEmit()
+        {
+            // 警告不应阻断发射：程序仍应可编译并执行
+            var result = RunMain(
+                ObsoleteDecl("") +
+                "class C {" + Nl +
+                "    [Obsolete] public function Old(): i32 { return 1 }" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var c = new C()" + Nl +
+                "    return c.Old()" + Nl +
+                "}", "ObsoleteRun");
+
+            Assert.Equal(1, result);
+        }
+
         [Fact]
         public void Attribute_IsEmittedOnClassMember()
         {

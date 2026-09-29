@@ -2626,6 +2626,8 @@ namespace Cocoa.CodeAnalysis.Binding
                 OperatorKind = operatorKind,
             };
             DocumentationBackfill.BackfillDocumentation(method, syntax, _diagnostics);
+            // 类方法级 attribute（[Obsolete] 等）——此前类方法漏绑，导致调用点无法消费
+            method.Attributes = BindAttributes(syntax.Attributes, syntax);
 
             // 运算符声明的元数/宿主/形态校验 + 登记查找表
             if (operatorKind.HasValue)

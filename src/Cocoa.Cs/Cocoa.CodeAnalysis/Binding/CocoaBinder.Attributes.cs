@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using Cocoa.CodeAnalysis.Symbols;
 using CoreSyntax = Cocoa.CodeAnalysis.Syntax;
 
@@ -11,6 +11,62 @@ namespace Cocoa.CodeAnalysis.Binding
     /// </summary>
     public partial class CocoaBinder
     {
+        /// <summary>
+        /// 属性语义消费：调用点检查被调符号的 <c>[Obsolete]</c>。
+        ///
+        /// 语义对齐 C# CS0618/CS0619：
+        /// <list type="bullet">
+        /// <item><c>[Obsolete]</c> → 警告「已过时」</item>
+        /// <item><c>[Obsolete("说明")]</c> → 警告并带说明</item>
+        /// <item><c>[Obsolete("说明", true)]</c> → **错误**（CS0619，不可再用）</item>
+        /// </list>
+        ///
+        /// 此前属性能解析/绑定/写进 PE 的 CustomAttribute 表，但编译器**不消费**任何属性——
+        /// 本方法让「写进去的属性」第一次真正影响编译结果。
+        /// </summary>
+        private void ReportObsoleteUsage(Text.TextLocation location, FunctionSymbol? method)
+        {
+            if (method == null || method.Attributes.IsDefaultOrEmpty)
+            {
+                return;
+            }
+
+            foreach (var attribute in method.Attributes)
+            {
+                if (attribute.Type.Name != "ObsoleteAttribute" && attribute.Type.Name != "Obsolete")
+                {
+                    continue;
+                }
+
+                var message = attribute.Arguments
+                    .Select(a => a.Value).OfType<string>().FirstOrDefault() ?? string.Empty;
+
+                var isError = attribute.Arguments
+                    .Select(a => a.Value)
+                    .OfType<bool>()
+                    .FirstOrDefault();
+
+                var name = method.ContainingClass != null
+                    ? method.ContainingClass.Name + "." + method.Name
+                    : method.Name;
+
+                var text = message.Length > 0
+                    ? $"'{name}' 已过时：{message}"
+                    : $"'{name}' 已过时。";
+
+                if (isError)
+                {
+                    _diagnostics.ReportError(location, text);
+                }
+                else
+                {
+                    _diagnostics.ReportWarning(location, text);
+                }
+
+                return;
+            }
+        }
+
         private ImmutableArray<AttributeSymbol> BindAttributes(ImmutableArray<CoreSyntax.AttributeSyntax> attributes, Syntax.SyntaxNode target)
         {
             if (attributes.IsDefaultOrEmpty)
