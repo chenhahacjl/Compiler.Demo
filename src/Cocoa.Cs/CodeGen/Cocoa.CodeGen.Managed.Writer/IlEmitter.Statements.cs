@@ -419,11 +419,55 @@ namespace Cocoa.CodeGen.Managed.Writer
                     EmitPropertyPattern(il, (BoundPropertyPattern)node);
                     break;
                 case BoundNodeKind.DeclarationPattern:
-                    throw new System.Exception(
-                        "声明模式（is T v）在 IL 后端未实现：模式变量的局部槽位需 CFG 级必定赋值跟踪与槽位登记。");
+                    EmitDeclarationPattern(il, (BoundDeclarationPattern)node);
+                    break;
                 default:
                     throw new System.Exception($"Unexpected node kind {node.Kind}");
             }
+        }
+
+        /// <summary>
+        /// 声明模式 <c>e is T v</c>（C# 规范模式）：<c>isinst T</c> 后把结果存入模式变量，
+        /// 再以「非 null」为测试结果——
+        /// <code>
+        ///   isinst T; stloc v; ldloc v; brtrue L_true; ldc.i4.0; br L_end; L_true: ldc.i4.1; L_end:
+        /// </code>
+        /// 赋值与测试合为一体，故测试通过时 v 必然已赋值，then 分支读取安全。
+        ///
+        /// **仅支持引用型目标**：值型目标需 <c>unbox.any</c> 且要求元数据层登记装箱类型 TypeRef，
+        /// 而 isinst 对基元类型本就非法（isinst 只接受 class/valuetype 令牌）。
+        /// 该形态当前报明确诊断，不静默错编。
+        /// </summary>
+        private void EmitDeclarationPattern(IlAssembler il, BoundDeclarationPattern node)
+        {
+            if (node.TargetType.IsValueType)
+            {
+                throw new System.Exception(
+                    $"声明模式的值类型目标 '{node.TargetType.Name}' 在 IL 后端未实现：" +
+                    "需 unbox.any 路径 + 元数据层登记装箱类型 TypeRef（isinst 对基元类型非法）。");
+            }
+
+            EmitExpression(il, node.Expression);
+            il.Emit(IlOpCodeTable.Get("Isinst"), ToIlType(node.TargetType));
+
+            if (!_locals.TryGetValue(node.Variable, out var slot))
+            {
+                throw new System.Exception(
+                    $"声明模式变量 '{node.Variable.Name}' 未登记局部槽位（CollectPatternLocals 未覆盖该表达式位置）。");
+            }
+
+            il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)slot);
+
+            var elseLabel = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
+            var endLabel = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
+
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)slot);
+            il.Emit(IlOpCodeTable.Get("Brtrue"), elseLabel);
+            il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));
+            il.Emit(IlOpCodeTable.Get("Br"), endLabel);
+            il.Emit(elseLabel);
+            il.Emit(IlOpCodeTable.Get("Ldc_I4_1"));
+            il.Emit(endLabel);
         }
 
         /// <summary>

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using Cocoa.CodeAnalysis;
@@ -82,9 +82,7 @@ namespace Cocoa.Tests.Compiler
         // 声明模式（类型模式 + 变量绑定）
         // ------------------------------------------------------------------
 
-        [Fact(Skip = "声明模式待补：模式变量是表达式内赋值而非语句内 BoundVariableDeclaration，"
-                        + "IL 局部槽位分配（按声明语句建槽）覆盖不到，抛 KeyNotFound；"
-                        + "需 CFG 级「必定赋值」跟踪 + 模式变量槽位登记。已改为报明确诊断，不静默错编。")]
+        [Fact]
         public void DeclarationPattern_TypeTestAndBinding()
         {
             var result = RunMain(
@@ -176,9 +174,54 @@ namespace Cocoa.Tests.Compiler
         // when 子句
         // ------------------------------------------------------------------
 
-        [Fact(Skip = "when 子句未解析：IsExpressionSyntax 无 WhenClause 槽位。"
-                        + "补齐需改红/绿节点体系（IsExpressionSyntax ctor + CocoaGreenNodeFactory + "
-                        + "CoaFormat 序列化），且 .co 轨 golden 需同步。")]
+        [Fact(Skip = "值类型声明模式在 IL 后端未实现：需 unbox.any 路径 + 元数据层登记装箱类型 TypeRef"
+                        + "（isinst 对基元类型本就非法）。已改为 IL 端抛明确诊断，不静默错编。")]
+        public void DeclarationPattern_ValueTypeTarget()
+        {
+            // 值类型目标：无 null 哨兵，匹配恒成立（unbox.any 完成转换）
+            var result = RunMain(
+                "class Box { public field V: i32 }" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var o: any = 42" + Nl +
+                "    if o is i32 n { return n }" + Nl +
+                "    return -1" + Nl +
+                "}", "DeclValueType");
+
+            Assert.Equal(42, result);
+        }
+
+        [Fact]
+        public void WhenClause_WithRelationalPattern()
+        {
+            // when 可叠在关系模式上：x is > 0 when x < 10
+            var result = RunMain(
+                "function F(x: i32): bool { return x is > 0 when x < 10 }" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    if F(5) { return 1 }" + Nl +
+                "    return 0" + Nl +
+                "}", "WhenRelational");
+
+            Assert.Equal(1, result);
+        }
+
+        [Fact]
+        public void WhenClause_ReferencesPatternVariable()
+        {
+            // when 条件里可按名引用声明模式的模式变量（已先行声明）
+            var result = RunMain(
+                "class A { public field X: i32 }" + Nl +
+                "class B { public field Y: i32 }" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var a = new A()" + Nl +
+                "    a.X = 7" + Nl +
+                "    if a is A v when v.X > 5 { return 1 }" + Nl +
+                "    return 0" + Nl +
+                "}", "WhenVarRef");
+
+            Assert.Equal(1, result);
+        }
+
+        [Fact]
         public void WhenClause_FiltersCandidate()
         {
             var result = RunMain(

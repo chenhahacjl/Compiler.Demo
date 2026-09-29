@@ -1290,6 +1290,14 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return new LogicalPatternSyntax(_syntaxTree, left, orToken, right);
             }
 
+            // when 子句：C# 绑定强于 and/or，故置于 and/or 之后（`is A a when ... and ...`）
+            if (Current.Kind == SyntaxKind.WhenKeyword)
+            {
+                var whenToken = NextToken();
+                var condition = ParseExpression();
+                return new WhenPatternSyntax(_syntaxTree, left, whenToken, condition);
+            }
+
             return left;
         }
 

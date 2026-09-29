@@ -802,6 +802,30 @@ namespace Cocoa.CodeGen.Managed.Writer
                 case BoundSequencePointStatement sequencePoint:
                     CollectLocals(sequencePoint.Statement, localTypes);
                     break;
+                case BoundIfStatement ifStatement:
+                    // 条件里可能含声明模式（`if o is A a`），模式变量须占槽
+                    CollectPatternLocals(ifStatement.Condition, localTypes);
+                    CollectLocals(ifStatement.ThenStatement, localTypes);
+                    if (ifStatement.ElseStatement != null)
+                    {
+                        CollectLocals(ifStatement.ElseStatement, localTypes);
+                    }
+
+                    break;
+                case BoundReturnStatement returnStatement:
+                    CollectPatternLocals(returnStatement.Expression, localTypes);
+                    break;
+                case BoundWhileStatement whileStatement:
+                    CollectPatternLocals(whileStatement.Condition, localTypes);
+                    CollectLocals(whileStatement.Body, localTypes);
+                    break;
+                case BoundDoWhileStatement doWhileStatement:
+                    CollectPatternLocals(doWhileStatement.Condition, localTypes);
+                    CollectLocals(doWhileStatement.Body, localTypes);
+                    break;
+                case BoundConditionalGotoStatement conditionalGoto:
+                    CollectPatternLocals(conditionalGoto.Condition, localTypes);
+                    break;
                 case BoundTryStatement tryStatement:
                     CollectLocals(tryStatement.TryBlock, localTypes);
                     foreach (var catchClause in tryStatement.Catches)
@@ -816,6 +840,68 @@ namespace Cocoa.CodeGen.Managed.Writer
                         CollectLocals(tryStatement.FinallyBlock, localTypes);
                     }
 
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// 为表达式子树中出现的**声明模式变量**（`is T v`）登记局部槽。
+        /// 声明模式是表达式内的赋值而非语句内的 <see cref="BoundVariableDeclaration"/>，
+        /// 故 <see cref="CollectLocals"/> 的语句遍历覆盖不到，必须显式下探表达式。
+        /// </summary>
+        private void CollectPatternLocals(BoundExpression? expression, List<IlType> localTypes)
+        {
+            switch (expression)
+            {
+                case null:
+                    break;
+
+                case BoundDeclarationPattern declaration:
+                    if (!_locals.ContainsKey(declaration.Variable))
+                    {
+                        _locals.Add(declaration.Variable, localTypes.Count);
+                        localTypes.Add(ToIlType(declaration.Variable.Type));
+                    }
+
+                    CollectPatternLocals(declaration.Expression, localTypes);
+                    break;
+
+                case BoundLogicalPattern logical:
+                    CollectPatternLocals(logical.Left, localTypes);
+                    CollectPatternLocals(logical.Right, localTypes);
+                    CollectPatternLocals(logical.Operand, localTypes);
+                    break;
+
+                case BoundPropertyPattern property:
+                    CollectPatternLocals(property.Expression, localTypes);
+                    break;
+
+                case BoundRelationalPattern relational:
+                    CollectPatternLocals(relational.Expression, localTypes);
+                    CollectPatternLocals(relational.Value, localTypes);
+                    break;
+
+                case BoundBinaryExpression binary:
+                    CollectPatternLocals(binary.Left, localTypes);
+                    CollectPatternLocals(binary.Right, localTypes);
+                    break;
+
+                case BoundUnaryExpression unary:
+                    CollectPatternLocals(unary.Operand, localTypes);
+                    break;
+
+                case BoundCallExpression call:
+                    foreach (var argument in call.Arguments)
+                    {
+                        CollectPatternLocals(argument, localTypes);
+                    }
+
+                    break;
+
+                case BoundConditionalExpression conditional:
+                    CollectPatternLocals(conditional.Condition, localTypes);
+                    CollectPatternLocals(conditional.WhenTrue, localTypes);
+                    CollectPatternLocals(conditional.WhenFalse, localTypes);
                     break;
             }
         }

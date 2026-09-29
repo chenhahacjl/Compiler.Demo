@@ -577,6 +577,12 @@ namespace Cocoa.CodeAnalysis.Binding
                 return BindPropertyPattern(syntax, operand, propertyPattern);
             }
 
+            // when 子句模式：expr is <pattern> when <cond>
+            if (syntax.Pattern is CoreSyntax.WhenPatternSyntax whenPattern)
+            {
+                return BindWhenPattern(syntax, operand, whenPattern);
+            }
+
             // 回退：类型测试（旧路径）
             if (syntax.TypeName != null)
             {
@@ -602,6 +608,33 @@ namespace Cocoa.CodeAnalysis.Binding
                     : BoundLogicalPatternKind.Or;
                 return new BoundLogicalPattern(syntax, leftPattern, opKind, rightPattern);
             }
+        }
+
+        /// <summary>
+        /// when 子句降级：<c>e is &lt;pattern&gt; when &lt;cond&gt;</c> ≡ <c>&lt;pattern&gt; &amp;&amp; cond</c>。
+        /// 条件对已通过内层类型测试的匹配值求值，故声明模式变量在条件里可直接按名引用
+        /// （变量由 <see cref="DeclarePatternVariables"/> 先行声明）。
+        /// </summary>
+        private BoundExpression BindWhenPattern(
+            CoreSyntax.SyntaxNode syntax,
+            BoundExpression operand,
+            CoreSyntax.WhenPatternSyntax whenPattern)
+        {
+            var inner = BindPattern(operand, whenPattern.Pattern);
+            if (inner.Type == TypeSymbol.Error)
+            {
+                return new BoundErrorExpression(whenPattern);
+            }
+
+            DeclarePatternVariables(inner);
+
+            var condition = BindExpression(whenPattern.Condition, TypeSymbol.Boolean);
+            if (condition.Type == TypeSymbol.Error)
+            {
+                return new BoundErrorExpression(whenPattern);
+            }
+
+            return new BoundLogicalPattern(whenPattern, inner, BoundLogicalPatternKind.And, condition);
         }
 
         /// <summary>
@@ -673,6 +706,11 @@ namespace Cocoa.CodeAnalysis.Binding
             if (pattern is CoreSyntax.PropertyPatternSyntax propertyPattern)
             {
                 return BindPropertyPattern(pattern, operand, propertyPattern);
+            }
+
+            if (pattern is CoreSyntax.WhenPatternSyntax whenPattern)
+            {
+                return BindWhenPattern(pattern, operand, whenPattern);
             }
 
             return new BoundErrorExpression(pattern);
