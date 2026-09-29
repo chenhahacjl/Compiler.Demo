@@ -53,6 +53,7 @@ namespace Cocoa.CodeAnalysis.Binding
         private field _classMethodStatic: bool[]
         private field _classMethodOffsets: i32[]
         private field _classMethodCounts: i32[]
+        private field _classMethodTotal: i32
         private field _classCount: i32
         private field _currentClass: string
         private field _topLevelIndexes: i32[]
@@ -93,6 +94,7 @@ namespace Cocoa.CodeAnalysis.Binding
             b._classMethodStatic = new bool[8]
             b._classMethodOffsets = new i32[8]
             b._classMethodCounts = new i32[8]
+            b._classMethodTotal = 0
             b._classCount = 0
             b._currentClass = ""
             b._topLevelIndexes = new i32[8]
@@ -334,20 +336,20 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             _classNames[classIndex] = className
-            // 字段/方法平铺偏移 = 前序类累计
+            // 字段平铺偏移 = 前序类累计
             var fieldRun = 0
-            var methodRun = 0
             var p = 0
             while p < classIndex
             {
                 fieldRun = fieldRun + _classFieldCounts[p]
-                methodRun = methodRun + _classMethodCounts[p]
                 p = p + 1
             }
 
             _classFieldOffsets[classIndex] = fieldRun
             _classFieldCounts[classIndex] = 0
-            _classMethodOffsets[classIndex] = methodRun
+            // 方法平铺偏移不再按前序类 count 求和（该求和在多类/多轮绑定下会与实际写入顺序错位，
+            // 表现为 _classMethodNames[_classMethodOffsets[X]] 读到别的类的方法名）。
+            // 改为首次为该类登记方法时按实际写入位置固定（见 BindClassMethod / BindClassConstructor）。
             _classMethodCounts[classIndex] = 0
             _classCount = _classCount + 1
 
@@ -428,6 +430,12 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             let methodIndex = _functionCount
+            // 首次为该类登记方法时，按实际写入位置固定其方法表起点
+            if _classMethodCounts[classIndex] == 0
+            {
+                _classMethodOffsets[classIndex] = _classMethodTotal
+            }
+
             let midx = _classMethodOffsets[classIndex] + _classMethodCounts[classIndex]
             if midx >= _classMethodIndexes.Length
             {
@@ -456,6 +464,7 @@ namespace Cocoa.CodeAnalysis.Binding
             _classMethodNames[midx] = methodName
             _classMethodStatic[midx] = isStatic
             _classMethodCounts[classIndex] = _classMethodCounts[classIndex] + 1
+            _classMethodTotal = _classMethodTotal + 1
 
             AddFunction(fn, methodName)
         }
@@ -481,6 +490,12 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             let methodIndex = _functionCount
+            // 首次为该类登记方法时，按实际写入位置固定其方法表起点
+            if _classMethodCounts[classIndex] == 0
+            {
+                _classMethodOffsets[classIndex] = _classMethodTotal
+            }
+
             let midx = _classMethodOffsets[classIndex] + _classMethodCounts[classIndex]
             if midx >= _classMethodIndexes.Length
             {
@@ -509,6 +524,7 @@ namespace Cocoa.CodeAnalysis.Binding
             _classMethodNames[midx] = ".ctor"
             _classMethodStatic[midx] = false
             _classMethodCounts[classIndex] = _classMethodCounts[classIndex] + 1
+            _classMethodTotal = _classMethodTotal + 1
 
             AddFunction(fn, ".ctor")
         }

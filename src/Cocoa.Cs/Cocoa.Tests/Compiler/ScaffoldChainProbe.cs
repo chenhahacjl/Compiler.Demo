@@ -724,6 +724,28 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal("ChildCount", output);
         }
 
+        /// <summary>三元表达式的分支里含数组下标：b ? arr[i] : "x"。
+        /// 自举发射器对 ConditionalExpression 的类型推断取 Child(2)（else 分支），
+        /// 需确认求值时两个分支都发射完整（否则栈上残留会读出脏值）。</summary>
+        [Fact]
+        public void SelfCompiled_TernaryBranch_WithArrayIndex_Evaluates()
+        {
+            var nl = Environment.NewLine;
+            var (exit, output) = RunTinyMain(
+                "function Pick(b: bool, arr: string[]): string {" + nl +
+                "    return b ? arr[0] : \"none\"" + nl +
+                "}" + nl +
+                "function Main(args: string[]): i32 {" + nl +
+                "    var a = new string[1]" + nl +
+                "    a[0] = \"first\"" + nl +
+                "    System.Console.WriteLine(Pick(true, a))" + nl +
+                "    System.Console.WriteLine(Pick(false, a))" + nl +
+                "    return 0" + nl +
+                "}" + nl);
+            Assert.Equal(0, exit);
+            Assert.Equal("first\nnone", output);
+        }
+
         /// <summary>用户类名作为参数类型（function F(n: N)）。</summary>
         [Fact]
         public void SelfCompiled_UserClassAsParameterType_Runs()
