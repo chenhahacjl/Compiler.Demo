@@ -35,6 +35,10 @@ namespace Cocoa.CodeAnalysis.Binding
         /// 实例由 <see cref="BoundGlobalScope.Operators"/> 持有并跨 binder 实例共享（声明遍与体绑遍不共用实例）。</summary>
         internal readonly OperatorRegistry _operators;
 
+        /// <summary>checked/unchecked 嵌套栈（最近声明在栈顶）。绑定期仅供诊断，溢出语义由发射层读树上的
+        /// <see cref="BoundCheckedStatement"/> 决定。</summary>
+        private readonly Stack<bool> _checkedStack = new();
+
         /// <summary>6f-3：跨用户库同名类型全名集（绑定侧缓存；非限定使用拒绝解析）。</summary>
         private readonly ImmutableHashSet<string> _ambiguousCodTypeNames;
 

@@ -138,7 +138,9 @@ namespace Cocoa.Tests.Compiler
         // checked / unchecked
         // ------------------------------------------------------------------
 
-        [Fact(Skip = "checked 语义未实现：CheckedStatement 可解析并编译，但算术仍走非溢出检测路径（无 add.ovf）。需绑定期标记 checked 上下文 + 发射层选 add.ovf/sub.ovf/mul.ovf。")]
+        [Fact(Skip = "checked 溢出检查发射待补：IlOpCode 表用紧凑内部编码（Add=0x58…Not=0x66 连续，非 ECMA-335 实际字节），"
+                        + "需先补入 ovf 族编码并验证编码表与 PE 写出的一致性。checked 的绑定期/树/遍历/发射上下文标记已全部就位，"
+                        + "IL 端现报明确异常，不静默发出无检查算术。")]
         public void Checked_OverflowThrows()
         {
             var compilation = Compilation.Create(SyntaxTree.Parse(

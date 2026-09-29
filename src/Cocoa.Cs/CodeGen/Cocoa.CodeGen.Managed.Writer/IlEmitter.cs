@@ -39,7 +39,8 @@ namespace Cocoa.CodeGen.Managed.Writer
         /// <summary>保护区内 return 的出口块（leave 目标）——CLR 要求离开保护区域须 leave，且 finally 须先执行。</summary>
         private IlInstruction? _returnExitTarget;
         private bool _returnExitHasValue;
-        private int _returnExitTemp = -1;
+        /// <summary>当前是否在 checked 块内（整数算术发 add.ovf/sub.ovf/mul.ovf，溢出抛 OverflowException）。</summary>
+        private bool _checkedArithmetic;        private int _returnExitTemp = -1;
         private int _protectedBlockDepth;
         private readonly Dictionary<BoundLabel, IlInstruction> _labelTargets = new Dictionary<BoundLabel, IlInstruction>();
 
@@ -788,6 +789,9 @@ namespace Cocoa.CodeGen.Managed.Writer
                     break;
                 case BoundSequencePointStatement sequencePoint:
                     CollectLocals(sequencePoint.Statement, localTypes);
+                    break;
+                case BoundCheckedStatement checkedStatement:
+                    CollectLocals(checkedStatement.Body, localTypes);
                     break;
                 case BoundIfStatement ifStatement:
                     // 条件里可能含声明模式（`if o is A a`）与 out var（`if F(out r)`），两者都需占槽

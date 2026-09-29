@@ -1,4 +1,4 @@
-using System.CodeDom.Compiler;
+﻿using System.CodeDom.Compiler;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
@@ -103,6 +103,7 @@ namespace Cocoa.CodeAnalysis.Binding
                             StartBlock();
                             break;
                         case BoundNodeKind.NopStatement:
+                        case BoundNodeKind.CheckedStatement:
                         case BoundNodeKind.VariableDeclaration:
                         case BoundNodeKind.SequencePointStatement:
                         case BoundNodeKind.ExpressionStatement:
@@ -195,6 +196,7 @@ namespace Cocoa.CodeAnalysis.Binding
                                 Connect(current, _end);
                                 break;
                             case BoundNodeKind.NopStatement:
+                            case BoundNodeKind.CheckedStatement:
                             case BoundNodeKind.VariableDeclaration:
                             case BoundNodeKind.LabelStatement:
                             case BoundNodeKind.SequencePointStatement:
@@ -343,6 +345,12 @@ namespace Cocoa.CodeAnalysis.Binding
                     if (lastStatement is BoundTryStatement tryStmt &&
                         tryStmt.TryBlock is BoundBlockStatement tryBlock &&
                         AllPathsReturn(tryBlock))
+                        continue;
+
+                    // checked/unchecked 块同理：块体所有路径都 return 即算 return
+                    if (lastStatement is BoundCheckedStatement checkedStmt &&
+                        checkedStmt.Body is BoundBlockStatement checkedBlock &&
+                        AllPathsReturn(checkedBlock))
                         continue;
 
                     return false;

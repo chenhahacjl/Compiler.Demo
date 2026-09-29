@@ -340,9 +340,23 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundStatement BindCheckedStatement(CheckedStatementSyntax syntax)
         {
-            // checked/unchecked { body } → just bind the body (no overflow checking in interpreter)
-            return BindStatement(syntax.Body);
+            // 算术溢出语义在发射期决定（IL 选 add.ovf 等），绑定期只把上下文标记随树带下去。
+            // 栈式记录嵌套：内层 checked/unchecked 覆盖外层（C# 同）。
+            var isChecked = syntax.Keyword.Kind == CoreSyntax.SyntaxKind.CheckedKeyword;
+            _checkedStack.Push(isChecked);
+            try
+            {
+                var body = BindStatement(syntax.Body);
+                return new BoundCheckedStatement(syntax, body, isChecked);
+            }
+            finally
+            {
+                _checkedStack.Pop();
+            }
         }
+
+        /// <summary>当前是否处于 checked 溢出检查上下文（最近的 checked/unchecked 声明为 checked 时）。</summary>
+        private bool IsCheckedContext => _checkedStack.Count > 0 && _checkedStack.Peek();
 
         private BoundStatement BindYieldReturnStatement(YieldReturnStatementSyntax syntax)
         {

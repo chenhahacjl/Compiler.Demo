@@ -33,6 +33,9 @@ namespace Cocoa.CodeGen.Managed.Writer
                 case BoundNodeKind.NopStatement:
                     il.Emit(IlOpCodeTable.Get("Nop"));
                     break;
+                case BoundNodeKind.CheckedStatement:
+                    EmitCheckedStatement(il, (BoundCheckedStatement)node);
+                    break;
                 case BoundNodeKind.VariableDeclaration:
                     EmitVariableDeclaration(il, (BoundVariableDeclaration)node);
                     break;
@@ -468,6 +471,24 @@ namespace Cocoa.CodeGen.Managed.Writer
             il.Emit(elseLabel);
             il.Emit(IlOpCodeTable.Get("Ldc_I4_1"));
             il.Emit(endLabel);
+        }
+
+        /// <summary>
+        /// <c>checked { … }</c> / <c>unchecked { … }</c>：块体本身照常发射，只切换整数算术的溢出模式。
+        /// 保存并恢复外层状态，故 <c>checked { unchecked { … } }</c> 的内层回绕语义正确。
+        /// </summary>
+        private void EmitCheckedStatement(IlAssembler il, BoundCheckedStatement node)
+        {
+            var previous = _checkedArithmetic;
+            _checkedArithmetic = node.IsChecked;
+            try
+            {
+                EmitStatement(il, node.Body);
+            }
+            finally
+            {
+                _checkedArithmetic = previous;
+            }
         }
 
         /// <summary>
@@ -1138,6 +1159,20 @@ namespace Cocoa.CodeGen.Managed.Writer
 
             // 6e-M21 Phase 4：无符号整数走 _un 变体（浮点保持有符号比较指令）
             var isUnsigned = node.Type.IsInteger && !node.Type.IsSigned && !node.Type.IsPlaceholder128;
+
+            // checked 上下文：需溢出检查变体（add.ovf/sub.ovf/mul.ovf）。
+            // 但本仓 IlOpCode 表用的是**紧凑内部编码**（Add=0x58…Not=0x66 连续排布，非 ECMA-335 实际字节），
+            // 尚未补入 ovf 族编码；直接查表会得到不存在的键甚至写出非法两字节前缀。
+            // 故此处明确报未实现，不静默发出「无溢出检查」的算术——那会让 checked 静默失效。
+            if (_checkedArithmetic && !node.Left.Type.IsFloat && !node.Right.Type.IsFloat &&
+                node.Op.Kind is BoundBinaryOperatorKind.Addition
+                    or BoundBinaryOperatorKind.Subtraction
+                    or BoundBinaryOperatorKind.Multiplication)
+            {
+                throw new System.Exception(
+                    "checked 上下文的整数算术发射待补：IlOpCode 表需先补入 ovf 族编码" +
+                    $"（当前 {node.Op.Kind} @ {node.Left.Type.Name}）。");
+            }
 
             switch (node.Op.Kind)
             {

@@ -1,4 +1,4 @@
-using Cocoa.CodeAnalysis.Symbols;
+﻿using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
 using Cocoa.IO;
@@ -28,9 +28,12 @@ namespace Cocoa.CodeAnalysis.Binding
                 case BoundNodeKind.BlockStatement:
                     WriteBlockStatement((BoundBlockStatement)node, writer);
                     break;
-                case BoundNodeKind.NopStatement:
-                    WriteNopStatement((BoundNopStatement)node, writer);
-                    break;
+            case BoundNodeKind.NopStatement:
+                WriteNopStatement((BoundNopStatement)node, writer);
+                break;
+            case BoundNodeKind.CheckedStatement:
+                WriteCheckedStatement((BoundCheckedStatement)node, writer);
+                break;
                 case BoundNodeKind.VariableDeclaration:
                     WriteVariableDeclaration((BoundVariableDeclaration)node, writer);
                     break;
@@ -288,6 +291,13 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             writer.WriteKeyword("nop");
             writer.WriteLine();
+        }
+
+        private static void WriteCheckedStatement(BoundCheckedStatement node, IndentedTextWriter writer)
+        {
+            writer.WriteKeyword(node.IsChecked ? "checked" : "unchecked");
+            writer.WriteLine();
+            node.Body.WriteTo(writer);
         }
 
         private static void WriteVariableDeclaration(BoundVariableDeclaration node, IndentedTextWriter writer)

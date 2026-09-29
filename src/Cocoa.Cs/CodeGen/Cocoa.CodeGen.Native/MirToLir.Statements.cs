@@ -231,6 +231,11 @@ namespace Cocoa.CodeGen.Native
                     EmitExpression(((BoundExpressionStatement)node).Expression);
                     break;
 
+                case BoundNodeKind.CheckedStatement:
+                    // native 端整数算术本就无溢出检查概念（x64 语义即 unchecked），块标记无操作
+                    EmitStatement(((BoundCheckedStatement)node).Body);
+                    break;
+
                 default:
                     throw new Exception($"Unexpected statement: {node.Kind}");
             }

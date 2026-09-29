@@ -59,6 +59,31 @@ namespace Cocoa.CodeGen.Interpreter
                     case BoundNodeKind.NopStatement:
                         index++;
                         break;
+                    case BoundNodeKind.CheckedStatement:
+                    {
+                        // 解释器的算术本就按宿主语义求值（.NET 默认 unchecked），与块标记一致。
+                        // 块内顶层 return 需向上传播（否则外层循环走完末值被丢弃）。
+                        var checkedBody = ((BoundCheckedStatement)statement).Body;
+                        var checkedStatements = checkedBody is BoundBlockStatement checkedBlockStatements
+                            ? checkedBlockStatements.Statements
+                            : ImmutableArray.Create(checkedBody);
+
+                        foreach (var inner in checkedStatements)
+                        {
+                            var unwrapped = inner is BoundSequencePointStatement innerPoint ? innerPoint.Statement : inner;
+                            if (unwrapped is BoundReturnStatement checkedReturn)
+                            {
+                                _lastValue = checkedReturn.Expression == null ? null : EvaluateExpression(checkedReturn.Expression);
+                                _returned = true;
+                                return _lastValue;
+                            }
+
+                            EvaluateSingleStatement(unwrapped, labelToIndex);
+                        }
+
+                        index++;
+                        break;
+                    }
                     case BoundNodeKind.BlockStatement:
                         var block = (BoundBlockStatement)statement;
                         foreach (var s in block.Statements)
@@ -143,6 +168,19 @@ namespace Cocoa.CodeGen.Interpreter
             switch (statement.Kind)
             {
                 case BoundNodeKind.NopStatement:
+                    break;
+                case BoundNodeKind.CheckedStatement:
+                    // 解释器的算术本就按宿主语义求值（.NET 默认 unchecked），与块标记一致
+                    if (((BoundCheckedStatement)statement).Body is BoundBlockStatement checkedBlock)
+                    {
+                        foreach (var s in checkedBlock.Statements)
+                            EvaluateSingleStatement(s, labelToIndex);
+                    }
+                    else
+                    {
+                        EvaluateSingleStatement(((BoundCheckedStatement)statement).Body, labelToIndex);
+                    }
+
                     break;
                 case BoundNodeKind.VariableDeclaration:
                     EvaluateVariableDeclaration((BoundVariableDeclaration)statement);
