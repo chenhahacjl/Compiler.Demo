@@ -356,22 +356,46 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal(1, result);
         }
 
-        [Fact(Skip = "无法在本探针环境复现：C# 轨探针的 BCL 引用是受控子集，看不到 System.Convert"
-                        + "（报 \"'Convert' is not a variable\"）。该缺陷只在 .co 轨自举时暴露——"
-                        + "EvaluatorRuntime::DoubleToString 发出 `conv.i4; call Convert::ToString(Object)`，"
-                        + "即 facade 方法按名取到第一个重载 ToString(Object) 而非 ToString(Double)，"
-                        + "把值类型当引用传。修 facade 重载解析时应在 .co 轨侧加门禁，"
-                        + "而不是在这里加 C# 轨测试。")]
-        public void Facade_OverloadPicksMatchingArityAndType_NotFirstByName()
+        [Fact]
+        public void PrimitiveToString_OnParameter_BoxesCorrectType_NotInt32()
         {
-            // 目标行为：对 facade 类型 System.Convert 调用 ToString(f64)，
-            // 应按实参类型选中 ToString(Double) 重载。
+            // 回归护栏（阶段 8 自举经 ilverify 暴露 EvaluatorRuntime::DoubleToString）：
+            // 对 **f64 形参** 调 ToString() 时，发射器发出
+            //   `box System.Int32; call Convert::ToString(Object)`
+            // 把双精度当 Int32 装箱，CLR 判 `found Double [expected Int32]`。
+            // 注意：对「字面量初始化的局部量」调 ToString() 是正确的
+            // （见 PrimitiveToString_BoxesCorrectType_NotInt32）——
+            // 差别在接收者是形参，其类型来自签名而非推断。
             var result = RunMain(
+                "class R {" + Nl +
+                "    public static function F(v: f64): string {" + Nl +
+                "        return v.ToString()" + Nl +
+                "    }" + Nl +
+                "}" + Nl +
                 "function Main(args: string[]): i32 {" + Nl +
-                "    var s = Convert.ToString(1.5)" + Nl +
+                "    var s = R.F(1.5)" + Nl +
                 "    if s == \"1.5\" { return 1 }" + Nl +
                 "    return 0" + Nl +
-                "}", "FacadeOverload");
+                "}", "PrimToStringParam");
+
+            Assert.Equal(1, result);
+        }
+
+        [Fact]
+        public void PrimitiveToString_BoxesCorrectType_NotInt32()
+        {
+            // 回归护栏（阶段 8 自举经 ilverify 暴露 EvaluatorRuntime::DoubleToString）：
+            // 对 f64 值调 ToString() 时，发射器发出
+            //   `box System.Int32; call Convert::ToString(Object)`
+            // 即把双精度**当 Int32 装箱**（TypeRef 指向 System.Int32），CLR 判非法：
+            // `found Double [expected Int32]`。正确行为是 box System.Double。
+            var result = RunMain(
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var v = 1.5" + Nl +
+                "    var s = v.ToString()" + Nl +
+                "    if s == \"1.5\" { return 1 }" + Nl +
+                "    return 0" + Nl +
+                "}", "PrimToString");
 
             Assert.Equal(1, result);
         }
