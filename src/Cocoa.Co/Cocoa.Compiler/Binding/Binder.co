@@ -999,8 +999,13 @@ _localCount = 0
                 return ReceiverVarNameOf(tgt.Child(0))
             }
 
-            if k == "IdentifierToken" || k == "VariableExpression"
+            if k == "IdentifierToken" || k == "VariableExpression" || k == "NameExpression"
             {
+                // NameExpression 是 .co 解析器对**裸标识符表达式**产出的节点（ParsePrimary 一类），
+                // Text() 直接给出变量名。此前只认 IdentifierToken/VariableExpression，
+                // 于是 `node.Child(i).Kind()`、`stmt.Kind()` 这类形态的接收者取不到名字
+                // → 实例方法返回类型查找落空 → return "?" → 局部类型退化为 i32
+                // （阶段 8 的 B 类：DeclWordOf 等方法的 String 局部被写成 Int32）。
                 return tgt.Text()
             }
 
