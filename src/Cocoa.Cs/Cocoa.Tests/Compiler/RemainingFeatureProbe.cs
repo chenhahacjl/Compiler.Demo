@@ -356,6 +356,23 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal(1, result);
         }
 
+        [Fact]
+        public void TypeCheck_IntComparedToString_IsError()
+        {
+            // 回归护栏：C# 前端曾**静默接受** `int == string`，发出
+            // `String.op_Equality(int32, string)` 这种签名不匹配的 IL，
+            // 被 CLR 判 InvalidProgramException。阶段 8 自举靠 ilverify 暴露了它。
+            // 正确行为：编译期报操作数类型不匹配。
+            var diagnostics = Diagnostics(
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var k = 0" + Nl +
+                "    if k == \"TypeClause\" { return 1 }" + Nl +
+                "    return 0" + Nl +
+                "}");
+
+            Assert.Contains(diagnostics, d => d.IsError);
+        }
+
         [Fact(Skip = "反射完整面待补：目前只有 System.Type 的 Name/FullName 两个 getter + GetType，"
                         + "typeof（获取 Type 的入口）已就位。缺 Assembly / Type 成员（GetMethods 等）/"
                         + "MemberInfo 子集 / Activator / Enum.GetValues / Attribute.GetCustomAttribute。")]
