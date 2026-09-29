@@ -42,16 +42,22 @@ namespace Cocoa.CodeAnalysis.Syntax
                     Current.Kind == SyntaxKind.CdeclKeyword ||
                     Current.Kind == SyntaxKind.StdcallKeyword ||
                     Current.Kind == SyntaxKind.FunctionKeyword ||
+                    Current.Kind == SyntaxKind.OperatorKeyword ||
+                    Current.Kind == SyntaxKind.ImplicitKeyword ||
+                    Current.Kind == SyntaxKind.ExplicitKeyword ||
                     Current.Kind == SyntaxKind.EnumKeyword;
                 if (!isSupported)
                 {
-                    ReportError(Current.Location, "attribute 目前仅支持类/结构体/接口/函数/枚举声明（如 `[Test] function X(): void`）。");
+                    ReportError(Current.Location, "attribute 目前仅支持类/结构体/接口/函数/运算符/枚举声明（如 `[Test] function X(): void`）。");
                 }
             }
 
             if (Current.Kind == SyntaxKind.CdeclKeyword ||
                 Current.Kind == SyntaxKind.StdcallKeyword ||
-                Current.Kind == SyntaxKind.FunctionKeyword)
+                Current.Kind == SyntaxKind.FunctionKeyword ||
+                Current.Kind == SyntaxKind.OperatorKeyword ||
+                Current.Kind == SyntaxKind.ImplicitKeyword ||
+                Current.Kind == SyntaxKind.ExplicitKeyword)
             {
                 return ParseFunctionDeclaration(attributes, modifiers);
             }
@@ -660,8 +666,35 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private MemberSyntax ParseFunctionDeclaration(ImmutableArray<AttributeSyntax> attributes, ImmutableArray<SyntaxToken> modifiers)
         {
-            var functionKeyword = MatchToken(SyntaxKind.FunctionKeyword);
-            var identifier = MatchToken(SyntaxKind.IdentifierToken);
+            SyntaxToken? functionKeyword = null;
+            SyntaxToken identifier;
+
+            // 运算符重载 / 转换运算符声明：`function operator +` / `function implicit operator T`。
+            // 复用 FunctionDeclarationSyntax：关键字槽存 operator|implicit|explicit，identifier 槽存运算符 token
+            // （转换运算符的 identifier 存被转换目标类型的首标识符，binder 以返回类型为准合成方法名）。
+            if (Current.Kind == SyntaxKind.FunctionKeyword)
+            {
+                functionKeyword = NextToken();
+            }
+
+            if (Current.Kind == SyntaxKind.OperatorKeyword ||
+                Current.Kind == SyntaxKind.ImplicitKeyword ||
+                Current.Kind == SyntaxKind.ExplicitKeyword)
+            {
+                var operatorPrefix = NextToken();
+                if (operatorPrefix.Kind == SyntaxKind.ImplicitKeyword || operatorPrefix.Kind == SyntaxKind.ExplicitKeyword)
+                {
+                    MatchToken(SyntaxKind.OperatorKeyword);
+                }
+
+                functionKeyword = operatorPrefix;
+                identifier = ParseOperatorToken();
+            }
+            else
+            {
+                identifier = MatchToken(SyntaxKind.IdentifierToken);
+            }
+
             var typeParameters = ParseOptionalTypeParameterList();
             var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
             var parameters = ParseParameterList();
@@ -697,6 +730,54 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
 
             return new FunctionDeclarationSyntax(_syntaxTree, attributes, modifiers, functionKeyword, identifier, typeParameters, openParenthesisToken, parameters, closeParenthesisToken, type, body, externMetadata, whereClauses);
+        }
+
+        /// <summary>可重载的运算符 token 集合（二元 + 一元 + 相等/关系 + 取反/按位非）。
+        /// 转换运算符（implicit/explicit）不走本表——其"运算符"是目标类型，identifier 退化为类型名 token。</summary>
+        private static bool IsOverloadableOperatorToken(SyntaxKind kind)
+        {
+            switch (kind)
+            {
+                case SyntaxKind.PlusToken:
+                case SyntaxKind.MinusToken:
+                case SyntaxKind.StarToken:
+                case SyntaxKind.SlashToken:
+                case SyntaxKind.PercentToken:
+                case SyntaxKind.AmpersandToken:
+                case SyntaxKind.PipeToken:
+                case SyntaxKind.HatToken:
+                case SyntaxKind.ShiftLeftToken:
+                case SyntaxKind.ShiftRightToken:
+                case SyntaxKind.EqualsEqualsToken:
+                case SyntaxKind.BangEqualsToken:
+                case SyntaxKind.LessToken:
+                case SyntaxKind.LessOrEqualsToken:
+                case SyntaxKind.GreaterToken:
+                case SyntaxKind.GreaterOrEqualsToken:
+                case SyntaxKind.BangToken:
+                case SyntaxKind.TildeToken:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private SyntaxToken ParseOperatorToken()
+        {
+            if (IsOverloadableOperatorToken(Current.Kind))
+            {
+                return NextToken();
+            }
+
+            // 转换运算符的目标类型：先吃标识符，允许点号限定（implicit operator Foo.Bar）
+            var builder = new List<SyntaxToken> { MatchToken(SyntaxKind.IdentifierToken) };
+            while (Current.Kind == SyntaxKind.DotToken)
+            {
+                builder.Add(NextToken());
+                builder.Add(MatchToken(SyntaxKind.IdentifierToken));
+            }
+
+            return builder[0];
         }
 
         private ExternMetadataSyntax? ParseOptionalExternMetadata()

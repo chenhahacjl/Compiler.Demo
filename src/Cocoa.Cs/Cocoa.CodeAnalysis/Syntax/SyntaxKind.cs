@@ -250,5 +250,8 @@ ColonToken,               // :
         FieldKeyword = 231, // field（6e-M31 类字段显式关键字，对齐 property；显式值避免移动隐式段成员）
         Attribute = 232,    // attribute 声明（`[Name]` / `[Name("arg")]`，6e-M32 首例为 facade 属性；显式值避免偏移）
         SingleLineDocCommentTrivia = 233, // 单行文档注释（6e-M24）——显式值避免插入 trivia 段导致隐式值漂移
+        OperatorKeyword = 234, // operator（运算符重载声明前缀：`operator +`）
+        ImplicitKeyword = 235, // implicit（隐式转换运算符：`implicit operator T`）
+        ExplicitKeyword = 236, // explicit（显式转换运算符：`explicit operator T`）
     }
 }

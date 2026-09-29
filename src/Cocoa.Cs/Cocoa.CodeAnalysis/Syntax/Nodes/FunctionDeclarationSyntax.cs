@@ -45,6 +45,25 @@ namespace Cocoa.CodeAnalysis.Syntax
         /// <summary>泛型约束子句列表（`where T: ...`，6e-M20）。</summary>
         public ImmutableArray<WhereClauseSyntax> WhereClauses { get; }
 
+        /// <summary>运算符重载/转换运算符声明（`operator +` / `implicit operator T` / `explicit operator T`）。
+        /// 判定依据：<see cref="FunctionKeyword"/> 槽存的是 operator/implicit/explicit 而非 `function`。</summary>
+        public bool IsOperatorDeclaration =>
+            FunctionKeyword?.Kind == SyntaxKind.OperatorKeyword ||
+            FunctionKeyword?.Kind == SyntaxKind.ImplicitKeyword ||
+            FunctionKeyword?.Kind == SyntaxKind.ExplicitKeyword;
+
+        /// <summary>隐式转换运算符声明（`implicit operator T(v: S)`）。</summary>
+        public bool IsImplicitConversion => FunctionKeyword?.Kind == SyntaxKind.ImplicitKeyword;
+
+        /// <summary>显式转换运算符声明（`explicit operator T(v: S)`）。</summary>
+        public bool IsExplicitConversion => FunctionKeyword?.Kind == SyntaxKind.ExplicitKeyword;
+
+        /// <summary>转换运算符声明（implicit 或 explicit）——单参、返回目标类型。</summary>
+        public bool IsConversionOperator => IsImplicitConversion || IsExplicitConversion;
+
+        /// <summary>非转换运算符声明时为运算符 token（`+`/`-`/…）；转换运算符与普通函数为 null。</summary>
+        public SyntaxToken? OperatorToken => IsOperatorDeclaration && !IsConversionOperator ? Identifier : null;
+
         public override IEnumerable<SyntaxNode> GetChildren()
         {
             foreach (var attribute in Attributes)

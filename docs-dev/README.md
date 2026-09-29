@@ -22,6 +22,7 @@
 | [plan/自举实施计划.md](plan/自举实施计划.md) | 阶段 7 实施主线：管线增量分解 / 验收护栏（增量一 Lexer ✅；增量二 Parser 🔄 M8-a0…a8） |
 | [plan/IR分层与格式设计.md](plan/IR分层与格式设计.md) | HIR/MIR/LIR 三层语义与命名、「.coa 存 HIR」决策（S-7 定稿为准） |
 | [plan/语义债务清单.md](plan/语义债务清单.md) | 定夺类设计偏差 D1-D5（非 bug），修或维持需逐项拍板 |
+| [plan/语言特性对照表.md](plan/语言特性对照表.md) | **语言面权威表**：C# 语义 × 双轨（C# / .co）逐特性状态，源码实证（`SyntaxKind` / 绑定器 / 发射器 / 测试），含 Attribute·反射·运算符重载三专题与 20 项补齐路线 |
 | [plan/未完成盘点.md](plan/未完成盘点.md) | 全仓未开发/未完成/已后置内容总账（自举主线 / stdlib 遗留 / 语言面 / native 硬边界 / Evaluator / 语义债务 / 远期），逐项状态·阻塞·证据 |
 | [plan/重构执行计划.md](plan/重构执行计划.md) | 重构步骤与进度表（⬜/🔄/✅/⏭️ 标记） |
 | [plan/Cocoa.IDE设计.md](plan/Cocoa.IDE设计.md) | 类 Visual Studio 桌面 IDE：Avalonia 11 路线 + 功能矩阵 |

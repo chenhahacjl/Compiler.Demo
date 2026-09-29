@@ -131,6 +131,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.ConstructorKeyword;
                 case "function":
                     return SyntaxKind.FunctionKeyword;
+                case "operator":
+                    return SyntaxKind.OperatorKeyword;
+                case "implicit":
+                    return SyntaxKind.ImplicitKeyword;
+                case "explicit":
+                    return SyntaxKind.ExplicitKeyword;
                 case "if":
                     return SyntaxKind.IfKeyword;
                 case "import":
@@ -437,6 +443,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "when";
                 case SyntaxKind.FunctionKeyword:
                     return "function";
+                case SyntaxKind.OperatorKeyword:
+                    return "operator";
+                case SyntaxKind.ImplicitKeyword:
+                    return "implicit";
+                case SyntaxKind.ExplicitKeyword:
+                    return "explicit";
                 case SyntaxKind.IfKeyword:
                     return "if";
                 case SyntaxKind.ImportKeyword:
