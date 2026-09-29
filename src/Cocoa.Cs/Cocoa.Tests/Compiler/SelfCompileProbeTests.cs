@@ -324,6 +324,12 @@ namespace Cocoa.Tests.Compiler
             if (stderr.Length > 0) { _out.WriteLine("stderr: " + stderr.Trim().Substring(0, Math.Min(600, stderr.Trim().Length))); }
 
             var hexLine = stdout.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.StartsWith("HEX:", StringComparison.Ordinal));
+            // 自举编译器自身的诊断输出（非 HEX 行）回显到测试输出，便于定位 .co 轨问题
+            foreach (var line in stdout.Split('\n').Select(l => l.TrimEnd())
+                         .Where(l => l.Length > 0 && !l.StartsWith("HEX:", StringComparison.Ordinal)))
+            {
+                _out.WriteLine("[selfhost] " + line);
+            }
             if (hexLine == null)
             {
                 _out.WriteLine("stdout: " + stdout.Trim().Substring(0, Math.Min(600, stdout.Trim().Length)));

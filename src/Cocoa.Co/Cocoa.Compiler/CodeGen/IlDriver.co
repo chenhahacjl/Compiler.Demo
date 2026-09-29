@@ -1,4 +1,4 @@
-// M5-a5 批 2→BCL/字符串扩展 + C-2 类支持：自举 IL → 物理 .dll 端到端驱动。
+﻿// M5-a5 批 2→BCL/字符串扩展 + C-2 类支持：自举 IL → 物理 .dll 端到端驱动。
 // 绑定 → 逐函数 IlEmitter/IlAssembler（方法体 hex + maxStack + 局部签名）→ 元数据计划（签名/RVA/flags/token）→
 // IlMetadataBuilder（六流 hex + FieldDef + 用户 TypeDef）→ ManagedPeWriter（PE 字节）→ 返回 PE 字节 hex 或 "ERR:…"。
 // 支持：多顶层函数、参数、内部调用（0x06…）、局部变量（StandAloneSig）、控制流（if/while）、

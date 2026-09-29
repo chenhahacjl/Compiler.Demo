@@ -1,4 +1,4 @@
-// Cocoa 自举 Binder —— 阶段 7 增量三（M9-a0 差分基建 + M9-a1 符号声明面 + M9-a2 诊断面）：
+﻿// Cocoa 自举 Binder —— 阶段 7 增量三（M9-a0 差分基建 + M9-a1 符号声明面 + M9-a2 诊断面）：
 // 自举 Parser 的 Node 树 → 符号（顶层函数 / 全局变量），DescribeSymbols() 与 C# 端
 // BinderDifferentialTests.SymbolDump 逐字节一致（M9 差分口径）。
 // M9-a1 范围：函数符号（名/参数/返回类型）、全局变量（显式类型 + 字面量 var 推断）、main 判定。
@@ -967,6 +967,20 @@ _localCount = 0
             let k = tgt.Kind()
             if k == "CallExpression"
             {
+                if tgt.ChildCount() == 0
+                {
+                    return ""
+                }
+
+                return ReceiverVarNameOf(tgt.Child(0))
+            }
+
+            if k == "MemberCallExpression"
+            {
+                // 链式调用 `a.B().C()` 的中间节点也是 MemberCallExpression（ParsePostfixChain 产出），
+                // 此前只处理 CallExpression / MemberAccessExpression，导致这类接收者取不到变量名
+                // → 实例方法返回类型查找落空 → return "?" → 局部类型退化为 i32
+                // （阶段 8 的 B 类 14 条：DeclWordOf 等方法的 String 局部被写成 Int32）。
                 if tgt.ChildCount() == 0
                 {
                     return ""
