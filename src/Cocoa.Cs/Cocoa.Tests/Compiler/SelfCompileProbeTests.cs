@@ -2,6 +2,8 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -108,22 +110,13 @@ namespace Cocoa.Tests.Compiler
         }
 
         // ------------------------------------------------------------------
-        // 慢档：参考端自举（B1 生产）。仅 COCOA_SLOW_PROBE=1。
+        // 语料编译（慢档共用）：把全量 .co 语料 + 自举 Main 交给 C# 轨编译，返回 B1 十六进制。
+        // B1_Bootstrap_ReferenceEnd 与 Corpus_CompileAndDump 共用，避免复制这段昂贵逻辑。
         // ------------------------------------------------------------------
-        [Fact]
-        public void B1_Bootstrap_ReferenceEnd()
+        private static string CompileCorpusToHex()
         {
-            if (!SlowEnabled)
-            {
-                _out.WriteLine("SKIP slow: 设置 COCOA_SLOW_PROBE=1 运行（约 27m）；日常迭代请跑 B2_Fixpoint_ViaSavedB1。");
-                return;
-            }
-
             var allFiles = CorpusFiles();
             var allSrc = CorpusSource(allFiles);
-            _out.WriteLine("full corpus chars: " + allSrc.Length);
-
-            // B1 = 全量编译器自举产物：语料 + Main(args){ BuildDllHex(args[0]) }（自包含编译器 DLL）
             var master = allSrc + Environment.NewLine +
                 "function Main(args: string[]): i32 {" + Environment.NewLine +
                 "    let h = Cocoa.CodeGen.IlDriver.BuildDllHex(args[0])" + Environment.NewLine +
@@ -145,7 +138,6 @@ namespace Cocoa.Tests.Compiler
                 "    return 0\n}\n");
             trees.Add(mainTree);
 
-            // 阶段 8 B1：参考端驱动自编全量语料 → B1 十六进制
             var original = Console.Out;
             string b1Hex;
             try
@@ -173,6 +165,22 @@ namespace Cocoa.Tests.Compiler
 
             Assert.False(b1Hex.StartsWith("ERR:", StringComparison.Ordinal), "B1 自举阻塞: " + b1Hex);
             Assert.True(b1Hex.Length > 200000, "B1 hex 过短 (" + b1Hex.Length + ")");
+            return b1Hex;
+        }
+
+        // ------------------------------------------------------------------
+        // 慢档：参考端自举（B1 生产）。仅 COCOA_SLOW_PROBE=1。
+        // ------------------------------------------------------------------
+        [Fact]
+        public void B1_Bootstrap_ReferenceEnd()
+        {
+            if (!SlowEnabled)
+            {
+                _out.WriteLine("SKIP slow: 设置 COCOA_SLOW_PROBE=1 运行（约 27m）；日常迭代请跑 B2_Fixpoint_ViaSavedB1。");
+                return;
+            }
+
+            var b1Hex = CompileCorpusToHex();
             _out.WriteLine("B1 hex length: " + (b1Hex.Length / 2));
 
             var b1Bytes = SelfHostedEndToEndTests.HexToBytes(b1Hex);
@@ -186,7 +194,10 @@ namespace Cocoa.Tests.Compiler
             _out.WriteLine("B1 saved: " + b1Path);
             File.WriteAllText(Path.Combine(ProbeDir, "B1.stamp"), CurrentHead() + StampSliceSuffix());
 
-            // 独立目录副本 + 立即冒烟：加载 + ilverify 门禁（不跑 27m 的 B2）
+            // 独立目录副本 + 立即冒烟：加载 + 类型数
+            // 注：此处原注释写「+ ilverify 门禁」，但代码从未真正调用 ilverify——
+            // 真实错误数此前只能手工跑 ilverify 得到。真正的 ilverify 门禁见
+            // Corpus_CompileAndDump（COCOA_RUN_ILVERIFY=1）。
             var dir = Path.Combine(Path.GetTempPath(), "cocoa-b1", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(dir);
             var b1Copy = Path.Combine(dir, "B1.dll");
@@ -195,6 +206,171 @@ namespace Cocoa.Tests.Compiler
             Assert.NotNull(b1Asm.EntryPoint);
             _out.WriteLine("B1 loads; entry: " + b1Asm.EntryPoint!.Name);
             _out.WriteLine("B1 types: " + b1Asm.GetTypes().Length);
+        }
+
+        // ------------------------------------------------------------------
+        // 慢档：编译全量语料并 dump 产物（方法索引 / 指定方法 IL / ilverify）。
+        //
+        // 存在的理由：阶段 8 的 ilverify 错配只在下沉自举时暴露，而 C# 轨 2700+ 探针
+        // 覆盖不到 syscall / facade 转发 / 全量语料上下文这些路径。此前定位全靠手工跑
+        // ilverify + 临时 metadata dump 工具，反复踩坑（输出截断、引用缺失、基线陈旧）。
+        // 本测试把这些固化成可反复使用的门禁：
+        //
+        //   产物（始终）：%TEMP%\cocoa-b1-probe\Corpus.dll
+        //                  %TEMP%\cocoa-b1-probe\Corpus.methods.txt   （token → 类型::方法 签名）
+        //   COCOA_DUMP_METHODS=Kind1,Kind2    只 dump 方法名含这些子串的 IL
+        //                                        （locals 签名 / maxstack / 字节）
+        //   COCOA_RUN_ILVERIFY=1               跑 ilverify 并打印错误清单
+        //
+        // 刻意**不**写 B1.dll：保留 bootstrap 产物的基线不被本测试覆盖。
+        // ------------------------------------------------------------------
+        [Fact]
+        public void Corpus_CompileAndDump()
+        {
+            if (!SlowEnabled)
+            {
+                _out.WriteLine("SKIP slow: 设置 COCOA_SLOW_PROBE=1 运行（约 27m）。");
+                return;
+            }
+
+            var hex = CompileCorpusToHex();
+            var bytes = SelfHostedEndToEndTests.HexToBytes(hex);
+            var dllPath = Path.Combine(ProbeDir, "Corpus.dll");
+            File.WriteAllBytes(dllPath, bytes);
+            _out.WriteLine("Corpus.dll: " + bytes.Length + " B -> " + dllPath);
+
+            // 方法索引：token → 类型::方法 + 签名。定位 token 错位时最常需要的就是这张表。
+            using (var fs = File.OpenRead(dllPath))
+            using (var pe = new System.Reflection.PortableExecutable.PEReader(fs))
+            {
+                var md = pe.GetMetadataReader();
+                var index = new System.Text.StringBuilder();
+                foreach (var th in md.TypeDefinitions)
+                {
+                    var td = md.GetTypeDefinition(th);
+                    var ns = md.GetString(td.Namespace);
+                    var tn = md.GetString(td.Name);
+                    var full = string.IsNullOrEmpty(ns) ? tn : ns + "." + tn;
+                    foreach (var mh in td.GetMethods())
+                    {
+                        var mdf = md.GetMethodDefinition(mh);
+                        index.Append("0x").Append(System.Reflection.Metadata.Ecma335.MetadataTokens.GetToken(mh).ToString("X8"))
+                            .Append("  ").Append(full).Append("::").Append(md.GetString(mdf.Name))
+                            .Append("  rva=0x").Append(mdf.RelativeVirtualAddress.ToString("X")).AppendLine();
+                    }
+                }
+
+                var indexPath = Path.Combine(ProbeDir, "Corpus.methods.txt");
+                File.WriteAllText(indexPath, index.ToString());
+                _out.WriteLine("Corpus.methods.txt: " + md.MethodDefinitions.Count + " 个方法 -> " + indexPath);
+
+                // 按需 dump 指定方法的完整 IL
+                var filter = Environment.GetEnvironmentVariable("COCOA_DUMP_METHODS");
+                if (!string.IsNullOrEmpty(filter))
+                {
+                    var needles = filter!.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                    foreach (var th in md.TypeDefinitions)
+                    {
+                        var td = md.GetTypeDefinition(th);
+                        var ns = md.GetString(td.Namespace);
+                        var tn = md.GetString(td.Name);
+                        var full = string.IsNullOrEmpty(ns) ? tn : ns + "." + tn;
+                        foreach (var mh in td.GetMethods())
+                        {
+                            var mdf = md.GetMethodDefinition(mh);
+                            var mn = md.GetString(mdf.Name);
+                            if (!needles.Any(n => full.Contains(n, StringComparison.OrdinalIgnoreCase)
+                                                || mn.Contains(n, StringComparison.OrdinalIgnoreCase)))
+                            {
+                                continue;
+                            }
+
+                            _out.WriteLine("");
+                            _out.WriteLine("=== " + full + "::" + mn + "  token=0x"
+                                + System.Reflection.Metadata.Ecma335.MetadataTokens.GetToken(mh).ToString("X8") + " ===");
+                            if (mdf.RelativeVirtualAddress == 0)
+                            {
+                                _out.WriteLine("  (无方法体)");
+                                continue;
+                            }
+
+                            var body = pe.GetMethodBody(mdf.RelativeVirtualAddress);
+                            _out.WriteLine("  maxstack=" + body.MaxStack);
+                            _out.WriteLine("  IL: " + BitConverter.ToString(body.GetILBytes()!));
+                        }
+                    }
+                }
+            }
+
+            // ilverify 门禁：把「真实错误数」变成可自动化的产出，而不是手工跑一次。
+            // 必须提供 System.Private.CoreLib 引用，否则每个方法都报 FileLoadErrorGeneric，
+            // 真实错误被完全淹没。
+            if (Environment.GetEnvironmentVariable("COCOA_RUN_ILVERIFY") == "1")
+            {
+                RunIlVerify(dllPath);
+            }
+        }
+
+        private void RunIlVerify(string dllPath)
+        {
+            var exe = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".dotnet", "tools", "ilverify.exe");
+            if (!File.Exists(exe))
+            {
+                _out.WriteLine("ilverify 未找到: " + exe + "（dotnet tool install -g ilverify）");
+                return;
+            }
+
+            var runtimeDir = Path.GetDirectoryName(typeof(object).Assembly.Location)!;
+            var work = Path.Combine(Path.GetTempPath(), "cocoa-ilverify-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(work);
+            File.Copy(dllPath, Path.Combine(work, "Corpus.dll"), true);
+            // 同目录放一份运行时程序集，供 -r 解析（ilverify 不会自动查 GAC/共享框架）
+            foreach (var f in Directory.GetFiles(runtimeDir, "*.dll"))
+            {
+                try { File.Copy(f, Path.Combine(work, Path.GetFileName(f)), true); } catch { }
+            }
+
+            var refs = Directory.GetFiles(work, "*.dll")
+                .Where(f => !string.Equals(Path.GetFileName(f), "Corpus.dll", StringComparison.OrdinalIgnoreCase))
+                .SelectMany(f => new[] { "-r", Path.GetFileName(f) })
+                .ToList();
+            var psi = new System.Diagnostics.ProcessStartInfo(exe)
+            {
+                WorkingDirectory = work,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+            };
+            psi.ArgumentList.Add("Corpus.dll");
+            foreach (var r in refs) { psi.ArgumentList.Add(r); }
+            psi.ArgumentList.Add("-s");
+            psi.ArgumentList.Add("System.Private.CoreLib");
+
+            using var proc = System.Diagnostics.Process.Start(psi)!;
+            var stdout = proc.StandardOutput.ReadToEnd();
+            var stderr = proc.StandardError.ReadToEnd();
+            proc.WaitForExit();
+
+            var errors = stdout.Split('\n').Where(l => l.StartsWith("[IL]: Error", StringComparison.Ordinal)).ToList();
+            _out.WriteLine("");
+            _out.WriteLine("=== ilverify: " + errors.Count + " 个错误 ===");
+            foreach (var e in errors)
+            {
+                _out.WriteLine("  " + e.Replace(dllPath, "Corpus.dll").Trim());
+            }
+
+            if (errors.Count > 0 && stdout.IndexOf("FileLoadErrorGeneric", StringComparison.Ordinal) >= 0
+                && errors.All(e => e.Contains("FileLoadErrorGeneric", StringComparison.Ordinal)))
+            {
+                _out.WriteLine("注意：全部为 FileLoadErrorGeneric —— 引用没配好，结果不可信（见方法注释）。");
+            }
+
+            if (stderr.Length > 0)
+            {
+                _out.WriteLine("ilverify stderr: " + stderr.Trim());
+            }
         }
 
         // ------------------------------------------------------------------
