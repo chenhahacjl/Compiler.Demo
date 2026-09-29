@@ -356,6 +356,26 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal(1, result);
         }
 
+        [Fact(Skip = "无法在本探针环境复现：C# 轨探针的 BCL 引用是受控子集，看不到 System.Convert"
+                        + "（报 \"'Convert' is not a variable\"）。该缺陷只在 .co 轨自举时暴露——"
+                        + "EvaluatorRuntime::DoubleToString 发出 `conv.i4; call Convert::ToString(Object)`，"
+                        + "即 facade 方法按名取到第一个重载 ToString(Object) 而非 ToString(Double)，"
+                        + "把值类型当引用传。修 facade 重载解析时应在 .co 轨侧加门禁，"
+                        + "而不是在这里加 C# 轨测试。")]
+        public void Facade_OverloadPicksMatchingArityAndType_NotFirstByName()
+        {
+            // 目标行为：对 facade 类型 System.Convert 调用 ToString(f64)，
+            // 应按实参类型选中 ToString(Double) 重载。
+            var result = RunMain(
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var s = Convert.ToString(1.5)" + Nl +
+                "    if s == \"1.5\" { return 1 }" + Nl +
+                "    return 0" + Nl +
+                "}", "FacadeOverload");
+
+            Assert.Equal(1, result);
+        }
+
         [Fact]
         public void LocalSig_MethodCallReturningString_NotMarkedInt32()
         {
