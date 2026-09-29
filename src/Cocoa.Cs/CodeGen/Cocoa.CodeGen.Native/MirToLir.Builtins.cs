@@ -481,6 +481,12 @@ namespace Cocoa.CodeGen.Native
 
         private LirVirtualRegister EmitUnaryExpression(BoundUnaryExpression node)
         {
+            // 用户定义一元运算符重载：静态调用（单参 = 操作数）
+            if (node.Op.IsUserDefined)
+            {
+                return EmitUserDefinedOperator(node.Syntax, node.Op.UserDefinedMethod!, node.Operand);
+            }
+
             var operand = EmitExpression(node.Operand);
             var instructions = _currentFunction.Instructions;
 
@@ -553,6 +559,12 @@ namespace Cocoa.CodeGen.Native
 
         private LirVirtualRegister EmitBinaryExpression(BoundBinaryExpression node)
         {
+            // 用户定义运算符重载：改走静态调用（EmitUserCall），不产内建算术 LIR
+            if (node.Op.IsUserDefined)
+            {
+                return EmitUserDefinedOperator(node.Syntax, node.Op.UserDefinedMethod!, node.Left, node.Right);
+            }
+
             var op = node.Op.Kind;
             var instructions = _currentFunction.Instructions;
 

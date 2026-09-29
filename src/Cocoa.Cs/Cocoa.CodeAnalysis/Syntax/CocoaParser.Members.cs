@@ -664,7 +664,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             return nameTokens.ToImmutable();
         }
 
-        private MemberSyntax ParseFunctionDeclaration(ImmutableArray<AttributeSyntax> attributes, ImmutableArray<SyntaxToken> modifiers)
+        private MemberSyntax ParseFunctionDeclaration(ImmutableArray<AttributeSyntax> attributes, ImmutableArray<SyntaxToken> modifiers, bool allowBody = true)
         {
             SyntaxToken? functionKeyword = null;
             SyntaxToken identifier;
@@ -707,7 +707,15 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             BlockStatementSyntax? body = null;
 
-            if (Current.Kind == SyntaxKind.FatArrowToken)
+            if (!allowBody)
+            {
+                // 接口成员：只有签名，无函数体；可选尾随分号
+                if (Current.Kind == SyntaxKind.SemicolonToken)
+                {
+                    NextToken();
+                }
+            }
+            else if (Current.Kind == SyntaxKind.FatArrowToken)
             {
                 var arrow = NextToken();
                 var expression = ParseExpression();
@@ -1203,17 +1211,13 @@ namespace Cocoa.CodeAnalysis.Syntax
 
                 if (Current.Kind == SyntaxKind.CdeclKeyword ||
                     Current.Kind == SyntaxKind.StdcallKeyword ||
-                    Current.Kind == SyntaxKind.FunctionKeyword)
+                    Current.Kind == SyntaxKind.FunctionKeyword ||
+                    Current.Kind == SyntaxKind.OperatorKeyword ||
+                    Current.Kind == SyntaxKind.ImplicitKeyword ||
+                    Current.Kind == SyntaxKind.ExplicitKeyword)
                 {
-                    var functionKeyword = MatchToken(SyntaxKind.FunctionKeyword);
-                    var memberIdentifier = MatchToken(SyntaxKind.IdentifierToken);
-                    var memberTypeParameters = ParseOptionalTypeParameterList();
-                    var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
-                    var parameters = ParseParameterList();
-                    var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
-                    var type = ParseOptionalTypeClause();
-                    var memberWhereClauses = ParseWhereClauses();
-                    members.Add(new FunctionDeclarationSyntax(_syntaxTree, ImmutableArray<AttributeSyntax>.Empty, modifiers, functionKeyword, memberIdentifier, memberTypeParameters, openParenthesisToken, parameters, closeParenthesisToken, type, body: null, whereClauses: memberWhereClauses));
+                    // 接口内声明运算符虽非法（C# 同），仍走完整声明解析以便 binder 给出精确诊断而非语法错误
+                    members.Add(ParseFunctionDeclaration(ImmutableArray<AttributeSyntax>.Empty, modifiers, allowBody: false));
                 }
                 else if (Current.Kind == SyntaxKind.PropertyKeyword)
                 {

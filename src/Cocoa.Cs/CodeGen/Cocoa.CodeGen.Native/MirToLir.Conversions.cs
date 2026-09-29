@@ -207,6 +207,18 @@ namespace Cocoa.CodeGen.Native
             return EmitUserCall(node);
         }
 
+        /// <summary>
+        /// 用户定义运算符（`function operator +`）的 native 发射：包装为等价
+        /// <see cref="BoundCallExpression"/> 复用 <see cref="EmitUserCall"/>（静态方法恒无接收者）。
+        /// </summary>
+        private LirVirtualRegister EmitUserDefinedOperator(
+            Cocoa.CodeAnalysis.Syntax.SyntaxNode syntax,
+            FunctionSymbol method,
+            params BoundExpression[] arguments)
+        {
+            return EmitUserCall(new BoundCallExpression(syntax, method, ImmutableArray.Create(arguments)));
+        }
+
         private LirVirtualRegister EmitExternCall(BoundCallExpression node)
         {
             return EmitExternCall(node.Function, node.Arguments);

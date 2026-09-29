@@ -1,4 +1,4 @@
-using Cocoa.CodeAnalysis.Lowering;
+﻿using Cocoa.CodeAnalysis.Lowering;
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.CodeAnalysis.Symbols;
@@ -1840,6 +1840,17 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     if (member is FunctionDeclarationSyntax methodDeclaration)
                     {
+                        // 接口不能声明运算符重载（C# 同）——给精确诊断，不落符号
+                        if (methodDeclaration.IsOperatorDeclaration)
+                        {
+                            _diagnostics.ReportError(
+                                methodDeclaration.OperatorToken?.Location ??
+                                methodDeclaration.FunctionKeyword?.Location ??
+                                methodDeclaration.Identifier.Location,
+                                "接口不能声明运算符重载方法。");
+                            continue;
+                        }
+
                         var visibility = GetVisibility(methodDeclaration.Modifiers, Visibility.Public);
 
                         // 泛型接口方法类型参数（6e-M20）先行：签名的 T 解析依赖此上下文
@@ -2595,16 +2606,32 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            // syscall 方法隐含 static（System.Runtime.Runtime.Print 类名调用）
-            var method = new FunctionSymbol(syntax.Identifier.Text, parameters, type, syntax, isExtern: isExtern, dllName: dllName, callingConvention: GetCallingConvention(syntax), containingClass: classType, visibility: visibility, builtinKind: builtinKind, entryPoint: entryPoint, charSet: charSet)
+            // 运算符重载 / 转换运算符声明：先解出种类与合成元数据名（Name 只读，须在构造符号前定名）
+            OperatorKind? operatorKind = null;
+            if (syntax.IsOperatorDeclaration)
             {
-                IsStatic = isStatic || isSyscall,
+                operatorKind = ResolveDeclaredOperatorKind(syntax);
+            }
+
+            var declaredName = operatorKind.HasValue ? OperatorNames.ToMetadataName(operatorKind.Value) : syntax.Identifier.Text;
+
+            // syscall 方法隐含 static（System.Runtime.Runtime.Print 类名调用）
+            var method = new FunctionSymbol(declaredName, parameters, type, syntax, isExtern: isExtern, dllName: dllName, callingConvention: GetCallingConvention(syntax), containingClass: classType, visibility: visibility, builtinKind: builtinKind, entryPoint: entryPoint, charSet: charSet)
+            {
+                IsStatic = isStatic || isSyscall || operatorKind.HasValue,
                 IsVirtual = isVirtual,
                 IsOverride = isOverride,
                 IsAbstract = isAbstract,
                 IsSealed = isSealed,
+                OperatorKind = operatorKind,
             };
             DocumentationBackfill.BackfillDocumentation(method, syntax, _diagnostics);
+
+            // 运算符声明的元数/宿主/形态校验 + 登记查找表
+            if (operatorKind.HasValue)
+            {
+                ValidateAndRegisterOperator(syntax, method, classType, parameters, type, operatorKind.Value);
+            }
 
             // 泛型方法类型参数（6e-M20）：`function Map<U>(…)` 类内声明 + where 子句落符号
             method.TypeParameters = _declaringMethodTypeParameters;
@@ -2661,8 +2688,96 @@ namespace Cocoa.CodeAnalysis.Binding
             return method;
         }
 
-        private static bool IsOverrideSignatureMatch(FunctionSymbol baseMethod, FunctionSymbol overrideMethod)
+        /// <summary>解出运算符声明的种类：implicit/explicit 前缀直判；`operator X` 按 token 翻译（+ - 单参时回退一元）。</summary>
+        private static OperatorKind? ResolveDeclaredOperatorKind(FunctionDeclarationSyntax syntax)
         {
+            if (syntax.IsImplicitConversion)
+            {
+                return OperatorKind.ImplicitConversion;
+            }
+
+            if (syntax.IsExplicitConversion)
+            {
+                return OperatorKind.ExplicitConversion;
+            }
+
+            var token = syntax.OperatorToken;
+            if (token == null)
+            {
+                return null;
+            }
+
+            // 元数为 1 时 `+`/`-` 是二元符号的一元形态
+            if (syntax.Parameters.Count == 1)
+            {
+                return OperatorNames.UnaryFromToken(token.Kind);
+            }
+
+            return OperatorNames.FromToken(token.Kind);
+        }
+
+        /// <summary>
+        /// 运算符重载 / 转换运算符声明校验 + 登记：
+        /// 元数、转换目标非 void、禁接口、禁泛型、禁 extern/syscall、禁 virtual/override/abstract，最后入 <see cref="Operators"/>。
+        /// </summary>
+        private void ValidateAndRegisterOperator(
+            FunctionDeclarationSyntax syntax,
+            FunctionSymbol method,
+            NamedTypeSymbol classType,
+            ImmutableArray<ParameterSymbol> parameters,
+            TypeSymbol returnType,
+            OperatorKind kind)
+        {
+            var location = syntax.OperatorToken?.Location ?? syntax.FunctionKeyword?.Location ?? syntax.Identifier.Location;
+
+            var arity = OperatorNames.Arity(kind);
+            if (parameters.Length != arity)
+            {
+                _diagnostics.ReportError(location,
+                    $"运算符 '{OperatorNames.ToMetadataName(kind)}' 需要 {arity} 个操作数，实际 {parameters.Length} 个。");
+                return;
+            }
+
+            // 转换运算符的返回类型即目标类型；不可为 void
+            if (OperatorNames.IsConversion(kind) && returnType == TypeSymbol.Void)
+            {
+                _diagnostics.ReportError(location, "转换运算符的返回类型不能为 void。");
+                return;
+            }
+
+            if (classType.TypeKind == TypeKind.Interface)
+            {
+                _diagnostics.ReportError(location, "接口不能声明运算符重载方法。");
+                return;
+            }
+
+            if (syntax.TypeParameters?.Parameters.Length > 0 || method.TypeParameters.Length > 0)
+            {
+                _diagnostics.ReportError(location, "运算符重载方法暂不支持泛型类型参数。");
+                return;
+            }
+
+            if (method.IsExtern || method.BuiltinKind != null)
+            {
+                _diagnostics.ReportError(location, "extern/syscall 方法不能声明为运算符重载。");
+                return;
+            }
+
+            if (syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.VirtualKeyword ||
+                                          m.Kind == CoreSyntax.SyntaxKind.OverrideKeyword ||
+                                          m.Kind == CoreSyntax.SyntaxKind.AbstractKeyword))
+            {
+                _diagnostics.ReportError(location, "运算符重载方法不能是 virtual/override/abstract。");
+                return;
+            }
+
+            if (!_operators.Register(method, parameters.Select(p => (TypeSymbol?)p.Type).ToList()))
+            {
+                _diagnostics.ReportSymbolAlreadyDeclared(location, OperatorNames.ToMetadataName(kind));
+            }
+        }
+
+        private static bool IsOverrideSignatureMatch(FunctionSymbol baseMethod, FunctionSymbol overrideMethod)        {
             if (baseMethod.ReturnType != overrideMethod.ReturnType)
             {
                 return false;

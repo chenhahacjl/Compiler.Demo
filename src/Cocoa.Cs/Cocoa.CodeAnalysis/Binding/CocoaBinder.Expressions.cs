@@ -1,4 +1,4 @@
-using Cocoa.CodeAnalysis.Lowering;
+﻿using Cocoa.CodeAnalysis.Lowering;
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.CodeAnalysis.Symbols;
@@ -1744,6 +1744,27 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (boundOperator == null)
             {
+                // 内建表未命中 → 回落用户定义一元运算符（`function operator -` / `operator !` / `operator ~`）
+                var declaredKind = OperatorNames.UnaryFromToken(syntax.OperatorToken.Kind);
+                if (declaredKind.HasValue)
+                {
+                    var method = _operators.ResolveUnary(declaredKind.Value, boundOperand.Type);
+                    if (method != null)
+                    {
+                        var resultType = OperatorNames.IsComparison(declaredKind.Value)
+                            ? TypeSymbol.Boolean
+                            : method.ReturnType;
+
+                        var op = BoundUnaryOperator.ForUserDefined(
+                            BoundUnaryOperator.Translate(syntax.OperatorToken.Kind),
+                            boundOperand.Type,
+                            resultType,
+                            method);
+
+                        return new BoundUnaryExpression(syntax, op, boundOperand);
+                    }
+                }
+
                 _diagnostics.ReportUndefinedUnaryOperator(syntax.OperatorToken.Location, syntax.OperatorToken.Text, boundOperand.Type);
                 return new BoundErrorExpression(syntax);
             }
@@ -1779,13 +1800,70 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundErrorExpression(syntax);
             }
 
+            // 类类型 ==/!= 的内建结果是**合成的引用相等**（BoundBinaryOperator 的类/委托/null 分支）。
+            // C# 规则：用户定义的 op_Equality/op_Inequality 优先于预定义引用相等——此处让用户定义先行。
+            if (boundOperator != null &&
+                (boundOperator.Kind == BoundBinaryOperatorKind.ReferenceEquals ||
+                 boundOperator.Kind == BoundBinaryOperatorKind.ReferenceNotEquals))
+            {
+                if (TryBindUserDefinedBinaryOperator(syntax, boundLeft, boundRight, out var userDefinedComparison))
+                {
+                    return userDefinedComparison!;
+                }
+            }
+
             if (boundOperator == null)
             {
+                // 内建表未命中 → 回落用户定义运算符重载（`function operator +`）
+                if (TryBindUserDefinedBinaryOperator(syntax, boundLeft, boundRight, out var userDefined))
+                {
+                    return userDefined!;
+                }
+
                 _diagnostics.ReportUndefinedBinaryOperator(syntax.OperatorToken.Location, syntax.OperatorToken.Text, boundLeft.Type, boundRight.Type);
                 return new BoundErrorExpression(syntax);
             }
 
             return new BoundBinaryExpression(syntax, boundLeft, boundOperator, boundRight);
+        }
+
+        /// <summary>
+        /// 用户定义二元运算符回落：内建运算符表未命中时查 <see cref="Operators"/>。
+        /// 比较/相等类结果恒为 bool，其余取运算符方法返回类型。
+        /// </summary>
+        private bool TryBindUserDefinedBinaryOperator(
+            BinaryExpressionSyntax syntax,
+            BoundExpression left,
+            BoundExpression right,
+            out BoundExpression? result)
+        {
+            result = null;
+
+            var declaredKind = OperatorNames.FromToken(syntax.OperatorToken.Kind);
+            if (!declaredKind.HasValue)
+            {
+                return false;
+            }
+
+            var method = _operators.ResolveBinary(declaredKind.Value, left.Type, right.Type);
+            if (method == null)
+            {
+                return false;
+            }
+
+            var resultType = OperatorNames.IsComparison(declaredKind.Value)
+                ? TypeSymbol.Boolean
+                : method.ReturnType;
+
+            var op = BoundBinaryOperator.ForUserDefined(
+                BoundBinaryOperator.Translate(syntax.OperatorToken.Kind),
+                left.Type,
+                right.Type,
+                resultType,
+                method);
+
+            result = new BoundBinaryExpression(syntax, left, op, right);
+            return true;
         }
 
         /// <summary>

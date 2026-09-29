@@ -113,5 +113,12 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         /// <summary>合成环境类（6e-M22 C5）：宿主函数与其体内捕获 lambda 共享同一类（发射布局用）。</summary>
         public NamedTypeSymbol? EnvironmentClass { get; set; }
+
+        /// <summary>运算符重载种类（`function operator +` / `function implicit operator T`）——普通方法为 null。
+        /// 运算符方法强制 static，名称为 <see cref="OperatorNames.ToMetadataName"/> 合成的 <c>op_*</c>。</summary>
+        public OperatorKind? OperatorKind { get; set; }
+
+        /// <summary>语义标志：本函数是否为运算符重载方法（<see cref="OperatorKind"/> 非空）。</summary>
+        public bool IsOperator => OperatorKind.HasValue;
     }
 }

@@ -35,6 +35,27 @@ namespace Cocoa.CodeAnalysis.Binding
         public TypeSymbol RightType { get; }
         public TypeSymbol ResultType { get; }
 
+        /// <summary>用户定义运算符方法（`function operator +` 的 <c>op_Addition</c>）——内建命中时为 null。
+        /// 非空时发射层须改走静态调用（参数 = 左后右），不产内建算术指令。</summary>
+        public FunctionSymbol? UserDefinedMethod { get; private init; }
+
+        /// <summary>是否走用户定义运算符路径（发射层分派判据，等价于 <see cref="UserDefinedMethod"/> 非空）。</summary>
+        public bool IsUserDefined => UserDefinedMethod != null;
+
+        /// <summary>
+        /// 构造用户定义运算符绑定：<paramref name="kind"/> 取词法 token 翻译出的内建语义 kind，
+        /// 仅供诊断/打印保留运算符字面；发射层以 <see cref="UserDefinedMethod"/> 为准。
+        /// </summary>
+        public static BoundBinaryOperator ForUserDefined(
+            BoundBinaryOperatorKind kind,
+            TypeSymbol leftType,
+            TypeSymbol rightType,
+            TypeSymbol resultType,
+            FunctionSymbol method)
+        {
+            return new BoundBinaryOperator(kind, leftType, rightType, resultType) { UserDefinedMethod = method };
+        }
+
         private static readonly BoundBinaryOperator[] _operators = BuildOperators();
 
         /// <summary>
@@ -252,8 +273,9 @@ namespace Cocoa.CodeAnalysis.Binding
             return null;
         }
 
-        /// <summary>词法 token → 语义二元 kind（HIR 净化翻译门，供 <see cref="Bind(SyntaxKind, TypeSymbol, TypeSymbol)"/>）。</summary>
-        private static BoundBinaryOperatorKind Translate(SyntaxKind syntaxKind)
+        /// <summary>词法 token → 语义二元 kind（HIR 净化翻译门，供 <see cref="Bind(SyntaxKind, TypeSymbol, TypeSymbol)"/>；
+        /// 用户定义运算符回落亦复用它保留运算符字面）。</summary>
+        public static BoundBinaryOperatorKind Translate(SyntaxKind syntaxKind)
         {
             return syntaxKind switch
             {

@@ -38,5 +38,11 @@ namespace Cocoa.CodeAnalysis.Binding
 
         /// <summary>合成构造器体（元组 `__Tuple_N`）：源内无 Declaration，携入 BindProgram 并入函数体清单。</summary>
         public ImmutableDictionary<FunctionSymbol, BoundBlockStatement> TupleCtorBodies { get; init; } = ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Empty;
+
+        /// <summary>
+        /// 运算符重载查找表——跨 binder 实例共享：声明期 binder 填入，函数体绑定期（另一个 binder 实例）查询。
+        /// 放在 global scope 而非 binder 实例上，是因为体绑定遍与声明遍不共用 <see cref="Binding.CocoaBinder"/> 实例。
+        /// </summary>
+        public Binding.OperatorRegistry Operators { get; init; } = new Binding.OperatorRegistry();
     }
 }

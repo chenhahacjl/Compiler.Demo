@@ -795,6 +795,13 @@ namespace Cocoa.CodeGen.Managed.Writer
 
         private void EmitUnaryExpression(IlAssembler il, BoundUnaryExpression node)
         {
+            // 用户定义一元运算符重载（`function operator -` / `operator !` / `operator ~`）：静态调用
+            if (node.Op.IsUserDefined)
+            {
+                EmitUserDefinedOperatorCall(il, node.Op.UserDefinedMethod!, node.Operand);
+                return;
+            }
+
             EmitExpression(il, node.Operand);
 
             if (node.Op.Kind == BoundUnaryOperatorKind.Identity)
@@ -820,8 +827,42 @@ namespace Cocoa.CodeGen.Managed.Writer
             }
         }
 
+        /// <summary>
+        /// 用户定义运算符方法的 IL 发射：按参数顺序压栈后 <c>call</c>。
+        /// 目标优先本编译单元 <see cref="_methods"/> 的 MethodDef，回退 cod 库的 MemberRef。
+        /// 运算符方法恒 static，故无 this/接收者与 struct 取址处理。
+        /// </summary>
+        private void EmitUserDefinedOperatorCall(IlAssembler il, FunctionSymbol method, params BoundExpression[] arguments)
+        {
+            foreach (var argument in arguments)
+            {
+                EmitExpression(il, argument);
+            }
+
+            if (_methods.TryGetValue(method, out var methodDefinition))
+            {
+                il.Emit(IlOpCodeTable.Get("Call"), methodDefinition);
+                return;
+            }
+
+            if (_codAssemblies.TryGetValue(method, out var codAssembly))
+            {
+                il.Emit(IlOpCodeTable.Get("Call"), CodMethodRef(method, codAssembly));
+                return;
+            }
+
+            throw new System.Exception($"运算符方法 '{method.ContainingClass?.Name}.{method.Name}' 无发射目标（未登记 MethodDef 且非 cod 库成员）。");
+        }
+
         private void EmitBinaryExpression(IlAssembler il, BoundBinaryExpression node)
         {
+            // 用户定义运算符重载（`function operator +`）：改走静态调用，不产内建算术指令
+            if (node.Op.IsUserDefined)
+            {
+                EmitUserDefinedOperatorCall(il, node.Op.UserDefinedMethod!, node.Left, node.Right);
+                return;
+            }
+
             if (node.Op.Kind == BoundBinaryOperatorKind.Addition)
             {
                 if (node.Left.Type == TypeSymbol.String && node.Right.Type == TypeSymbol.String)

@@ -108,6 +108,12 @@ namespace Cocoa.CodeGen.Interpreter
 
         private object? EvaluateUnaryExpression(BoundUnaryExpression unary)
         {
+            // 用户定义一元运算符重载：静态调用（单参 = 操作数）
+            if (unary.Op.IsUserDefined)
+            {
+                return EvaluateUserDefinedOperator(unary.Syntax, unary.Op.UserDefinedMethod!, unary.Operand);
+            }
+
             var operand = EvaluateExpression(unary.Operand);
 
             Debug.Assert(operand != null);
@@ -117,8 +123,21 @@ namespace Cocoa.CodeGen.Interpreter
             return PrimitiveEval.Unary(unary.Op.Kind, unary.Op.OperandType, unary.Op.ResultType, operand);
         }
 
+        /// <summary>用户定义运算符求值：包装为等价 <see cref="BoundCallExpression"/> 复用调用路径
+        /// （含静态类 .cctor 首次触碰、闭包环境压栈、frame 压栈）。</summary>
+        private object? EvaluateUserDefinedOperator(Cocoa.CodeAnalysis.Syntax.SyntaxNode syntax, FunctionSymbol method, params BoundExpression[] arguments)
+        {
+            return EvaluateCallExpression(new BoundCallExpression(syntax, method, ImmutableArray.Create(arguments)));
+        }
+
         private object? EvaluateBinaryExpression(BoundBinaryExpression binary)
         {
+            // 用户定义运算符重载：改走静态调用（复用调用表达式路径，参数 = 左后右）
+            if (binary.Op.IsUserDefined)
+            {
+                return EvaluateUserDefinedOperator(binary.Syntax, binary.Op.UserDefinedMethod!, binary.Left, binary.Right);
+            }
+
             var left = EvaluateExpression(binary.Left);
             var right = EvaluateExpression(binary.Right);
 
