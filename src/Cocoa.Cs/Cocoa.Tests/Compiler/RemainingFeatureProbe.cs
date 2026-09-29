@@ -401,6 +401,39 @@ namespace Cocoa.Tests.Compiler
         }
 
         [Fact]
+        public void ArrayLoad_BoolArrayFieldElement_EmitsLdelemU1_NotRef()
+        {
+            // C 类线索（阶段 8 自举经 ilverify 暴露 Binder::GetClassMethodIsStatic）：
+            // B1 中 `return _classMethodStatic[_classMethodOffsets[index] + methodIndex]`
+            // 发出 ldelem.ref，而字段声明是 `bool[]`、方法返回 bool。
+            // 发射器分派本身正确（Boolean -> Ldelem_U1），且 IsReferenceElement(Boolean)
+            // 明确返回 false——所以要么元素类型被推成了非基元（object/Any），
+            // 要么 bool[] 的数组类型映射有别。本用例直接验 bool[] 字段索引。
+            var result = RunMain(
+                "class Holder {" + Nl +
+                "    private field _flags: bool[]" + Nl +
+                "    public function Init() {" + Nl +
+                "        _flags = new bool[8]" + Nl +
+                "    }" + Nl +
+                "    public function At(index: i32): bool {" + Nl +
+                "        return _flags[index]" + Nl +
+                "    }" + Nl +
+                "    public function Set(index: i32, v: bool) {" + Nl +
+                "        _flags[index] = v" + Nl +
+                "    }" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var h = new Holder()" + Nl +
+                "    h.Init()" + Nl +
+                "    h.Set(3, true)" + Nl +
+                "    if h.At(3) { return 1 }" + Nl +
+                "    return 0" + Nl +
+                "}", "BoolArrField2");
+
+            Assert.Equal(1, result);
+        }
+
+        [Fact]
         public void LocalSig_LetInsideLoopInClassMethod_KeepsStringType()
         {
             // B 类根因（阶段 8 自举经 ilverify + metadata dump 定位）：
