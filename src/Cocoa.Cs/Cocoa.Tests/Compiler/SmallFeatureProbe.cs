@@ -138,12 +138,52 @@ namespace Cocoa.Tests.Compiler
         // checked / unchecked
         // ------------------------------------------------------------------
 
-        [Fact(Skip = "checked 溢出发射待修。已确认：ovf 编码已补入 IlOpCode 表并与 CLR 逐条锁定（add.ovf=0xD6 等）；"
-                        + "IL 字节与 fat 方法头（maxStack/codeSize）均核对无误；checked 块内不含算术时程序有效——"
-                        + "即算术指令是唯一触发点，但产出程序仍被判 InvalidProgramException，问题落在算术指令与既有着色/EH 段交互上，尚未定位。")]
+        [Fact]
         public void Checked_OverflowThrows()
         {
-            // 目标行为：checked { var a: i32 = 2147483647; var b = a + 1 } 抛 OverflowException
+            // checked { var a: i32 = 2147483647; var b = a + 1 } → OverflowException
+            var path = Path.Combine(Path.GetTempPath(), "cocoa-smallprobe", "CheckedOvf.dll");
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            var compilation = Compilation.Create(SyntaxTree.Parse(
+                "function Main(args: string[]): i32 {" + Nl +
+                "    checked {" + Nl +
+                "        var a: i32 = 2147483647" + Nl +
+                "        var b = a + 1" + Nl +
+                "        return b" + Nl +
+                "    }" + Nl +
+                "}"));
+
+            var emit = compilation.Emit("Main", References, path, Cocoa.Targeting.IlTarget.Parse("net9.0"), emitLibrary: true);
+            Assert.Empty(string.Join("\n", emit.Where(d => d.IsError)));
+
+            var asm = System.Reflection.Assembly.LoadFile(path);
+            string observed;
+            try
+            {
+                observed = "returned " + asm.EntryPoint!.Invoke(null, new object[] { new[] { "x" } });
+            }
+            catch (System.Reflection.TargetInvocationException e)
+            {
+                observed = "threw " + e.InnerException!.GetType().Name;
+            }
+
+            Assert.Equal("threw OverflowException", observed);
+        }
+
+        [Fact]
+        public void Unchecked_StillWrapsAround()
+        {
+            // unchecked 保持回绕语义（不得被 checked 的 ovf 影响）
+            var result = RunMain(
+                "function Main(args: string[]): i32 {" + Nl +
+                "    unchecked {" + Nl +
+                "        var a: i32 = 2147483647" + Nl +
+                "        var b = a + 1" + Nl +
+                "        return b" + Nl +
+                "    }" + Nl +
+                "}", "UncheckedWrap");
+
+            Assert.Equal(-2147483648, result);
         }        // ------------------------------------------------------------------
         // typeof / sizeof
         // ------------------------------------------------------------------

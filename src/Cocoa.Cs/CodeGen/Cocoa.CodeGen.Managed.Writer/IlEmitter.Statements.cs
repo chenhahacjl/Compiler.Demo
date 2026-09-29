@@ -1160,31 +1160,20 @@ namespace Cocoa.CodeGen.Managed.Writer
             // 6e-M21 Phase 4：无符号整数走 _un 变体（浮点保持有符号比较指令）
             var isUnsigned = node.Type.IsInteger && !node.Type.IsSigned && !node.Type.IsPlaceholder128;
 
-            // checked 上下文：整数算术需溢出检查变体（add.ovf/sub.ovf/mul.ovf，编码已补入 IlOpCode 表
-            // 并由 IlOpCodeTableTests 与 CLR 逐条锁定）。但当前发出的程序被 CLR 判为
-            // InvalidProgramException——IL 字节（FE D6）与 fat 方法头（maxStack=2 / codeSize 与实际一致）
-            // 均已核对无误，且 checked 块内不含算术时程序有效，故问题落在算术指令与既有着色/EH 段的交互上，
-            // 尚未定位。为避免让 checked 静默退化成无检查算术，此处明确报错而非发 Add。
-            if (_checkedArithmetic && !node.Left.Type.IsFloat && !node.Right.Type.IsFloat &&
-                node.Op.Kind is BoundBinaryOperatorKind.Addition
-                    or BoundBinaryOperatorKind.Subtraction
-                    or BoundBinaryOperatorKind.Multiplication)
-            {
-                throw new System.Exception(
-                    $"checked 上下文的整数算术发射待修：ovf 编码已就位，但产出程序被判 InvalidProgramException" +
-                    $"（{node.Op.Kind} @ {node.Left.Type.Name}）。");
-            }
+            // checked 上下文：整数算术改用溢出检查变体（add.ovf/sub.ovf/mul.ovf，溢出抛 OverflowException）。
+            // 浮点无 ovf 变体，仍用无检查指令。
+            var useOvf = _checkedArithmetic && !node.Left.Type.IsFloat && !node.Right.Type.IsFloat;
 
             switch (node.Op.Kind)
             {
                 case BoundBinaryOperatorKind.Addition:
-                    il.Emit(IlOpCodeTable.Get("Add"));
+                    il.Emit(IlOpCodeTable.Get(useOvf ? "Add_Ovf" : "Add"));
                     break;
                 case BoundBinaryOperatorKind.Subtraction:
-                    il.Emit(IlOpCodeTable.Get("Sub"));
+                    il.Emit(IlOpCodeTable.Get(useOvf ? "Sub_Ovf" : "Sub"));
                     break;
                 case BoundBinaryOperatorKind.Multiplication:
-                    il.Emit(IlOpCodeTable.Get("Mul"));
+                    il.Emit(IlOpCodeTable.Get(useOvf ? "Mul_Ovf" : "Mul"));
                     break;
                 case BoundBinaryOperatorKind.Division:
                     il.Emit(IlOpCodeTable.Get(isUnsigned ? "Div_Un" : "Div"));

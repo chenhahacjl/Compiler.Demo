@@ -266,12 +266,12 @@ namespace Cocoa.CodeGen.Managed.Writer
                 case 0x58: // Add
                 case 0x59: // Sub
                 case 0x5A: // Mul
-                case 0xFED6: // Add_Ovf（两字节，checked 上下文）
-                case 0xFEDA: // Sub_Ovf
-                case 0xFED8: // Mul_Ovf
-                case 0xFED7: // Add_Ovf_Un
-                case 0xFEDB: // Sub_Ovf_Un
-                case 0xFED9: // Mul_Ovf_Un
+                case 0xD6: // Add_Ovf（checked 上下文，单字节）
+                case 0xD7: // Add_Ovf_Un
+                case 0xD8: // Mul_Ovf
+                case 0xD9: // Mul_Ovf_Un
+                case 0xDA: // Sub_Ovf
+                case 0xDB: // Sub_Ovf_Un
                 case 0x5B: // Div
                 case 0x5D: // Rem
                 case 0x5F: // And

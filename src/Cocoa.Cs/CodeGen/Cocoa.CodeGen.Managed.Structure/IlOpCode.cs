@@ -132,14 +132,15 @@ namespace Cocoa.CodeGen.Managed.Structure
             Define("Not", 0x66, IlOperandType.InlineNone);
 
             // 溢出检查算术（checked 上下文；_Un 为无符号变体）。
-            // 字节取自 CLR 自身 System.Reflection.Emit.OpCodes（add.ovf=0xD6 … sub.ovf.un=0xDB），
-            // 按本仓两字节约定写成 0xFE00|byte；由 IlOpCodeTableTests 逐条与 CLR 比对锁定。
-            Define("Add_Ovf", 0xFED6, IlOperandType.InlineNone);
-            Define("Add_Ovf_Un", 0xFED7, IlOperandType.InlineNone);
-            Define("Mul_Ovf", 0xFED8, IlOperandType.InlineNone);
-            Define("Mul_Ovf_Un", 0xFED9, IlOperandType.InlineNone);
-            Define("Sub_Ovf", 0xFEDA, IlOperandType.InlineNone);
-            Define("Sub_Ovf_Un", 0xFEDB, IlOperandType.InlineNone);
+            // 注意：add/sub/mul 的 .ovf 族是**单字节**编码（0xD6–0xDB），不是 0xFE 前缀的两字节形式——
+            // 误写成 0xFED6 会产出 CLR 判为 InvalidProgramException 的非法程序（已实测确认）。
+            // 字节取自 CLR 自身 System.Reflection.Emit.OpCodes，由 IlOpCodeTableTests 逐条锁定。
+            Define("Add_Ovf", 0xD6, IlOperandType.InlineNone);
+            Define("Add_Ovf_Un", 0xD7, IlOperandType.InlineNone);
+            Define("Mul_Ovf", 0xD8, IlOperandType.InlineNone);
+            Define("Mul_Ovf_Un", 0xD9, IlOperandType.InlineNone);
+            Define("Sub_Ovf", 0xDA, IlOperandType.InlineNone);
+            Define("Sub_Ovf_Un", 0xDB, IlOperandType.InlineNone);
 
             // 转换
             Define("Conv_I1", 0x67, IlOperandType.InlineNone);

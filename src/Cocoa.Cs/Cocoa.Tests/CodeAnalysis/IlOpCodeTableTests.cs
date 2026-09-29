@@ -92,22 +92,21 @@ namespace Cocoa.Tests.CodeAnalysis
 
             _out.WriteLine($"{clrName,-12} 本仓={ours} 0x{actual:X4} CLR=0x{expected:X4}");
 
-            // 本仓两字节约定把 0xFE 前缀编进 Value（0xFE00|byte）；
-            // CLR 的 OpCode.Value 只存字节、前缀由 Size 隐含。故比对低字节 + 断言本仓为两字节。
-            Assert.True((expected & 0xFF) == (actual & 0xFF),
+            // 逐字节比对 CLR 权威取值；ovf 族是单字节（0xD6–0xDB），不套本仓两字节约定
+            Assert.True(expected == actual,
                 $"{clrName} 编码不一致：本仓 0x{actual:X4}，CLR 0x{expected:X4}");
-            Assert.Equal(2, IlOpCodeTable.Get(ours).Size);
-            Assert.True(IlOpCodeTable.Get(ours).IsTwoByte, $"{ours} 应标记为两字节指令");
+            Assert.False(IlOpCodeTable.Get(ours).IsTwoByte, $"{ours} 应为单字节指令（0xD6–0xDB 段）");
+            Assert.Equal(1, IlOpCodeTable.Get(ours).Size);
         }
 
-        [Fact(Skip = "checked 溢出发射的排查结论记录（当前 IL 端对 checked 整数算术报明确诊断，故不产生 ovf 代码可转储）。"
-                        + "已查明：① ovf 编码已补入 IlOpCode 表并与 CLR 逐条锁定（add.ovf=0xD6/sub.ovf=0xDA/mul.ovf=0xD8）；"
-                        + "② 实发 IL 字节为 FE D6（= add.ovf），fat 方法头 maxStack=2、codeSize 与实际长度一致；"
-                        + "③ checked 块内不含算术时程序有效——算术指令是唯一触发点；"
-                        + "④ 产出程序被判 InvalidProgramException，问题落在算术指令与既有着色/EH 段的交互上，尚未定位。")]
-        public void GeneratedAssembly_EmitsAddOvf_Bytes()
+        /// <summary>
+        /// checked 上下文端到端：IL 里必须出现**单字节** 0xD6（add.ovf），
+        /// 且不得出现 0xFE 0xD6 的两字节形式——那个编码未分配，CLR 会判 InvalidProgramException。
+        /// 本例是该坑的回归护栏：曾把 ovf 误按本仓两字节约定写成 0xFED6。
+        /// </summary>
+        [Fact]
+        public void GeneratedAssembly_CheckedContext_EmitsSingleByteAddOvf()
         {
-            // 从我们生成的 DLL 里读回 Main 的 IL 字节，确认 checked 上下文实际发出了什么
             var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "cocoa-ovf-dump", "Ovf.dll");
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
 
@@ -120,84 +119,21 @@ namespace Cocoa.Tests.CodeAnalysis
                 "    }\n" +
                 "}\n"));
 
-            var diagnostics = compilation.Emit(
-                "Main",
-                new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location },
-                path,
-                Cocoa.Targeting.IlTarget.Parse("net9.0"),
-                emitLibrary: true);
-            Assert.Empty(string.Join("\n", diagnostics.Where(d => d.IsError)));
-
-            var asm = System.Reflection.Assembly.LoadFile(path);
-            var main = asm.EntryPoint!;
-            var body = main.GetMethodBody()!;
-            var bytes = body.GetILAsByteArray()!;
-            _out.WriteLine("Main IL: " + string.Join(" ", bytes.Select(b => b.ToString("X2"))));
-            _out.WriteLine($"MaxStack={body.MaxStackSize} InitLocals={body.InitLocals}");
-
-            Assert.Contains((byte)0xD6, bytes);
-
-            string observed;
-            try
-            {
-                observed = "returned " + main.Invoke(null, new object[] { new[] { "x" } });
-            }
-            catch (System.Reflection.TargetInvocationException e)
-            {
-                observed = "threw " + e.InnerException!.GetType().Name + ": " + e.InnerException.Message;
-            }
-
-            _out.WriteLine("invoke: " + observed);
-
-            // 读原始方法头：在文件里定位 IL 首字节，回看前 12 字节判定 tiny/fat 及 CodeSize/MaxStack
-            var needle = bytes;
-            var file = System.IO.File.ReadAllBytes(path);
-            var found = -1;
-            for (var i = 0; i + needle.Length <= file.Length; i++)
-            {
-                var match = true;
-                for (var j = 0; j < needle.Length; j++)
-                {
-                    if (file[i + j] != needle[j]) { match = false; break; }
-                }
-
-                if (match) { found = i; break; }
-            }
-
-            Assert.True(found > 12, "未在 PE 中定位到 IL 字节");
-            var header = file.Skip(found - 12).Take(12).ToArray();
-            _out.WriteLine("header: " + string.Join(" ", header.Select(b => b.ToString("X2"))));
-            var flags = header[0] | (header[1] << 8);
-            var maxStack = (header[2] | (header[3] << 8)) >> 12;
-            var codeSize = (header[2] | (header[3] << 8) | (header[4] << 24)) & 0x00FFFFFF;
-            _out.WriteLine($"decoded: fat={(flags & 0x3) == 0x3} moreSects={(flags & 0x8) != 0} initLocals={(flags & 0x10) != 0} maxStack={maxStack} codeSize={codeSize} actualIlLen={bytes.Length}");
-        }
-
-        [Theory]
-        [InlineData("checked")]
-        [InlineData("unchecked")]
-        public void CheckedBlock_WithoutArithmetic_IsValid(string keyword)
-        {
-            // 隔离：checked 块内不含算术时程序是否有效（判定 ovf 是否为唯一触发点）
-            var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "cocoa-ovf-dump", "NoArith" + keyword + ".dll");
-            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
-
-            var compilation = Cocoa.CodeAnalysis.Compilation.Create(Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(
-                "function Main(args: string[]): i32 {\n" +
-                "    " + keyword + " {\n" +
-                "        var a: i32 = 5\n" +
-                "        return a\n" +
-                "    }\n" +
-                "}\n"));
-
             var diagnostics = compilation.Emit("Main",
                 new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location },
                 path, Cocoa.Targeting.IlTarget.Parse("net9.0"), emitLibrary: true);
             Assert.Empty(string.Join("\n", diagnostics.Where(d => d.IsError)));
 
-            var asm = System.Reflection.Assembly.LoadFile(path);
-            var observed = "returned " + asm.EntryPoint!.Invoke(null, new object[] { new[] { "x" } });
-            Assert.Equal("returned 5", observed);
+            var bytes = System.Reflection.Assembly.LoadFile(path).EntryPoint!.GetMethodBody()!.GetILAsByteArray()!;
+            _out.WriteLine("Main IL: " + string.Join(" ", bytes.Select(b => b.ToString("X2"))));
+
+            Assert.Contains((byte)0xD6, bytes);
+
+            for (var i = 0; i + 1 < bytes.Length; i++)
+            {
+                Assert.False(bytes[i] == 0xFE && bytes[i + 1] == 0xD6,
+                    "ovf 不得写成两字节形式（FE D6）——该编码非法，CLR 判 InvalidProgramException");
+            }
         }
     }
 }
