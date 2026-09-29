@@ -783,28 +783,15 @@ namespace Cocoa.CodeGen.Managed.Writer
                     localTypes.Add(ToIlType(variableDeclaration.Variable.Type));
                     break;
                 case BoundExpressionStatement expressionStatement:
-                    // out var 内联声明变量（无显式声明语句）：从调用实参的 byref 变量收集局部
-                    if (expressionStatement.Expression is BoundCallExpression call)
-                    {
-                        foreach (var argument in call.Arguments)
-                        {
-                            if (argument is BoundByRefArgument byRefArgument &&
-                                byRefArgument.Expression is BoundVariableExpression byRefVariable &&
-                                !_locals.ContainsKey(byRefVariable.Variable))
-                            {
-                                _locals.Add(byRefVariable.Variable, localTypes.Count);
-                                localTypes.Add(ToIlType(byRefVariable.Variable.Type));
-                            }
-                        }
-                    }
-
+                    // out var 内联声明变量（无显式声明语句）：从任意表达式位置的 byref 变量收集局部
+                    CollectExpressionLocals(expressionStatement.Expression, localTypes);
                     break;
                 case BoundSequencePointStatement sequencePoint:
                     CollectLocals(sequencePoint.Statement, localTypes);
                     break;
                 case BoundIfStatement ifStatement:
-                    // 条件里可能含声明模式（`if o is A a`），模式变量须占槽
-                    CollectPatternLocals(ifStatement.Condition, localTypes);
+                    // 条件里可能含声明模式（`if o is A a`）与 out var（`if F(out r)`），两者都需占槽
+                    CollectExpressionLocals(ifStatement.Condition, localTypes);
                     CollectLocals(ifStatement.ThenStatement, localTypes);
                     if (ifStatement.ElseStatement != null)
                     {
@@ -813,18 +800,18 @@ namespace Cocoa.CodeGen.Managed.Writer
 
                     break;
                 case BoundReturnStatement returnStatement:
-                    CollectPatternLocals(returnStatement.Expression, localTypes);
+                    CollectExpressionLocals(returnStatement.Expression, localTypes);
                     break;
                 case BoundWhileStatement whileStatement:
-                    CollectPatternLocals(whileStatement.Condition, localTypes);
+                    CollectExpressionLocals(whileStatement.Condition, localTypes);
                     CollectLocals(whileStatement.Body, localTypes);
                     break;
                 case BoundDoWhileStatement doWhileStatement:
-                    CollectPatternLocals(doWhileStatement.Condition, localTypes);
+                    CollectExpressionLocals(doWhileStatement.Condition, localTypes);
                     CollectLocals(doWhileStatement.Body, localTypes);
                     break;
                 case BoundConditionalGotoStatement conditionalGoto:
-                    CollectPatternLocals(conditionalGoto.Condition, localTypes);
+                    CollectExpressionLocals(conditionalGoto.Condition, localTypes);
                     break;
                 case BoundTryStatement tryStatement:
                     CollectLocals(tryStatement.TryBlock, localTypes);
@@ -845,11 +832,11 @@ namespace Cocoa.CodeGen.Managed.Writer
         }
 
         /// <summary>
-        /// 为表达式子树中出现的**声明模式变量**（`is T v`）登记局部槽。
-        /// 声明模式是表达式内的赋值而非语句内的 <see cref="BoundVariableDeclaration"/>，
+        /// 为表达式子树中出现的**声明模式变量**（<c>is T v</c>）与 **out var 实参**登记局部槽。
+        /// 二者都是表达式内的引入（而非语句内的 <see cref="BoundVariableDeclaration"/>），
         /// 故 <see cref="CollectLocals"/> 的语句遍历覆盖不到，必须显式下探表达式。
         /// </summary>
-        private void CollectPatternLocals(BoundExpression? expression, List<IlType> localTypes)
+        private void CollectExpressionLocals(BoundExpression? expression, List<IlType> localTypes)
         {
             switch (expression)
             {
@@ -857,52 +844,80 @@ namespace Cocoa.CodeGen.Managed.Writer
                     break;
 
                 case BoundDeclarationPattern declaration:
-                    if (!_locals.ContainsKey(declaration.Variable))
+                    DeclareLocal(declaration.Variable, localTypes);
+                    CollectExpressionLocals(declaration.Expression, localTypes);
+                    break;
+
+                case BoundByRefArgument byRef:
+                    // out var：内联声明的变量没有独立声明语句，由此处按需占槽
+                    if (byRef.Expression is BoundVariableExpression byRefVariable)
                     {
-                        _locals.Add(declaration.Variable, localTypes.Count);
-                        localTypes.Add(ToIlType(declaration.Variable.Type));
+                        DeclareLocal(byRefVariable.Variable, localTypes);
                     }
 
-                    CollectPatternLocals(declaration.Expression, localTypes);
+                    CollectExpressionLocals(byRef.Expression, localTypes);
                     break;
 
                 case BoundLogicalPattern logical:
-                    CollectPatternLocals(logical.Left, localTypes);
-                    CollectPatternLocals(logical.Right, localTypes);
-                    CollectPatternLocals(logical.Operand, localTypes);
+                    CollectExpressionLocals(logical.Left, localTypes);
+                    CollectExpressionLocals(logical.Right, localTypes);
+                    CollectExpressionLocals(logical.Operand, localTypes);
                     break;
 
                 case BoundPropertyPattern property:
-                    CollectPatternLocals(property.Expression, localTypes);
+                    CollectExpressionLocals(property.Expression, localTypes);
+                    foreach (var sub in property.Subpatterns)
+                    {
+                        CollectExpressionLocals(sub.Pattern, localTypes);
+                    }
+
                     break;
 
                 case BoundRelationalPattern relational:
-                    CollectPatternLocals(relational.Expression, localTypes);
-                    CollectPatternLocals(relational.Value, localTypes);
+                    CollectExpressionLocals(relational.Expression, localTypes);
+                    CollectExpressionLocals(relational.Value, localTypes);
                     break;
 
                 case BoundBinaryExpression binary:
-                    CollectPatternLocals(binary.Left, localTypes);
-                    CollectPatternLocals(binary.Right, localTypes);
+                    CollectExpressionLocals(binary.Left, localTypes);
+                    CollectExpressionLocals(binary.Right, localTypes);
                     break;
 
                 case BoundUnaryExpression unary:
-                    CollectPatternLocals(unary.Operand, localTypes);
+                    CollectExpressionLocals(unary.Operand, localTypes);
+                    break;
+
+                case BoundMemberCallExpression memberCall:
+                    CollectExpressionLocals(memberCall.Expression, localTypes);
+                    foreach (var argument in memberCall.Arguments)
+                    {
+                        CollectExpressionLocals(argument, localTypes);
+                    }
+
                     break;
 
                 case BoundCallExpression call:
                     foreach (var argument in call.Arguments)
                     {
-                        CollectPatternLocals(argument, localTypes);
+                        CollectExpressionLocals(argument, localTypes);
                     }
 
                     break;
 
                 case BoundConditionalExpression conditional:
-                    CollectPatternLocals(conditional.Condition, localTypes);
-                    CollectPatternLocals(conditional.WhenTrue, localTypes);
-                    CollectPatternLocals(conditional.WhenFalse, localTypes);
+                    CollectExpressionLocals(conditional.Condition, localTypes);
+                    CollectExpressionLocals(conditional.WhenTrue, localTypes);
+                    CollectExpressionLocals(conditional.WhenFalse, localTypes);
                     break;
+            }
+        }
+
+        private void DeclareLocal(VariableSymbol variable, List<IlType> localTypes)
+        {
+            if (!_locals.ContainsKey(variable))
+            {
+                _locals.Add(variable, localTypes.Count);
+                localTypes.Add(ToIlType(variable.Type));
             }
         }
 

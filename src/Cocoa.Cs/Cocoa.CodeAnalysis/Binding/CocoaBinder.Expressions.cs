@@ -1422,7 +1422,9 @@ namespace Cocoa.CodeAnalysis.Binding
                     var isBase = boundExpression is BoundBaseExpression;
 
                     var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
-                    foreach (var reorderedArgument in ReorderCallArguments(syntax, syntax.Arguments, boundArguments.ToImmutable(), method.Parameters, (loc, val, p) => BindConversion(loc, val, p.Type)))
+                    // 走 BindArgumentConversion（而非裸 BindConversion）：成员调用此前绕过了
+                    // byref 形参对应校验与 out var 内联声明，params 展开也只在此路径实现
+                    foreach (var reorderedArgument in ReorderCallArguments(syntax, syntax.Arguments, boundArguments.ToImmutable(), method.Parameters, BindArgumentConversion))
                     {
                         arguments.Add(reorderedArgument);
                     }
@@ -2277,6 +2279,33 @@ namespace Cocoa.CodeAnalysis.Binding
             for (var i = 0; i < parameters.Length; i++)
             {
                 var parameter = parameters[i];
+
+                // params 形参：其后全部位实参折叠为数组（与顶层/命名空间函数路径同构）
+                if (parameter.IsParams)
+                {
+                    var elementType = parameter.Type.ElementType ?? TypeSymbol.Int32;
+                    var items = ImmutableArray.CreateBuilder<BoundExpression>();
+
+                    if (hasNamedArgument && namedValues.TryGetValue(parameter.Name, out var paramsNamedValue))
+                    {
+                        items.Add(BindConversion(paramsNamedValue.Syntax?.Location ?? syntax.Location, paramsNamedValue, elementType));
+                    }
+
+                    while (positionalIndex < positionalValues.Count)
+                    {
+                        var location = positionalValues[positionalIndex].Syntax?.Location ?? syntax.Location;
+                        items.Add(BindConversion(location, positionalValues[positionalIndex], elementType));
+                        positionalIndex++;
+                    }
+
+                    reordered.Add(new BoundArrayCreationExpression(
+                        syntax,
+                        parameter.Type,
+                        new BoundLiteralExpression(syntax, items.Count, TypeSymbol.Int32),
+                        items.ToImmutable()));
+                    continue;
+                }
+
                 if (hasNamedArgument && namedValues.TryGetValue(parameter.Name, out var namedValue))
                 {
                     reordered.Add(convert(namedValue.Syntax?.Location ?? syntax.Location, namedValue, parameter));
