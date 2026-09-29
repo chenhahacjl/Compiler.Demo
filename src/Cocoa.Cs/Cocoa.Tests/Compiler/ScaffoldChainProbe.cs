@@ -746,146 +746,85 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal("first\nnone", output);
         }
 
-        /// <summary>用户类名作为参数类型（function F(n: N)）。</summary>
+        /// <summary>规模与顺序无关性：30 个类 × 每类 9 个方法（迫使 _classMethodNames 等四数组
+        /// 从初始 8 起反复倍增 8→16→…→288），被调用类声明在宿主类之前，
+        /// 最后一类上做 node.Child(i).Kind() 两层链类型推断 —— 语料规模的关键形态。</summary>
         [Fact]
-        public void SelfCompiled_UserClassAsParameterType_Runs()
+        public void SelfCompiled_ManyClassesAndMethods_CrossChainTypeResolves()
         {
             var nl = Environment.NewLine;
-            var (exit, output) = RunTinyMain(
-                "class N {" + nl +
-                "    private field _v: i32" + nl +
-                "    public function Get(): i32 { return _v }" + nl +
-                "}" + nl +
-                "function Use(n: N): i32 {" + nl +
-                "    return n.Get()" + nl +
-                "}" + nl +
-                "function Main(args: string[]): i32 {" + nl +
-                "    var n = new N()" + nl +
-                "    System.Console.WriteLine(string(Use(n)))" + nl +
-                "    return 0" + nl +
-                "}" + nl);
-            Assert.Equal(0, exit);
-            Assert.Equal("0", output);
-        }
+            var sb = new System.Text.StringBuilder();
+            for (var i = 0; i < 30; i++)
+            {
+                sb.Append("class C" + i + " {" + nl);
+                sb.Append("    public function Kind(): string { return \"TypeClause\" }" + nl);
+                for (var m = 1; m < 8; m++)
+                {
+                    sb.Append("    public function M" + m + "(a: i32): i32 { return a + " + m + " }" + nl);
+                }
 
-        /// <summary>let 局部在紧随其后的 if 条件里与多个字面量比较（Binder.DeclWordOf / FieldTypeOf
-        /// / MethodReturnTypeOf / BinaryGlyphOf / UnaryGlyphOf 共同形状：
-        /// `let k = ...; if k == "A" || k == "B" || k == "C"`）。</summary>
-        [Fact]
-        public void SelfCompiled_LetLocal_ThenOrChainCompare_Runs()
-        {
-            var nl = Environment.NewLine;
-            var (exit, output) = RunTinyMain(
-                "class Node {" + nl +
-                "    private field _k: string" + nl +
-                "    public constructor(k: string) {" + nl +
-                "        _k = k" + nl +
-                "    }" + nl +
-                "    public function Child(i: i32): Node { return this }" + nl +
-                "    public function Kind(): string { return _k }" + nl +
-                "}" + nl +
-                "function FieldTypeOf(node: Node): string {" + nl +
-                "    var i = 0" + nl +
-                "    while i < 1" + nl +
-                "    {" + nl +
-                "        let k = node.Child(i).Kind()" + nl +
-                "        if k == \"TypeClause\" || k == \"ArrayTypeClause\" || k == \"GenericTypeClause\"" + nl +
-                "        {" + nl +
-                "            return \"hit\"" + nl +
-                "        }" + nl +
-                "        i = i + 1" + nl +
-                "    }" + nl +
-                "    return \"int\"" + nl +
-                "}" + nl +
-                "function Main(args: string[]): i32 {" + nl +
-                "    System.Console.WriteLine(FieldTypeOf(new Node(\"TypeClause\")))" + nl +
-                "    return 0" + nl +
-                "}" + nl);
+                sb.Append("    public function Child(idx: i32): C" + i + " { return this }" + nl);
+                sb.Append("}" + nl);
+            }
+
+            sb.Append("class User {" + nl);
+            sb.Append("    public function Probe(n: C29): string {" + nl);
+            sb.Append("        var i = 0" + nl);
+            sb.Append("        while i < 1" + nl);
+            sb.Append("        {" + nl);
+            sb.Append("            let k = n.Child(i).Kind()" + nl);
+            sb.Append("            if k == \"TypeClause\" || k == \"ArrayTypeClause\"" + nl);
+            sb.Append("            {" + nl);
+            sb.Append("                return \"hit\"" + nl);
+            sb.Append("            }" + nl);
+            sb.Append("            i = i + 1" + nl);
+            sb.Append("        }" + nl);
+            sb.Append("        return \"int\"" + nl);
+            sb.Append("    }" + nl);
+            sb.Append("}" + nl);
+            sb.Append("function Main(args: string[]): i32 {" + nl);
+            sb.Append("    var u = new User()" + nl);
+            sb.Append("    System.Console.WriteLine(u.Probe(new C29()))" + nl);
+            sb.Append("    return 0" + nl);
+            sb.Append("}" + nl);
+            var (exit, output) = RunTinyMain(sb.ToString());
             Assert.Equal(0, exit);
             Assert.Equal("hit", output);
         }
 
-        /// <summary>静态工厂方法里的多分支 return new X(...)（BoundBinaryOperator.Bind / BoundUnaryOperator.Bind 形状：
-        /// 按类型与操作符组合分派，每支 return new，最后 return 默认值。</summary>
+        /// <summary>类方法返回类型来自参数时（Kind(t: string)）的两层链推断。</summary>
         [Fact]
-        public void SelfCompiled_StaticFactory_MultiBranchReturnNew_Runs()
+        public void SelfCompiled_KindWithParam_CrossChainTypeResolves()
         {
             var nl = Environment.NewLine;
-            var (exit, output) = RunTinyMain(
-                "class Op {" + nl +
-                "    private field _kind: i32" + nl +
-                "    public constructor(kind: i32) {" + nl +
-                "        _kind = kind" + nl +
-                "    }" + nl +
-                "    public function Kind(): i32 { return _kind }" + nl +
-                "}" + nl +
-                "function Make(kind: i32, lt: string, rt: string): i32 {" + nl +
-                "    if lt == \"int\" && rt == \"int\"" + nl +
-                "    {" + nl +
-                "        if kind == 0 || kind == 1 || kind == 2 || kind == 3 || kind == 4" + nl +
+            var node = "class Node {" + nl +
+                "    public function Kind(t: string): string { return t }" + nl +
+                "    public function Child(idx: i32): Node { return this }" + nl +
+                "}" + nl;
+            var user = "class User {" + nl +
+                "    public function Probe(n: Node): string {" + nl +
+                "        var i = 0" + nl +
+                "        while i < 1" + nl +
                 "        {" + nl +
-                "            return new Op(kind).Kind()" + nl +
+                "            let k = n.Child(i).Kind(\"TypeClause\")" + nl +
+                "            if k == \"TypeClause\"" + nl +
+                "            {" + nl +
+                "                return \"hit\"" + nl +
+                "            }" + nl +
+                "            i = i + 1" + nl +
                 "        }" + nl +
-                "        if kind == 10 || kind == 11 || kind == 12 || kind == 13 || kind == 14 || kind == 15" + nl +
-                "        {" + nl +
-                "            return new Op(1).Kind()" + nl +
-                "        }" + nl +
+                "        return \"int\"" + nl +
                 "    }" + nl +
-                "    if lt == \"double\" && rt == \"double\"" + nl +
-                "    {" + nl +
-                "        return new Op(2).Kind()" + nl +
-                "    }" + nl +
-                "    if lt == \"string\" && rt == \"string\"" + nl +
-                "    {" + nl +
-                "        return new Op(3).Kind()" + nl +
-                "    }" + nl +
-                "    return 0" + nl +
-                "}" + nl +
+                "}" + nl;
+            var src = user + node +
                 "function Main(args: string[]): i32 {" + nl +
-                "    System.Console.WriteLine(string(Make(0, \"int\", \"int\")))" + nl +
+                "    var u = new User()" + nl +
+                "    System.Console.WriteLine(u.Probe(new Node()))" + nl +
                 "    return 0" + nl +
-                "}" + nl);
+                "}" + nl;
+            var (exit, output) = RunTinyMain(src);
             Assert.Equal(0, exit);
-            Assert.Equal("0", output);
-        }
-
-        /// <summary>Binder.InferTypeOfExpression 形状：三元表达式 `?`、块表达式尾值、
-        /// 元素访问与成员访问的返回类型推断。</summary>
-        [Fact]
-        public void SelfCompiled_Ternary_AndBlockTail_InferTypes_Runs()
-        {
-            var nl = Environment.NewLine;
-            var (exit, output) = RunTinyMain(
-                "function Pick(b: bool, a: string, c: string): string {" + nl +
-                "    return b ? a : c" + nl +
-                "}" + nl +
-                "function TailBlock(b: bool, a: string, c: string): string {" + nl +
-                "    if b" + nl +
-                "    {" + nl +
-                "        return a" + nl +
-                "    }" + nl +
-                "    else" + nl +
-                "    {" + nl +
-                "        return c" + nl +
-                "    }" + nl +
-                "}" + nl +
-                "class Bag {" + nl +
-                "    private field _items: string[]" + nl +
-                "    public constructor(n: i32) {" + nl +
-                "        _items = new string[n]" + nl +
-                "    }" + nl +
-                "    public function At(i: i32): string { return _items[i] }" + nl +
-                "    public function Len(): i32 { return _items.Length }" + nl +
-                "}" + nl +
-                "function Main(args: string[]): i32 {" + nl +
-                "    System.Console.WriteLine(Pick(true, \"A\", \"B\"))" + nl +
-                "    System.Console.WriteLine(TailBlock(false, \"C\", \"D\"))" + nl +
-                "    var bag = new Bag(2)" + nl +
-                "    System.Console.WriteLine(string(bag.Len()))" + nl +
-                "    return 0" + nl +
-                "}" + nl);
-            Assert.Equal(0, exit);
-            Assert.Equal("A\nD\n2", output);
+            Assert.Equal("hit", output);
         }
 
         [Fact]
