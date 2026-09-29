@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
@@ -409,9 +409,167 @@ namespace Cocoa.CodeGen.Managed.Writer
                 case BoundNodeKind.ByRefArgument:
                     EmitByRefArgument(il, (BoundByRefArgument)node);
                     break;
+                case BoundNodeKind.RelationalPattern:
+                    EmitRelationalPattern(il, (BoundRelationalPattern)node);
+                    break;
+                case BoundNodeKind.LogicalPattern:
+                    EmitLogicalPattern(il, (BoundLogicalPattern)node);
+                    break;
+                case BoundNodeKind.PropertyPattern:
+                    EmitPropertyPattern(il, (BoundPropertyPattern)node);
+                    break;
+                case BoundNodeKind.DeclarationPattern:
+                    throw new System.Exception(
+                        "声明模式（is T v）在 IL 后端未实现：模式变量的局部槽位需 CFG 级必定赋值跟踪与槽位登记。");
                 default:
                     throw new System.Exception($"Unexpected node kind {node.Kind}");
             }
+        }
+
+        /// <summary>
+        /// 关系模式 <c>e is &gt; 0</c>：求值两侧后按 <see cref="BoundRelationalPattern.OperatorKind"/> 发比较指令。
+        /// 语义与 Evaluator 的 <c>CompareValues</c> 对齐（数值按值比较，null 侧为 false）。
+        /// </summary>
+        private void EmitRelationalPattern(IlAssembler il, BoundRelationalPattern node)
+        {
+            EmitExpression(il, node.Expression);
+            EmitExpression(il, node.Value);
+
+            // 严格比较直接发指令；含等比较走「取反」：a >= b ≡ !(a < b)，a <= b ≡ !(a > b)
+            // （Cgt/Clt 只给 0/1，含等需在两者之间取补，CEq 直解需复制双侧，栈序列易错）
+            var strict = node.OperatorKind switch
+            {
+                BoundBinaryOperatorKind.Greater => "Cgt",
+                BoundBinaryOperatorKind.Less => "Clt",
+                BoundBinaryOperatorKind.GreaterOrEquals => "Clt",
+                BoundBinaryOperatorKind.LessOrEquals => "Cgt",
+                _ => "Cgt",
+            };
+
+            if (node.OperatorKind is BoundBinaryOperatorKind.Greater or BoundBinaryOperatorKind.Less)
+            {
+                il.Emit(IlOpCodeTable.Get(strict));
+                return;
+            }
+
+            // 两侧入临时局部，再取反
+            var right = AllocateTemporaryLocal(node, TypeSymbol.Int32);
+            il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)right);
+
+            var left = AllocateTemporaryLocal(node, TypeSymbol.Int32);
+            il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)left);
+
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)left);
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)right);
+            il.Emit(IlOpCodeTable.Get(strict));
+            il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));
+            il.Emit(IlOpCodeTable.Get("Ceq"));
+        }
+
+        /// <summary>
+        /// 逻辑模式 <c>and</c>/<c>or</c>/<c>not</c>：转成等价布尔表达式后复用既有短路发射路径
+        /// （与 Evaluator 的非短路求值结果一致，短路仅为可观察行为上的严格改进）。
+        /// </summary>
+        private void EmitLogicalPattern(IlAssembler il, BoundLogicalPattern node)
+        {
+            if (node.IsUnary)
+            {
+                EmitExpression(il, node.Operand!);
+                il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));
+                il.Emit(IlOpCodeTable.Get("Ceq"));
+                return;
+            }
+
+            var kind = node.OperatorKind == BoundLogicalPatternKind.Or
+                ? BoundBinaryOperatorKind.LogicalOr
+                : BoundBinaryOperatorKind.LogicalAnd;
+
+            var op = BoundBinaryOperator.Bind(kind, TypeSymbol.Boolean, TypeSymbol.Boolean)
+                     ?? throw new System.Exception($"内部错误：{kind} 的 bool×bool 运算未注册");
+
+            EmitBinaryExpression(il, new BoundBinaryExpression(node.Syntax, node.Left!, op, node.Right!));
+        }
+
+        /// <summary>
+        /// 属性模式 <c>e is { X: &gt; 0 }</c>：按接收者**静态类型**解析成员（字段优先，其次属性 getter），
+        /// 逐子模式求值后以短路 <c>&amp;&amp;</c> 合取。接收者为 <c>any</c> 时无静态成员信息——
+        /// 动态成员查找目前仅 Evaluator 后端支持（见 <c>EvaluatePropertyPattern</c>）。
+        /// </summary>
+        private void EmitPropertyPattern(IlAssembler il, BoundPropertyPattern node)
+        {
+            if (node.Subpatterns.Length == 0)
+            {
+                il.Emit(IlOpCodeTable.Get("Ldc_I4_1"));
+                return;
+            }
+
+            var andOp = BoundBinaryOperator.Bind(BoundBinaryOperatorKind.LogicalAnd, TypeSymbol.Boolean, TypeSymbol.Boolean)
+                        ?? throw new System.Exception("内部错误：LogicalAnd 的 bool×bool 运算未注册");
+
+            BoundExpression? combined = null;
+
+            foreach (var sub in node.Subpatterns)
+            {
+                var memberType = ResolvePropertyPatternMemberType(node.Expression.Type, sub.PropertyName);
+                if (memberType == null)
+                {
+                    throw new System.Exception(
+                        $"属性模式：类型 '{node.Expression.Type.Name}' 无成员 '{sub.PropertyName}'（或接收者为 any，动态成员查找仅 Evaluator 后端支持）。");
+                }
+
+                // 子模式以「成员访问」为操作数求值：常量子模式退化为等值比较
+                var test = sub.Pattern switch
+                {
+                    BoundRelationalPattern relational => BuildPatternAgainstMember(node, relational, memberType),
+                    BoundBinaryExpression binary => new BoundBinaryExpression(
+                        node.Syntax,
+                        BuildMemberAccess(node, sub.PropertyName, memberType),
+                        binary.Op,
+                        binary.Right),
+                    _ => new BoundBinaryExpression(
+                        node.Syntax,
+                        BuildMemberAccess(node, sub.PropertyName, memberType),
+                        BoundBinaryOperator.Bind(BoundBinaryOperatorKind.Equals, memberType, sub.Pattern.Type) ??
+                            throw new System.Exception($"属性模式子模式：{sub.Pattern.Type.Name} 无等值运算"),
+                        sub.Pattern),
+                };
+
+                combined = combined == null
+                    ? test
+                    : new BoundBinaryExpression(node.Syntax, combined, andOp, test);
+            }
+
+            EmitExpression(il, combined!);
+        }
+
+        private BoundExpression BuildPatternAgainstMember(BoundPropertyPattern node, BoundRelationalPattern relational, TypeSymbol memberType)
+        {
+            var op = BoundBinaryOperator.Bind(relational.OperatorKind, memberType, relational.Value.Type)
+                     ?? throw new System.Exception(
+                         $"属性模式子模式：{memberType.Name} 不支持 {relational.OperatorKind}");
+
+            return new BoundBinaryExpression(
+                node.Syntax,
+                BuildMemberAccess(node, relational.Syntax != null ? node.Subpatterns[0].PropertyName : node.Subpatterns[0].PropertyName, memberType),
+                op,
+                relational.Value);
+        }
+
+        private BoundExpression BuildMemberAccess(BoundPropertyPattern node, string name, TypeSymbol memberType)
+        {
+            return new BoundMemberAccessExpression(
+                node.Syntax!, memberType, node.Expression, name,
+                (node.Expression.Type as NamedTypeSymbol)?.GetField(name));
+        }
+
+        private static TypeSymbol? ResolvePropertyPatternMemberType(TypeSymbol receiver, string name)
+        {
+            if (receiver is not NamedTypeSymbol named)
+            {
+                return null;
+            }
+
+            return named.GetField(name)?.Type ?? named.GetProperty(name)?.Type;
         }
 
         /// <summary>6e-M19 M5-b：is → isinst + ldnull + cgt.un（C# 规范模式：非 null 引用 &gt; null）。</summary>

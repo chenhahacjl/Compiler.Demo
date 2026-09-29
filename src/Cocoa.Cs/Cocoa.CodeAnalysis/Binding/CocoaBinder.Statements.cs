@@ -1,4 +1,4 @@
-using Cocoa.CodeAnalysis.Lowering;
+﻿using Cocoa.CodeAnalysis.Lowering;
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.CodeAnalysis.Symbols;
@@ -506,13 +506,22 @@ namespace Cocoa.CodeAnalysis.Binding
             return BindConversion(syntax.Expression, type, allowExplicit: true);
         }
 
-        /// <summary>is 类型测试 / 模式匹配——常量模式降级为 == 比较，声明模式绑定变量，关系/逻辑模式组合。</summary>
+        /// <summary>
+        /// is 类型测试 / 模式匹配。各模式产专用模式节点（<c>BoundRelationalPattern</c> 等），
+        /// 由**各后端**自行求值：Evaluator 已完整实现；IL 后端的实现见 <c>IlEmitter.EmitPattern*</c>。
+        /// 不在绑定期降级为普通布尔表达式——那会丢掉 `any` 接收者的动态类型测试/动态成员查找语义。
+        /// </summary>
         private BoundExpression BindIsExpression(IsExpressionSyntax syntax)
         {
             var operand = BindExpression(syntax.Expression);
             if (operand.Type == TypeSymbol.Error)
                 return new BoundErrorExpression(syntax);
 
+            return BindIsPatternCore(syntax, operand);
+        }
+
+        private BoundExpression BindIsPatternCore(IsExpressionSyntax syntax, BoundExpression operand)
+        {
             // 常量模式：expr is null → expr == null / expr is 0 → expr == 0
             if (syntax.Pattern is CoreSyntax.ConstantPatternSyntax constantPattern)
             {
@@ -523,7 +532,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return BoundNodeFactory.Binary(syntax, operand, CoreSyntax.SyntaxKind.EqualsEqualsToken, patternValue);
             }
 
-            // 声明模式：expr is int n → 检查类型并绑定变量
+            // 声明模式：expr is A a → 类型测试 + 变量绑定
             if (syntax.Pattern is CoreSyntax.DeclarationPatternSyntax declarationPattern)
             {
                 var type = LookupType(declarationPattern.TypeToken.Text ?? "?");
@@ -595,13 +604,17 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
+        /// <summary>
+        /// 属性模式 <c>e is { X: &gt; 0 }</c>：产出 <see cref="BoundPropertyPattern"/>，
+        /// 成员解析（字段/属性/动态成员）由各后端按接收者静态类型或运行时类型处理。
+        /// </summary>
         private BoundExpression BindPropertyPattern(CoreSyntax.SyntaxNode syntax, BoundExpression operand, CoreSyntax.PropertyPatternSyntax propertyPattern)
         {
             var subpatterns = ImmutableArray.CreateBuilder<BoundPropertySubpattern>();
 
             foreach (var sub in propertyPattern.Subpatterns)
             {
-                // For constant patterns, bind the value directly (not via BindPattern which creates binary expr)
+                // 常量子模式直接绑值（不经 BindPattern，后者会造比较表达式）
                 if (sub.Pattern is CoreSyntax.ConstantPatternSyntax constantSub)
                 {
                     var patternValue = BindExpression((CoreSyntax.ExpressionSyntax)constantSub.Expression);
@@ -609,7 +622,6 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
                 else
                 {
-                    // For relational/logical/declaration patterns, use BindPattern with operand
                     var subPattern = BindPattern(operand, sub.Pattern);
                     subpatterns.Add(new BoundPropertySubpattern(sub.NameToken.Text ?? "", subPattern));
                 }
