@@ -433,6 +433,30 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal(1, result);
         }
 
+
+        [Fact]
+        public void AssignToParameter_ByValue_EmitsStarg()
+        {
+            // 回归护栏：赋值给**普通（非 byref）形参**此前在 IL 发射器里没有分支，
+            // 会落到 _locals[node.Variable] 抛 KeyNotFoundException。
+            // 真实触发例是自举语料里的 `usTexts = ug2`（形参重绑定，C# 语义合法）。
+            // 它阻塞了「用 Compilation.Emit 快速迭代 .co 轨」这条路径。
+            var result = RunMain(
+                "function Rebind(xs: i32[], n: i32): i32[] {" + Nl +
+                "    xs = new i32[n]" + Nl +
+                "    xs[0] = 42" + Nl +
+                "    return xs" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    let src = new i32[1]" + Nl +
+                "    let out2 = Rebind(src, 1)" + Nl +
+                "    if out2[0] == 42 { return 1 }" + Nl +
+                "    return 0" + Nl +
+                "}", "AssignParam");
+
+            Assert.Equal(1, result);
+        }
+
         [Fact]
         public void LocalSig_LetInsideLoopInClassMethod_KeepsStringType()
         {

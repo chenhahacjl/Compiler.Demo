@@ -233,6 +233,103 @@ namespace Cocoa.Tests.Compiler
         // 这一点是它比 COCOA_CORPUS_EXCLUDE 排除档（~7m）快两个数量级的原因。
         // ------------------------------------------------------------------
         // ------------------------------------------------------------------
+        // 快档自举回路：编译全量语料 → **直接运行** → 对产出做 ilverify。
+        //
+        // 与 bootstrap 的关键区别：bootstrap 用 Compilation.Evaluate，即由 C# 轨的
+        // **解释器**逐条执行 .co 语料（因此 27 分钟）；本测试用 Compilation.Emit 产出
+        // 可执行程序集再由 CLR 原生执行，因此秒级。
+        //
+        // 前提是 .co 轨语料能整份编译成 IL——这依赖 AssignToParameter 那类
+        // 发射器补全（见 6450d28 之后的一批修复）。
+        //
+        // 重要：产物 B2 的 IL 由 .co 轨自己的 IlMetadataBuilder 写出，
+        // 所以这里 ilverify 出来的错误才是阶段 8 那 22 条的来源。
+        // ------------------------------------------------------------------
+        [Fact]
+        public void Corpus_EmitAndRun_FastSelfHost()
+        {
+            if (!SlowEnabled)
+            {
+                _out.WriteLine("SKIP: 设置 COCOA_SLOW_PROBE=1 运行。");
+                return;
+            }
+
+            var files = CorpusFiles();
+            var trees = new System.Collections.Generic.List<Cocoa.CodeAnalysis.Syntax.SyntaxTree>();
+            foreach (var f in files)
+            {
+                trees.Add(Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(File.ReadAllText(f)));
+            }
+
+            // 入口点与 bootstrap 一致：由 .co 的 IlDriver.BuildDllHex 产出自举 DLL 的十六进制
+            trees.Add(Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(
+                "using System\n" +
+                "function Main(args: string[]): i32\n{\n" +
+                "    let h = Cocoa.CodeGen.IlDriver.BuildDllHex(args[0])\n" +
+                "    System.Console.WriteLine(\"HEX:\" + h)\n" +
+                "    return 0\n}\n"));
+
+            var compilation = Cocoa.CodeAnalysis.Compilation.Create(
+                "Main",
+                new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location },
+                trees.ToArray());
+            var runner = Path.Combine(Path.GetTempPath(), "cocoa-fastselfhost", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(runner);
+            var runnerDll = Path.Combine(runner, "FastSelfHost.dll");
+            var diags = compilation.Emit("FastSelfHost", runnerDll, IlTarget.Default, emitLibrary: false);
+            Assert.False(diags.HasErrors(), "全量语料 Emit 失败: " + string.Join(" | ", diags.Select(d => d.Message).Take(8)));
+            _out.WriteLine("runner: " + runnerDll + "  " + new FileInfo(runnerDll).Length + " B");
+
+            // Emit 不写 runtimeconfig.json，直接 `dotnet <dll>` 会因缺 hostpolicy 失败
+            File.WriteAllText(
+                Path.Combine(runner, "FastSelfHost.runtimeconfig.json"),
+                "{\n  \"runtimeOptions\": {\n    \"tfm\": \"net9.0\",\n    \"framework\": {\n      \"name\": \"Microsoft.NETCore.App\",\n      \"version\": \"" + Environment.Version.ToString() + "\"\n    }\n  }\n}\n");
+
+            // 喂一个待编译的源码文件给自举编译器
+            var inputCo = Path.Combine(runner, "input.co");
+            File.WriteAllText(inputCo,
+                "class V { public function Twice(x: i32): i32 { return x * 2 } }\n" +
+                "function Main(args: string[]): i32 { return new V().Twice(21) }\n");
+
+            var psi = new System.Diagnostics.ProcessStartInfo("dotnet")
+            {
+                WorkingDirectory = runner,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+            };
+            psi.ArgumentList.Add(runnerDll);
+            psi.ArgumentList.Add(inputCo);
+            using var proc = System.Diagnostics.Process.Start(psi)!;
+            var stdout = proc.StandardOutput.ReadToEnd();
+            var stderr = proc.StandardError.ReadToEnd();
+            proc.WaitForExit();
+            _out.WriteLine("exit=" + proc.ExitCode);
+            if (stderr.Length > 0) { _out.WriteLine("stderr: " + stderr.Trim().Substring(0, Math.Min(600, stderr.Trim().Length))); }
+
+            var hexLine = stdout.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.StartsWith("HEX:", StringComparison.Ordinal));
+            if (hexLine == null)
+            {
+                _out.WriteLine("stdout: " + stdout.Trim().Substring(0, Math.Min(600, stdout.Trim().Length)));
+                Assert.True(false, "自举编译器未输出 HEX: 快速自举回路不通");
+            }
+
+            var hex = hexLine!["HEX:".Length..].Trim();
+            Assert.False(hex.StartsWith("ERR:", StringComparison.Ordinal), "自举编译失败: " + hex);
+            var b2 = SelfHostedEndToEndTests.HexToBytes(hex);
+            var b2Path = Path.Combine(ProbeDir, "B2.fast.dll");
+            File.WriteAllBytes(b2Path, b2);
+            _out.WriteLine("B2.fast.dll: " + b2.Length + " B -> " + b2Path);
+            _out.WriteLine("HEAD: " + CurrentHead());
+
+            // 产出 B2 的 IL 由 .co 轨写出，故这里的 ilverify 才是阶段 8 错误的来源
+            if (Environment.GetEnvironmentVariable("COCOA_RUN_ILVERIFY") == "1")
+            {
+                RunIlVerify(b2Path);
+            }
+        }
+
+        // ------------------------------------------------------------------
         // 快档：C# 发射器（Compilation.Emit 路径）在语料子集上的 locals 签名探针。
         //
         // ⚠️ 重要：**这个探针与阶段 8 的 22 个 ilverify 错配无关。**

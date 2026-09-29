@@ -1018,6 +1018,21 @@ namespace Cocoa.CodeGen.Managed.Writer
                 return;
             }
 
+            // 普通（非 byref）形参赋值：形参不在 _locals 里，需发 starg。
+            // 此前无此分支，会落到末尾的 _locals[node.Variable] 抛 KeyNotFoundException。
+            // 真实触发例：src/Cocoa.Co/.../CodeGen/IlDriver.co 的 `usTexts = ug2`
+            // （形参重绑定，C# 语义合法且常见）。
+            if (node.Variable is ParameterSymbol plainParameter)
+            {
+                var parameterIndex = plainParameter.Ordinal + (_currentMethodIsInstance ? 1 : 0);
+                EmitExpression(il, node.Expression);
+                // 赋值表达式要留下值（与末尾局部变量路径的 Dup + Stloc 语义一致），
+                // 否则语句层的 pop 会把 starg 已弹掉的值再弹一次 → 栈下溢 → InvalidProgram。
+                il.Emit(IlOpCodeTable.Get("Dup"));
+                il.Emit(IlOpCodeTable.Get("Starg"), (ushort)parameterIndex);
+                return;
+            }
+
             // 6e-M22 C5-c：捕获变量写环境字段（目标先入栈 + 值 = [env, v]，与 stfld 语义一致；
             // 用临时局部保表达式结果——原实现缺值入栈致 [env] 欠栈 InvalidProgram/NRE）
             if (node.Variable.IsCaptured && _closureEnvLocalIndex.HasValue)

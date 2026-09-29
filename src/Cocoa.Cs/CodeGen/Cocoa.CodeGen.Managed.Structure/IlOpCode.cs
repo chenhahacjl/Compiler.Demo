@@ -250,6 +250,10 @@ namespace Cocoa.CodeGen.Managed.Structure
             Define("Ldloc", 0xFE0C, IlOperandType.InlineVar);
             Define("Ldloca", 0xFE0D, IlOperandType.InlineVar);
             Define("Stloc", 0xFE0E, IlOperandType.InlineVar);
+        // starg（ECMA-335 III.2.7.13 = 0xFE0B）：写形参。此前表里**没有**这条指令，
+        // 导致「赋值给普通形参」无路可走。IsLoadInstruction 的 default 已把 Starg
+        // 归为非加载类，故 StackDelta 自动为 -1（弹 1 净 0 中的弹出项）。
+        Define("Starg", 0xFE0B, IlOperandType.InlineVar);
         }
     }
 }
