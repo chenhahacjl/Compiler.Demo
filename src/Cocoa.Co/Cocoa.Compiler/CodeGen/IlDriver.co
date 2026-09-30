@@ -189,6 +189,22 @@ namespace Cocoa.CodeGen
             // Double 排在 Char 之后：保持既有硬编码家长行号（Char=7）不变
             var doubleTypeRow = charTypeRow
             if usesBoxDouble { doubleTypeRow = doubleTypeRow + 1 }
+
+            // String.get_Chars：字符串下标 s[i] 必须发 call get_Chars(i32)，
+            // 不能走 ldelem（string 不是数组）。此前 ElementAccessExpression 无条件 ldelem，
+            // 对 string 会发出 ldelem.ref 作用在非数组上 → CLR/JIT 判非法程序，
+            // 且 ilverify 在 ImportLoadElement 抛 InvalidCastException 中断验证。
+            // 照搬 usesConvert 的既有模式：usesString 时无条件注册（此时家长行必为 String）。
+            // 必须在 convertMemberRow 之前注册，BCL 成员行号随 bclCount 顺移。
+            if usesString
+            {
+                var cpChars = new string[1]
+                cpChars[0] = "i32"
+                EnsureBcl(bclKeys, bclTokens, bclParents, bclSigs, bclNames, bclCount,
+                    "String.get_Chars", stringTypeRow, "get_Chars",
+                    MetadataEncode.EncodeMethodSignatureHex("char", cpChars, 1, true))
+            }
+
             var convertTypeRow = typeRefCount
             var convertMemberRow = 1 + bclCount[0]
             if classCount > 0 { convertMemberRow = convertMemberRow + 1 }
