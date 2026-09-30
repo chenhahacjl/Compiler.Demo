@@ -159,10 +159,14 @@ namespace Cocoa.CodeGen
             // 装箱用 TypeRef：Convert.ToString(object) 需要按实参类型 box，
             // 此前只有 System.Int32 一个（硬编码 _boxInt32Token），
             // 导致 f64/bool 等实参被当 Int32 装箱（阶段 8 的 A 类 5 条）。
+            // ⚠️ 登记位置**必须在 Char 之后**：BCL 成员表里有硬编码的家长行号
+            // （CollectNodes 的 EnsureBcl 调用，Char 为 7），把 Double 插在中间
+            // 会把 Char 挤到 8、导致 Char.IsDigit 等被挂到 System.Boolean 上
+            // （表现为 MissingMethodException: 'Boolean System.Boolean.IsDigit(Char)'）。
             var usesBoxDouble = usesConvert[0]
-            if usesBoxDouble { typeRefCount = typeRefCount + 1 }
             if usesBool { typeRefCount = typeRefCount + 1 }
             if usesChar { typeRefCount = typeRefCount + 1 }
+            if usesBoxDouble { typeRefCount = typeRefCount + 1 }
             if usesConvert[0] { typeRefCount = typeRefCount + 1 }
             var stringTypeRow = 2
             if hasConsole { stringTypeRow = stringTypeRow + 1 }
@@ -171,21 +175,20 @@ namespace Cocoa.CodeGen
             if hasConsole { int32TypeRow = int32TypeRow + 1 }
             if usesString { int32TypeRow = int32TypeRow + 1 }
             if usesInt32 { int32TypeRow = int32TypeRow + 1 }
-            var doubleTypeRow = int32TypeRow
-            if usesBoxDouble { doubleTypeRow = doubleTypeRow + 1 }
             var boolTypeRow = 2
             if hasConsole { boolTypeRow = boolTypeRow + 1 }
             if usesString { boolTypeRow = boolTypeRow + 1 }
             if usesInt32 { boolTypeRow = boolTypeRow + 1 }
-            if usesBoxDouble { boolTypeRow = boolTypeRow + 1 }
             if usesBool { boolTypeRow = boolTypeRow + 1 }
             var charTypeRow = 2
             if hasConsole { charTypeRow = charTypeRow + 1 }
             if usesString { charTypeRow = charTypeRow + 1 }
             if usesInt32 { charTypeRow = charTypeRow + 1 }
-            if usesBoxDouble { charTypeRow = charTypeRow + 1 }
             if usesBool { charTypeRow = charTypeRow + 1 }
             if usesChar { charTypeRow = charTypeRow + 1 }
+            // Double 排在 Char 之后：保持既有硬编码家长行号（Char=7）不变
+            var doubleTypeRow = charTypeRow
+            if usesBoxDouble { doubleTypeRow = doubleTypeRow + 1 }
             var convertTypeRow = typeRefCount
             var convertMemberRow = 1 + bclCount[0]
             if classCount > 0 { convertMemberRow = convertMemberRow + 1 }
@@ -620,15 +623,6 @@ namespace Cocoa.CodeGen
                 typeRow = typeRow + 1
             }
 
-            if usesBoxDouble
-            {
-                // 装箱目标：Convert.ToString(object) 的实参装箱类型（此前只有 Int32）
-                typeRefScope[typeRow] = 1
-                typeRefNs[typeRow] = "System"
-                typeRefName[typeRow] = "Double"
-                typeRow = typeRow + 1
-            }
-
             if usesBool
             {
                 typeRefScope[typeRow] = 1
@@ -642,6 +636,16 @@ namespace Cocoa.CodeGen
                 typeRefScope[typeRow] = 1
                 typeRefNs[typeRow] = "System"
                 typeRefName[typeRow] = "Char"
+                typeRow = typeRow + 1
+            }
+
+            if usesBoxDouble
+            {
+                // 装箱目标：Convert.ToString(object) 的实参装箱类型（此前只有 Int32）。
+                // 必须排在 Char 之后，见 usesBoxDouble 处的行号耦合说明。
+                typeRefScope[typeRow] = 1
+                typeRefNs[typeRow] = "System"
+                typeRefName[typeRow] = "Double"
                 typeRow = typeRow + 1
             }
 
