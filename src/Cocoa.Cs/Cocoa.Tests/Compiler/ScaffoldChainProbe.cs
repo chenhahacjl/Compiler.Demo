@@ -1605,5 +1605,205 @@ namespace Cocoa.Tests.Compiler
 
             throw new Xunit.Sdk.XunitException(info);
         }
+
+        /// <summary>
+        /// 产物结构自校验：同一份 .co 源码分别用 **.co 轨**与 **C# 轨**发射器编译，
+        /// 比对产物的反射可见结构。
+        ///
+        /// 背景（B1 为何仍然跑不起来）：
+        /// `SavedB1_AllMethodBodiesJitClean` 已经把 badCount 从 59 降到 **0**，
+        /// 但 B1 依旧对任意输入返回 `ERR:no functions`，放大输入还会
+        /// `AccessViolationException`。这说明**方法体干净 ≠ 产物结构健全**：
+        /// `RuntimeHelpers.PrepareMethod` 只校验方法体本身与其 token 引用，
+        /// **不校验** #Strings/#US 堆的内容与边界、字段布局与 RVA、堆偏移计算等。
+        ///
+        /// 而 B1/B2 的字节完全相等（fixpoint 成立），且 B1 明显跑不起来，
+        /// 同时 C# 轨发射的 runner 跑得动同一份 .co 源码——于是差异只能落在
+        /// **.co 轨自己的 PE/元数据写出器**上。本门禁就是直接量这个差异。
+        ///
+        /// 判据：类型数、字段数、方法数必须一致，且两边 GetTypes() 都不抛异常。
+        /// 挂 COCOA_SLOW_PROBE 档（需要 14s 快速回路产出的 runner）。
+        /// </summary>
+        [Fact]
+        public void CoEmitter_ProductStructureMatchesCsEmitter()
+        {
+            if (Environment.GetEnvironmentVariable("COCOA_SLOW_PROBE") != "1")
+            {
+                Console.WriteLine("SKIP: 需 COCOA_SLOW_PROBE=1（并先跑 Corpus_EmitAndRun_FastSelfHost 产出 runner）。");
+                return;
+            }
+
+            var runner = NewestRunnerDll();
+            if (runner == null)
+            {
+                Console.WriteLine("SKIP: 未找到 %TEMP%\\cocoa-fastselfhost\\*\\FastSelfHost.dll，先跑 Corpus_EmitAndRun_FastSelfHost。");
+                return;
+            }
+
+            // 用**全量语料**（与 B1 的输入完全一致），这样量到的差异就是 B1 跑不起来的那个差异。
+            var repo = FindRepoRoot();
+            var coRoot = repo == null ? null : Path.Combine(repo, "src", "Cocoa.Co", "Cocoa.Compiler");
+            var parts = new List<string>();
+            if (coRoot != null && Directory.Exists(coRoot))
+            {
+                foreach (var f in Directory.GetFiles(coRoot, "*.co", SearchOption.AllDirectories)
+                             .OrderBy(f => f, StringComparer.Ordinal))
+                {
+                    parts.Add(File.ReadAllText(f));
+                }
+            }
+
+            if (parts.Count == 0)
+            {
+                Console.WriteLine("SKIP: 未找到语料（src\\Cocoa.Co\\Cocoa.Compiler\\**\\*.co）。");
+                return;
+            }
+
+            var source = string.Join(Environment.NewLine, parts) + Environment.NewLine
+                + "function Main(args: string[]): i32 { return 0 }" + Environment.NewLine;
+
+            // ── 1) .co 轨：跑快速回路产出的 runner（内部就是 .co 轨 IlDriver）
+            var work = Path.Combine(Path.GetTempPath(), "cocoa-structcmp-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(work);
+            var input = Path.Combine(work, "input.co");
+            File.WriteAllText(input, source);
+            File.Copy(runner, Path.Combine(work, "FastSelfHost.dll"), true);
+            File.Copy(
+                Path.Combine(Path.GetDirectoryName(runner)!, "FastSelfHost.runtimeconfig.json"),
+                Path.Combine(work, "FastSelfHost.runtimeconfig.json"),
+                true);
+
+            var psi = new System.Diagnostics.ProcessStartInfo("dotnet")
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+            };
+            psi.ArgumentList.Add(Path.Combine(work, "FastSelfHost.dll"));
+            psi.ArgumentList.Add(input);
+            using (var proc = System.Diagnostics.Process.Start(psi)!)
+            {
+                var stdout = proc.StandardOutput.ReadToEnd();
+                proc.StandardError.ReadToEnd();
+                proc.WaitForExit(600_000);
+                var hex = stdout.Split('\n').Select(l => l.Trim())
+                    .FirstOrDefault(l => l.StartsWith("HEX:", StringComparison.Ordinal))?["HEX:".Length..].Trim();
+                Assert.True(hex != null, ".co 轨未输出 HEX:；stdout=" + stdout.Substring(0, Math.Min(300, stdout.Length)));
+                Assert.False(hex!.StartsWith("ERR:", StringComparison.Ordinal), ".co 轨编译失败: " + hex);
+                var coBytes = SelfHostedEndToEndTests.HexToBytes(hex);
+                File.WriteAllBytes(Path.Combine(work, "co.dll"), coBytes);
+
+                // ── 2) C# 轨：同一份源码
+                var trees = Cocoa.CodeAnalysis.Compilation.Create(
+                    "Main",
+                    new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location },
+                    Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(source));
+                var csDll = Path.Combine(work, "cs.dll");
+                var diags = trees.Emit("Cs", csDll, Cocoa.Targeting.IlTarget.Default, emitLibrary: false);
+                Assert.False(diags.HasErrors(), "C# 轨 Emit 失败: " + string.Join(" | ", diags.Select(d => d.Message).Take(6)));
+                var csBytes = File.ReadAllBytes(csDll);
+
+                var coStat = Structure(Path.Combine(work, "co.dll"), coBytes);
+                var csStat = Structure(csDll, csBytes);
+
+                var msg = "source=" + source.Length + " chars  co=" + coBytes.Length + " B  cs=" + csBytes.Length + " B"
+                    + Environment.NewLine + "  co: " + coStat
+                    + Environment.NewLine + "  cs: " + csStat;
+
+                // 类型名差集：让门禁直接指出「谁少了什么」，而不只是两个数字。
+                var coNames = TypeNames(Path.Combine(work, "co.dll"));
+                var csNames = TypeNames(csDll);
+                var onlyCs = csNames.Except(coNames).OrderBy(x => x, StringComparer.Ordinal).ToArray();
+                var onlyCo = coNames.Except(csNames).OrderBy(x => x, StringComparer.Ordinal).ToArray();
+                if (onlyCs.Length > 0)
+                {
+                    msg += Environment.NewLine + "  只在 C# 轨产物里（" + onlyCs.Length + "）: " + string.Join(", ", onlyCs.Take(25));
+                }
+
+                if (onlyCo.Length > 0)
+                {
+                    msg += Environment.NewLine + "  只在 .co 轨产物里（" + onlyCo.Length + "）: " + string.Join(", ", onlyCo.Take(25));
+                }
+
+                if (coStat == csStat)
+                {
+                    return;
+                }
+
+                throw new Xunit.Sdk.XunitException(
+                    ".co 轨与 C# 轨产物结构不一致——B1 跑不起来的根因在此。" + Environment.NewLine + msg);
+            }
+        }
+
+        private static string[] TypeNames(string path)
+        {
+            try
+            {
+                return System.Reflection.Assembly.LoadFile(path).GetTypes().Select(t => t.FullName ?? t.Name).ToArray();
+            }
+            catch (System.Reflection.ReflectionTypeLoadException ex)
+            {
+                return ex.Types.Where(t => t != null).Select(t => t!.FullName ?? t.Name).ToArray();
+            }
+        }
+
+        private static string Structure(string path, byte[] bytes)
+        {
+            System.Type[] types;
+            var note = "";
+            try
+            {
+                types = System.Reflection.Assembly.LoadFile(path).GetTypes();
+            }
+            catch (System.Reflection.ReflectionTypeLoadException ex)
+            {
+                // 产物里有父类型不存在的 TypeRef（实测 C# 轨产物出现 System.Kernel32）。
+                // 不让整个门禁被这一点打断——取能加载的类型继续比对，并把加载失败的
+                // 类型数带进结论，因为这本身就是**结构缺陷的证据**。
+                var failed = ex.Types.Count(t => t == null);
+                var firstMsg = ex.LoaderExceptions != null && ex.LoaderExceptions.Length > 0 && ex.LoaderExceptions[0] != null
+                    ? ex.LoaderExceptions[0]!.Message : "-";
+                types = ex.Types.Where(t => t != null).Select(t => t!).ToArray();
+                note = " loadFail=" + failed + " [" + firstMsg + "]";
+            }
+
+            var methods = 0;
+            var fields = 0;
+            foreach (var t in types)
+            {
+                methods += t.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic
+                    | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.DeclaredOnly).Length;
+                fields += t.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic
+                    | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.DeclaredOnly).Length;
+            }
+
+            return "types=" + types.Length + " methods=" + methods + " fields=" + fields + " bytes=" + bytes.Length + note;
+        }
+
+        private static string? NewestRunnerDll()
+        {
+            var root = Path.Combine(Path.GetTempPath(), "cocoa-fastselfhost");
+            if (!Directory.Exists(root))
+            {
+                return null;
+            }
+
+            return Directory.EnumerateDirectories(root)
+                .Select(d => Path.Combine(d, "FastSelfHost.dll"))
+                .Where(File.Exists)
+                .OrderByDescending(File.GetLastWriteTimeUtc)
+                .FirstOrDefault();
+        }
+
+        private static string? FindRepoRoot()
+        {
+            var root = AppContext.BaseDirectory;
+            while (root != null && !File.Exists(Path.Combine(root, "src", "Cocoa.SDK", "System.Core", "String.co")))
+            {
+                root = Path.GetDirectoryName(root);
+            }
+
+            return root;
+        }
     }
 }
