@@ -441,5 +441,45 @@ namespace Cocoa.Tests.Compiler
 
             Assert.Equal(4, result);
         }
+
+        /// <summary>
+        /// 引用相等 `===` / `!==` —— **未实现**（审计中发现的缺口，不在原「未完成盘点」清单里）。
+        ///
+        /// 审计方式：把 <c>BoundBinaryOperatorKind</c> 的 21 个种类逐个对照
+        /// 「IL 发射器」与「求值器」两处的分支，结果：
+        ///   - 发射器缺：NullCoalescing
+        ///   - 求值器缺：NullCoalescing、ReferenceEquals、ReferenceNotEquals
+        /// 再实测定性：
+        ///   - <c>===</c> **连词法都没有** —— 实测报
+        ///     <c>Unexpected token &lt;EqualsToken&gt;, expected &lt;IdentifierToken&gt;</c>，
+        ///     所以它比「发射器漏了分支」更早失败。
+        ///   - <c>??</c> 能解析（走的是不经 <c>NullCoalescing</c> 的路径），
+        ///     但结果类型不参与统一：`var v = a ?? b` 得到 <c>any</c>，
+        ///     再 <c>return v</c> 到 <c>i32</c> 报 <c>Cannot convert type 'any' to 'int'</c>。
+        ///     **注意这一条不是 bug**——C# 里 <c>object a; object b;</c> 的
+        ///     <c>a ?? b</c> 结果同样是 <c>object</c>，返回到 <c>int</c> 一样报错。
+        ///
+        /// 实现 `===` 需要动：词法 → SyntaxKind → parser 的二元运算符 switch →
+        /// 运算符 kind 映射 → 发射器（<c>ceq</c> + 非 <c>ceq</c>）→ 求值器，
+        /// 共 6 处，属于「漏一处就废」的多点改动，尚未实施。
+        /// </summary>
+        [Fact(Skip = "引用相等 === 未实现：实测连词法都没有（Unexpected token <EqualsToken>），"
+                        + "需 6 处改动（词法/SyntaxKind/parser switch/运算符映射/发射器/求值器），尚未实施。")]
+        public void Operator_Audit_ReferenceEquality()
+        {
+            var result = RunMain(
+                "class Box { public field V: i32 }" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var a = new Box()" + Nl +
+                "    var b = new Box()" + Nl +
+                "    var same = 0" + Nl +
+                "    var diff = 0" + Nl +
+                "    if a === a { same = 1 }" + Nl +
+                "    if a === b { diff = 1 }" + Nl +
+                "    return same * 10 + diff" + Nl +
+                "}", "RefEquality");
+
+            Assert.Equal(10, result);
+        }
     }
 }
