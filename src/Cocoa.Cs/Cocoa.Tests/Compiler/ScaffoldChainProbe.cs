@@ -856,6 +856,23 @@ namespace Cocoa.Tests.Compiler
         [Fact]
         public void SavedB1_AllMethodBodiesJitClean()
         {
+            // COCOA_JITCHECK_DLL：直接指定要检查的程序集，跳过慢档/产物存在性检查。
+            // 这是配合 14 秒快速回路做**分钟级定位**的入口：让 .co 轨只编译一个语料子集
+            // （如 HexCodec.co），产出的 PE 里就能复现同样的非法方法体，
+            // 逐个 dump IL 即可定位到具体指令，而不必等 40 分钟 bootstrap。
+            var explicitDll = Environment.GetEnvironmentVariable("COCOA_JITCHECK_DLL");
+            if (!string.IsNullOrEmpty(explicitDll))
+            {
+                if (!File.Exists(explicitDll))
+                {
+                    Console.WriteLine("SKIP: COCOA_JITCHECK_DLL 指向的文件不存在: " + explicitDll);
+                    return;
+                }
+
+                AssertAllBodiesJitClean(explicitDll!);
+                return;
+            }
+
             // 依赖慢档产出的 B1.dll（40m），故挂在 COCOA_SLOW_PROBE 档上——
             // 与仓库既有约定一致：不污染日常档的绿灯，慢档下红并给出完整分组诊断。
             if (Environment.GetEnvironmentVariable("COCOA_SLOW_PROBE") != "1")
@@ -871,7 +888,12 @@ namespace Cocoa.Tests.Compiler
                 return;
             }
 
-            var asm = System.Reflection.Assembly.LoadFile(b1);
+            AssertAllBodiesJitClean(b1);
+        }
+
+        private static void AssertAllBodiesJitClean(string dllPath)
+        {
+            var asm = System.Reflection.Assembly.LoadFile(dllPath);
             var bad = new System.Collections.Generic.List<string>();
             var checkedCount = 0;
             foreach (var type in asm.GetTypes())
@@ -893,7 +915,7 @@ namespace Cocoa.Tests.Compiler
             }
 
             Assert.True(bad.Count == 0,
-                "B1 有 " + bad.Count + "/" + checkedCount + " 个方法体 CLR 无法 JIT。" + Environment.NewLine
+                dllPath + " 有 " + bad.Count + "/" + checkedCount + " 个方法体 CLR 无法 JIT。" + Environment.NewLine
                 + "按类型分组：" + Environment.NewLine
                 + string.Join(Environment.NewLine,
                     bad.GroupBy(l => l.Split('.')[0])

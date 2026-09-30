@@ -257,7 +257,6 @@ namespace Cocoa.CodeGen
             var fieldTokens = new i32[totalFields]
             var fieldTypes = new string[totalFields]
             var userTypeNames = new string[classCount]
-            var userTypeNamespaces = new string[classCount]
             var userTypeFieldLists = new i32[classCount]
             var userTypeMethodLists = new i32[classCount]
 
@@ -268,7 +267,6 @@ namespace Cocoa.CodeGen
             {
                 let className = binder.GetClassName(ci)
                 userTypeNames[ci] = className
-                userTypeNamespaces[ci] = binder.GetClassNamespace(ci)
                 userTypeMethodLists[ci] = classStartRow[ci] + 1
                 userTypeFieldLists[ci] = totalFields > 0 ? fieldStart[ci] + 1 : 1
                 classCtorNames[ci] = className
@@ -734,7 +732,7 @@ namespace Cocoa.CodeGen
                 "0102030405060708090a0b0c0d0e0f10", usHex,
                 mSigBlobs,
                 fieldNames, fieldSigs, fieldFlags,
-                userTypeNames, userTypeNamespaces, userTypeFieldLists, userTypeMethodLists)
+                userTypeNames, userTypeFieldLists, userTypeMethodLists)
             let tables = builder.TablesHex()
             let strings = builder.StringsHex()
             let usStream = builder.UsHex()
