@@ -841,14 +841,38 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal("42\ns", output);
         }
 
-    [Fact(Skip = "诊断：读 %TEMP%\\cocoa-b1-probe\\B1.dll 逐方法 PrepareMethod 猎无效 IL（阶段8 调试用，手动启用）")]
-        public void HuntInvalid_FromSavedB1()
+        /// <summary>
+        /// 阶段 8 门禁：B1 里**每个方法体都必须能被 CLR JIT**。
+        ///
+        /// 这比 ilverify 可靠：ilverify 在本程序上会抛 InvalidCastException 中断验证
+        /// （ImportLoadElement），「0 错」是假阴性；而 `RuntimeHelpers.PrepareMethod`
+        /// 是 CLR 自己的判定，抛不抛就是抛不抛。
+        ///
+        /// 用途：B1 要能自己写出 PE，必须先能跑。当前实测 **badCount=59 / checked=954**，
+        /// 且集中在**元数据/PE 写出层**（HexCodec / MetadataEncode / IlMetadataBuilder /
+        /// ManagedPeWriter / PeImageBuilder / IlMetadataRoot）与 X64Assembler——
+        /// 也就是 B1 物理上还写不出可用 DLL。详见 docs-dev/plan/未完成盘点.md。
+        /// </summary>
+        [Fact]
+        public void SavedB1_AllMethodBodiesJitClean()
         {
-            var probeDir = Path.Combine(Path.GetTempPath(), "cocoa-b1-probe");
-            var b1 = Path.Combine(probeDir, "B1.dll");
-            Assert.True(File.Exists(b1), "B1.dll 未保存: " + b1 + "（先跑 SelfCompileProbeTests）");
+            // 依赖慢档产出的 B1.dll（40m），故挂在 COCOA_SLOW_PROBE 档上——
+            // 与仓库既有约定一致：不污染日常档的绿灯，慢档下红并给出完整分组诊断。
+            if (Environment.GetEnvironmentVariable("COCOA_SLOW_PROBE") != "1")
+            {
+                Console.WriteLine("SKIP: 需 COCOA_SLOW_PROBE=1（且先跑 B1_Bootstrap_ReferenceEnd 产出 B1.dll）。");
+                return;
+            }
+
+            var b1 = Path.Combine(Path.GetTempPath(), "cocoa-b1-probe", "B1.dll");
+            if (!File.Exists(b1))
+            {
+                Console.WriteLine("SKIP: 无 " + b1 + "；先跑 COCOA_SLOW_PROBE=1 的 B1_Bootstrap_ReferenceEnd（约 40m）。");
+                return;
+            }
+
             var asm = System.Reflection.Assembly.LoadFile(b1);
-            var bad = new System.Text.StringBuilder();
+            var bad = new System.Collections.Generic.List<string>();
             var checkedCount = 0;
             foreach (var type in asm.GetTypes())
             {
@@ -863,16 +887,66 @@ namespace Cocoa.Tests.Compiler
                     }
                     catch (Exception ex)
                     {
+                        bad.Add(type.Name + "." + method.Name + " => " + ex.GetType().Name);
+                    }
+                }
+            }
+
+            Assert.True(bad.Count == 0,
+                "B1 有 " + bad.Count + "/" + checkedCount + " 个方法体 CLR 无法 JIT。" + Environment.NewLine
+                + "按类型分组：" + Environment.NewLine
+                + string.Join(Environment.NewLine,
+                    bad.GroupBy(l => l.Split('.')[0])
+                       .OrderByDescending(g => g.Count())
+                       .Select(g => "  " + g.Key + " x" + g.Count()))
+                + Environment.NewLine + "前 20 个：" + Environment.NewLine + string.Join(Environment.NewLine, bad.Take(20).Select(l => "  " + l)));
+        }
+
+        [Fact(Skip = "诊断：统计 B1 中 CLR 无法 JIT 的方法体（读 %TEMP%\\cocoa-b1-probe\\B1.dll；当前实测 badCount=59/954，见 docs-dev/plan/未完成盘点.md）")]
+        public void HuntInvalid_FromSavedB1()
+        {
+            var probeDir = Path.Combine(Path.GetTempPath(), "cocoa-b1-probe");
+            var b1 = Path.Combine(probeDir, "B1.dll");
+            Assert.True(File.Exists(b1), "B1.dll 未保存: " + b1 + "（先跑 SelfCompileProbeTests）");
+            var asm = System.Reflection.Assembly.LoadFile(b1);
+            var bad = new System.Text.StringBuilder();
+            // 注意：此前这里报的是 bad.Length（诊断文本的**字符数**），
+            // 打印成 "bad=6377" 极易被误读成「6377 个方法坏了」。改为真实的坏方法**个数**。
+            var badCount = 0;
+            var checkedCount = 0;
+            foreach (var type in asm.GetTypes())
+            {
+                foreach (var method in type.GetMethods(System.Reflection.BindingFlags.Public |
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static |
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.DeclaredOnly))
+                {
+                    checkedCount++;
+                    try
+                    {
+                        System.Runtime.CompilerServices.RuntimeHelpers.PrepareMethod(method.MethodHandle);
+                    }
+                    catch (Exception ex)
+                    {
+                        badCount++;
                         bad.AppendLine(type.Name + "." + method.Name + " => " + ex.GetType().Name + ": " + ex.Message);
                     }
                 }
             }
 
-            throw new Xunit.Sdk.XunitException("checked=" + checkedCount + " bad=" + (checkedCount > 0 ? bad.Length : 0) +
-                (bad.Length > 0 ? "\n" + bad.ToString().Substring(0, Math.Min(bad.Length, 2000)) : ""));
+            var summary = "checked=" + checkedCount + " badCount=" + badCount
+                + " (badTextChars=" + bad.Length + ")";
+            if (badCount == 0)
+            {
+                // 真正的好消息才走这里：全部方法体都能被 CLR JIT。
+                Assert.True(true, summary);
+                return;
+            }
+
+            var first = bad.ToString().Split('\n').Where(l => l.Trim().Length > 0).Take(80);
+            throw new Xunit.Sdk.XunitException(summary + "\n" + string.Join("\n", first));
         }
 
-        [Fact(Skip = "诊断：读 %TEMP%\\cocoa-b1-probe\\B1.dll dump Main IL + BCL MemberRef sig（需新鲜 B1，手动启用）")]
+        [Fact(Skip = "诊断：dump B1 的 Main IL + 解析 call token（已证实 Main 的 IL 完全正确：ldarg 0; ldc.i4 0; ldelem.ref; call 0x060000EA == IlDriver.BuildDllHex(string)）")]
         public void DumpMainIL_FromSavedB1()
         {
             var probeDir = Path.Combine(Path.GetTempPath(), "cocoa-b1-probe");
@@ -914,8 +988,29 @@ namespace Cocoa.Tests.Compiler
 
             try
             {
+                // Main 的 IL 里 call 0x060000EA —— 期望是 IlDriver.BuildDllHex(string)。
+                // 若方法 token 表错位，这里会解析到别的方法上，就会返回垃圾字符串。
+                var tEa = asm.ManifestModule.ResolveMethod(0x060000EA);
+                info += "TARGET_EA=" + (tEa?.DeclaringType?.Name + "." + tEa?.Name ?? "null");
+                if (tEa is System.Reflection.MethodInfo miEa)
+                {
+                    info += " ret=" + miEa.ReturnType + " p=" + string.Join(",", tEa.GetParameters().Select(p => p.ParameterType + ":" + p.Name));
+                }
+
+                // 顺带扫一遍全表，看 BuildDllHex 到底在哪个 token
+                foreach (var tt in asm.GetTypes())
+                {
+                    foreach (var mm in tt.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.DeclaredOnly))
+                    {
+                        if (mm.Name == "BuildDllHex")
+                        {
+                            info += "\n  FOUND BuildDllHex on " + tt.Name + " p=" + string.Join(",", mm.GetParameters().Select(p => p.ParameterType + ":" + p.Name));
+                        }
+                    }
+                }
+
                 var t = asm.ManifestModule.ResolveMethod(0x060000E0);
-                info += "rowE0=" + (t?.DeclaringType?.Name + "." + t?.Name ?? "null");
+                info += " rowE0=" + (t?.DeclaringType?.Name + "." + t?.Name ?? "null");
                 if (t != null && t is System.Reflection.MethodInfo mi)
                 {
                     info += " ret=" + mi.ReturnType + " p=" + string.Join(",", t.GetParameters().Select(p => p.ParameterType + ":" + p.Name));
