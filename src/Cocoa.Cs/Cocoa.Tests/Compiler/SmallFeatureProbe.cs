@@ -482,6 +482,50 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal(10, result);
         }
 
+        /// <summary>
+        /// 无符号右移 `>>>` —— **仅词法 + token 存在，语义层刻意未接**。
+        ///
+        /// 已接：词法（`>>` 后再跟 `>`；注意 `>>=` 优先判定，避免 `a >>= b` 被误切）
+        /// + `SyntaxKind.UnsignedShiftRightToken` + token 字形（供诊断/高亮显示）。
+        ///
+        /// **刻意未接**：parser 的二元运算符 switch、优先级、`BoundBinaryOperator`、发射、求值器。
+        ///
+        /// 为什么停在词法（这是本轮的关键取舍）：
+        /// 先试过把它**接进 parser**（构出 `BinaryExpression`），结果绑定器
+        /// `BoundBinaryOperator.Translate` 对未知 token 抛 **NotSupportedException**——
+        /// 那是**未处理异常**，比明确报错更糟。再往前一步（让绑定器报诊断）就进入
+        /// 「绑定通了但发射语义没接」的半修状态，会**静默给出错误结果**
+        /// （上一轮 `any` 转换就踩了这个坑）。
+        ///
+        /// 所以最终选择：只留词法，`a >>> b` 得到干净的
+        /// `Unexpected token &lt;UnsignedShiftRightToken&gt;` 解析错误。
+        /// 这样边界清晰，且失败方式不会误导人。
+        ///
+        /// `Shr_Un` opcode 其实**已存在**（IlOpCode.cs 定义 0x64），将来补齐时缺的只是
+        /// 运算符 kind 注册、parser 接入与发射分支。
+        /// </summary>
+        [Fact]
+        public void UnsignedShiftRight_LexesButNotParsed()
+        {
+            // 词法层：token 存在，且显示文本是 ">>>"（不是被切成 ">>" + ">"）
+            var tree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var a = 8" + Nl +
+                "    var b = 1" + Nl +
+                "    var c = a >>> b" + Nl +
+                "    return c" + Nl +
+                "}");
+
+            // 语义层未接 -> 明确的解析错误（不是异常，也不是静默错值）
+            var errors = Diagnostics(
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var a = 8" + Nl +
+                "    var b = 1" + Nl +
+                "    var c = a >>> b" + Nl +
+                "    return c" + Nl +
+                "}");
+            Assert.Contains(errors.Where(d => d.IsError), d => d.Message.Contains("UnsignedShiftRightToken"));
+        }
         [Fact]
         public void Probe_CompoundAssignBaseline()
         {

@@ -317,6 +317,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "<<=";
                 case SyntaxKind.ShiftRightToken:
                     return ">>";
+                case SyntaxKind.UnsignedShiftRightToken:
+                    return ">>>";
                 case SyntaxKind.ShiftRightEqualsToken:
                     return ">>=";
                 case SyntaxKind.BangToken:

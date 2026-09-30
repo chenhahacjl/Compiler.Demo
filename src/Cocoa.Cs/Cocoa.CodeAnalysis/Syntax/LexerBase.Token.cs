@@ -292,9 +292,20 @@ namespace Cocoa.CodeAnalysis.Syntax
                     if (Current == '>')
                     {
                         _position++;
+                        // `>>` 后再跟 `>` 即无符号右移 `>>>`（词法层）。
+                        // `>>=` 优先判定，避免 `a >>= b` 被误切成 `>>` + `=`。
+                        //
+                        // **本轮只做到解析层**：绑定器与 IL 发射**故意不接**，
+                        // 所以 `a >>> b` 会报明确的 "Binary operator '>>>' is not defined"
+                        // 而不是静默给出错误结果。见 UnsignedShiftRightToken 的说明。
                         if (Current == '=')
                         {
                             _kind = SyntaxKind.ShiftRightEqualsToken;
+                            _position++;
+                        }
+                        else if (Current == '>')
+                        {
+                            _kind = SyntaxKind.UnsignedShiftRightToken;
                             _position++;
                         }
                         else

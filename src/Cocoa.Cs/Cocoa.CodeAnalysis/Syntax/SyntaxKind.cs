@@ -1,4 +1,4 @@
-﻿namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
     /// 语法类型
@@ -257,5 +257,6 @@ ColonToken,               // :
         TypeofKeyword = 238,   // typeof：`typeof(T)`
         SizeofKeyword = 239,   // sizeof：`sizeof(T)`
         TypeOperatorExpression = 240,   // 类型运算表达式：typeof(T) / sizeof(T)
+        UnsignedShiftRightToken = 243, // >>> 无符号右移（**仅解析**，绑定/发射未接）
     }
 }
