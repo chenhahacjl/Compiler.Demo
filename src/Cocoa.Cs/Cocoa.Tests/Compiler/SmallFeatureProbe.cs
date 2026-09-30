@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using Cocoa.CodeAnalysis;
@@ -480,6 +480,51 @@ namespace Cocoa.Tests.Compiler
                 "}", "RefEquality");
 
             Assert.Equal(10, result);
+        }
+
+        [Fact(Skip = "实测缺口：`??=` 报 Binary operator '??=' is not defined for types 'any'。需算子注册 + 发射两处")]
+        public void Probe_CoalesceAssignment()
+        {
+            var r = RunMain(
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var a: any = null" + Nl +
+                "    var b = 0" + Nl +
+                "    a ??= 7" + Nl +
+                "    if a != null { b = 1 }" + Nl +
+                "    return b" + Nl +
+                "}", "CoalesceAssign");
+
+            Assert.Equal(1, r);
+        }
+
+        [Fact(Skip = "实测缺口：`b?.V` 报 Binary operator '??=' is not defined——词法疑似把 `?.` 误判成 `??=`，需先查词法")]
+        public void Probe_NullConditional()
+        {
+            var r = RunMain(
+                "class Box { public field V: i32 }" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var b: any = null" + Nl +
+                "    var v = b?.V" + Nl +
+                "    if v == null { return 1 }" + Nl +
+                "    return 0" + Nl +
+                "}", "NullConditional");
+
+            Assert.Equal(1, r);
+        }
+
+        [Fact(Skip = "实测缺口：`v == 9`（v: any）报 '==' is not defined for types 'any' and 'int'。属 any 与具体类型比较的转换推导缺口，非单点可修")]
+        public void Probe_CoalesceRight()
+        {
+            var r = RunMain(
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var a: any = null" + Nl +
+                "    var b: any = 9" + Nl +
+                "    var v = a ?? b" + Nl +
+                "    if v == 9 { return 1 }" + Nl +
+                "    return 0" + Nl +
+                "}", "CoalesceRight");
+
+            Assert.Equal(1, r);
         }
     }
 }
