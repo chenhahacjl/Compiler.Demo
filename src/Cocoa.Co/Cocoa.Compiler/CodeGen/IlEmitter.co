@@ -76,6 +76,7 @@ private field _pendingCount: i32
         private field _arrayElemCount: i32
         private field _convertToken: i32
         private field _boxInt32Token: i32
+        private field _boxDoubleToken: i32
 
         public constructor()
         {
@@ -234,11 +235,22 @@ private field _pendingCount: i32
             _arrayElemCount = count
         }
 
-        /// <summary>string(x) 转换：Convert.ToString(object) 成员 token + i32 装箱 TypeRef token。</summary>
-        public function SetStringConvert(convertToken: i32, boxInt32Token: i32): void
+        /// <summary>string(x) 转换：Convert.ToString(object) 成员 token + 各装箱类型 TypeRef token。</summary>
+        public function SetStringConvert(convertToken: i32, boxInt32Token: i32, boxDoubleToken: i32): void
         {
             _convertToken = convertToken
             _boxInt32Token = boxInt32Token
+            _boxDoubleToken = boxDoubleToken
+        }
+
+        /// <summary>按实参类型名选装箱 TypeRef token。Convert.ToString(object) 的形参是引用类型，
+        /// 值类型必须 box 成**它自己**的类型；此前一律用 Int32，f64/bool 等被当 Int32 装箱
+        /// （阶段 8 的 A 类错配：found Int32 [expected ref 'object'] / found Double [expected Int32]）。
+        /// 未登记的基元回退 Int32。</summary>
+        private function BoxTokenFor(typeName: string): i32
+        {
+            if typeName == "f64" || typeName == "double" { return _boxDoubleToken }
+            return _boxInt32Token
         }
 
         private function ArrayElemToken(typeName: string): i32
@@ -1771,7 +1783,7 @@ private field _pendingCount: i32
                         let at = StringArgTypeOf(expr.Child(1))
                         if at != "string"
                         {
-                            _assembler.EmitOperand("Box", 8, _boxInt32Token, -1)
+                            _assembler.EmitOperand("Box", 8, BoxTokenFor(at), -1)
                             let cidx = _assembler.EmitOperand("Call", 7, _convertToken, -1)
                             _assembler.SetCallDelta(cidx, 0)
                         }
@@ -1858,7 +1870,7 @@ private field _pendingCount: i32
                     EmitExpression(target)
                     if owner != "string"
                     {
-                        _assembler.EmitOperand("Box", 8, _boxInt32Token, -1)
+                        _assembler.EmitOperand("Box", 8, BoxTokenFor(owner), -1)
                         let cidx = _assembler.EmitOperand("Call", 7, _convertToken, -1)
                         _assembler.SetCallDelta(cidx, 0)
                     }

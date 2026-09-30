@@ -145,6 +145,11 @@ namespace Cocoa.CodeGen
             if hasConsole { typeRefCount = typeRefCount + 1 }
             if usesString { typeRefCount = typeRefCount + 1 }
             if usesInt32 { typeRefCount = typeRefCount + 1 }
+            // 装箱用 TypeRef：Convert.ToString(object) 需要按实参类型 box，
+            // 此前只有 System.Int32 一个（硬编码 _boxInt32Token），
+            // 导致 f64/bool 等实参被当 Int32 装箱（阶段 8 的 A 类 5 条）。
+            var usesBoxDouble = usesConvert[0]
+            if usesBoxDouble { typeRefCount = typeRefCount + 1 }
             if usesBool { typeRefCount = typeRefCount + 1 }
             if usesChar { typeRefCount = typeRefCount + 1 }
             if usesConvert[0] { typeRefCount = typeRefCount + 1 }
@@ -155,15 +160,19 @@ namespace Cocoa.CodeGen
             if hasConsole { int32TypeRow = int32TypeRow + 1 }
             if usesString { int32TypeRow = int32TypeRow + 1 }
             if usesInt32 { int32TypeRow = int32TypeRow + 1 }
+            var doubleTypeRow = int32TypeRow
+            if usesBoxDouble { doubleTypeRow = doubleTypeRow + 1 }
             var boolTypeRow = 2
             if hasConsole { boolTypeRow = boolTypeRow + 1 }
             if usesString { boolTypeRow = boolTypeRow + 1 }
             if usesInt32 { boolTypeRow = boolTypeRow + 1 }
+            if usesBoxDouble { boolTypeRow = boolTypeRow + 1 }
             if usesBool { boolTypeRow = boolTypeRow + 1 }
             var charTypeRow = 2
             if hasConsole { charTypeRow = charTypeRow + 1 }
             if usesString { charTypeRow = charTypeRow + 1 }
             if usesInt32 { charTypeRow = charTypeRow + 1 }
+            if usesBoxDouble { charTypeRow = charTypeRow + 1 }
             if usesBool { charTypeRow = charTypeRow + 1 }
             if usesChar { charTypeRow = charTypeRow + 1 }
             var convertTypeRow = typeRefCount
@@ -367,7 +376,7 @@ namespace Cocoa.CodeGen
 
             if usesConvert[0]
             {
-                emitter.SetStringConvert(0x0A000000 + convertMemberRow + 1, 0x01000000 + int32TypeRow)
+                emitter.SetStringConvert(0x0A000000 + convertMemberRow + 1, 0x01000000 + int32TypeRow, 0x01000000 + doubleTypeRow)
             }
             if totalClassMethods > 0
             {
@@ -597,6 +606,15 @@ namespace Cocoa.CodeGen
                 typeRefScope[typeRow] = 1
                 typeRefNs[typeRow] = "System"
                 typeRefName[typeRow] = "Int32"
+                typeRow = typeRow + 1
+            }
+
+            if usesBoxDouble
+            {
+                // 装箱目标：Convert.ToString(object) 的实参装箱类型（此前只有 Int32）
+                typeRefScope[typeRow] = 1
+                typeRefNs[typeRow] = "System"
+                typeRefName[typeRow] = "Double"
                 typeRow = typeRow + 1
             }
 
