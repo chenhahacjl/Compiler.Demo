@@ -482,7 +482,35 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal(10, result);
         }
 
-        [Fact(Skip = "实测缺口：`??=` 报 Binary operator '??=' is not defined for types 'any'。需算子注册 + 发射两处")]
+        [Fact]
+        public void Probe_CompoundAssignBaseline()
+        {
+            // 基准：`+=` 到底走哪条路？
+            // src\Cocoa.Cs\CodeGen 全树 0 处 CompoundAssignment —— 那 `+=` 若能用，
+            // 说明它在别处被脱糖了；这决定 `??=` 是"加表项"还是"要新建整条发射路径"。
+            var r = RunMain(
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var a = 1" + Nl +
+                "    a += 4" + Nl +
+                "    return a" + Nl +
+                "}", "CompoundBaseline");
+
+            Assert.Equal(5, r);
+        }
+
+        /// <summary>实测缺口：`a ??= 7`（a: any）报 `'??=' is not defined for types 'any'`。
+        ///
+        /// **根因与 <see cref="Probe_CoalesceRight"/> 同源**：算子表只注册了
+        /// `(Any, Any)` 与 `(String, String)` 的 NullCoalescing
+        /// （BoundBinaryOperator.cs:149-153），**没有 any ↔ 具体类型的隐式转换**，
+        /// 而 C# 允许 `object a; a ??= 7;`。
+        ///
+        /// 所以这不是"算子缺失"，而是**底层转换推导缺口**——它同时挡住了
+        /// `??=`、`v == 9`（v: any）等多个看似独立的缺口。
+        /// </summary>
+        [Fact(Skip = "实测缺口：`a ??= 7`（a: any）报 `'??=' is not defined for types 'any'`。"
+                        + "根因与 Probe_CoalesceRight 同源：算子表只注册了 (Any,Any)/(String,String) 的 NullCoalescing，"
+                        + "缺 any <-> 具体类型的隐式转换（C# 允许 object a; a ??= 7;）。属底层转换推导缺口，不是算子缺失。")]
         public void Probe_CoalesceAssignment()
         {
             var r = RunMain(
@@ -517,7 +545,11 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal(5, r);
         }
 
-        [Fact(Skip = "实测缺口：`v == 9`（v: any）报 '==' is not defined for types 'any' and 'int'。属 any 与具体类型比较的转换推导缺口，非单点可修")]
+        /// <summary>实测缺口：`var v = a ?? b; if v == 9`（v: any）报
+        /// '==' is not defined for types 'any' and 'int'。
+        /// 与 Probe_CoalesceAssignment **同源**：any 与具体类型缺隐式转换推导。
+        /// 这是三个缺口里最基础的一个，建议优先修——修好后 `??=` 等可能同时可用。</summary>
+        [Fact(Skip = "实测缺口：`v == 9`（v: any）报 ''==' is not defined for types 'any' and 'int''。与 Probe_CoalesceAssignment 同源：缺 any <-> 具体类型的隐式转换。")]
         public void Probe_CoalesceRight()
         {
             var r = RunMain(
