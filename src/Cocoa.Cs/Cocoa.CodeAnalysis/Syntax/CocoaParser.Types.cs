@@ -28,10 +28,32 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
 
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
+            identifier = ParseQualifiedNameSuffix(identifier);
             TypeClauseSyntax type = ParseGenericTypeSuffix(colonToken, identifier);
             type = WrapArrayTypeClause(colonToken, type);
 
             return type;
+        }
+
+        /// <summary>把后续的 `.Name` 合并进标识符，得到 `Outer.Inner` 这样的限定名。
+        /// 嵌套类型落地后，返回类型/参数类型都可能写成限定名
+        /// （如 `public function Make(): Outer.Inner`）。
+        /// 与 <c>ParseArrayCreationExpression</c> 里处理 `new Outer.Inner()` 的做法一致：
+        /// 合成一个文本为 `A.B` 的 IdentifierToken，下游按全名查类型即可。</summary>
+        private SyntaxToken ParseQualifiedNameSuffix(SyntaxToken identifier)
+        {
+            while (Current.Kind == SyntaxKind.DotToken &&
+                   Peek(1).Kind == SyntaxKind.IdentifierToken)
+            {
+                NextToken();
+                var next = MatchToken(SyntaxKind.IdentifierToken);
+                var combinedText = identifier.Text + "." + next.Text;
+                identifier = new SyntaxToken(_syntaxTree, SyntaxKind.IdentifierToken,
+                    identifier.Position, combinedText, combinedText,
+                    identifier.LeadingTrivia, next.TrailingTrivia);
+            }
+
+            return identifier;
         }
 
         private TypeClauseSyntax WrapArrayTypeClause(SyntaxToken? colonToken, TypeClauseSyntax elementType)

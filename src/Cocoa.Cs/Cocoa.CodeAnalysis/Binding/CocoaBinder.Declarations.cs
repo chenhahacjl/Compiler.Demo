@@ -2310,10 +2310,35 @@ namespace Cocoa.CodeAnalysis.Binding
                 if (member is ClassDeclarationSyntax classDeclaration)
                 {
                     allClasses.Add((classDeclaration, ns));
+                    CollectNestedClasses(classDeclaration, ns.Length == 0
+                        ? classDeclaration.Identifier.Text
+                        : ns + "." + classDeclaration.Identifier.Text, allClasses);
                 }
                 else if (member is NamespaceDeclarationSyntax nested)
                 {
                     CollectClasses(nested, ns, allClasses);
+                }
+            }
+        }
+
+        /// <summary>递归收集嵌套类型：类体里的 `class Inner { … }`。
+        ///
+        /// 复用外层那个 `Namespace` 槽位来承载**外层类型的限定名**，于是
+        /// `CocoaBinder.cs` 阶段 2 里的 `ns + "." + Identifier.Text` 自然算出
+        /// `Outer.Inner`（命名空间内的嵌套类则是 `Ns.Outer.Inner`），与解析侧
+        /// 把 `Outer.Inner` 合成单个标识符的做法对齐，类型查找无需额外分支。
+        ///
+        /// 已知偏差：内层类型的 `Namespace` 因此会带上外层类型名
+        /// （`Inner.Namespace == "Outer"` 而非 `""`）。类型全名与查找是正确的，
+        /// 只有反射里读 `Namespace` 的场景会看到差异——先记为已知偏差。
+        private void CollectNestedClasses(ClassDeclarationSyntax owner, string ownerQualifiedName, List<(ClassDeclarationSyntax Syntax, string Namespace)> allClasses)
+        {
+            foreach (var member in owner.Members)
+            {
+                if (member is ClassDeclarationSyntax nested)
+                {
+                    allClasses.Add((nested, ownerQualifiedName));
+                    CollectNestedClasses(nested, ownerQualifiedName + "." + nested.Identifier.Text, allClasses);
                 }
             }
         }

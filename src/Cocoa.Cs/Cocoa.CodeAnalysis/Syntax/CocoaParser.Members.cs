@@ -1026,6 +1026,13 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return ParseDelegateDeclaration(modifiers);
             }
 
+            if (Current.Kind == SyntaxKind.ClassKeyword || Current.Kind == SyntaxKind.StructKeyword)
+            {
+                // 嵌套类型：类体/结构体体内直接写 `class Inner { … }`。
+                // ParseClassDeclaration 本身就吃 `class|struct` 关键字打头，可直接复用。
+                return ParseClassDeclaration(attributes, modifiers);
+            }
+
             if (Current.Kind == SyntaxKind.PropertyKeyword)
             {
                 return ParsePropertyDeclaration(attributes, modifiers);

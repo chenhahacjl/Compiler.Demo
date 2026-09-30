@@ -173,6 +173,8 @@ namespace Cocoa.CodeAnalysis.Binding
                 else if (member is ClassDeclarationSyntax classDeclaration)
                 {
                     allClasses.Add((classDeclaration, ""));
+                    // 顶层类的嵌套类型同样要登记（命名空间内的走 CollectClasses 那条路）
+                    binder.CollectNestedClasses(classDeclaration, classDeclaration.Identifier.Text, allClasses);
                 }
                 else if (member is DelegateDeclarationSyntax delegateDeclaration)
                 {

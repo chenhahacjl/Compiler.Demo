@@ -130,14 +130,78 @@ namespace Cocoa.Tests.Compiler
         // 嵌套类
         // ------------------------------------------------------------------
 
-        [Fact(Skip = "嵌套类未实现：类体内写 `class Inner { … }` 报 Unexpected token <ClassKeyword>, "
-                        + "expected <IdentifierToken>。C# 式限定名 new Outer.Inner() 需等嵌套类型落地后才可用。")]
+        [Fact]
         public void NestedClass_DeclaredInsideClass()
         {
+            // 类体内直接声明 class，并按 `new Outer.Inner()` 的 C# 式限定名构造
+            var result = RunMain(
+                "class Outer {" + Nl +
+                "    public field Tag: i32" + Nl +
+                "    class Inner {" + Nl +
+                "        public field V: i32" + Nl +
+                "    }" + Nl +
+                "    public function Make(v: i32): Outer.Inner {" + Nl +
+                "        var i = new Outer.Inner()" + Nl +
+                "        i.V = v" + Nl +
+                "        return i" + Nl +
+                "    }" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var o = new Outer()" + Nl +
+                "    return o.Make(7).V" + Nl +
+                "}", "NestedClass");
+            Assert.Equal(7, result);
         }
-        // ------------------------------------------------------------------
-        // foreach 解构
-        // ------------------------------------------------------------------
+
+        [Fact]
+        public void NestedClass_TwoLevelsDeep()
+        {
+            // 两层嵌套：A.B.C 的限定名要能一层层拼出来
+            var result = RunMain(
+                "class A {" + Nl +
+                "    class B {" + Nl +
+                "        class C {" + Nl +
+                "            public field V: i32" + Nl +
+                "        }" + Nl +
+                "    }" + Nl +
+                "    public function Make(): A.B.C {" + Nl +
+                "        var c = new A.B.C()" + Nl +
+                "        c.V = 5" + Nl +
+                "        return c" + Nl +
+                "    }" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var a = new A()" + Nl +
+                "    return a.Make().V" + Nl +
+                "}", "NestedClassDeep");
+
+            Assert.Equal(5, result);
+        }
+
+        [Fact]
+        public void NestedClass_InsideNamespace()
+        {
+            // 命名空间内的嵌套类：全名应为 Ns.Outer.Inner
+            var result = RunMain(
+                "namespace Ns {" + Nl +
+                "    class Outer {" + Nl +
+                "        class Inner {" + Nl +
+                "            public field V: i32" + Nl +
+                "        }" + Nl +
+                "        public function Make(): Ns.Outer.Inner {" + Nl +
+                "            var i = new Ns.Outer.Inner()" + Nl +
+                "            i.V = 9" + Nl +
+                "            return i" + Nl +
+                "        }" + Nl +
+                "    }" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var o = new Ns.Outer()" + Nl +
+                "    return o.Make().V" + Nl +
+                "}", "NestedClassNs");
+
+            Assert.Equal(9, result);
+        }
 
         [Fact(Skip = "foreach 元组解构未实现：`foreach (var a, var b) in t` 报 Unexpected token <CommaToken>, "
                         + "expected <InKeyword>——循环变量位置只接受单个 `var 名字`，"
