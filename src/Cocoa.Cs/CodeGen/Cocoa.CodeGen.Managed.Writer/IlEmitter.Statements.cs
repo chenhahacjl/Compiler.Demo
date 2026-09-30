@@ -375,6 +375,9 @@ namespace Cocoa.CodeGen.Managed.Writer
                 case BoundNodeKind.MemberAccessExpression:
                     EmitMemberAccessExpression(il, (BoundMemberAccessExpression)node);
                     break;
+                case BoundNodeKind.ConditionalAccessExpression:
+                    EmitConditionalAccessExpression(il, (BoundConditionalAccessExpression)node);
+                    break;
                 case BoundNodeKind.MemberCallExpression:
                     EmitMemberCallExpression(il, (BoundMemberCallExpression)node);
                     break;

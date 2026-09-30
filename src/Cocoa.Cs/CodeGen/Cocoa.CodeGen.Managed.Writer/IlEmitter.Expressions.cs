@@ -921,9 +921,42 @@ namespace Cocoa.CodeGen.Managed.Writer
             }
         }
 
-        private void EmitMemberAccessExpression(IlAssembler il, BoundMemberAccessExpression node)
+        /// <summary>
+        /// <c>?.</c> 空条件访问（<c>a?.B</c>）：<c>a</c> 为 null 时整体结果为 null，
+        /// 否则取 <c>a.B</c>。
+        ///
+        /// 此前**只有词法 + 解析 + 绑定 + 求值器**这条链是通的
+        /// （词法 <c>QuestionDotToken</c>、<c>ConditionalAccessExpressionSyntax</c>、
+        /// <c>BindConditionalAccessExpression</c>、<c>EvaluateConditionalAccessExpression</c>），
+        /// **唯独 IL 发射器没有对应分支**——所以走 Emit 的路径（也就是探针里的
+        /// <c>RunMain</c>）会失败，而走求值器看不出问题。这类"某一层独缺"的缺口
+        /// 靠端到端试错很难定位，按层查（绑定/求值/发射各 grep 一次）最快。
+        ///
+        /// 发射形态：接收者求值一次存局部槽 → 非 null 走访问路径 → 汇合处留 null。
+        /// 必须**只求值一次**接收者（`a?.F()` 若求值两次会有副作用重复）。
+        /// </summary>
+        private void EmitConditionalAccessExpression(IlAssembler il, BoundConditionalAccessExpression node)
         {
-            if (node.Field != null && node.Field.IsStatic)
+            var slot = AllocateTemporaryLocal(node, node.Expression.Type);
+            var nullBranch = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
+            var end = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
+
+            EmitExpression(il, node.Expression);
+            il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)slot);
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)slot);
+            il.Emit(IlOpCodeTable.Get("Brfalse"), nullBranch);
+
+            EmitExpression(il, node.WhenNotNull);
+            il.Emit(IlOpCodeTable.Get("Br"), end);
+
+            il.Emit(nullBranch);
+            il.Emit(IlOpCodeTable.Get("Ldnull"));
+
+            il.Emit(end);
+        }
+
+        private void EmitMemberAccessExpression(IlAssembler il, BoundMemberAccessExpression node)
+        {            if (node.Field != null && node.Field.IsStatic)
             {
                 il.Emit(IlOpCodeTable.Get("Ldsfld"), _fieldToken(node.Field));
                 return;
