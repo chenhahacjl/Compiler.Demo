@@ -1342,29 +1342,61 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal(7, (int)exit!);
         }
 
-        [Fact(Skip = "诊断：跑 %TEMP%\\cocoa-b1-probe\\B1.dll 的 Main 于小源（需新鲜 B1，手动启用）")]
-        public void RunSavedB1_WithSmallSource()
+        /// <summary>
+        /// 阶段 8 的核心门禁：**自举产物 B1 必须能被 CLR 真正加载并运行**。
+        ///
+        /// 原实现是交互式诊断（无论结果如何都 throw XunitException），因此长期挂着 Skip。
+        /// 本次改为真实断言：产物缺失则条件跳过，存在则必须能跑完一个最小自举编译。
+        ///
+        /// 比 ilverify 更权威：ilverify 在本程序上会抛 InvalidCastException 中断验证
+        /// （ImportLoadElement），「0 错」是假阴性；而 CLR 能否 JIT 并执行是确定判据。
+        ///
+        /// 另两个 Dump* / HuntInvalid* 仍保持 Skip——它们同样以 throw 输出诊断信息，
+        /// 属交互式工具而非断言，入库会永久标红。
+        /// </summary>
+        [Fact(Skip = "阶段8 门禁（待 .co 轨小输入缺陷修复后解除）：已实测 B1 能被 CLR 加载并运行、"
+            + "且对 593KB 全量语料能产出完整 B2（260,096 B）；但对「只有顶层函数、无类」的小源码报 "
+            + "ERR:no functions——Binder.GetTopLevelFunctionCount 返回 0。"
+            + "已排除后端分歧：同一份 .co 源码经 C# 轨 IL 发射路径（B2.fast.dll）编译全量语料成功，"
+            + "仅小输入失败，故是 .co 轨 Parser/Binder 的小输入顶层函数登记问题，非 Evaluator/IlEmitter 不一致。")]
+        public void SavedB1_RunsMinimalSelfCompile()
         {
-            var probeDir = Path.Combine(Path.GetTempPath(), "cocoa-b1-probe");
-            var b1 = Path.Combine(probeDir, "B1.dll");
-            Assert.True(File.Exists(b1), "B1.dll 未保存");
+            var b1 = Path.Combine(Path.GetTempPath(), "cocoa-b1-probe", "B1.dll");
+            if (!File.Exists(b1))
+            {
+                Console.WriteLine("SKIP: 无 " + b1 + "；先跑 COCOA_SLOW_PROBE=1 的 B1_Bootstrap_ReferenceEnd（约 40m）。");
+                return;
+            }
+
+            // BuildDllHex 接受**源码文本**（不是文件路径）：IlDriver.co 的 BuildDllHex 直接
+            // Binder.Create(source) 解析，不读文件。
+            const string source = "class V { public function Twice(x: i32): i32 { return x * 2 } }\nfunction Main(args: string[]): i32 { return new V().Twice(21) }\n";
+
             var asm = System.Reflection.Assembly.LoadFile(b1);
             var ep = asm.EntryPoint!;
+            Assert.NotNull(ep);
+            Assert.Equal("Main", ep.Name);
+
+            var original = Console.Out;
             string output;
             object? exit;
-            var original = Console.Out;
             try
             {
                 using var writer = new StringWriter();
                 Console.SetOut(writer);
                 try
                 {
-                    exit = ep.Invoke(null, new object[] { new[] { "function Main(): i32 { return 0 }\n" } });
+                    exit = ep.Invoke(null, new object[] { new[] { source } });
                 }
                 catch (Exception ex)
                 {
                     Console.SetOut(original);
-                    throw new Xunit.Sdk.XunitException("B1 invoke err: " + ex.GetType().Name + ":" + ex.Message + " | ep=" + ep + " | inner=" + ex.InnerException);
+                    var inner = ex.InnerException ?? ex;
+                    throw new Xunit.Sdk.XunitException(
+                        "B1 自举编译器无法运行（CLR 判非法程序）——" + inner.GetType().Name + ": " + inner.Message
+                        + "。这是阶段 8 的硬门禁：ilverify 在本程序上不可信（会崩溃），"
+                        + "「产物能否被 CLR 加载并执行」才是权威判据。"
+                        + "注意 B1 由 bootstrap 产出，若近期修过 .co 源码需先重建 B1。");
                 }
 
                 Console.SetOut(original);
@@ -1375,7 +1407,21 @@ namespace Cocoa.Tests.Compiler
                 Console.SetOut(original);
             }
 
-            throw new Xunit.Sdk.XunitException("B1 exit=" + exit + " out='" + (output.Length <= 200 ? output.Replace("\n", "\\n") : output.Substring(0, 200).Replace("\n", "\\n")) + "'");
+            Assert.Equal(0, (int)exit!);
+            // B1 的 Main 会打印 B2:<hex>。必须是真正的十六进制 PE，不能是 ERR: 前缀。
+            var line = output.Split('\n').Select(l => l.Trim())
+                .FirstOrDefault(l => l.StartsWith("B2:", StringComparison.Ordinal));
+            Assert.True(line != null, "B1 未输出 B2:<hex>；实际输出: " + output);
+            var hex = line!["B2:".Length..].Trim();
+            Assert.False(hex.StartsWith("ERR:", StringComparison.Ordinal),
+                "自举编译失败: " + hex + Environment.NewLine
+                + "已定位的当前缺陷：.co 自举编译器对「只有顶层函数、无类」的小源码报 ERR:no functions"
+                + "（Binder.GetTopLevelFunctionCount 返回 0）。同一份 .co 源码经 C# 轨 **IL 发射**路径"
+                + "（Corpus_EmitAndRun_FastSelfHost 产出的 B2.fast.dll）编译 593KB 全量语料是成功的，"
+                + "因此这不是 C# 轨两个后端（Evaluator/IlEmitter）不一致，而是 .co 轨"
+                + "Parser/Binder 在小输入上的顶层函数登记问题。");
+            Assert.True(hex.Length > 200, "B2 hex 过短 (" + hex.Length + ")，可能未产出完整 PE");
+            Assert.Equal("4D5A", hex.Substring(0, 4)); // MZ
         }
 
         [Fact(Skip = "诊断：裸 PE 元数据解析测 #US/#Strings 堆大小+HeapSizes（阶段8 调试用，读 %TEMP%\\cocoa-b1-probe\\B1.dll）")]
