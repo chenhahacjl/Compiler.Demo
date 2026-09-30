@@ -1354,13 +1354,16 @@ namespace Cocoa.Tests.Compiler
         /// 另两个 Dump* / HuntInvalid* 仍保持 Skip——它们同样以 throw 输出诊断信息，
         /// 属交互式工具而非断言，入库会永久标红。
         /// </summary>
-        [Fact(Skip = "阶段8 门禁（待 .co 轨自产代码的 Parser/Binder 缺陷修复后解除）。"
-            + "已实测确认：B1/B2 能被 CLR 加载运行、argv 通路正常（不传参抛 IndexOutOfRange），"
-            + "且 B2==B1 字节级相等（均 260,608 B）；但 BuildDllHex 对**任意**小源码都返回 "
-            + "ERR:no functions（零诊断、零警告、零顶层函数），非法参数与合法源码输出完全相同。"
-            + "对照组：同一份 .co 源码经 C# 轨发射产出的 runner 能把 596KB 全量语料编译成"
-            + "有效的 260,608 B PE（零 binder 警告）。故这是 .co 轨**自产代码**与 C# 轨发射产物的"
-            + "行为分歧，定位在 Parser/Binder 的 .co 发射路径，不是「小输入顶层函数登记」问题。")]
+        [Fact(Skip = "阶段8 门禁（待 .co 轨 string[] 元素读取的发射缺陷修复后解除）。"
+            + "已实测：B1/B2 能被 CLR 加载运行、argv 数组本身正常（不传参抛 IndexOutOfRangeException，"
+            + "证明 args 长度正确），且 B2==B1 字节级相等（均 260,608 B）；"
+            + "但 BuildDllHex 对**任意**小源码都返回 ERR:no functions，且**零诊断、零警告**——"
+            + "传入合法源码与传入垃圾参数（ZZZ_not_source）输出完全相同。"
+            + "零诊断+零警告说明它拿到的输入里根本没有任何可解析内容，指向 args[0] 的 string 元素"
+            + "读取在 .co 轨被发射错（拿到空串），而非 Parser/Binder 的小输入边界问题。"
+            + "对照组：同一份 .co 源码经 C# 轨发射产出的 runner 能把 596KB 全量语料编译成有效 PE。"
+            + "旁证：.co 轨从未被测过「Main(string[]) 里 args[0] 的发射」——"
+            + "Corpus_EmitAndRun_FastSelfHost 的 runner 是 C# 轨 Emit 出来的，只做字节比对，从不让 B1/B2 干活。")]
         public void SavedB1_RunsMinimalSelfCompile()
         {
             var b1 = Path.Combine(Path.GetTempPath(), "cocoa-b1-probe", "B1.dll");
@@ -1372,6 +1375,7 @@ namespace Cocoa.Tests.Compiler
 
             // BuildDllHex 接受**源码文本**（不是文件路径）：IlDriver.co 的 BuildDllHex 直接
             // Binder.Create(source) 解析，不读文件。
+            // 注意：全量语料约 596KB，无法走 argv（Windows 命令行 32KB 上限），本门禁只能用小源码。
             const string source = "class V { public function Twice(x: i32): i32 { return x * 2 } }\nfunction Main(args: string[]): i32 { return new V().Twice(21) }\n";
 
             var asm = System.Reflection.Assembly.LoadFile(b1);
@@ -1418,10 +1422,11 @@ namespace Cocoa.Tests.Compiler
             Assert.False(hex.StartsWith("ERR:", StringComparison.Ordinal),
                 "自举编译失败: " + hex + Environment.NewLine
                 + "已定位的当前缺陷：.co 轨**自产**的编译器（B1/B2）对**任意**小源码都返回 "
-                + "ERR:no functions——零诊断、零警告、零顶层函数；且传入非法参数（如 ZZZ_not_source）"
-                + "输出完全相同，说明 BuildDllHex 拿到的输入无法被 .co 轨 Parser 解析出任何顶层函数。"
-                + "对照组：同一份 .co 源码经 C# 轨发射产出的 runner 编译 596KB 全量语料成功。"
-                + "故这是 .co 轨自产代码与 C# 轨发射产物的行为分歧，定位在 Parser/Binder 的 .co 发射路径。");
+                + "ERR:no functions，且**零诊断、零警告**——传入合法源码与传入垃圾参数"
+                + "（ZZZ_not_source）输出完全相同。零诊断+零警告说明它拿到的输入里没有任何"
+                + "可解析内容，指向 args[0] 的 string 元素读取在 .co 轨被发射错（拿到空串），"
+                + "而非 Parser/Binder 的小输入边界问题。对照组：同一份 .co 源码经 C# 轨发射产出的 "
+                + "runner 编译 596KB 全量语料成功。");
             Assert.True(hex.Length > 200, "B2 hex 过短 (" + hex.Length + ")，可能未产出完整 PE");
             Assert.Equal("4D5A", hex.Substring(0, 4)); // MZ
         }
