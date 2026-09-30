@@ -1449,16 +1449,7 @@ namespace Cocoa.Tests.Compiler
         /// 另两个 Dump* / HuntInvalid* 仍保持 Skip——它们同样以 throw 输出诊断信息，
         /// 属交互式工具而非断言，入库会永久标红。
         /// </summary>
-        [Fact(Skip = "阶段8 门禁（待 .co 轨 string[] 元素读取的发射缺陷修复后解除）。"
-            + "已实测：B1/B2 能被 CLR 加载运行、argv 数组本身正常（不传参抛 IndexOutOfRangeException，"
-            + "证明 args 长度正确），且 B2==B1 字节级相等（均 260,608 B）；"
-            + "但 BuildDllHex 对**任意**小源码都返回 ERR:no functions，且**零诊断、零警告**——"
-            + "传入合法源码与传入垃圾参数（ZZZ_not_source）输出完全相同。"
-            + "零诊断+零警告说明它拿到的输入里根本没有任何可解析内容，指向 args[0] 的 string 元素"
-            + "读取在 .co 轨被发射错（拿到空串），而非 Parser/Binder 的小输入边界问题。"
-            + "对照组：同一份 .co 源码经 C# 轨发射产出的 runner 能把 596KB 全量语料编译成有效 PE。"
-            + "旁证：.co 轨从未被测过「Main(string[]) 里 args[0] 的发射」——"
-            + "Corpus_EmitAndRun_FastSelfHost 的 runner 是 C# 轨 Emit 出来的，只做字节比对，从不让 B1/B2 干活。")]
+        [Fact(Skip = "阶段8 门禁（待 B1 大规模产物的元数据/堆写出损坏修复后解除）。实测：B1/B2 能加载运行、argv 通路正常、badCount 已降到 0，但对**任意**输入（含只有 1 个顶层函数的 82 字符源码）一律返回 ERR:no functions；输入放大到约 400 个函数（14.6KB）时改为 AccessViolationException 崩溃。已排除 args[0] 读取问题：.co 轨自产的 2KB 程序能正确读出 args.Length=2 与 args[0]。")]
         public void SavedB1_RunsMinimalSelfCompile()
         {
             var b1 = Path.Combine(Path.GetTempPath(), "cocoa-b1-probe", "B1.dll");
