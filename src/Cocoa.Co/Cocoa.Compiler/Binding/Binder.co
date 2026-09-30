@@ -34,6 +34,11 @@ namespace Cocoa.CodeAnalysis.Binding
         private field _boundRoots: Node[]
         private field _diags: string[]
         private field _diagCount: i32
+        /// <summary>非致命诊断（与 _diags 分开计数）。type: 推断失败回落成 "?" 时告警——
+        /// 它会被 MetadataEncode 静默编码成 object，若不报出就会生成错误签名却无人知晓
+        /// （阶段 8 曾因此长期藏有 4 条 ilverify 错配）。</summary>
+        private field _warnings: string[]
+        private field _warningCount: i32
         private field _mainName: string
         private field _labelCount: i32
         private field _loopLabelCount: i32
@@ -80,6 +85,8 @@ namespace Cocoa.CodeAnalysis.Binding
             b._localCount = 0
             b._diags = new string[8]
             b._diagCount = 0
+            b._warnings = new string[8]
+            b._warningCount = 0
             b._boundRoots = new Node[8]
             b._classNames = new string[8]
             b._knownClassNames = new string[16]
@@ -888,13 +895,131 @@ _localCount = 0
                 let child = node.Child(i)
                 if !child.IsToken() && child.Kind() != "TypeClause" && child.Kind() != "ArrayTypeClause" && child.Kind() != "GenericTypeClause"
                 {
-                    return InferTypeOfExpression(child)
+                    let inferred = InferTypeOfExpression(child)
+                    if inferred == "?"
+                    {
+                        // 推断落空 → MetadataEncode 会静默编码成 object(1c)。
+                        // 这类问题曾长期隐身（阶段 8 的 4 条 A 类错配即由此来），
+                        // 故在此告警：每个不可推断的局部量只报一次，且带函数名 + 变量名。
+                        // 消息用逐步追加而非一长串 + 拼接：多段拼接混三元会触发发射器
+                        // 的「Expected numeric type on the stack」。
+                        ReportLocalTypeWarning(node, child.Kind())
+                    }
+
+                    return inferred
                 }
 
                 i = i + 1
             }
 
+            ReportLocalTypeWarning(node, "")
             return "?"
+        }
+
+        /// <summary>报告「局部量类型推断落空」。消息分段追加，便于阅读与定位。</summary>
+        private function ReportLocalTypeWarning(node: Node, initKind: string): void
+        {
+            var msg = "cannot infer type of local '"
+            msg = msg + DeclNameOf(node)
+            msg = msg + "' in "
+            msg = msg + (_currentClass != "" ? _currentClass : "<global>")
+            let fn = CurrentFunctionName()
+            if fn != ""
+            {
+                msg = msg + "."
+                msg = msg + fn
+            }
+
+            if initKind != ""
+            {
+                msg = msg + " (initializer kind="
+                msg = msg + initKind
+                msg = msg + ")"
+            }
+
+            ReportWarning(msg)
+        }
+
+        /// <summary>按函数名查返回类型：当前类方法 → 任意类方法（静态/实例均可）→ 顶层函数。
+        /// 优先级与发射侧 ExprTypeOf 的 CallExpression 分支一致
+        /// （CurClassReturnType → TopMethodType → ClassMethodType）。</summary>
+        private function FunctionReturnTypeOf(fn: string): string
+        {
+            if fn == ""
+            {
+                return ""
+            }
+
+            // 当前类（含基类链由 _classNames/_classField 之外的类表覆盖）
+            var ci = 0
+            while ci < _classCount
+            {
+                if _classNames[ci] == _currentClass
+                {
+                    var mi = 0
+                    while mi < _classMethodCounts[ci]
+                    {
+                        let off = _classMethodOffsets[ci] + mi
+                        if _classMethodNames[off] == fn
+                        {
+                            return _functions[_classMethodIndexes[off]].ReturnType()
+                        }
+
+                        mi = mi + 1
+                    }
+                }
+
+                ci = ci + 1
+            }
+
+            // 任意类
+            ci = 0
+            while ci < _classCount
+            {
+                var mi2 = 0
+                while mi2 < _classMethodCounts[ci]
+                {
+                    let off2 = _classMethodOffsets[ci] + mi2
+                    if _classMethodNames[off2] == fn
+                    {
+                        return _functions[_classMethodIndexes[off2]].ReturnType()
+                    }
+
+                    mi2 = mi2 + 1
+                }
+
+                ci = ci + 1
+            }
+
+            // 顶层函数
+            let gi = IndexOfString(_functionNames, _functionCount, fn)
+            if gi >= 0
+            {
+                return _functions[gi].ReturnType()
+            }
+
+            return ""
+        }
+
+        /// <summary>取局部声明的变量名（首 token 的文本；复合节点取首子节点）。</summary>
+        private function DeclNameOf(node: Node): string
+        {
+            if node.ChildCount() > 1
+            {
+                return node.Child(1).Text()
+            }
+
+            if node.ChildCount() > 0
+            {
+                return node.Child(0).Text()
+            }
+
+            return "?"
+        }
+
+        private function CurrentFunctionName(): string
+        {
+            return _currentFunction != null ? _currentFunction.Name() : ""
         }
 
         /// <summary>字面量/一元/二元/名称/调用表达式 → 推断类型名（var 无类型标注时；对齐 C# 绑定）。</summary>
@@ -1207,17 +1332,58 @@ _localCount = 0
                 return "?"
             }
 
+            if k == "CallExpression"
+            {
+                // 裸函数调用 f(...) 的类型 = 被调函数返回类型。
+                // 此前 binder 缺此分支（发射侧 ExprTypeOf 有，IlEmitter.co:695-729），
+                // 于是 `let v = ParseInt(s)` 这类初始化器推断落空 → "?" → 编码成 object。
+                // 当前是潜在风险而非显错误：这些局部量恰好多持有引用，Object 兼容；
+                // 一旦其中某个持有值类型就会静默生成错误签名。
+                if node.ChildCount() == 0
+                {
+                    return "?"
+                }
+
+                var fn = node.Child(0).Text()
+                if node.Child(0).Kind() == "MemberAccessExpression" && node.Child(0).ChildCount() > 2
+                {
+                    fn = node.Child(0).Child(2).Text()
+                }
+
+                // 转换式 string(x) / i32(x) / f64(x) / bool(x) / char(x)：类型就是目标类型本身，
+                // 不能委托给实参——`i32(s[0])` 的实参 `s[0]` 是 string 下标（元素类型未必可推断），
+                // 但转换结果必然是 i32。此前委托实参导致这类初始化器推断落空。
+                if fn == "string" || fn == "i32" || fn == "f64" || fn == "bool" || fn == "char"
+                {
+                    return fn
+                }
+
+                let r = FunctionReturnTypeOf(fn)
+                if r.Length > 0
+                {
+                    return r
+                }
+
+                return "?"
+            }
+
             if k == "ElementAccessExpression"
             {
                 // x[i]：x 的参数/局部类型为数组 → 元素类型（args[0] → string）
                 if node.ChildCount() > 0
                 {
                     let tn = node.Child(0).ChildCount() > 0 ? node.Child(0).Child(0).Text() : node.Child(0).Text()
-                    let at = LocalTypeOrParamOf(tn)
-                    if at.Length > 2 && at.IndexOf("[]") == at.Length - 2
-                    {
-                        return at.substring(0, at.Length - 2)
-                    }
+                        let at = LocalTypeOrParamOf(tn)
+                        if at.Length > 2 && at.IndexOf("[]") == at.Length - 2
+                        {
+                            return at.substring(0, at.Length - 2)
+                        }
+
+                        // 字符串下标 s[i] → char（C# 语义；Node.Escape 的 let c = text[i] 依赖此）
+                        if at == "string"
+                        {
+                            return "char"
+                        }
                 }
 
                 return "?"
@@ -2837,6 +3003,51 @@ _localCount = 0
 
             _diags[_diagCount] = "error: " + message
             _diagCount = _diagCount + 1
+        }
+
+        /// <summary>非致命诊断。**不进** _diags —— BuildDllHex 用 DiagnosticCount() > 0 决定是否
+        /// 放弃出 DLL，若告警混入该通道会直接阻断自举编译。故独立计数，仅由调用方透出。</summary>
+        public function ReportWarning(message: string): void
+        {
+            // 去重：绑定过程会多次经过同一局部量（如多轮作用域/重复绑定），
+            // 不去重会让门禁计数被重复登记放大，掩盖真实数量。
+            var seen = 0
+            while seen < _warningCount
+            {
+                if _warnings[seen] == "warning: " + message
+                {
+                    return
+                }
+
+                seen = seen + 1
+            }
+
+            if _warningCount >= _warnings.Length
+            {
+                var bigger = new string[_warnings.Length * 2]
+                var i = 0
+                while i < _warningCount
+                {
+                    bigger[i] = _warnings[i]
+                    i = i + 1
+                }
+
+                _warnings = bigger
+            }
+
+            _warnings[_warningCount] = "warning: " + message
+            _warningCount = _warningCount + 1
+        }
+
+        /// <summary>非致命诊断条数（供自举回路/门禁读取；当前语义为「应为 0」）。</summary>
+        public function WarningCount(): i32
+        {
+            return _warningCount
+        }
+
+        public function WarningAt(index: i32): string
+        {
+            return _warnings[index]
         }
 
         private function IsPrimitiveTypeName(t: string): bool

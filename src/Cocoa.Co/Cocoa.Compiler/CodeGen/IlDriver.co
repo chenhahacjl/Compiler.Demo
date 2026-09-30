@@ -25,6 +25,17 @@ namespace Cocoa.CodeGen
                 return "ERR:" + binder.DiagnosticAt(0)
             }
 
+            // 非致命诊断只透出、**不影响**出 DLL：类型推断落空（"?"）会被
+            // MetadataEncode 静默编码成 object 而生成错误签名——这类问题必须在
+            // 编译期可见，故打印到 stdout，由自举回路的门禁断言警告数为 0。
+            // 不并入上面的 DiagnosticCount 分支：告警混入会直接阻断自举编译。
+            var widx = 0
+            while widx < binder.WarningCount()
+            {
+                System.Console.WriteLine(binder.WarningAt(widx))
+                widx = widx + 1
+            }
+
             let topCount = binder.GetTopLevelFunctionCount()
             let classCount = binder.GetClassCount()
             let fnCount = binder.GetFunctionCount()

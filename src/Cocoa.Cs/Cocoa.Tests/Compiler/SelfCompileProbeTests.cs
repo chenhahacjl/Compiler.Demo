@@ -323,6 +323,21 @@ namespace Cocoa.Tests.Compiler
             _out.WriteLine("exit=" + proc.ExitCode);
             if (stderr.Length > 0) { _out.WriteLine("stderr: " + stderr.Trim().Substring(0, Math.Min(600, stderr.Trim().Length))); }
 
+            // 非致命诊断门禁：类型推断落空（"?"）会被 MetadataEncode 静默编码成 object，
+            // 生成与实际值类型不符的 locals 签名。编译器侧刻意**不**阻断（告警混入会
+            // 阻断自举），阻断放在这里——语义与门禁分离，但效果同样是不许它溜过去。
+            var warnings = stdout.Split('\n').Select(l => l.Trim())
+                .Where(l => l.StartsWith("warning:", StringComparison.Ordinal))
+                .ToList();
+            _out.WriteLine("binder warnings: " + warnings.Count);
+            foreach (var w in warnings.Take(10))
+            {
+                _out.WriteLine("  " + w);
+            }
+
+            Assert.True(warnings.Count == 0,
+                $"binder 报告 {warnings.Count} 条非致命诊断（首个：{warnings.FirstOrDefault() ?? "-"}）");
+
             var hexLine = stdout.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.StartsWith("HEX:", StringComparison.Ordinal));
             // 自举编译器自身的诊断输出（非 HEX 行）回显到测试输出，便于定位 .co 轨问题
             foreach (var line in stdout.Split('\n').Select(l => l.TrimEnd())
