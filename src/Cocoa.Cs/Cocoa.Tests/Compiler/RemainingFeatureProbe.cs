@@ -694,10 +694,44 @@ namespace Cocoa.Tests.Compiler
             Assert.NotEmpty(diagnostics.Where(d => d.IsError));
         }
 
-        [Fact(Skip = "集合表达式 `[1, 2, 3]` 未实现：无 CollectionExpression 语法节点，"
-                        + "解析器把 `[` 当下标表达式起始并连报 Unexpected token。")]
-        public void CollectionExpression_NotSupported()
+        /// <summary>
+        /// 集合表达式 `[1, 2, 3]`（C# 12）——**未实现**，测试体已写好待启用。
+        ///
+        /// 实测缺口：`var a: i32[] = [1, 2, 3]` 报
+        /// `Unexpected token &lt;OpenBracketToken&gt;, expected &lt;IdentifierToken&gt;`，
+        /// 因为 `[` 在主表达式位置不被当作起始符（它只在下标后置位置有含义）。
+        ///
+        /// 计划做法（**尚未实施**，据评估涉及三处、且绑定器改动有风险）：
+        /// 1. 解析：在主表达式 switch 里加 `OpenBracketToken` 分支，解析
+        ///    `[e1, e2, ...]`，**脱糖**成已有的 <c>ArrayCreationExpressionSyntax</c>
+        ///    （Elements 装元素、Size 留空、new 关键字用默认 token）——
+        ///    刻意不新建语法节点类型，避免重蹈 green node 槽位承载的覆辙。
+        /// 2. 绑定：需要从**目标类型**推出元素类型（`i32[]` → i32）。
+        ///    这一步是主要风险点：绑定器在多数表达式位置拿不到目标类型上下文，
+        ///    可能需要引入"期望类型"参数或在声明绑定处特判。
+        /// 3. 发射：复用既有数组创建发射（newarr + dup + stelem）。
+        ///
+        /// 本次只覆盖「目标是数组」这一种最直接形态；List/集合目标、
+        /// 展开运算符 `..`、切片 `[1..3]` 都另算。
+        /// </summary>
+        [Fact(Skip = "集合表达式未实现（测试体已备好）：缺口已实测为 "
+                        + "Unexpected token <OpenBracketToken>, expected <IdentifierToken>。"
+                        + "实现需改 解析+绑定+发射 三处，其中「从目标类型推元素类型」有风险，详见本方法注释。")]
+        public void CollectionExpression_BuildsArray()
         {
+            // C# 12 集合表达式：`int[] a = [1, 2, 3];`
+            // 先只覆盖「目标是数组」这一种最直接的形态——元素类型由目标类型推出。
+            var result = RunMain(
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var a: i32[] = [1, 2, 3]" + Nl +
+                "    var s = 0" + Nl +
+                "    var i = 0" + Nl +
+                "    while i < 3 { s = s + a[i]" + Nl +
+                "      i = i + 1 }" + Nl +
+                "    return s" + Nl +
+                "}", "CollectionExprArray");
+
+            Assert.Equal(6, result);
         }
         [Fact]
         public void ExplicitInterfaceImplementation_NotSupported()
