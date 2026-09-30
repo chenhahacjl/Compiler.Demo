@@ -165,7 +165,13 @@ namespace Cocoa.Tests.CodeAnalysis
             sb.Append("        mrParent, mrName, mrSig,\n");
             sb.Append("        mName, mSig, mRva, mParam, mFlags,\n");
             sb.Append("        aName, aMajor, aMinor, aBuild, aRev, aFlags, aPk, aCulture,\n");
-            sb.Append("        ").Append(debugCtorRow).Append(", new i32[0], new i32[0], new string[0], \"").Append(mvidHex).Append("\", \"").Append(usHex).Append("\", new string[0], new string[0], new string[0], new i32[0], new string[0], new i32[0], new i32[0]" + ")\n");
+            // 尾部实参与 IlMetadataBuilder 构造函数的形参表一一对应：
+            //   localSigBlobs, fieldName, fieldSig, fieldFlags,
+            //   userTypeName, userTypeNamespace, userTypeFieldList, userTypeMethodList
+            // userTypeNamespace 是为「TypeDef 的 Namespace 不再硬编码空串」新增的形参。
+            // 增删 IlMetadataBuilder 构造形参时这里必须同步，否则报构造函数元数不匹配
+            // （差分测试会正确地拦住这类改动）。
+            sb.Append("        ").Append(debugCtorRow).Append(", new i32[0], new i32[0], new string[0], \"").Append(mvidHex).Append("\", \"").Append(usHex).Append("\", new string[0], new string[0], new string[0], new i32[0], new string[0], new string[0], new i32[0], new i32[0]" + ")\n");
             sb.Append("    System.Console.WriteLine(\"T:\" + b.TablesHex())\n");
             sb.Append("    System.Console.WriteLine(\"S:\" + b.StringsHex())\n");
             sb.Append("    System.Console.WriteLine(\"U:\" + b.UsHex())\n");

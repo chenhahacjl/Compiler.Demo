@@ -48,6 +48,7 @@ namespace Cocoa.CodeGen
         private field _fieldFlags: i32[]
         private field _userTypeCount: i32
         private field _userTypeName: string[]
+        private field _userTypeNamespace: string[]
         private field _userTypeFieldList: i32[]
         private field _userTypeMethodList: i32[]
 
@@ -71,7 +72,7 @@ namespace Cocoa.CodeGen
             debugCtorRow: i32, attrParentCoded: i32[], attrCtorCoded: i32[], attrValueBlob: string[],
             mvidHex: string, usHex: string, localSigBlobs: string[],
             fieldName: string[], fieldSig: string[], fieldFlags: i32[],
-            userTypeName: string[], userTypeFieldList: i32[], userTypeMethodList: i32[])
+            userTypeName: string[], userTypeNamespace: string[], userTypeFieldList: i32[], userTypeMethodList: i32[])
         {
             _moduleName = moduleName
             _assemblyName = assemblyName
@@ -111,6 +112,7 @@ namespace Cocoa.CodeGen
             _fieldFlags = fieldFlags
             _fieldCount = fieldName.Length
             _userTypeName = userTypeName
+            _userTypeNamespace = userTypeNamespace
             _userTypeFieldList = userTypeFieldList
             _userTypeMethodList = userTypeMethodList
             _userTypeCount = userTypeName.Length
@@ -253,7 +255,7 @@ namespace Cocoa.CodeGen
             {
                 t = t + HexCodec.HexU32(0x00000001)
                 t = t + HexCodec.HexU16(GetOrAddString(_userTypeName[i]))
-                t = t + HexCodec.HexU16(GetOrAddString(""))
+                t = t + HexCodec.HexU16(GetOrAddString(_userTypeNamespace[i]))
                 t = t + HexCodec.HexU16(5)
                 t = t + HexCodec.HexU16(_userTypeFieldList[i])
                 t = t + HexCodec.HexU16(_userTypeMethodList[i])

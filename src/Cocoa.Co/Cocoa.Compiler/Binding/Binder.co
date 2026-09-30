@@ -46,6 +46,8 @@ namespace Cocoa.CodeAnalysis.Binding
         private field _loopContinueLabels: string[]
         private field _loopDepth: i32
         private field _classNames: string[]
+        private field _classNamespaces: string[]
+        private field _currentNamespace: string
         private field _knownClassNames: string[]
         private field _knownClassCount: i32
         private field _classFieldNames: string[]
@@ -89,6 +91,8 @@ namespace Cocoa.CodeAnalysis.Binding
             b._warningCount = 0
             b._boundRoots = new Node[8]
             b._classNames = new string[8]
+            b._classNamespaces = new string[8]
+            b._currentNamespace = ""
             b._knownClassNames = new string[16]
             b._knownClassCount = 0
             b._classFieldNames = new string[8]
@@ -215,6 +219,37 @@ namespace Cocoa.CodeAnalysis.Binding
             let k = node.Kind()
             if k == "NamespaceDeclaration"
             {
+                // 记录当前命名空间，供 TypeDef 的 Namespace 字段使用。
+                // 子节点布局（Parser.co ParseNamespaceDeclaration）：
+                //   [NamespaceKeyword] Ident (Dot Ident)* [OpenBrace] ...成员... [CloseBrace]
+                // 即标识符在奇数下标 1,3,5...
+                var ns = ""
+                var ni = 1
+                while ni < node.ChildCount()
+                {
+                    let nk = node.Child(ni).Kind()
+                    if nk == "IdentifierToken"
+                    {
+                        if ns.Length > 0
+                        {
+                            ns = ns + "."
+                        }
+
+                        ns = ns + node.Child(ni).Text()
+                        ni = ni + 2
+                    }
+                    else if nk == "OpenBraceToken" || nk == "CloseBraceToken"
+                    {
+                        break
+                    }
+                    else
+                    {
+                        ni = ni + 1
+                    }
+                }
+
+                let savedNs = _currentNamespace
+                _currentNamespace = ns
                 var c = 0
                 while c < node.ChildCount()
                 {
@@ -227,6 +262,7 @@ namespace Cocoa.CodeAnalysis.Binding
                     c = c + 1
                 }
 
+                _currentNamespace = savedNs
                 return
             }
 
@@ -320,6 +356,7 @@ namespace Cocoa.CodeAnalysis.Binding
             if classIndex >= _classNames.Length
             {
                 var bn = new string[_classNames.Length * 2]
+                var bns = new string[_classNames.Length * 2]
                 var bo = new i32[_classFieldOffsets.Length * 2]
                 var bc = new i32[_classFieldCounts.Length * 2]
                 var mo = new i32[_classMethodOffsets.Length * 2]
@@ -328,6 +365,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 while g < classIndex
                 {
                     bn[g] = _classNames[g]
+                    bns[g] = _classNamespaces[g]
                     bo[g] = _classFieldOffsets[g]
                     bc[g] = _classFieldCounts[g]
                     mo[g] = _classMethodOffsets[g]
@@ -336,6 +374,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
 
                 _classNames = bn
+                _classNamespaces = bns
                 _classFieldOffsets = bo
                 _classFieldCounts = bc
                 _classMethodOffsets = mo
@@ -343,6 +382,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             _classNames[classIndex] = className
+            _classNamespaces[classIndex] = _currentNamespace
             // 字段平铺偏移 = 前序类累计
             var fieldRun = 0
             var p = 0
@@ -2015,6 +2055,14 @@ _localCount = 0
         public function GetClassName(index: i32): string
         {
             return _classNames[index]
+        }
+
+        /// <summary>第 index 个类所属的命名空间（无 namespace 声明时为空串）。
+        /// 供 TypeDef 的 Namespace 字段使用——此前该字段被硬编码为 ""，
+        /// 导致产物的所有类型都落在全局命名空间（见 IlMetadataBuilder.co）。</summary>
+        public function GetClassNamespace(index: i32): string
+        {
+            return _classNamespaces[index]
         }
 
         public function GetClassFieldCount(index: i32): i32
