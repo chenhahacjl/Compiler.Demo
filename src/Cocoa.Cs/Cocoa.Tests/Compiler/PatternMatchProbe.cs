@@ -171,6 +171,50 @@ namespace Cocoa.Tests.Compiler
         }
 
         // ------------------------------------------------------------------
+
+        [Fact]
+        public void ParenthesizedPattern_GroupsAlternatives()
+        {
+            // C# 9 括号模式：`x is (1 or 2)` —— 只做分组，不改变 or 模式的语义
+            var result = RunMain(
+                "function IsOneOrTwo(x: i32): i32 {" + Nl +
+                "    if x is (1 or 2) { return 1 }" + Nl +
+                "    return 0" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var a = IsOneOrTwo(2)" + Nl +
+                "    var b = IsOneOrTwo(7)" + Nl +
+                "    return a * 10 + b" + Nl +
+                "}", "ParenPattern");
+
+            Assert.Equal(10, result);
+        }
+
+        [Fact]
+        public void ParenthesizedPattern_ChangesPrecedence()
+        {
+            // 括号真正起作用的场景：`(1 or 3) and 3`。
+            // 加括号 = （1 或 3）**且** 3  -> 只有 x==3 成立；
+            // 不加括号时 `and` 结合更紧，会读成 `1 or (3 and 3)` -> x==1 也成立。
+            // 所以 F(1) 的结果能区分两者：加括号应为 0。
+            //
+            // （第一版我写成 `(1 or 2) and 3`，那是**期望写错了**：该式要求同时满足，
+            //   x==3 本就不匹配，恒为 0，测不出优先级。）
+            var result = RunMain(
+                "function F(x: i32): i32 {" + Nl +
+                "    if x is (1 or 3) and 3 { return 1 }" + Nl +
+                "    return 0" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var a = F(3)" + Nl +   // (1 or 3) 成立，且 3==3 -> 1
+                "    var b = F(1)" + Nl +   // (1 or 3) 成立，但 1!=3 -> 0
+                "    return a * 10 + b" + Nl +
+                "}", "ParenPrecedence");
+
+            Assert.Equal(10, result);
+        }
+
+        // ------------------------------------------------------------------
         // when 子句
         // ------------------------------------------------------------------
 

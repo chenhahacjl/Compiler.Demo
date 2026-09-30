@@ -314,6 +314,15 @@ namespace Cocoa.CodeAnalysis.Syntax
                         var pattern = ParsePattern();
                         left = new IsExpressionSyntax(_syntaxTree, left, isKeyword, null, pattern);
                     }
+                    // 括号模式（分组）：is (1 or 2) / is (> 0 and < 10)
+                    // `is` 后面的分派是**逐个 lookahead 硬列**的（C# 的模式起始符种类多，
+                    // 这里没有用「默认都交给 ParsePattern」）。漏掉 `(` 会直接掉到下面的
+                    // 类型测试分支，报 Unexpected token <OpenParenthesisToken>。
+                    else if (Current.Kind == SyntaxKind.OpenParenthesisToken)
+                    {
+                        var pattern = ParsePattern();
+                        left = new IsExpressionSyntax(_syntaxTree, left, isKeyword, null, pattern);
+                    }
                     else
                     {
                         // 类型测试：is TypeName
@@ -1201,6 +1210,18 @@ namespace Cocoa.CodeAnalysis.Syntax
         /// </summary>
         private PatternSyntax ParsePattern()
         {
+            // 括号模式（纯分组）：is (1 or 2) / is (> 0 and < 10)
+            // 括号在模式里不产生任何语义，等同于去掉，所以这里**拆封**返回内层模式，
+            // 不新建语法节点类型——ParsePatternRest 仍会正常把 or/and 接上。
+            // 代价：语法树上看不到这对括号（高亮/诊断会少一对），语义无影响。
+            if (Current.Kind == SyntaxKind.OpenParenthesisToken)
+            {
+                NextToken();
+                var innerPattern = ParsePattern();
+                MatchToken(SyntaxKind.CloseParenthesisToken);
+                return ParsePatternRest(innerPattern);
+            }
+
             // 属性模式：{ Length: > 0 } / { Name: "hello", Age: > 18 }
             if (Current.Kind == SyntaxKind.OpenBraceToken)
             {
