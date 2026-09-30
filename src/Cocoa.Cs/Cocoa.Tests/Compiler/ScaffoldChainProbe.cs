@@ -1449,7 +1449,7 @@ namespace Cocoa.Tests.Compiler
         /// 另两个 Dump* / HuntInvalid* 仍保持 Skip——它们同样以 throw 输出诊断信息，
         /// 属交互式工具而非断言，入库会永久标红。
         /// </summary>
-        [Fact(Skip = "阶段8 门禁（待 B1 大规模产物的元数据/堆写出损坏修复后解除）。实测：B1/B2 能加载运行、argv 通路正常、badCount 已降到 0，但对**任意**输入（含只有 1 个顶层函数的 82 字符源码）一律返回 ERR:no functions；输入放大到约 400 个函数（14.6KB）时改为 AccessViolationException 崩溃。已排除 args[0] 读取问题：.co 轨自产的 2KB 程序能正确读出 args.Length=2 与 args[0]。")]
+        [Fact(Skip = "阶段8 门禁（已定位：.co 轨自产编译器对任意输入返回 ERR:no functions，零诊断零警告；args[0] 通路已证正常。命名空间修复方案实测为净倒退——结构变对但方法体有效性从 0 退回 59，已回退。详见 docs-dev/plan/未完成盘点.md）")]
         public void SavedB1_RunsMinimalSelfCompile()
         {
             var b1 = Path.Combine(Path.GetTempPath(), "cocoa-b1-probe", "B1.dll");
