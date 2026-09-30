@@ -733,8 +733,25 @@ namespace Cocoa.Tests.Compiler
 
             Assert.Equal(6, result);
         }
+        /// <summary>
+        /// 显式接口实现 `public function IReader.Read(): i32` —— **语义仍未实现**，
+        /// 但本用例守的是「解析层不再报误导性错误」这一条。
+        ///
+        /// 实测改动前：报 `Unexpected token &lt;DotToken&gt;, expected &lt;OpenParenthesisToken&gt;`
+        /// 外加一串错误恢复噪声（实测 6 条以上）。原用例名叫 `..._NotSupported`，
+        /// **那个名字是误导的**——它暗示「语义层判定不支持」，实际是**解析层压根读不出
+        /// 带点的成员名**，于是错误现场看起来像解析器崩在一个不该出现的位置。
+        ///
+        /// 改动后：方法名位置也走限定名解析（与 <c>ParseTypeClause</c> 对称），
+        /// 诊断降到 **0 条**——名字 `IReader.Read` 被当作普通方法名绑定。
+        ///
+        /// **注意这不等于显式接口实现可用**：`Doc` 并没有真的去实现 `IReader`，
+        /// 把 `Doc` 当 `IReader` 用依然不成立（那需要 MemberRef 名带点的
+        /// `IReader.Read` 发射路径 + 接口槽位映射）。这里只锁住
+        /// 「限定名成员声明能干净解析」这一条已完成的行为。
+        /// </summary>
         [Fact]
-        public void ExplicitInterfaceImplementation_NotSupported()
+        public void ExplicitInterfaceImplementation_QualifiedMemberNameParsesCleanly()
         {
             var diagnostics = Diagnostics(
                 "interface IReader { function Read(): i32 }" + Nl +
@@ -742,8 +759,8 @@ namespace Cocoa.Tests.Compiler
                 "    public function IReader.Read(): i32 { return 1 }" + Nl +
                 "}" + Nl +
                 "function Main(args: string[]): i32 { return 0 }");
-            _out.WriteLine("显式接口实现诊断: " + string.Join(" | ", diagnostics.Select(d => d.Message)));
-            Assert.NotEmpty(diagnostics.Where(d => d.IsError));
+
+            Assert.Empty(diagnostics.Where(d => d.IsError));
         }
     }
 }

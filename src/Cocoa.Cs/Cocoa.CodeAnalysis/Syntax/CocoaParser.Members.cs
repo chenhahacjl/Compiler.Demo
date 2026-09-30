@@ -799,6 +799,14 @@ namespace Cocoa.CodeAnalysis.Syntax
             else
             {
                 identifier = MatchToken(SyntaxKind.IdentifierToken);
+                // 显式接口实现形如 `public function IReader.Read(): i32`：方法名位置也可能是限定名。
+                // 此前这里只吃单个标识符，遇到 `.` 会报
+                // `Unexpected token <DotToken>, expected <OpenParenthesisToken>`，
+                // 连带后面一串错误恢复噪声——**看起来像"语义上不支持"，其实是解析层缺口**。
+                // 与 ParseTypeClause 的限定名处理对称（见 ParseQualifiedNameSuffix）。
+                // 这里只负责把名字**解析出来**；后续绑定会给出
+                // “该类型没有成员 IReader.Read”这类语义错误，那才是准确诊断。
+                identifier = ParseQualifiedNameSuffix(identifier);
             }
 
             var typeParameters = ParseOptionalTypeParameterList();
