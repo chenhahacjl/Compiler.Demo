@@ -2964,6 +2964,17 @@ _localCount = 0
                 if k == "GreaterOrEqualsToken" || k == "GreaterEqualsToken" { return ">=" }
                 if k == "AndKeyword" || k == "AmpersandAmpersandToken" { return "&&" }
                 if k == "OrKeyword" || k == "PipePipeToken" { return "||" }
+                // 位运算符此前**全部漏掉**，落到末尾的 `return "?"`。
+                // 后果：IlEmitter.EmitBinaryOp 收到 op="?"，匹配不到任何分支，
+                // 于是**一个字节都不发** → 栈失衡 → CLR 判 InvalidProgramException。
+                // 实测症状：HexCodec.HexByte/HexU16/HexU32（都含 `v & 0xFF`）三个方法体非法。
+                // 注意：EmitBinaryOp 里已补好对应的 And/Or/Xor/Shl/Shr 分支，
+                // 但在补这里之前那些分支是**死代码**——glyph 根本到不了。
+                if k == "AmpersandToken" { return "&" }
+                if k == "PipeToken" { return "|" }
+                if k == "HatToken" { return "^" }
+                if k == "ShiftLeftToken" { return "<<" }
+                if k == "ShiftRightToken" { return ">>" }
                 i = i + 1
             }
 
