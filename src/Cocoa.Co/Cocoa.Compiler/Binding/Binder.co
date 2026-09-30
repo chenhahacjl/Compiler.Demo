@@ -955,6 +955,43 @@ _localCount = 0
             return ""
         }
 
+        /// <summary>按类名 + 字段名查字段的声明类型（跨类也可用）。
+        /// LocalTypeOrParamOf 的字段段只搜 _currentClass，本 helper 供
+        /// InferTypeOfExpression 的 MemberAccessExpression 分支做 `other.field` 解析。
+        /// 类不存在或字段未命中一律返回 ""（交调用方兜底）。</summary>
+        private function ClassFieldTypeOf(className: string, fieldName: string): string
+        {
+            if className == "" || fieldName == ""
+            {
+                return ""
+            }
+
+            var ci = 0
+            while ci < _classCount
+            {
+                if _classNames[ci] == className
+                {
+                    var fi = 0
+                    while fi < _classFieldCounts[ci]
+                    {
+                        let off = _classFieldOffsets[ci] + fi
+                        if _classFieldNames[off] == fieldName
+                        {
+                            return _classFieldTypes[off]
+                        }
+
+                        fi = fi + 1
+                    }
+
+                    return ""
+                }
+
+                ci = ci + 1
+            }
+
+            return ""
+        }
+
         /// <summary>取「裸调用接收者」的变量名：node.Child(i) → "node"（MemberAccessExpression 的首 token）。
         /// Token.Text() 仅对 token 有效，compound 返回 ""，故必须逐层下钻。</summary>
         private function ReceiverVarNameOf(tgt: Node): string
@@ -1096,9 +1133,14 @@ _localCount = 0
                 return "?"
             }
 
-            if k == "VariableExpression"
+            if k == "VariableExpression" || k == "NameExpression"
             {
                 // var x = someVar / someField → 参数/局部/当前类字段类型
+                // NameExpression 必须一并匹配：.co 解析器对裸标识符只产出 NameExpression
+                // （Parser.co 的 MakeCompound("NameExpression")），从不产出 VariableExpression。
+                // 此前本分支仅挂 VariableExpression → 裸字段读取永远落空 → return "?"
+                // → 局部量类型回落为 "?" → EncodeTypeHex 静默编码成 object(1c)
+                // → locals 签名与实际 stloc 的值类型不符（阶段 8 剩余 4 条 A 类错配）。
                 let vn = node.ChildCount() > 0 ? node.Child(0).Text() : node.Text()
                 let vt = LocalTypeOrParamOf(vn)
                 if vt.Length > 0
@@ -1122,6 +1164,44 @@ _localCount = 0
                     }
 
                     fci2 = fci2 + 1
+                }
+
+                return "?"
+            }
+
+            if k == "MemberAccessExpression"
+            {
+                // this.字段 → 当前类字段类型；X.字段 → 跨类字段类型（ownerType 由接收者递归推断）
+                // 与发射侧 IlEmitter.ExprTypeOf 的同名分支（IlEmitter.co:676-690）保持一致。
+                // AST 形状见 Parser.co 的 ParsePostfixChain：
+                //   Child(0)=接收者 / Child(1)=dot / Child(2)=字段名
+                if node.ChildCount() > 2
+                {
+                    let tgt0 = node.Child(0)
+                    if tgt0 != null
+                    {
+                        let fname = node.Child(2).Text()
+                        if tgt0.Kind() == "ThisExpression"
+                        {
+                            let tSelf = ClassFieldTypeOf(_currentClass, fname)
+                            if tSelf.Length > 0
+                            {
+                                return tSelf
+                            }
+                        }
+                        else
+                        {
+                            let ownerType = InferTypeOfExpression(tgt0)
+                            if ownerType.Length > 0 && ownerType != "?"
+                            {
+                                let tOther = ClassFieldTypeOf(ownerType, fname)
+                                if tOther.Length > 0
+                                {
+                                    return tOther
+                                }
+                            }
+                        }
+                    }
                 }
 
                 return "?"
