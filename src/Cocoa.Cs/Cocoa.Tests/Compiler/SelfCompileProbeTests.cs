@@ -646,8 +646,16 @@ namespace Cocoa.Tests.Compiler
             proc.WaitForExit();
 
             var errors = stdout.Split('\n').Where(l => l.StartsWith("[IL]: Error", StringComparison.Ordinal)).ToList();
-            _out.WriteLine("");
-            _out.WriteLine("=== ilverify: " + errors.Count + " 个错误 ===");
+            // ⚠️ 崩溃检测：ilverify 遇到 ldelem/stelem 作用在非数组类型等构造时，会在
+            // ILImporter.ImportLoadElement 抛 InvalidCastException 并中途退出。此时它
+            // 不打印任何 [IL]: Error 就结束——只看错误数会得到「0 错」的**假阴性**
+            // （实测踩过：22 条清零后仍报 0，实际有 13 错 + 多类型崩溃）。
+            // 故必须把「异常退出」本身判为门禁失败。
+            var crashed = stderr.Contains("Unhandled exception", StringComparison.Ordinal)
+                || stderr.Contains("InvalidCastException", StringComparison.Ordinal)
+                || stdout.Contains("Unhandled exception", StringComparison.Ordinal)
+                || stdout.Contains("InvalidCastException", StringComparison.Ordinal);
+            _out.WriteLine("=== ilverify: " + errors.Count + " 个错误" + (crashed ? "（但**异常退出，结果不可信**）" : "") + " ===");
             foreach (var e in errors)
             {
                 _out.WriteLine("  " + e.Replace(dllPath, "Corpus.dll").Trim());
@@ -661,8 +669,12 @@ namespace Cocoa.Tests.Compiler
 
             if (stderr.Length > 0)
             {
-                _out.WriteLine("ilverify stderr: " + stderr.Trim());
+                _out.WriteLine("ilverify stderr: " + stderr.Trim().Substring(0, Math.Min(400, stderr.Trim().Length)));
             }
+
+            Assert.True(!crashed,
+                "ilverify 异常退出，验证未完成——错误数不可信。典型原因：ldelem/stelem 作用在"
+                + "非数组类型上。stderr: " + stderr.Trim().Substring(0, Math.Min(300, stderr.Trim().Length)));
         }
 
         // ------------------------------------------------------------------
