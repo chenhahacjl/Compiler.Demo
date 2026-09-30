@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
@@ -444,24 +444,93 @@ namespace Cocoa.CodeGen.Managed.Writer
         /// 而 isinst 对基元类型本就非法（isinst 只接受 class/valuetype 令牌）。
         /// 该形态当前报明确诊断，不静默错编。
         /// </summary>
-        private void EmitDeclarationPattern(IlAssembler il, BoundDeclarationPattern node)
+        /// <summary>
+        /// 值类型在 <c>isinst</c> / <c>unbox.any</c> 处需要的**装箱形态**类型操作数。
+        ///
+        /// 关键点：<c>ToIlType(Int32)</c> 返回的是基元 <see cref="IlType"/>（<c>IlType.Int32</c>），
+        /// 它不是 TypeRef，<c>PatchTokens</c> 查不到对应 token 会抛 KeyNotFoundException。
+        /// 而 <c>isinst</c>/<c>unbox.any</c> 的 InlineType 操作数必须是 TypeRef/TypeDef/TypeSpec，
+        /// 所以这里要像装箱那样走 <c>_framework.RequireType("System.Int32")</c> 拿到装箱类型的 TypeRef。
+        ///
+        /// 参照装箱路径 <c>IlEmitter.Expressions.cs</c> 的同名映射（System.Int64 / System.SByte …）。
+        /// </summary>
+        private IlType ToBoxedIlType(TypeSymbol type)
         {
-            if (node.TargetType.IsValueType)
+            if (!type.IsValueType)
             {
-                throw new System.Exception(
-                    $"声明模式的值类型目标 '{node.TargetType.Name}' 在 IL 后端未实现：" +
-                    "需 unbox.any 路径 + 元数据层登记装箱类型 TypeRef（isinst 对基元类型非法）。");
+                return ToIlType(type);
             }
 
-            EmitExpression(il, node.Expression);
-            il.Emit(IlOpCodeTable.Get("Isinst"), ToIlType(node.TargetType));
+            var name = type == TypeSymbol.Boolean ? "System.Boolean"
+                : type == TypeSymbol.Int8 ? "System.SByte"
+                : type == TypeSymbol.Int16 ? "System.Int16"
+                : type == TypeSymbol.Int32 ? "System.Int32"
+                : type == TypeSymbol.Int64 ? "System.Int64"
+                : type == TypeSymbol.UInt8 ? "System.Byte"
+                : type == TypeSymbol.UInt16 ? "System.UInt16"
+                : type == TypeSymbol.UInt32 ? "System.UInt32"
+                : type == TypeSymbol.UInt64 ? "System.UInt64"
+                : type == TypeSymbol.Char ? "System.Char"
+                : type == TypeSymbol.Float ? "System.Single"
+                : type == TypeSymbol.Double ? "System.Double"
+                : null;
+            if (name != null)
+            {
+                return IlType.Class(_framework.RequireType(name));
+            }
 
+            // 用户自定义的 struct（值类型 class）：走与普通命名类型相同的解析。
+            if (type is NamedTypeSymbol named)
+            {
+                return IlType.Class(ResolveExternalTypeRef(named));
+            }
+
+            throw new System.Exception(
+                $"声明模式的值类型目标 '{type.Name}' 没有对应的装箱类型名，无法为 isinst/unbox.any 生成 TypeRef。");
+        }
+
+        private void EmitDeclarationPattern(IlAssembler il, BoundDeclarationPattern node)
+        {
             if (!_locals.TryGetValue(node.Variable, out var slot))
             {
                 throw new System.Exception(
                     $"声明模式变量 '{node.Variable.Name}' 未登记局部槽位（CollectPatternLocals 未覆盖该表达式位置）。");
             }
 
+            if (node.TargetType.IsValueType)
+            {
+                // 值类型目标：`o is int n` 不能走 isinst+castclass（castclass 对值类型非法）。
+                // 正确形态（与 Roslyn 一致，isinst 对值类型**是**合法的，返回装箱实例或 null）：
+                //   <operand>            -> object
+                //   isinst  T             -> 装箱 T 或 null
+                //   brfalse.s notMatch
+                //   <operand>            -> 重新压入原对象
+                //   unbox.any T          -> 拆箱出值类型本体
+                //   stloc  slot
+                //   ldc.i4.1 / br end / notMatch: ldc.i4.0 / end:
+                // 必须重载原对象再 unbox：isinst 留下的是**装箱引用**，直接 unbox.any 它
+                // 得到的是装箱后的值而非拆箱结果。
+                var notMatch = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
+                var endValue = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
+
+                EmitExpression(il, node.Expression);
+                il.Emit(IlOpCodeTable.Get("Isinst"), ToBoxedIlType(node.TargetType));
+                il.Emit(IlOpCodeTable.Get("Brfalse"), notMatch);
+
+                EmitExpression(il, node.Expression);
+                il.Emit(IlOpCodeTable.Get("Unbox_Any"), ToBoxedIlType(node.TargetType));
+                il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)slot);
+
+                il.Emit(IlOpCodeTable.Get("Ldc_I4_1"));
+                il.Emit(IlOpCodeTable.Get("Br"), endValue);
+                il.Emit(notMatch);
+                il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));
+                il.Emit(endValue);
+                return;
+            }
+
+            EmitExpression(il, node.Expression);
+            il.Emit(IlOpCodeTable.Get("Isinst"), ToIlType(node.TargetType));
             il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)slot);
 
             var elseLabel = new IlInstruction(IlOpCodeTable.Get("Nop"), null);

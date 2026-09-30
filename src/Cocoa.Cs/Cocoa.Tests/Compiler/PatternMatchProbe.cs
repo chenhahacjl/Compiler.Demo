@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using Cocoa.CodeAnalysis;
@@ -174,8 +174,7 @@ namespace Cocoa.Tests.Compiler
         // when 子句
         // ------------------------------------------------------------------
 
-        [Fact(Skip = "值类型声明模式在 IL 后端未实现：需 unbox.any 路径 + 元数据层登记装箱类型 TypeRef"
-                        + "（isinst 对基元类型本就非法）。已改为 IL 端抛明确诊断，不静默错编。")]
+        [Fact]
         public void DeclarationPattern_ValueTypeTarget()
         {
             // 值类型目标：无 null 哨兵，匹配恒成立（unbox.any 完成转换）
@@ -188,6 +187,39 @@ namespace Cocoa.Tests.Compiler
                 "}", "DeclValueType");
 
             Assert.Equal(42, result);
+        }
+
+        [Fact]
+        public void DeclarationPattern_ValueTypeTarget_NonMatchTakesNoMatch()
+        {
+            // 反向路径：isinst 返回 null 时必须走 brfalse 那条支路（跳过 i64 那个分支），
+            // 且**不能**执行 unbox.any（否则会抛 NullReferenceException）。
+            // 只测匹配成功那一条是测不出这个分支的。
+            var result = RunMain(
+                "class Box { public field V: i32 }" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var o: any = 7" + Nl +
+                "    if o is bool b { return 1 }" + Nl +
+                "    if o is i32 n { return n }" + Nl +
+                "    return -1" + Nl +
+                "}", "DeclValueTypeNoMatch");
+
+            Assert.Equal(7, result);
+        }
+
+        [Fact]
+        public void DeclarationPattern_ValueTypeTarget_ReferenceIsNoMatch()
+        {
+            // 装箱里的引用类型不匹配值类型：isinst 应返回 null 并走 no-match 支路。
+            var result = RunMain(
+                "class Box { public field V: i32 }" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var o: any = new Box()" + Nl +
+                "    if o is i32 n { return 1 }" + Nl +
+                "    return -1" + Nl +
+                "}", "DeclValueTypeRefNoMatch");
+
+            Assert.Equal(-1, result);
         }
 
         [Fact]
