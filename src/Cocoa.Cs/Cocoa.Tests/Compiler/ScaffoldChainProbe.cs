@@ -1354,11 +1354,13 @@ namespace Cocoa.Tests.Compiler
         /// 另两个 Dump* / HuntInvalid* 仍保持 Skip——它们同样以 throw 输出诊断信息，
         /// 属交互式工具而非断言，入库会永久标红。
         /// </summary>
-        [Fact(Skip = "阶段8 门禁（待 .co 轨小输入缺陷修复后解除）：已实测 B1 能被 CLR 加载并运行、"
-            + "且对 593KB 全量语料能产出完整 B2（260,096 B）；但对「只有顶层函数、无类」的小源码报 "
-            + "ERR:no functions——Binder.GetTopLevelFunctionCount 返回 0。"
-            + "已排除后端分歧：同一份 .co 源码经 C# 轨 IL 发射路径（B2.fast.dll）编译全量语料成功，"
-            + "仅小输入失败，故是 .co 轨 Parser/Binder 的小输入顶层函数登记问题，非 Evaluator/IlEmitter 不一致。")]
+        [Fact(Skip = "阶段8 门禁（待 .co 轨自产代码的 Parser/Binder 缺陷修复后解除）。"
+            + "已实测确认：B1/B2 能被 CLR 加载运行、argv 通路正常（不传参抛 IndexOutOfRange），"
+            + "且 B2==B1 字节级相等（均 260,608 B）；但 BuildDllHex 对**任意**小源码都返回 "
+            + "ERR:no functions（零诊断、零警告、零顶层函数），非法参数与合法源码输出完全相同。"
+            + "对照组：同一份 .co 源码经 C# 轨发射产出的 runner 能把 596KB 全量语料编译成"
+            + "有效的 260,608 B PE（零 binder 警告）。故这是 .co 轨**自产代码**与 C# 轨发射产物的"
+            + "行为分歧，定位在 Parser/Binder 的 .co 发射路径，不是「小输入顶层函数登记」问题。")]
         public void SavedB1_RunsMinimalSelfCompile()
         {
             var b1 = Path.Combine(Path.GetTempPath(), "cocoa-b1-probe", "B1.dll");
@@ -1415,11 +1417,11 @@ namespace Cocoa.Tests.Compiler
             var hex = line!["B2:".Length..].Trim();
             Assert.False(hex.StartsWith("ERR:", StringComparison.Ordinal),
                 "自举编译失败: " + hex + Environment.NewLine
-                + "已定位的当前缺陷：.co 自举编译器对「只有顶层函数、无类」的小源码报 ERR:no functions"
-                + "（Binder.GetTopLevelFunctionCount 返回 0）。同一份 .co 源码经 C# 轨 **IL 发射**路径"
-                + "（Corpus_EmitAndRun_FastSelfHost 产出的 B2.fast.dll）编译 593KB 全量语料是成功的，"
-                + "因此这不是 C# 轨两个后端（Evaluator/IlEmitter）不一致，而是 .co 轨"
-                + "Parser/Binder 在小输入上的顶层函数登记问题。");
+                + "已定位的当前缺陷：.co 轨**自产**的编译器（B1/B2）对**任意**小源码都返回 "
+                + "ERR:no functions——零诊断、零警告、零顶层函数；且传入非法参数（如 ZZZ_not_source）"
+                + "输出完全相同，说明 BuildDllHex 拿到的输入无法被 .co 轨 Parser 解析出任何顶层函数。"
+                + "对照组：同一份 .co 源码经 C# 轨发射产出的 runner 编译 596KB 全量语料成功。"
+                + "故这是 .co 轨自产代码与 C# 轨发射产物的行为分歧，定位在 Parser/Binder 的 .co 发射路径。");
             Assert.True(hex.Length > 200, "B2 hex 过短 (" + hex.Length + ")，可能未产出完整 PE");
             Assert.Equal("4D5A", hex.Substring(0, 4)); // MZ
         }
