@@ -526,6 +526,29 @@ namespace Cocoa.Tests.Compiler
                 "}");
             Assert.Contains(errors.Where(d => d.IsError), d => d.Message.Contains("UnsignedShiftRightToken"));
         }
+        /// <summary>数字分隔符（C# 7.0）：词法在扫描时跳过 `_`
+        /// （LexerBase.CharsNumbers.cs 的十六进制/二进制/十进制三处 while 都含 `|| Current == '_'`）。
+        /// 要验的是**值计算**有没有跟着把 `_` 排除——若值从 Text() 取就会算错。</summary>
+        [Theory]
+        [InlineData("1_000", 1000)]
+        [InlineData("1_000_000", 1000000)]
+        [InlineData("0xFF_FF", 65535)]
+        [InlineData("0b1010_1010", 170)]
+        [InlineData("7_7", 77)]
+        public void NumericLiteralSeparators_ComputeCorrectValue(string literal, int expected)
+        {
+            var r = RunMain(
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var v = " + literal + Nl +
+                "    return v" + Nl +
+                // tag 必须按用例唯一：RunMain 用 tag 决定产物文件名，而 xunit 会并行跑
+                // Theory 的各个 case，共用 tag 会互撞 DLL 文件锁
+                // （症状是 IOException "being used by another process"，与被测代码无关）。
+                "}", "NumericSep_" + literal.Replace("_", "u"));
+
+            Assert.Equal(expected, r);
+        }
+
         [Fact]
         public void Probe_CompoundAssignBaseline()
         {
