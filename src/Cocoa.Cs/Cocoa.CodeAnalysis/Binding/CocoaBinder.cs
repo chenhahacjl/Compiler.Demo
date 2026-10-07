@@ -788,6 +788,10 @@ namespace Cocoa.CodeAnalysis.Binding
             // S-7：拆双产物——raw（构造前缀/插值归一后、未 Lower 的结构化 HIR）供 .coa 持久化；
             // lowered（Lowerer 输出 goto/CFG 的 MIR）供三后端与求值器消费。Library 消费边界见链接处补 Lower。
             var rawBody = (BoundBlockStatement)InterpolationNormalizer.Rewrite(body);
+
+            // required 成员（C# 11）：实例构造器必须赋值全部 required 字段/属性（按名收集本构造体赋值）
+            CheckRequiredMembersAssigned(binder, function, rawBody);
+
             var loweredBody = LoweringPipeline.Lower(function, rawBody, binder._diagnostics, returnCheckLocation);
 
             // 明确赋值分析（6e-M23 R4）：跟踪本函数 out 形参
@@ -797,6 +801,75 @@ namespace Cocoa.CodeAnalysis.Binding
                 binder._diagnostics);
 
             return (rawBody, loweredBody, binder.Diagnostics.ToImmutableArray(), binder._tupleCtorBodies.ToImmutableDictionary());
+        }
+
+        /// <summary>
+        /// required 成员（C# 11）：实例构造器必须赋值全部 required 字段/属性。
+        /// 按名收集构造体中的字段写与属性 setter 调用（宽松——不做每路径明确赋值，仅要求"至少赋值一处"）。
+        /// </summary>
+        private static void CheckRequiredMembersAssigned(CocoaBinder binder, FunctionSymbol function, BoundBlockStatement body)
+        {
+            if (!function.IsConstructor || function.IsStatic || function.ContainingClass == null)
+            {
+                return;
+            }
+
+            var requiredNames = new List<string>();
+            foreach (var field in function.ContainingClass.Fields)
+            {
+                if (field.IsRequired)
+                {
+                    requiredNames.Add(field.Name);
+                }
+            }
+            foreach (var property in function.ContainingClass.Properties)
+            {
+                if (property.IsRequired)
+                {
+                    requiredNames.Add(property.Name);
+                }
+            }
+            if (requiredNames.Count == 0)
+            {
+                return;
+            }
+
+            var assigned = new HashSet<string>(StringComparer.Ordinal);
+            CollectAssignedMemberNames(body, assigned);
+
+            foreach (var name in requiredNames)
+            {
+                if (!assigned.Contains(name))
+                {
+                    binder._diagnostics.ReportError(
+                        function.Declaration?.GetDeclarationNameLocation() ?? function.Syntax?.Location ?? default,
+                        $"required 成员 '{name}' 必须由构造器赋值。");
+                }
+            }
+        }
+
+        private static void CollectAssignedMemberNames(BoundNode node, HashSet<string> assigned)
+        {
+            switch (node)
+            {
+                case BoundMemberAssignmentExpression ma when ma.Field != null:
+                    assigned.Add(ma.Field.Name);
+                    break;
+                case BoundMemberCallExpression { Method: FunctionSymbol mcFn } when mcFn.IsPropertyAccessor && mcFn.Name.StartsWith("set_"):
+                    assigned.Add(mcFn.Name.Substring(4));
+                    break;
+                case BoundCallExpression { Function: FunctionSymbol bcFn } when bcFn.IsPropertyAccessor && bcFn.Name.StartsWith("set_"):
+                    assigned.Add(bcFn.Name.Substring(4));
+                    break;
+            }
+
+            foreach (var child in Compilation.BoundChildren(node))
+            {
+                if (child != null)
+                {
+                    CollectAssignedMemberNames(child, assigned);
+                }
+            }
         }
 
         /// <summary>

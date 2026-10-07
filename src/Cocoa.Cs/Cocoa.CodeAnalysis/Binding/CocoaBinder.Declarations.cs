@@ -758,10 +758,11 @@ namespace Cocoa.CodeAnalysis.Binding
                     var fieldVisibility = GetVisibility(fieldDeclaration.Modifiers, Visibility.Private);
                     var fieldIsReadonly = fieldDeclaration.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.ReadonlyKeyword);
                     var fieldIsStatic = fieldDeclaration.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.StaticKeyword);
+                    var fieldIsRequired = fieldDeclaration.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.RequiredKeyword);
 
                     if (classType.GetDeclaredField(fieldDeclaration.Identifier.Text) == null)
                     {
-                        var fieldSym = new FieldSymbol(fieldDeclaration.Identifier.Text, fieldType!, fieldVisibility, classType, isReadonly: fieldIsReadonly, isStatic: fieldIsStatic);
+                        var fieldSym = new FieldSymbol(fieldDeclaration.Identifier.Text, fieldType!, fieldVisibility, classType, isReadonly: fieldIsReadonly, isStatic: fieldIsStatic) { IsRequired = fieldIsRequired };
                         fieldSym.Attributes = BindAttributes(fieldDeclaration.Attributes, fieldDeclaration);
                         DocumentationBackfill.BackfillDocumentation(fieldSym, fieldDeclaration, _diagnostics);
                         classType.AddField(fieldSym);
@@ -2271,7 +2272,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var propertyName = isIndexer ? "Item" : syntax.Identifier.Text;
             if (classType.GetDeclaredProperty(propertyName) == null)
             {
-                var property = new PropertySymbol(propertyName, propertyType!, classType, getter, setter, visibility, isStatic, isIndexer: isIndexer);
+                var property = new PropertySymbol(propertyName, propertyType!, classType, getter, setter, visibility, isStatic, isIndexer: isIndexer) { IsRequired = syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.RequiredKeyword) };
                 property.Attributes = BindAttributes(syntax.Attributes, syntax);
                 if (getter != null) getter.ContainingProperty = property;
                 if (setter != null) setter.ContainingProperty = property;

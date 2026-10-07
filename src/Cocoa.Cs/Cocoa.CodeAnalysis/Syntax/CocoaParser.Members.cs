@@ -573,6 +573,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.OverrideKeyword:
                 case SyntaxKind.ReadonlyKeyword:
                 case SyntaxKind.PartialKeyword:
+                case SyntaxKind.RequiredKeyword:
                     return true;
                 default:
                     return false;

@@ -197,6 +197,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.LetKeyword;
                 case "return":
                     return SyntaxKind.ReturnKeyword;
+                case "required":
+                    return SyntaxKind.RequiredKeyword;
                 case "stdcall":
                     return SyntaxKind.StdcallKeyword;
                 case "syscall":
@@ -439,6 +441,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "protected";
                 case SyntaxKind.ReadonlyKeyword:
                     return "readonly";
+                case SyntaxKind.RequiredKeyword:
+                    return "required";
                 case SyntaxKind.RefKeyword:
                     return "ref";
                 case SyntaxKind.SealedKeyword:

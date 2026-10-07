@@ -33,5 +33,8 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         /// <summary>索引器（this[...]）：重定向到 BCL get_Item/set_Item；成员访问经普通调用发射。6e-M24。</summary>
         public bool IsIndexer { get; }
+
+        /// <summary>required 成员（C# 11：构造器必须赋值）。</summary>
+        public bool IsRequired { get; set; }
     }
 }

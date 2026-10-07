@@ -28,6 +28,9 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>readonly 字段（仅构造内可赋值）。</summary>
         public bool IsReadonly { get; }
 
+        /// <summary>required 成员（C# 11：构造器必须赋值）。</summary>
+        public bool IsRequired { get; set; }
+
         public bool IsStatic { get; set; }
     }
 }
