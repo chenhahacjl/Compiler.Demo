@@ -2475,6 +2475,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 case CoreSyntax.SyntaxKind.CallExpression: return BindCallExpression((CallExpressionSyntax)syntax);
                 case CoreSyntax.SyntaxKind.ArrayCreationExpression: return BindArrayCreationExpression((ArrayCreationExpressionSyntax)syntax);
                 case CoreSyntax.SyntaxKind.ObjectCreationExpression: return BindObjectCreationExpression((ObjectCreationExpressionSyntax)syntax);
+                case CoreSyntax.SyntaxKind.WithExpression: return BindWithExpression((WithExpressionSyntax)syntax);
                 case CoreSyntax.SyntaxKind.ElementAccessExpression: return BindElementAccessExpression((ElementAccessExpressionSyntax)syntax);
                 case CoreSyntax.SyntaxKind.MemberAccessExpression: return BindMemberAccessExpression((MemberAccessExpressionSyntax)syntax);
                 case CoreSyntax.SyntaxKind.MemberCallExpression: return BindMemberCallExpression((MemberCallExpressionSyntax)syntax);

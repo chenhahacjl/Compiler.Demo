@@ -43,6 +43,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 SyntaxKind.TupleExpression => BuildTupleExpression(syntaxTree, position),
                 SyntaxKind.MemberCallExpression => BuildMemberCallExpression(syntaxTree, position),
                 SyntaxKind.ObjectCreationExpression => BuildObjectCreationExpression(syntaxTree, position),
+                SyntaxKind.WithExpression => BuildWithExpression(syntaxTree, position),
                 SyntaxKind.ElementAccessExpression => BuildElementAccessExpression(syntaxTree, position),
                 SyntaxKind.TypeArgumentList => BuildTypeArgumentList(syntaxTree, position),
                 SyntaxKind.Parameter => BuildParameter(syntaxTree, position),

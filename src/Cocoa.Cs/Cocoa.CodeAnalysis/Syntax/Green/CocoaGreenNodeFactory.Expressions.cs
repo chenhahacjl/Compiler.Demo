@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Syntax
@@ -281,6 +281,31 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             var callTail = BuildCallTail(syntaxTree, position, slot);
             return new ObjectCreationExpressionSyntax(syntaxTree, newKeyword, identifier, callTail.TypeArguments, callTail.OpenParenthesis, callTail.Arguments, callTail.CloseParenthesis);
+        }
+
+        private SyntaxNode BuildWithExpression(SyntaxTree syntaxTree, int position)
+        {
+            var slot = 0;
+            var expression = (ExpressionSyntax)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += _green.GetSlot(slot)!.Width;
+            slot++;
+            var withKeyword = (SyntaxToken)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += _green.GetSlot(slot)!.Width;
+            slot++;
+            var openBrace = (SyntaxToken)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += _green.GetSlot(slot)!.Width;
+            slot++;
+
+            var nodesAndSeparators = ImmutableArray.CreateBuilder<SyntaxNode>();
+            for (var i = slot; i < _green.SlotCount - 1; i++)
+            {
+                nodesAndSeparators.Add(_green.GetSlot(i)!.CreateTypedRed(syntaxTree, position));
+                position += _green.GetSlot(i)!.Width;
+            }
+
+            var closeBrace = (SyntaxToken)_green.GetSlot(_green.SlotCount - 1)!.CreateTypedRed(syntaxTree, position);
+            var assignments = new SeparatedSyntaxList<ExpressionSyntax>(nodesAndSeparators.ToImmutable());
+            return new WithExpressionSyntax(syntaxTree, expression, withKeyword, openBrace, assignments, closeBrace);
         }
 
         private SyntaxNode BuildElementAccessExpression(SyntaxTree syntaxTree, int position)

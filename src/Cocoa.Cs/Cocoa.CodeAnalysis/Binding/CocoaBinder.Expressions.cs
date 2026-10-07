@@ -893,6 +893,115 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundObjectCreationExpression(syntax, classType, arguments.ToImmutable(), ctor);
         }
 
+        /// <summary>
+        /// with 表达式（C# 9，record 非破坏复制）：`p with { 字段 = 值, ... }`。
+        /// 脱糖为接收者类的**位置参数构造器调用**——每参实参 = with 赋值覆盖值，否则接收者对应字段原值透传。
+        /// 零新 Bound 节点、零后端发射改动；接收者限定为无副作用引用表达式（避免字段读取重复求值）。
+        /// </summary>
+        private BoundExpression BindWithExpression(WithExpressionSyntax syntax)
+        {
+            var receiver = BindExpression(syntax.Expression);
+
+            // 接收者须为引用表达式：变量/参数/this/字段访问（脱糖引用接收者多次，禁止带副作用表达式）
+            if (!(receiver is BoundVariableExpression || receiver is BoundThisExpression ||
+                  (receiver is BoundMemberAccessExpression ma && ma.Field != null)))
+            {
+                _diagnostics.ReportError(syntax.Expression.Location,
+                    "with 的接收者必须是简单表达式（变量/参数/this/字段访问）。");
+                return new BoundErrorExpression(syntax);
+            }
+
+            if (receiver.Type is not NamedTypeSymbol classType ||
+                classType.IsStatic || classType.IsInterface || classType.IsAbstract)
+            {
+                _diagnostics.ReportError(syntax.Location,
+                    "with 的接收者必须是可实例化的类（record）。");
+                return new BoundErrorExpression(syntax);
+            }
+
+            // 位置参数字段：非静态实例字段（record 展开为 public 字段，顺序与构造器参数一致）
+            var fields = classType.Fields.Where(f => !f.IsStatic).ToImmutableArray();
+
+            // 构造器：IsConstructor 标记的位置参数构造器（参数数 == 实例字段数，参数名 == 字段名）
+            var ctor = classType.GetMethods(classType.Name)
+                .FirstOrDefault(c => c.IsConstructor && c.Parameters.Length == fields.Length);
+            if (ctor == null)
+            {
+                _diagnostics.ReportError(syntax.Location,
+                    $"with 仅支持位置参数形式的 record（类 '{classType.Name}' 须有与实例字段一一对应的构造器）。");
+                return new BoundErrorExpression(syntax);
+            }
+
+            // 校验参数名与字段名逐一对应（record 展开保证成立；普通类若巧合同名也可用）
+            for (var i = 0; i < fields.Length; i++)
+            {
+                if (!string.Equals(ctor.Parameters[i].Name, fields[i].Name, StringComparison.Ordinal))
+                {
+                    _diagnostics.ReportError(syntax.Location,
+                        $"with 仅支持位置参数形式的 record：构造器参数 '{ctor.Parameters[i].Name}' 与字段 '{fields[i].Name}' 不对应。");
+                    return new BoundErrorExpression(syntax);
+                }
+            }
+
+            // 解析 with 赋值：字段名 → 绑定值（类型转换到字段类型）
+            var overrides = new BoundExpression?[fields.Length];
+            var assigned = new bool[fields.Length];
+            foreach (var assignment in syntax.Assignments)
+            {
+                if (assignment is not AssignmentExpressionSyntax assign ||
+                    assign.Target is not NameExpressionSyntax name)
+                {
+                    _diagnostics.ReportError(assignment.Location,
+                        "with 赋值项须为 `字段 = 值` 形式。");
+                    continue;
+                }
+
+                var fieldIndex = -1;
+                for (var i = 0; i < fields.Length; i++)
+                {
+                    if (string.Equals(fields[i].Name, name.IdentifierToken.Text, StringComparison.Ordinal))
+                    {
+                        fieldIndex = i;
+                        break;
+                    }
+                }
+
+                if (fieldIndex < 0)
+                {
+                    _diagnostics.ReportError(assign.Target.Location,
+                        $"with 赋值目标 '{name.IdentifierToken.Text}' 不是 record '{classType.Name}' 的位置参数字段。");
+                    continue;
+                }
+
+                var value = BindExpression(assign.Expression);
+                overrides[fieldIndex] = BindConversion(assign.Expression.Location, value, fields[fieldIndex].Type);
+                assigned[fieldIndex] = true;
+            }
+
+            // 组装构造器实参：with 赋值覆盖值，否则接收者字段原值透传
+            var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
+            for (var i = 0; i < fields.Length; i++)
+            {
+                if (assigned[i])
+                {
+                    arguments.Add(overrides[i]!);
+                }
+                else
+                {
+                    if (!IsAccessibleMember(fields[i].Visibility, fields[i].ContainingClass))
+                    {
+                        _diagnostics.ReportError(syntax.Location,
+                            $"with 读取字段 '{fields[i].Name}' 超出访问范围。");
+                        return new BoundErrorExpression(syntax);
+                    }
+
+                    arguments.Add(new BoundMemberAccessExpression(syntax, fields[i].Type, receiver, fields[i].Name, fields[i]));
+                }
+            }
+
+            return new BoundObjectCreationExpression(syntax, classType, arguments.ToImmutable(), ctor);
+        }
+
         private BoundExpression BindElementAccessExpression(ElementAccessExpressionSyntax syntax)
         {
             // ^n (index from end) → new Index(n, fromEnd: true)

@@ -189,6 +189,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.WhenKeyword;
                 case "while":
                     return SyntaxKind.WhileKeyword;
+                case "with":
+                    return SyntaxKind.WithKeyword;
                 case "let":
                     return SyntaxKind.LetKeyword;
                 case "return":
@@ -545,6 +547,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "unchecked";
                 case SyntaxKind.YieldKeyword:
                     return "yield";
+                case SyntaxKind.WithKeyword:
+                    return "with";
 
                 case SyntaxKind.FieldKeyword:
                     return "field";

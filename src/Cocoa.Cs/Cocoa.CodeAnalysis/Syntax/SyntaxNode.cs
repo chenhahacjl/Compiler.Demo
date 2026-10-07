@@ -283,6 +283,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return ((CallExpressionSyntax)this).Identifier.Location;
                 case SyntaxKind.MemberCallExpression:
                     return ((MemberCallExpressionSyntax)this).IdentifierToken.Location;
+                case SyntaxKind.WithExpression:
+                    return ((WithExpressionSyntax)this).Expression.GetUnreachableCodeLocation();
                 default:
                     throw new Exception($"Unexpected syntax {Kind}");
             }

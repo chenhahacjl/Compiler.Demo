@@ -258,5 +258,7 @@ ColonToken,               // :
         SizeofKeyword = 239,   // sizeof：`sizeof(T)`
         TypeOperatorExpression = 240,   // 类型运算表达式：typeof(T) / sizeof(T)
         UnsignedShiftRightToken = 243, // >>> 无符号右移（**仅解析**，绑定/发射未接）
+        WithKeyword = 244,     // with（record 非破坏复制表达式关键字，C# 9）
+        WithExpression = 245,  // with 表达式：expr with { 成员 = 值, ... }
     }
 }

@@ -1072,6 +1072,35 @@ namespace Cocoa.CodeAnalysis.Syntax
                     var operatorToken = NextToken();
                     expression = new PostfixIncrementExpressionSyntax(_syntaxTree, expression, operatorToken);
                 }
+                else if (Current.Kind == SyntaxKind.WithKeyword)
+                {
+                    var withKeyword = NextToken();
+                    var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
+
+                    var assignments = ImmutableArray.CreateBuilder<SyntaxNode>();
+                    while (Current.Kind != SyntaxKind.CloseBraceToken && Current.Kind != SyntaxKind.EndOfFileToken)
+                    {
+                        // with 赋值项：`成员 = 表达式`（左为裸标识符，由 Binder 对照接收者位置字段解析）
+                        var identifier = MatchToken(SyntaxKind.IdentifierToken);
+                        var left = new NameExpressionSyntax(_syntaxTree, identifier);
+                        var equalsToken = MatchToken(SyntaxKind.EqualsToken);
+                        var value = ParseExpression();
+                        assignments.Add(new AssignmentExpressionSyntax(_syntaxTree, left, equalsToken, value));
+
+                        if (Current.Kind == SyntaxKind.CommaToken)
+                        {
+                            assignments.Add(NextToken());
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+
+                    var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
+                    expression = new WithExpressionSyntax(_syntaxTree, expression, withKeyword, openBraceToken,
+                        new SeparatedSyntaxList<ExpressionSyntax>(assignments.ToImmutable()), closeBraceToken);
+                }
                 else
                 {
                     break;
