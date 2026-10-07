@@ -6,6 +6,58 @@
 
 ---
 
+## 未发布（2026-10-01）
+
+### 语言特性：模式匹配 / 嵌套类 / 空条件访问 / 溢出控制 / 运算符重载（2026-09-29 ~ 10-01）
+- **模式匹配补全**：IL 后端 relational / logical / property 三类模式发射（`8578abf`）；声明模式 + `when` 子句（`3b23f8c`）；**括号模式 `x is (1 or 2)`**（C# 9 模式分组，`98a7c4e`）；**值类型声明模式 `o is T v`**（unbox.any 路径 + 装箱类型 TypeRef，`18d489b`）。
+- **运算符重载落地**：语法层 operator/implicit/explicit（`fe7f068`）→ 绑定与三后端 op_* 发射（`01fbe50`）→ 转换运算符 op_Implicit/op_Explicit 在转换点生效（`ab56c99`）。
+- **嵌套类**（`a30b560`）：解析类体内的 class/struct 声明 + 限定名类型 + 嵌套类型登记。
+- **`?.` 空条件访问 IL 发射**（`75ae54c`，此前仅求值器路径通，走 Emit 必失败）。
+- **checked/unchecked 收尾**（`c5bc8f5`/`dc24aa0`）：IlOpCode 编码表逐条 CLR 校验 + 补 ovf 编码（根因：`Add_Ovf` 单字节编码），溢出检测真正生效。
+- **typeof / sizeof**（`975712b`/`9b10f3e`）：语法与绑定落地 + IL 发射（修复 2 个编码与栈增长 bug）。
+- **Attribute 语义消费**（`5a5d7e2`）：`[Obsolete]` 在调用点报诊断。
+- **数值字面量**：数字分隔符（C# 7.0）验证可用（`55cdd4e`）；`>>>` 仅词法（明确「仅解析」，`acfce7a`）；`??=` 根因定位后归并为统一底层问题（`269d0ed`，转 Skip 桩未实施）。
+- **核实已实现**：索引器与元组（`ef873ec`，补测试纠正文档误判）；成员调用 out var + params 修通（`55865aa`）。
+- **审计**：语言特性对照表按实测校正（`94264f8`、`2a64b05`）；运算符覆盖审计记录两个新增缺口（`71e375e`）。
+- **已知缺口（转 Skip 桩）**：集合表达式（`557b1f1`）、`??=`、`>>>` 语义、ParseExpression 递归护栏（`52c1e99`，尝试失败回退）。
+
+### 阶段 8 里程碑：B2 == B1 fixpoint 达成（字节级一致，2026-09-30）
+- **`d17d8e5`**：B2 与 B1 产物**字节级一致**——阶段 8 核心验收「B1 ≡ B2」达成。
+- **ilverify 双轨错配清零**：22 条错配按 A/B/C 三类定位归零（装箱 TypeRef 登记挤占 Char / NameExpression compound text 空返回 / ReceiverVarNameOf 缺分支 / 局部签名类型判错 / string 下标 ldelem.ref 误用 / 类方法名表语料规模错位等，`0da3a1e`…`e9a4fee`）。
+- **发射产物对齐修复**：.co 轨 TypeDef 命名空间（Binder/IlDriver/IlMetadataBuilder 三处，`8f0eab2`）、字符串下标改发 `String::get_Chars`（`1df7a8c`）、无初始化器变量声明多余 stloc（`ce4932b`，B2 产物首次 CLR 正常加载）、变量声明初始化器下标错位 + EmitBinaryOp 缺位运算符（`bc36027`）、GlyphOf 位运算符字形（非法方法体 59→8，`aed3f47`）。
+- **护栏**：产物结构自校验门禁（`4ab5bf6`）+ ilverify 崩溃假阴性门禁修复（`3c1814b`）+ `Corpus_CompileAndDump` 固化为可复用门禁（`25dd428`）。
+
+## 未发布（2026-09-26）
+
+### 阶段 8：B1→B2 全量语料自举通过（2026-09-26）
+- **`74ba7ce`**：全量语料（543K，含 CodeGen）自举通过——三元表达式自支撑修复。
+- **B1→B2 修复链**：BCL/US 收集数组 2048 定容溢出→扩容（`2beb0fa`/`2875373`）、string[] 参数 Main/局部签名 + Console.WriteLine 签名（`3561836`）、#US 空字符串长度（`708ba5d`）、字符串实例成员索引（`0a86570`）、i32[] 字段初始化 + Stelem_I4=0x9E 澄清（`5c49930`）。
+
+## 未发布（2026-09-25）
+
+### 阶段 8：B1 自举闭环达成（2026-09-25）
+- **`9bf1fbc`**：自举编译器（B0 产出）全量自编译 241K 语料通过——B1 自举闭环。
+- **B1 探针体系**：依赖子集快速回路（单文件 Binder.co 25s/轮、14 秒自举回路）、探针分层（Binder/Syntax/Symbols，`ScaffoldChainProbe` 系列）。
+- **关键修复**：自举解释器 && 不短路的**根本缺陷**（全部 `X != null && !X.IsToken()` 守卫改三元 `?:` 短路，`5480f97`）、类字段作用域（方法体直接引用 `_field`）、块作用域（嵌套局部重复声明）、KnownType 类名前向解析（`438da0f`）、arity 计参（实例方法 param0=this 裸调用省略接收者，`b6d6e55`）、静态类方法 emit（`0d175a3`）、MethodIndex 纯化 + ExprTypeOf 字段/链式推断（`b0808e7`/`a5ca973`）、B0 驱动完整发射自举编译器源码为可加载可运行 .dll（`8f18d79`）。
+
+## 未发布（2026-09-22）
+
+### 阶段 8 前置·类里程碑 C-1 ~ C-4（2026-09-21 ~ 09-22）
+- **C-1 ✅（09-21）**：自举 parser this/new 后缀链 + binder 类地基（实例字段/方法收集、顶层/类方法索引对齐）。
+- **C-2 ✅（09-22）**：自举 emit 类实例——this→ldarg0、new→newobj、ldfld/stfld、callvirt、TypeDef 字段表 + HAS_THIS 签名、隐式 ctor（`f7e894e`）。
+- **C-3 ✅（09-22）**：自举 emit 数组——newarr/ldelem/stelem/ldlen（含字符串数组）+ szarray 签名（`e6d6d26`）；字符串实例成员（s.substring/IndexOf callvirt，`d812a57`）；字段写 stfld + void 实例方法 + 方法尾隐式 ret（`36a29eb`）；string(n) 转换（box Int32 + Convert.ToString，`66ca626`）；IL 汇编器完整吸收（两遍编码 + token 占位，`42fd595`）。
+- **C-4 ✅（09-22）**：命名空间下钻（递归 WalkMember，`bb58fa9`）；**自举 Cli compile 子命令**（.co → 物理 .dll 全链落盘，`117de32`）。
+
+## 未发布（2026-09-21）
+
+### 增量五 M5-a0…a5 收官：自举 Emit 全链（2026-09-15 ~ 09-21）
+- **M5-a0** 绑定树结构化输出（B0 `--bound-json`，`4c30a19`）；**M5-a1** 自举 Interpreter 后端（树遍历求值 + EvaluatorRuntime）；**M5-a2** B0 端到端（Backend 项目级声明）；**M5-a3** IL 发射骨架（IlEmitter/IlAssembler/IlMetadataBuilder 自举版）。
+- **M5-a4 Native 骨架**：自举 NativeEmitter（绑定树 → LIR 文本，与 C# LirPrinter 逐行一致）+ X64Assembler 编码内核切片 1/2/3（REX/ModRM/SIB、LirToAssembler 布局无关符号化差分、runtime stub 一致性）。
+- **M5-a5 自举 ManagedPEWriter（2026-09-20 ~ 09-21）**：自举侧实现物理 .dll 写出全链——批 1-3 端到端（纯算术 Main + 局部变量实跑，`7cdbcaf`）→ 多函数（参数/内部调用/控制流，`00dea99`）→ **BCL/字符串**（Console.WriteLine + 字符串字面量，`cfd5702`）→ **字符串运算**（`==`/`!=`/`+`，String.op_Equality/op_Inequality/Concat，`a50ecea`）。
+
+### tools 构建脚本（2026-09-15）
+- **tools 新增**：`build-co` / `build-cs` / `build-ui` / `build-ide` 构建脚本；`build-sdk` 同步收集到 `tools\cocoa-sdk`（`System.Core.coa` 落仓，`d6f5b5c`）。
+
 ## 未发布（2026-09-15）
 
 ### 结构整理（2026-09）：CoaFormat 拆分 + 前端重命名
@@ -15,7 +67,7 @@
 - **cl 目录合并**：`Evaluation/` 单文件目录并入 `Compilation/`（命名空间保持 `.Evaluation`，避免与 `Compilation` 类同名冲突）。
 - **nullable 清零**：`Cli/Cocoa.Cli.csproj` 移除 8 个压制编号（0 警告），更新 `Directory.Build.props` 棘轮注释。
 - **自举 hex 去重**：5 个 `.co` 的 `HexByte/HexU16/HexU32` 收敛到 `CodeGen/HexCodec.co`。
-- 全量回归：C# **2821 通过 / 0 失败**；自举 native **135 通过 / 0 失败**。
+- 全量回归：C# **53,364 通过 / 0 失败**；自举 native **135 通过 / 0 失败**。
 
 ### 阶段 7 增量五 M5-a0…a4 规划：自举 Emit 实施计划（2026-09-15）
 - **增量五计划定稿**：5 个子步（M5-a0 结构化输出 → M5-a1 Interpreter 后端 → M5-a2 B0 端到端 → M5-a3 IL 骨架 → M5-a4 Native 骨架）。

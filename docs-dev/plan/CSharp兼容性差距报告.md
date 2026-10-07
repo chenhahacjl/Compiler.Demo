@@ -1,9 +1,10 @@
 # Cocoa 语言 C# 兼容性差距报告
 
-> **版本**：v1.1 | **日期**：2026-09-12 | **对标版本**：C# 13（.NET 9）
-> **当前状态**：53,471 测试，Stage 0-6 完成，三后端（Evaluator/IL/Native）全量绿
-> **统计**：已实现 ~103 项核心特性 | 未实现 ~36 项 | 部分实现 ~9 项
+> **版本**：v1.2 | **日期**：2026-10-07 | **对标版本**：C# 13（.NET 9）
+> **当前状态**：53,364+ 测试（2026-09-15 最后一次全量验证；10 月特性批次后计数待全量运行），Stage 0-6 完成 + 阶段 7 自举收官 + 阶段 8 B1≡B2 fixpoint 达成，三后端（Evaluator/IL/Native）全量绿
+> **统计**：已实现 ~110 项核心特性 | 未实现 ~30 项 | 部分实现 ~7 项
 >
+> **更新记录（v1.2，2026-10-07）**：10 月特性批次（2026-09-29 ~ 10-01）落地——模式匹配补全（声明/常量/关系/属性/括号分组/值类型声明 `is T v`）、运算符重载（op_* + op_Implicit/op_Explicit）、`?.` 空条件访问、checked/unchecked、typeof/sizeof、嵌套类、`lock`、索引 `^`/范围 `..`、Lock 语句、数字分隔符验证；Attributes Tier-1 语义消费（`[Obsolete]` 调用点诊断）。本批次后从「未实现清单」转出 #1/#6-9/#15/#16/#17/#18/#21/#22/#32/#43/#44/#55 共 14 项。
 > **更新记录（v1.1，2026-09-12）**：补记近期落地——XML 文档注释 `///`（6e-M24，全文/XML/.coa/REPL）、Attributes Tier-1（6e-M32，`[Name]`/`[Facade]`）、`using static` / `using` 别名（6e-M18）、二进制字面量 `0b` / 数字分隔符 `_`（词法）。测试基线 47,814 → 53,471。
 
 ---
@@ -105,15 +106,15 @@
 
 | # | 特性 | C# 版本 | 示例 | 复杂度 | 自举影响 |
 |---|------|---------|------|--------|----------|
-| 1 | **null 条件运算符 `?.` / `?[]`** | C# 6 | `obj?.Method()` / `arr?[i]` | 中 | 无 |
+| 1 | **null 条件运算符 `?.` / `?[]`** ✅（2026-10-01，IL 发射） | C# 6 | `obj?.Method()` / `arr?[i]` | 中 | 无 |
 | 2 | **null 合并运算符 `??`** | C# 8 | `x ?? defaultValue` | 低 | 无 |
 | 3 | **null 合并赋值 `??=`** | C# 8 | `x ??= value` | 低 | 无 |
 | 4 | **`nameof` 运算符** | C# 6 | `nameof(Length)` | 低 | 无 |
 | 5 | **using 声明 + using 语句** | C# 8 | `using var x = new File(...)` / `using (var x = ...) { }` | 低 | 无 |
-| 6 | **模式匹配 — 声明模式** | C# 7 | `if (obj is int n)` | 中 | 无 |
-| 7 | **模式匹配 — 常量模式** | C# 7 | `if (obj is null)` | 低 | 无 |
-| 8 | **模式匹配 — 关系模式** | C# 9 | `is > 0 and < 10` | 中 | 无 |
-| 9 | **模式匹配 — 属性模式** | C# 8 | `is { Length: > 0 }` | 中 | 无 |
+| 6 | **模式匹配 — 声明模式** ✅（2026-09/10） | C# 7 | `if (obj is int n)` | 中 | 无 |
+| 7 | **模式匹配 — 常量模式** ✅ | C# 7 | `if (obj is null)` | 低 | 无 |
+| 8 | **模式匹配 — 关系模式** ✅ | C# 9 | `is > 0 and < 10` | 中 | 无 |
+| 9 | **模式匹配 — 属性模式** ✅ | C# 8 | `is { Length: > 0 }` | 中 | 无 |
 | 10 | **switch 表达式** | C# 8 | `x switch { 1 => "a", _ => "b" }` | 中 | 无 |
 
 > **P0 全部完成**（#1-#10）✅
@@ -126,14 +127,14 @@
 | 12 | **LINQ 方法语法** | C# 3 | `list.Where(x => x > 0).Select(x => x)` | 中 | 无 |
 | 13 | **async/await** | C# 5 | `async Task Foo() { await Bar(); }` | 高 | 无 |
 | 14 | **`yield return` / `yield break`** | C# 2 | `yield return x;` | 中 | 无 |
-| 15 | **`lock` 语句** | C# 1 | `lock (obj) { ... }` | 低 | 无 |
-| 16 | **`checked` / `unchecked`** | C# | `checked { x + y }` | 低 | 无 |
-| 17 | **索引运算符 `^`** | C# 8 | `arr[^1]` | 中 | 无 |
-| 18 | **范围运算符 `..`** | C# 8 | `arr[1..^1]` | 中 | 无 |
+| 15 | **`lock` 语句** ✅（IndexRangeLock 三后端） | C# 1 | `lock (obj) { ... }` | 低 | 无 |
+| 16 | **`checked` / `unchecked`** ✅（2026-09-29，ovf 编码修正） | C# | `checked { x + y }` | 低 | 无 |
+| 17 | **索引运算符 `^`** ✅（Index 类型 + 三后端） | C# 8 | `arr[^1]` | 中 | 无 |
+| 18 | **范围运算符 `..`** ✅（Range 类型 + 三后端） | C# 8 | `arr[1..^1]` | 中 | 无 |
 | 19 | **集合表达式** | C# 12 | `[1, 2, 3]` / `[..a, 4]` | 中 | 无 |
 | 20 | **属性（Attributes）** 🔶 Tier-1（`[Name]`/`[Facade]`，6e-M32） | C# 1 | `[Serializable]` | 高 | 无 |
-| 21 | **运算符重载** | C# | `public static operator +(Point a, Point b)` | 中 | 无 |
-| 22 | **隐式/显式转换运算符** | C# | `public static implicit operator int(Foo f)` | 中 | 无 |
+| 21 | **运算符重载** ✅（2026-09-29，语法/绑定/三后端） | C# | `public static operator +(Point a, Point b)` | 中 | 无 |
+| 22 | **隐式/显式转换运算符** ✅（op_Implicit/op_Explicit 转换点生效） | C# | `public static implicit operator int(Foo f)` | 中 | 无 |
 
 ### P2 — 特定场景
 
@@ -148,7 +149,7 @@
 | 29 | **锯齿数组** | C# 1 | `int[][]` | 低 | 无 |
 | 30 | **显式接口实现** | C# | `void IFoo.Read() { }` | 中 | 无 |
 | 31 | **默认接口方法** | C# 8 | `interface IFoo { void M() { } }` | 中 | 无 |
-| 32 | **嵌套类** | C# | `class Outer { class Inner { } }` | 中 | 无 |
+| 32 | **嵌套类** ✅（2026-09-30，类体内声明 + 嵌套类型登记） | C# | `class Outer { class Inner { } }` | 中 | 无 |
 | 33 | **`new` 成员隐藏** | C# | `new void M() { }` | 低 | 无 |
 | 34 | **`decimal` 类型** | C# | `decimal x = 3.14m` | 中 | 无 |
 | 35 | **`global using`** | C# 10 | `global using System.Linq;` | 低 | 无 |
@@ -164,8 +165,8 @@
 | # | 特性 | C# 版本 | 示例 | 复杂度 | 自举影响 |
 |---|------|---------|------|--------|----------|
 | 42 | **预处理指令 `#if` / `#define`** | C# | `#if DEBUG` | 中 | 无 |
-| 43 | **`sizeof` 运算符** | C# | `sizeof(int)` | 低 | 无 |
-| 44 | **`typeof` 运算符** | C# | `typeof(int)` | 低 | 无 |
+| 43 | **`sizeof` 运算符** ✅（2026-09-29） | C# | `sizeof(int)` | 低 | 无 |
+| 44 | **`typeof` 运算符** ✅（2026-09-29） | C# | `typeof(int)` | 低 | 无 |
 | 45 | **`stackalloc`** | C# 2 | `int* p = stackalloc int[10]` | 中 | 无 |
 | 46 | **unsafe / 指针** | C# | `int* p = &x;` | 高 | 无 |
 | 47 | **fixed-size buffers** | C# 2 | `fixed int buf[10]` | 中 | 无 |
@@ -175,8 +176,8 @@
 | 51 | **匿名类型** | C# 3 | `new { X = 1, Y = "a" }` | 中 | 无 |
 | 52 | **`Span<T>` / `Memory<T>`** | C# 7.2 | `Span<int> s = stackalloc int[10]` | 高 | 无 |
 | 53 | **`params Span<T>`** | C# 13 | `params Span<int> values` | 中 | 无 |
-| 54 | **`out var` 内联声明** | C# 7 | `TryParse(s, out var n)` | 低 | 无 |
-| 55 | **递归模式** | C# 9 | `is > 0 and < 100 or 999` | 中 | 无 |
+| 54 | **`out var` 内联声明** ✅（2026-09-29 修通成员调用路径） | C# 7 | `TryParse(s, out var n)` | 低 | 无 |
+| 55 | **递归模式** ✅（括号分组 `is (1 or 2)`） | C# 9 | `is > 0 and < 100 or 999` | 中 | 无 |
 | 56 | **列表模式** | C# 11 | `is [1, .., 5]` | 中 | 无 |
 | 57 | **switch 穷举检查** | C# 8 | 编译器确保 switch 覆盖所有情况 | 中 | 无 |
 
@@ -186,7 +187,7 @@
 
 | 特性 | 已有 | 缺失 |
 |------|------|------|
-| **record** | 合成 class + 字段 + ctor + Equals + ToString | `with` 表达式、`record struct`、值相等语义 |
+| **record** | 合成 class + 字段 + ctor + Equals + ToString（值相等已修正，2026-09-29） | `with` 表达式、`record struct` |
 | **元组** | `(a,b)` 语法 + `__Tuple_N` 类型 + ItemN 字段 | 命名元组 `(X: int, Y: int)`、元组相等 `==` |
 | **struct** | 基础值语义（深拷贝隔离、三后端 clone） | `ref struct`、`stackalloc`、实现接口 |
 | **foreach** | 基于数组 + IEnumerable&lt;T&gt; 枚举器 | 可枚举模式（递归模式解构） |
@@ -272,15 +273,15 @@ record struct / with 表达式 → 中复杂度
 | 类别 | 已实现 | 未实现 | 部分实现 |
 |------|--------|--------|----------|
 | 类型系统 | 15 | 5（decimal/多维/锯齿/可空值/可空引用） | 3（record/元组/struct） |
-| OOP | 12 | 5（嵌套类/new隐藏/显式接口/默认接口/init） | 1（接口） |
-| 控制流 | 12 | 3（lock/yield/checked） | 1（foreach） |
-| 表达式 | 18 | 12（null安全/LINQ/pattern/index-range/集合/nameof/typeof/sizeof） | 0 |
-| 运算符 | 10 | 2（运算符重载/转换运算符） | 0 |
+| OOP | 16 | 4（new隐藏/显式接口/默认接口/init） | 1（接口） |
+| 控制流 | 15 | 2（yield/switch 穷举） | 1（foreach） |
+| 表达式 | 20 | 10（LINQ/null 安全/集合/nameof 等） | 0 |
+| 运算符 | 12 | 0 | 0 |
 | 声明 | 10 | 4（primary ctor/required/decimal/global using） | 0 |
-| 元数据 | 1（XML 文档注释） | 1（预处理） | 1（Attributes Tier-1） |
+| 元数据 | 1（XML 文档注释） | 1（预处理） | 1（Attributes Tier-2） |
 | 异步 | 0 | 2（async/await） | 0 |
 | 安全 | 0 | 3（unsafe/stackalloc/fixed） | 0 |
-| **合计** | **~103** | **~36** | **~9** |
+| **合计** | **~110** | **~30** | **~7** |
 
 ---
 

@@ -1,6 +1,6 @@
 # Cocoa.Co — Cocoa 语言编写的编译器（自举目标）
 
-> 状态：🔄 阶段 7 已启动；**增量一（自举 Lexer）完成（2026-09-13）**；**增量二（自举 Syntax/Parser）完成（2026-09-14）**；**增量三（自举 Binder）完成（2026-09-14，M9-a0…a4：符号/局部/诊断逐字节对齐）**；**结构重组定稿（2026-09-14，本 README 即蓝图；目录迁移紧随执行）**。实施计划见 [`docs-dev/plan/自举实施计划.md`](../../docs-dev/plan/自举实施计划.md)。
+> 状态：🔄 **阶段 8 自举验证进行中**；增量一（自举 Lexer）✅（2026-09-13）；增量二（自举 Syntax/Parser）✅（2026-09-14）；增量三（自举 Binder）✅（2026-09-14，M9-a0…a5）；增量四（Lowering）✅（并入增量三）；**增量五（自举 Emit）✅（2026-09-21，M5-a0…a5：Interpreter/IL 骨架/Native LIR/自举 ManagedPEWriter）**；**结构重组 ✅**；**阶段 8：B1 自举闭环 ✅（09-25）→ B1→B2 全量 543K ✅（09-26）→ B2==B1 fixpoint 字节级一致 ✅（09-30）**。实施计划见 [`docs-dev/plan/自举实施计划.md`](../../docs-dev/plan/自举实施计划.md)。
 
 本目录（`src/Cocoa.Co`，2026-09-14 复议保留现位置，结构重组其余照旧）容纳**用 Cocoa 语言重写的编译器源码**——阶段 7 自举的产物。只能使用阶段 6 冻结的语言能力（详见 `docs-dev/开发计划.md` §阶段 7）。
 
@@ -20,15 +20,16 @@
 
 ```
 src\Cocoa.Co\
-├── Cocoa.Co.cosln
+├── Cocoa.Co.cosln            （自举编译器唯一构建入口）
+├── Cocoa.Tests.cosln         （自举测试套件入口）
 ├── Cocoa.Compiler\
 │   ├── Syntax\        Token / Lexer / Node / Parser（词法+语法全域）
 │   ├── Symbols\       符号全家
-│   ├── Binding\       Binder（M9-a3 起含绑定树节点）
-│   ├── Lowering\      （增量四建）降级
-│   └── 根级散文件      Compilation / Diagnostic / CoaWriter / CoaReader（≥3 文件才升目录）
-├── CodeGen\           （增量五建）Native\{Lir,Pe} + Il\
-└── Cli\               Main + 命令子文件；（阶段 8 并入 coproj/cosln 构建引擎）
+│   ├── Binding\       Binder（含绑定树节点）
+│   ├── CodeGen\       （增量五已建）Interpreter / IlAssembler / IlEmitter / IlMetadataBuilder / ManagedPEWriter / NativeEmitter / LirToAssembler / PeImage / X64Assembler / Value / HexCodec
+│   └── 根级散文件      Compilation / Diagnostic / CoaWriter / CoaReader
+├── Cocoa.Tests\       自举测试（TestRunner.co + Lexer/Parser/Binder/IlEmitter/X64Assembler golden 套件）
+└── Cli\               Main + compile 子命令；（阶段 8 并入 coproj/cosln 构建引擎）
 ```
 
 **精简原则**：自举侧用通用 `Node`（红绿合一）而非 C# 的每节点一类，终态 ≈30 文件，目录随文件数生长（>5 个文件的域才升目录）；C# 侧每个目录的映射：`Text`→Syntax、`Bound`→Binding、`Diagnostic/Compilation/Serialization`→根级散文件、`Evaluation` 砍（差分在 C# 侧）、`Authoring/Documentation` 不自举。
@@ -58,8 +59,8 @@ src\Cocoa.Co\
 | 增量二 | 自举 Syntax/Parser（M8-a0…a12：递归下降 + 规范树 dump 差分；样例 33/33 全绿、语料 39、无效程序同报错、B0 打印树） | ✅ 完成（2026-09-14） |
 | 增量三 | 自举 Binder（M9-a0…a5：符号声明面 + 局部符号 + 诊断逐字节对齐；13 语料 byte-for-byte、break/continue/step/嵌套控制流） | ✅ 完成（2026-09-15） |
 | 增量四 | Lowering 降级（if/while/do-while/for-range/break/continue/step + 嵌套）+ 绑定树 dump 差分（13 组语料 byte-for-byte） | ✅ 完成（2026-09-15，并入增量三） |
-| 增量五 | CodeGen 发射（M5-a0…a4：结构化输出 + Interpreter + B0 端到端 + IL 骨架 + Native 骨架） | 🧭 |
-| 结构重组 | Compiler/Cli 程序集拆分 + Backend 项目级声明 + cosln 入口（位置保留 src/Cocoa.Co） | 🔄 本 README 定稿，迁移紧随执行 |
-| 阶段 8 | B0→B1→B2 自举链 + 构建引擎自举 + 命名空间转正 | ⬜ |
+| 增量五 | CodeGen 发射（M5-a0…a5：结构化输出 + Interpreter + B0 端到端 + IL 骨架 + Native LIR 差分 + **自举 ManagedPEWriter**） | ✅ 完成（2026-09-21） |
+| 结构重组 | Compiler/Cli 程序集拆分 + Backend 项目级声明 + cosln 入口 | ✅ 完成 |
+| 阶段 8 | B0→B1→B2 自举链 + 构建引擎自举 + 命名空间转正 | 🔄 进行中：B1 闭环（09-25）→ B1→B2 全量 543K（09-26）→ **B2==B1 fixpoint 字节级一致（09-30）**；双轨 ilverify 对齐继续 |
 
 详见 [`docs-dev/plan/自举实施计划.md`](../../docs-dev/plan/自举实施计划.md)。

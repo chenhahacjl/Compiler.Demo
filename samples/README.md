@@ -20,11 +20,12 @@ cocoa build -p samples/<路径>/<项目>.coproj [-b dotnet]
 |------|------|
 | `Tutorial/Basics` | 语言入门：HelloWorld · Types · ControlFlow · Functions |
 | `Tutorial/Data` | 数据类型：Arrays · Strings · Doubles · ByteArrays · Enums |
-| `Tutorial/Dialects` | 方言对照：CsStyle · TopLevelFunctions · CSharpDialect |
+| `Tutorial/Dialects` | 语法风格对照：CsStyle · TopLevelFunctions |
 | `Tutorial/Interop` | native DLL 导入（kernel32 import 块） |
 | `Libraries/NetLibrary` | .NET dll 库（`output = library`）+ `[references]` 消费方 app |
 | `Libraries/CodLibrary` | .coa Cocoa 程序集库（`output = cocoa`）+ 消费方 app |
 | `Classes/CSharpClass` | Cocoa 式类语法预览：字段/属性/构造函数/static |
+| `Samples/UI` | System.UI 立即模式 UI 库：BasicUI · AdvancedUI · NativeUI · DeclarativeUI |
 
 ## 示例索引
 
@@ -47,19 +48,31 @@ cocoa build -p samples/<路径>/<项目>.coproj [-b dotnet]
 | ByteArrays | byte 数组创建、赋值、溢出回绕 | `65`、`255` |
 | Enums | 枚举定义、比较、自定义值 | `404`、`True` |
 
-### Tutorial/Dialects — 方言对照
+### Tutorial/Dialects — 语法风格对照
 
 | 示例 | 演示内容 | 关键输出 |
 |------|---------|---------|
 | CsStyle | C# 式参数/局部变量/分号 ↔ Cocoa 式同文件对照（双后端） | `42`、`Hi, Cocoa (3)` |
 | TopLevelFunctions | C# 式顶层函数（`public static void Main()` 等） | `30`、`ababab` |
-| CSharpDialect | 纯 `.cs` 严格 C# 方言：类型前置、分号必选、`namespace X;`、foreach、字符串插值、switch when | `i = 2`、`few` |
+
+> 注：`.cs` 严格 C# 方言已随「去 C# 方言」移除（2026-09-13），`CSharpDialect` 样例同步删除。
 
 ### Tutorial/Interop — 互操作
 
 | 示例 | 演示内容 | 关键输出 |
 |------|---------|---------|
 | Interop | `import kernel32.dll { static extern ... }` import 块 + `System.Runtime.Random` | `True`、`True` |
+
+## UI 示例（Samples/UI）
+
+System.UI 立即模式 UI 库（阶段 1-5，见 [`docs/UI库手册.md`](../docs/UI库手册.md)）：
+
+| 示例 | 演示内容 | 后端 |
+|------|---------|------|
+| BasicUI | 核心控件集 + Win32 GDI 轮询后端，端到端弹窗渲染 | IL |
+| AdvancedUI | 完整控件集 + 输入/滚轮 + 子区域滚动 + 运行期主题切换 | IL |
+| NativeUI | native 最小控件集（x64） | native |
+| DeclarativeUI | 声明式语法糖：`UIView.Body` + `Ui.VStack/HStack/Group/Panel` | IL |
 
 ## 库示例（Libraries）
 

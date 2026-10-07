@@ -15,7 +15,7 @@
 | 工程 | 根命名空间 | AssemblyName | 职责 |
 |---|---|---|---|
 | `Cocoa.Targeting` | `Cocoa.Targeting` | 同名 | 目标常量：`TargetPlatform` / `IlTarget` |
-| `Cocoa.Compiler` | `Cocoa.CodeAnalysis` | 同名 | **编译器单装配件**（前端 + 绑定 + 降级 + 序列化）：Text / Syntax（SyntaxKind、SyntaxFacts、LexerBase、绿红树）/ Cocoa 前端（CocoaLexer、CocoaParser、CocoaBinder）/ Symbols / Bound / Compilation（`Compilation`/`SemanticModel` 具体类）/ Lowering / Serialization（CoaSerializer、SystemLibrary）/ Documentation / Authoring（Classifier）/ CFG / Monomorphizer |
+| `Cocoa.CodeAnalysis` | `Cocoa.CodeAnalysis` | 同名 | **编译器单装配件**（前端 + 绑定 + 降级 + 序列化）：Text / Syntax（SyntaxKind、SyntaxFacts、LexerBase、绿红树）/ Cocoa 前端（CocoaLexer、CocoaParser、CocoaBinder）/ Symbols / Bound / Compilation（`Compilation`/`SemanticModel` 具体类）/ Lowering / Serialization（CoaSerializer、SystemLibrary）/ Documentation / Authoring（Classifier）/ CFG / Monomorphizer |
 | `Cocoa.CodeGen.Managed.Structure` | 同名 | 同名 | IL 结构模型：IlOpCode / IlInstruction / IlMetadataModel / IlTypes |
 | `Cocoa.CodeGen.Managed.Reader` | 同名 | 同名 | IL 元数据读取：MetadataReader |
 | `Cocoa.CodeGen.Managed.Writer` | 同名 | 同名 | IL 后端：IlEmitter / MetadataBuilder / ManagedPEWriter / AppHostPatcher / CoaLibraryCompiler（`.coa`→DLL） |
@@ -31,18 +31,18 @@
 ## 3. 依赖方向
 
 ```
-Cocoa.Cli ──→ Cocoa.Build, Cocoa.Cli.Repl, Cocoa.Compiler,
+Cocoa.Cli ──→ Cocoa.Build, Cocoa.Cli.Repl, Cocoa.CodeAnalysis,
               CodeGen.{PE, Managed.Writer, Native, Interpreter}, Cocoa.Targeting
-Cocoa.Build ──→ Cocoa.Compiler, CodeGen.Managed.Writer, Cocoa.Targeting
-CodeGen.Managed.Writer ──→ Cocoa.Compiler, CodeGen.{PE, Managed.Structure, Managed.Reader}
-CodeGen.Native ──→ Cocoa.Compiler, CodeGen.{PE, Native.Lir}
-CodeGen.Interpreter ──→ Cocoa.Compiler
-Cocoa.Compiler ──→ CodeGen.{Managed.Structure, Managed.Reader}, Cocoa.Targeting
+Cocoa.Build ──→ Cocoa.CodeAnalysis, CodeGen.Managed.Writer, Cocoa.Targeting
+CodeGen.Managed.Writer ──→ Cocoa.CodeAnalysis, CodeGen.{PE, Managed.Structure, Managed.Reader}
+CodeGen.Native ──→ Cocoa.CodeAnalysis, CodeGen.{PE, Native.Lir}
+CodeGen.Interpreter ──→ Cocoa.CodeAnalysis
+Cocoa.CodeAnalysis ──→ CodeGen.{Managed.Structure, Managed.Reader}, Cocoa.Targeting
 CodeGen.PE ──→ Cocoa.Targeting
 CodeGen.Managed.Reader ──→ CodeGen.Managed.Structure
 ```
 
-- 后端（Managed.Writer / Native / Interpreter）**反向引用** `Cocoa.Compiler`，消费 `BoundProgram` 等绑定 IR；**Core 不引用任何后端**（见 §5）。
+- 后端（Managed.Writer / Native / Interpreter）**反向引用** `Cocoa.CodeAnalysis`，消费 `BoundProgram` 等绑定 IR；**Core 不引用任何后端**（见 §5）。
 - CLI/测试是唯一同时引用 Core 与全部后端的宿主。
 
 ## 4. 单语言前端
@@ -55,7 +55,7 @@ CodeGen.Managed.Reader ──→ CodeGen.Managed.Structure
 
 ## 5. 后端注册模式
 
-Core（`Cocoa.Compiler`）不引用任何后端工程，后端能力经**静态委托注册**注入：
+Core（`Cocoa.CodeAnalysis`）不引用任何后端工程，后端能力经**静态委托注册**注入：
 
 ```csharp
 // Core 侧（Compilation 内）
@@ -78,13 +78,13 @@ ManagedBackend.Register(); NativeBackend.Register(); InterpreterBackend.Register
 - `Directory.Build.props`：`TreatWarningsAsErrors=true`，全局 `NoWarn = CS0108;CA1416;xUnit2013;xUnit1026`。
   个别项目（`Cocoa.Cli` / `Cocoa.Build`）另有 nullable 债务压制组（CS8600..CS8625），清零后删除。
 - **棘轮只进不退**：禁止新增大范围 NoWarn；确需抑制 → 单条目 + 行内注释 + 登记债务清单。
-- 测试基线：全量 **53,358 通过 / 1 跳过**（2026-09-14；`docs-dev/plan/自举实施计划.md`）。
+- 测试基线：全量 **53,364 通过 / 1 跳过**（2026-09-15 最后一次全量验证；10 月特性增补，最新计数待全量运行）。
 
 ## 8. 验证与提交纪律
 
 - 验证：`dotnet build src/Cocoa.Cs/Cocoa.slnx --no-incremental`（增量构建在 stash/mtime 往返后会用陈旧二进制骗人）
   + `dotnet test src/Cocoa.Cs/Cocoa.Tests` 全量。
-- 标准库重建：改 `src/Cocoa.SDK/` 后跑 `tools\build-stdlib.cmd`（产物收集到 `src/Cocoa.Cs/libs/` 并自动分发）。
+- 标准库重建：改 `src/Cocoa.SDK/` 后跑 `tools\build-sdk.cmd`（产物收集到 `src/Cocoa.Cs/libs/` 与 `tools\cocoa-sdk/` 并自动分发）。
 - 每步独立 commit；重构前缀 `refactor(...)`，文档类用 `docs(...)`；文档与进度日志随每步更新。
 - 源文件 UTF-8；测试期望字符串注意 `\r\n` 与 Unicode 控制台输出（native exe 输出为 UTF-16）。
 

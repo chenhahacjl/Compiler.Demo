@@ -3,6 +3,7 @@
 > **日期**：2026-09-09 | **起点**：47,861 测试 green（80 既有失败 / 1 skip）
 > **目标**：让 native 后端对齐近期前端落地的语言特性（lock / Index / Range / yield），并建立真实的锁原语与惰性迭代器
 > **已确认决策**：N3 采用方案 B（惰性迭代器类）；N2 CAS 两步走（先 kernel32 导入，后汇编器原生 LOCK 指令）
+> **当前**：N1（lock/Index/Range 三后端）已落地（IndexRangeLock 三后端测试，2026-09）；yield 惰性迭代器（N3 方案 B）后续推进——最新状态见 [`CSharp兼容性差距报告.md`](CSharp兼容性差距报告.md)。
 
 ---
 

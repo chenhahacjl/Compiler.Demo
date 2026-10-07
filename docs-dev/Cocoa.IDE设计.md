@@ -1,10 +1,10 @@
 # Cocoa.IDE 设计 — 类 Visual Studio 桌面 IDE
 
-> 状态：🔧 实施中（M1~M6 已落地，2026-09-13 完成 M6 打磨：主题切换 + 语义着色 + 选项页 + 启动「最近/固定项目」弹窗；2026-09-12 完成**第二轮审计（§5.5，A1–A10）**并修订路线图：新增 **M2b VS2022 两步式新建项目向导（§8.1）**、**M5b 工程上下文语义（§7.5）**、**M6c VS 风格解决方案资源管理器（§6.4）**；实施顺序见 §12.2）
-> 目标：为 Cocoa 语言构建**类 Visual Studio 的桌面 IDE**——解决方案/项目管理 + 语法着色编辑器 + 实时诊断 + 补全/Hover/F12 + 构建运行 + （M7）解释器调试器，进程内直接复用编译器 `Cocoa.Compiler` 完整编译管线。
+> 状态：🔧 实施中（M1~M7 已落地：M7 解释器调试器——断点/单步/局部变量/调用栈，2026-09-12；M6 打磨——主题切换 + 语义着色 + 选项页 + 启动「最近/固定项目」弹窗，2026-09-13；M1~M5 核心 IDE 底座已落地；后续 M2b/M5b/M6c 路线修订见 §12.2）
+> 目标：为 Cocoa 语言构建**类 Visual Studio 的桌面 IDE**——解决方案/项目管理 + 语法着色编辑器 + 实时诊断 + 补全/Hover/F12 + 构建运行 + （M7）解释器调试器，进程内直接复用编译器 `Cocoa.CodeAnalysis` 完整编译管线。
 > 核心决策：**Avalonia 11 跨平台**；**直接消费既有 public API**（`Compilation.GetSemanticModel`/`SemanticModel`/`Classifier`/`BoundScope`/`Cocoa.Build` 全部已公开，零 `InternalsVisibleTo`，详见 §4）；**调试器基于解释器**（在 `Cocoa.CodeGen.Interpreter` 内新增 public `DebuggerSession`，见 §11）。
 > 相关文档：`docs/编译手册.md`（`cocoa` CLI 子命令）、`docs/项目格式规范.md`（`.coproj`/`.cosln`）、`docs-dev/实现目标.md`（编译器架构）
-> 最后更新：2026-09-12
+> 最后更新：2026-10-07
 
 ---
 

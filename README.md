@@ -1,29 +1,29 @@
 # Cocoa 编译器
 
-用 C# 编写的 C 系方言编译器，同时具备 **Native 代码生成**（x86 / x64，零依赖、纯自研 PE 输出）与 **IL 代码生成**（ECMA-335）两条后端路径，最终目标是用 Cocoa 语言自身重写编译器（自举）。
+用 C# 编写的 C 系方言编译器，同时具备 **Native 代码生成**（x86 / x64，零依赖、纯自研 PE 输出）与 **IL 代码生成**（ECMA-335）两条后端路径；编译器本体正在用 Cocoa 语言重写（自举，阶段 7 已完成，阶段 8 自举验证进行中）。
 
-> 当前阶段：阶段 7 — 编译器自举（用 Cocoa 重写编译器）；增量一（自举 Lexer）完成，增量二（自举 Parser）进行中（见 [`docs-dev/plan/自举实施计划.md`](docs-dev/plan/自举实施计划.md)）
-> 最新：**阶段 7 增量二自举 Parser（M8-a0…a8）已落地：递归下降 + 规范树 dump 差分，差分语料 39 个逐字节一致、样例覆盖率 21/33**。近期流水见 [CHANGELOG.md](CHANGELOG.md)。
+> 当前阶段：阶段 8 — 自举验证（B1 ≡ B2）。阶段 7（用 Cocoa 重写编译器）已收官：增量一~五全部完成——Lexer/Parser/Binder/Lowering 逐单元差分对齐，自举 Emit 全链（Interpreter + IL 自研 ManagedPEWriter + Native LIR）落地（见 [`docs-dev/plan/自举实施计划.md`](docs-dev/plan/自举实施计划.md)）。
+> 最新：**阶段 8 里程碑：B1 自举闭环（2026-09-25，全量 241K 语料自编译）、B1→B2 全量 543K 语料通过（2026-09-26）、B2 == B1 fixpoint 达成（字节级一致，2026-09-30）**；ilverify 双轨错配清零与语言特性补全（嵌套类/模式匹配/`?.`/checked-unchecked/typeof/sizeof/Attribute/运算符重载）持续推进。近期流水见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 路线图（摘要）
 
-| 阶段 | 内容 |
-|------|------|
-| 0 | 修复 x86 Native 崩溃（黑盒对照 TinyCC/gcc） |
-| 1-3 | IR 层：三地址码 + 虚拟寄存器，双后端共用 |
-| 4 | 运行时 IR 化（x86/x64 合并） |
-| 5 | IL 路径自研（移除 Mono.Cecil），零第三方依赖 |
-| 6 | 语言扩展 + 互操作（native DLL/.NET DLL/cod）+ 输出格式（exe/dll/cod）+ 项目系统 |
-| 7 | 编译器用 Cocoa 语言重写（自举） |
-| 8 | 自举验证（B1 ≡ B2） |
-| 9 | （可选）Native 路径的 .NET CLR Hosting 互操作 |
+| 阶段 | 内容 | 状态 |
+|------|------|------|
+| 0 | 修复 x86 Native 崩溃（黑盒对照 TinyCC/gcc） | ✅ |
+| 1-3 | IR 层：三地址码 + 虚拟寄存器，双后端共用 | ✅ |
+| 4 | 运行时 IR 化（x86/x64 合并） | ✅ |
+| 5 | IL 路径自研（移除 Mono.Cecil），零第三方依赖 | ✅ |
+| 6 | 语言扩展 + 互操作（native DLL/.NET DLL/.coa）+ 输出格式（exe/dll/coa）+ 项目系统 | ✅ |
+| 7 | 编译器用 Cocoa 语言重写（自举） | ✅ |
+| 8 | 自举验证（B1 ≡ B2） | 🔄 B1≡B2 fixpoint 已达成，双轨对齐/特性补全进行中 |
+| 9 | （可选）Native 路径的 .NET CLR Hosting 互操作 | 🧭 |
 
 ## 快速开始
 
 ```bash
 # 构建（编译器 + 标准库：cod 产物收集至 src\Cocoa.Cs\libs\，构建时自动分发到各 bin）
 dotnet build src\Cocoa.Cs\Cocoa.CodeAnalysis
-tools\build-stdlib.cmd
+tools\build-sdk.cmd
 
 # 创建新项目（模板 + 名称，仿 dotnet new）：console / library / cocoa / solution
 cocoa new console MyApp
