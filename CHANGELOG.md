@@ -10,10 +10,11 @@
 
 ## 未发布（2026-10-08）
 
-### 语言特性：`with` 表达式（C# 9，record 非破坏复制）✅
+### 语言特性：`with` 表达式 + `init` 访问器（C# 9 record 族）✅
 - **`p with { 字段 = 值, ... }`**：语法（`WithKeyword`/`WithExpression` + 后缀解析）+ 绑定——**脱糖为位置参数构造器调用**（未覆盖字段原值透传，零新 Bound 节点、三后端零发射改动）。
 - 接收者限定无副作用引用表达式（变量/参数/this/字段访问，避免重复求值）；赋值目标须为 record 位置字段（否则绑定诊断）；非位置参数 record 明确报错。
-- 测试 `WithExpressionThreeBackendTests` 6 例：Evaluator / IL(net9.0) / Native(x86+x64) 端到端 + 绑定树形态断言（无 With 节点泄漏）+ 负例。全量回归 657/658（本批定向）。
+- **`init` 访问器**：`property X: int { get init }`——语法（`InitKeyword`）+ 绑定（`set_X` 标记 `IsInitAccessor`）+ 强制（仅所属类构造上下文可赋值，`_function.IsConstructor` 判定，非构造赋值报诊断）；发射复用 setter 管线零改动。
+- 测试：`WithExpressionThreeBackendTests` 6 例 + `InitAccessorThreeBackendTests` 5 例（Evaluator / IL(net9.0) / Native(x86+x64) 端到端 + 绑定树形态断言 + 负例）。定向回归 657+24 通过。
 
 ## 未发布（2026-10-01）
 

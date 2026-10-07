@@ -143,6 +143,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.ImportKeyword;
                 case "in":
                     return SyntaxKind.InKeyword;
+                case "init":
+                    return SyntaxKind.InitKeyword;
                 case "interface":
                     return SyntaxKind.InterfaceKeyword;
                 case "is":
@@ -411,6 +413,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "get";
                 case SyntaxKind.InKeyword:
                     return "in";
+                case SyntaxKind.InitKeyword:
+                    return "init";
                 case SyntaxKind.SetKeyword:
                     return "set";
                 case SyntaxKind.PropertyKeyword:

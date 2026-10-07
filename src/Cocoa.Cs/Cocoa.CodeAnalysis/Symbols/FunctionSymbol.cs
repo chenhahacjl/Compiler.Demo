@@ -111,6 +111,9 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>语义标志：本函数是否为属性访问器（get_/set_ 隐式体、auto-property 判定用；A1 注入，供未来共享层消费）。</summary>
         public bool IsPropertyAccessor { get; set; }
 
+        /// <summary>语义标志：本函数是否为 init 访问器（set_X 仅构造上下文可赋值；C# 9）。</summary>
+        public bool IsInitAccessor { get; set; }
+
         /// <summary>合成环境类（6e-M22 C5）：宿主函数与其体内捕获 lambda 共享同一类（发射布局用）。</summary>
         public NamedTypeSymbol? EnvironmentClass { get; set; }
 

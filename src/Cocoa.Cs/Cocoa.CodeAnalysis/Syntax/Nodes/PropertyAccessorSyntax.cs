@@ -26,6 +26,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         public SyntaxToken? SemicolonToken { get; }
 
         public bool IsGet => Keyword.Kind == (SyntaxKind)SyntaxKind.GetKeyword;
+        public bool IsInit => Keyword.Kind == (SyntaxKind)SyntaxKind.InitKeyword;
 
         public override IEnumerable<SyntaxNode> GetChildren()
         {

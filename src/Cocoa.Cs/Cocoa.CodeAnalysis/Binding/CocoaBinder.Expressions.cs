@@ -469,6 +469,13 @@ namespace Cocoa.CodeAnalysis.Binding
                         return new BoundErrorExpression(syntax);
                     }
 
+                    if (property.Setter.IsInitAccessor && _function?.IsConstructor != true)
+                    {
+                        _diagnostics.ReportError(syntax.AssignmentToken.Location,
+                            $"属性 '{propertyName}' 是 init 访问器，仅能在构造上下文中赋值。");
+                        return new BoundErrorExpression(syntax);
+                    }
+
                     var converted = BindConversion(syntax.Expression.Location, boundExpression, property.Type);
                     // 保留 getter 调用的实参（普通属性为空；索引器为 [下标]，须随 setter 透传），
                     // 否则 list[i] = v 会因丢失下标实参导致 set_Item 调用栈不平衡（InvalidProgramException）。
@@ -491,6 +498,13 @@ namespace Cocoa.CodeAnalysis.Binding
                     if (!IsAccessibleMember(property.Setter.Visibility, property.Setter.ContainingClass!))
                     {
                         _diagnostics.ReportCannotAccessMember(syntax.AssignmentToken.Location, propertyName, property.Setter.Visibility);
+                        return new BoundErrorExpression(syntax);
+                    }
+
+                    if (property.Setter.IsInitAccessor && _function?.IsConstructor != true)
+                    {
+                        _diagnostics.ReportError(syntax.AssignmentToken.Location,
+                            $"属性 '{propertyName}' 是 init 访问器，仅能在构造上下文中赋值。");
                         return new BoundErrorExpression(syntax);
                     }
 

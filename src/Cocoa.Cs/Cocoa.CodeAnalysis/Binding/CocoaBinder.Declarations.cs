@@ -2263,7 +2263,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
 
                 setter = new FunctionSymbol(isIndexer ? "set_Item" : "set_" + syntax.Identifier.Text, setterParams, TypeSymbol.Void, null,
-                    syntax: syntax.Setter, containingClass: classType, visibility: setterVisibility) { IsStatic = isStatic || lower, IsPropertyAccessor = true };
+                    syntax: syntax.Setter, containingClass: classType, visibility: setterVisibility) { IsStatic = isStatic || lower, IsPropertyAccessor = true, IsInitAccessor = syntax.Setter.IsInit };
                 classType.AddMethod(setter);
                 classFunctions.Add(setter);
             }

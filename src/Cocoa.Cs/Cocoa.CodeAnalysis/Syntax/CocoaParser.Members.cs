@@ -1202,7 +1202,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             PropertyAccessorSyntax? setter = null;
             while (Current.Kind != SyntaxKind.CloseBraceToken && Current.Kind != SyntaxKind.EndOfFileToken)
             {
-                if (IsModifier(Current.Kind) || Current.Kind == SyntaxKind.GetKeyword || Current.Kind == SyntaxKind.SetKeyword)
+                if (IsModifier(Current.Kind) || Current.Kind == SyntaxKind.GetKeyword || Current.Kind == SyntaxKind.SetKeyword || Current.Kind == SyntaxKind.InitKeyword)
                 {
                     var accessor = ParsePropertyAccessor();
                     if (accessor.IsGet)
@@ -1508,7 +1508,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             PropertyAccessorSyntax? setter = null;
             while (Current.Kind != SyntaxKind.CloseBraceToken && Current.Kind != SyntaxKind.EndOfFileToken)
             {
-                if (IsModifier(Current.Kind) || Current.Kind == SyntaxKind.GetKeyword || Current.Kind == SyntaxKind.SetKeyword)
+                if (IsModifier(Current.Kind) || Current.Kind == SyntaxKind.GetKeyword || Current.Kind == SyntaxKind.SetKeyword || Current.Kind == SyntaxKind.InitKeyword)
                 {
                     var accessor = ParsePropertyAccessor();
                     if (accessor.IsGet)
@@ -1545,7 +1545,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             var modifiers = ParseModifiers();
 
             SyntaxToken keyword;
-            if (Current.Kind == SyntaxKind.GetKeyword || Current.Kind == SyntaxKind.SetKeyword)
+            if (Current.Kind == SyntaxKind.GetKeyword || Current.Kind == SyntaxKind.SetKeyword || Current.Kind == SyntaxKind.InitKeyword)
             {
                 keyword = NextToken();
             }
@@ -1619,7 +1619,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             PropertyAccessorSyntax? setter = null;
             while (Current.Kind != SyntaxKind.CloseBraceToken && Current.Kind != SyntaxKind.EndOfFileToken)
             {
-                if (IsModifier(Current.Kind) || Current.Kind == SyntaxKind.GetKeyword || Current.Kind == SyntaxKind.SetKeyword)
+                if (IsModifier(Current.Kind) || Current.Kind == SyntaxKind.GetKeyword || Current.Kind == SyntaxKind.SetKeyword || Current.Kind == SyntaxKind.InitKeyword)
                 {
                     var accessor = ParsePropertyAccessor();
                     if (accessor.IsGet)
