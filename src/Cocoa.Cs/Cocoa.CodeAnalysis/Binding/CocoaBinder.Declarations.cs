@@ -2641,6 +2641,15 @@ namespace Cocoa.CodeAnalysis.Binding
 
             var declaredName = operatorKind.HasValue ? OperatorNames.ToMetadataName(operatorKind.Value) : syntax.Identifier.Text;
 
+            // 显式接口实现（`function IReader.Read()`）：解析层已支持（限定名合成单标识符），
+            // 但运行时分派需 IL MethodImpl 槽映射 + native 接口槽映射，尚未实现。
+            // 给清晰诊断，避免"编译通过 → 运行时 TypeLoadException"。
+            if (declaredName.IndexOf('.') >= 0)
+            {
+                _diagnostics.ReportError(syntax.Identifier.Location,
+                    $"显式接口实现（function {declaredName}）的运行时分派尚未实现，请改用接口成员同名方法实现接口。");
+            }
+
             // syscall 方法隐含 static（System.Runtime.Runtime.Print 类名调用）
             var method = new FunctionSymbol(declaredName, parameters, type, syntax, isExtern: isExtern, dllName: dllName, callingConvention: GetCallingConvention(syntax), containingClass: classType, visibility: visibility, builtinKind: builtinKind, entryPoint: entryPoint, charSet: charSet)
             {
