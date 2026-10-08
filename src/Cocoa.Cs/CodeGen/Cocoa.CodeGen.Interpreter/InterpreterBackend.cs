@@ -11,6 +11,16 @@ namespace Cocoa.CodeGen.Interpreter
     /// </summary>
     public static class InterpreterBackend
     {
+        /// <summary>
+        /// 进程级输出拦截（CocoaEngine Output 事件底座，嵌入式引擎场景；WriteLine/Write 先经
+        /// 此委托再落 Console）。进程级静态状态是引擎文档记录的已知边界（docs/嵌入式引擎API.md §10）。
+        /// </summary>
+        public static Action<string>? OutputWriter
+        {
+            get => Evaluator.OutputInterceptor;
+            set => Evaluator.OutputInterceptor = value;
+        }
+
         /// <summary>把解释器求值实现注册到 Core（宿主/测试模块初始化时调用）。</summary>
         public static void Register()
             => Compilation.RegisterInterpreterEvaluator(Evaluate);

@@ -262,11 +262,11 @@ namespace Cocoa.CodeGen.Interpreter
                     return Console.ReadLine();
                 case BuiltinKind.WriteLine:
                     var writeLineValue = EvaluateExpression(arguments[0]);
-                    Console.WriteLine(DisplayValue(writeLineValue));
+                    EmitOutput(DisplayValue(writeLineValue), newline: true);
                     return null;
                 case BuiltinKind.Write:
                     var writeValue = EvaluateExpression(arguments[0]);
-                    Console.Write(DisplayValue(writeValue));
+                    EmitOutput(DisplayValue(writeValue), newline: false);
                     return null;
                 case BuiltinKind.ReadKey:
                     var intercept = (bool)EvaluateExpression(arguments[0])!;

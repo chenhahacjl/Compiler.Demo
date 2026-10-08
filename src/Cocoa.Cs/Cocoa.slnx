@@ -19,6 +19,9 @@
     <Project Path="Cli/Cocoa.Cli/Cocoa.Cli.csproj" />
     <Project Path="Cli/Cocoa.Cli.Repl/Cocoa.Cli.Repl.csproj" />
   </Folder>
+  <Folder Name="/Engine/">
+    <Project Path="Cocoa.Engine/Cocoa.Engine.csproj" />
+  </Folder>
   <Project Path="Cocoa.Build/Cocoa.Build.csproj" />
   <Project Path="Cocoa.Tests/Cocoa.Tests.csproj" />
   <Project Path="Cocoa.Tests.SelfHosting/Cocoa.Tests.SelfHosting.csproj" />

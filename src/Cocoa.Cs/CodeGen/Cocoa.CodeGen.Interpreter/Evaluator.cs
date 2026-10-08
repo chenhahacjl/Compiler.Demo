@@ -42,6 +42,32 @@ namespace Cocoa.CodeGen.Interpreter
         internal readonly Stack<DebugFrame> _frames = new Stack<DebugFrame>();
         internal Action<BoundStatement, TextLocation?, bool>? StatementBoundaryHook;
 
+        /// <summary>
+        /// 进程级输出拦截器（CocoaEngine Output 事件底座，嵌入式引擎场景）：WriteLine/Write 先调用此委托
+        /// （再落到 Console）。进程级静态状态是引擎文档记录的已知边界（docs/嵌入式引擎API.md §10）。
+        /// </summary>
+        internal static Action<string>? OutputInterceptor;
+
+        /// <summary>封装 WriteLine/Write 输出：经进程级拦截器（若有），再落到 Console。</summary>
+        internal static void EmitOutput(string text, bool newline)
+        {
+            if (OutputInterceptor != null)
+            {
+                OutputInterceptor(text + (newline ? Environment.NewLine : ""));
+            }
+            else
+            {
+                if (newline)
+                {
+                    Console.WriteLine(text);
+                }
+                else
+                {
+                    Console.Write(text);
+                }
+            }
+        }
+
         /// <summary>调用帧（顶帧在前）。</summary>
         internal IReadOnlyList<DebugFrame> Frames => _frames.ToArray();
 
