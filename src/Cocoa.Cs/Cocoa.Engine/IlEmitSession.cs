@@ -11,8 +11,10 @@ namespace Cocoa.Engine
     /// IlEmit 后端会话：脚本逐次发射为内存程序集（临时 dll + Assembly.Load），反射调用。
     /// 与 Interpreter 后端共享 submission 链语义（<see cref="Compilation.CreateScript"/> + Previous 链），
     /// 但每次提交重新发射整个程序（函数跨提交经链合并；顶层 final 表达式值经反射取 `$eval` 返回）。
-    /// 已知限制（docs/嵌入式引擎API.md §9/§12）：无 Output 拦截；全局变量跨提交保持不支持
-    /// （script 顶层变量在 IL 中是单函数局部，IlEmitter 未提升为静态字段）。
+    /// 全局变量经 <see cref="GetGlobal"/>/<see cref="SetGlobal"/> 反射读写（IlEmitter 已把 script 顶层
+    /// 变量发射为 &lt;CocoaTopLevel&gt; 静态字段）。跨提交持久为残留限制：每次 DoString 重新发射会
+    /// 依脚本初始值重置全局（Interpreter 后端字典持久不重置）。
+    /// 已知限制（docs/嵌入式引擎API.md §9/§12）：无 Output 拦截（反射调用直连 BCL Console）。
     /// </summary>
     internal sealed class IlEmitSession : IDisposable
     {
@@ -88,6 +90,41 @@ namespace Cocoa.Engine
             }
 
             return method.Invoke(null, args);
+        }
+
+        /// <summary>按名读 script 顶层变量（IlEmit：反射读 &lt;CocoaTopLevel&gt; 静态字段）；未声明返回 null。</summary>
+        public object? GetGlobal(string name)
+        {
+            if (_assembly == null)
+            {
+                return null;
+            }
+
+            var field = FindGlobalField(_assembly, name);
+            return field?.GetValue(null);
+        }
+
+        /// <summary>按名写 script 顶层变量（IlEmit：反射写 &lt;CocoaTopLevel&gt; 静态字段）；未声明抛 <see cref="ArgumentException"/>。</summary>
+        public void SetGlobal(string name, object? value)
+        {
+            if (_assembly == null)
+            {
+                throw new ArgumentException($"未声明的全局变量 '{name}'（引擎尚无任何脚本提交）", nameof(name));
+            }
+
+            var field = FindGlobalField(_assembly, name);
+            if (field == null)
+            {
+                throw new ArgumentException($"未声明的全局变量 '{name}'（IlEmit 后端仅支持已发射程序集内的顶层变量）", nameof(name));
+            }
+
+            field.SetValue(null, value);
+        }
+
+        private static FieldInfo? FindGlobalField(Assembly assembly, string name)
+        {
+            var topLevel = assembly.GetType("<CocoaTopLevel>");
+            return topLevel?.GetField("GV_" + name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
         }
 
         private EngineResult EmitAndInvoke(Compilation compilation, bool invokeEval)

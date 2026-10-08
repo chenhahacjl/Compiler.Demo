@@ -54,6 +54,9 @@ namespace Cocoa.CodeGen.Managed.Writer
 
         private readonly Dictionary<NamedTypeSymbol, IlTypeDef> _classTypeDefs = new Dictionary<NamedTypeSymbol, IlTypeDef>();
         private readonly Dictionary<FieldSymbol, IlFieldDef> _fieldDefs = new Dictionary<FieldSymbol, IlFieldDef>();
+
+        /// <summary>script 顶层变量（GlobalVariableSymbol）→ &lt;CocoaTopLevel&gt; 静态字段（IlEmit 全局变量持久）。</summary>
+        private readonly Dictionary<VariableSymbol, IlFieldDef> _globalVariableFields = new Dictionary<VariableSymbol, IlFieldDef>();
     private readonly DelegateShapeCache _delegateShapes;
         private HashSet<(string Namespace, string Name)>? _overloadedGroups;
         private bool _currentMethodIsInstance;
@@ -240,6 +243,10 @@ namespace Cocoa.CodeGen.Managed.Writer
                 }
             }
 
+            // 1.6 script 顶层变量（GlobalVariableSymbol）→ <CocoaTopLevel> 静态字段（IlEmit 全局变量持久）。
+            // 供 $eval 与各顶层/类函数跨提交共享（引擎 GetGlobal/SetGlobal 经反射读写）。
+            EmitGlobalVariables(program);
+
             // 2. 方法声明（顺序 = 顶层 + 各 class 方法，与 typeDefs 分组一致）
             // 先计算重载组（同 (ns, name) 顶层函数 >1）：IL 方法名追加参数类型后缀保证元数据唯一
             _overloadedGroups = new HashSet<(string, string)>();
@@ -371,6 +378,74 @@ namespace Cocoa.CodeGen.Managed.Writer
             }
 
             return ImmutableArray<Diagnostic>.Empty;
+        }
+
+        /// <summary>
+        /// collect + 发射 script 顶层变量（GlobalVariableSymbol）为 <CocoaTopLevel> 静态字段。
+        /// 收集范围：程序全部函数体（含 $eval 与各函数对全局变量的声明/读写引用）。
+        /// 静态字段命名用宿主前缀防与函数名撞（BindGlobalScope 已做变量名去重校验）。
+        /// </summary>
+        private void EmitGlobalVariables(BoundProgram program)
+        {
+            var globals = CollectGlobalVariables(program);
+            if (globals.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var variable in globals.OrderBy(v => v.Name, StringComparer.Ordinal))
+            {
+                var fieldDef = new IlFieldDef("GV_" + variable.Name, ToIlType(variable.Type), IlVisibility.Public, isStatic: true);
+                _typeDefinition.Fields.Add(fieldDef);
+                _globalVariableFields[variable] = fieldDef;
+            }
+        }
+
+        private static HashSet<GlobalVariableSymbol> CollectGlobalVariables(BoundProgram program)
+        {
+            var result = new HashSet<GlobalVariableSymbol>();
+            foreach (var (_, body) in program.Functions)
+            {
+                CollectGlobalVariables(body, result);
+            }
+
+            foreach (var (_, body) in program.RawFunctions)
+            {
+                CollectGlobalVariables(body, result);
+            }
+
+            return result;
+        }
+
+        private static void CollectGlobalVariables(BoundNode node, HashSet<GlobalVariableSymbol> result)
+        {
+            switch (node)
+            {
+                case BoundVariableDeclaration variableDeclaration:
+                    if (variableDeclaration.Variable is GlobalVariableSymbol globalSymbol)
+                    {
+                        result.Add(globalSymbol);
+                    }
+
+                    if (variableDeclaration.Initializer != null)
+                    {
+                        CollectGlobalVariables(variableDeclaration.Initializer, result);
+                    }
+
+                    return;
+                case BoundAssignmentExpression assignment when assignment.Variable is GlobalVariableSymbol:
+                    result.Add((GlobalVariableSymbol)assignment.Variable);
+                    CollectGlobalVariables(assignment.Expression, result);
+                    return;
+                case BoundVariableExpression variableExpression when variableExpression.Variable is GlobalVariableSymbol variableGlobal:
+                    result.Add(variableGlobal);
+                    return;
+            }
+
+            foreach (var child in Cocoa.CodeAnalysis.Compilation.BoundChildren(node))
+            {
+                CollectGlobalVariables(child, result);
+            }
         }
 
         /// <summary>framework-dependent 运行所需的 runtimeconfig.json。</summary>

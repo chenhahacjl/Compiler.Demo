@@ -127,14 +127,14 @@ namespace Cocoa.Engine
             }
         }
 
-        /// <summary>读取脚本已声明的顶层全局变量；未声明名称返回 null。IlEmit 后端不支持（见 <see cref="SetGlobal"/>）。</summary>
+        /// <summary>读取脚本已声明的顶层全局变量；未声明名称返回 null。</summary>
         public object? GetGlobal(string name)
         {
             ThrowIfDisposed();
 
             if (_backend == EngineBackend.IlEmit)
             {
-                throw new NotSupportedException("IlEmit 后端暂不支持全局变量读写（script 顶层变量未提升为静态字段——引擎 API §12 已知限制）");
+                return _ilSession!.GetGlobal(name);
             }
 
             var symbol = FindVariable(name);
@@ -149,7 +149,7 @@ namespace Cocoa.Engine
 
         /// <summary>
         /// 写入已声明的顶层全局变量。Cocoa 为静态语言：未声明变量抛 <see cref="ArgumentException"/>
-        /// （不自动创建隐式全局）。IlEmit 后端抛 <see cref="NotSupportedException"/>。
+        /// （不自动创建隐式全局）。
         /// </summary>
         public void SetGlobal(string name, object? value)
         {
@@ -157,7 +157,8 @@ namespace Cocoa.Engine
 
             if (_backend == EngineBackend.IlEmit)
             {
-                throw new NotSupportedException("IlEmit 后端暂不支持全局变量读写（script 顶层变量未提升为静态字段——引擎 API §12 已知限制）");
+                _ilSession!.SetGlobal(name, value);
+                return;
             }
 
             var symbol = FindVariable(name);

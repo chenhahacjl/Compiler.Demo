@@ -90,6 +90,14 @@ namespace Cocoa.CodeGen.Managed.Writer
                 return;
             }
 
+            // script 顶层变量声明 → 静态字段（IlEmit 全局变量持久）
+            if (_globalVariableFields.TryGetValue(node.Variable, out var globalField))
+            {
+                EmitExpression(il, node.Initializer);
+                il.Emit(IlOpCodeTable.Get("Stsfld"), globalField);
+                return;
+            }
+
             EmitExpression(il, node.Initializer);
 
             il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)_locals[node.Variable]);
@@ -1001,6 +1009,11 @@ namespace Cocoa.CodeGen.Managed.Writer
                     EmitLoadIndirect(il, node.Variable.Type);
                 }
             }
+            else if (_globalVariableFields.TryGetValue(node.Variable, out var globalField))
+            {
+                // script 顶层变量读静态字段（IlEmit 全局变量持久）
+                il.Emit(IlOpCodeTable.Get("Ldsfld"), globalField);
+            }
             else
             {
                 il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)_locals[node.Variable]);
@@ -1022,6 +1035,11 @@ namespace Cocoa.CodeGen.Managed.Writer
                     {
                         var argIndex = parameter.Ordinal + (_currentMethodIsInstance ? 1 : 0);
                         il.Emit(IlOpCodeTable.Get("Ldarga"), (ushort)argIndex);
+                    }
+                    else if (_globalVariableFields.TryGetValue(variable.Variable, out var globalField))
+                    {
+                        // script 顶层变量 byref 取址 → ldsflda
+                        il.Emit(IlOpCodeTable.Get("Ldsflda"), globalField);
                     }
                     else
                     {
@@ -1131,6 +1149,15 @@ namespace Cocoa.CodeGen.Managed.Writer
                 il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)temporaryLocal);
                 il.Emit(IlOpCodeTable.Get("Stfld"), _closureFieldDefs![node.Variable.Name]);
                 il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)temporaryLocal);
+                return;
+            }
+
+            // script 顶层变量写静态字段（IlEmit 全局变量持久）
+            if (_globalVariableFields.TryGetValue(node.Variable, out var globalField))
+            {
+                EmitExpression(il, node.Expression);
+                il.Emit(IlOpCodeTable.Get("Dup"));
+                il.Emit(IlOpCodeTable.Get("Stsfld"), globalField);
                 return;
             }
 

@@ -70,12 +70,36 @@ namespace Cocoa.Tests.Engine
         }
 
         [Fact]
-        public void IlEmit_GlobalVariables_NotSupported()
+        public void IlEmit_GlobalVariables_ReflectionReadWrite()
         {
             using var engine = new CocoaEngine(EngineBackend.IlEmit);
-            engine.DoString(@"var counter = 0");
-            Assert.Throws<NotSupportedException>(() => engine.GetGlobal("counter"));
-            Assert.Throws<NotSupportedException>(() => engine.SetGlobal("counter", 1));
+            var declared = engine.DoString(@"var counter = 0
+function Scale(x: i32): i32 { counter = counter + x; return counter }");
+            Assert.True(declared.Diagnostics.IsEmpty, string.Join("\n", declared.Diagnostics.Select(d => d.Message)));
+
+            // 经 $eval 执行（counter 仍 0），顶层函数读/写全局
+            Assert.Equal(5, engine.Call("Scale", 5));
+            Assert.Equal(5, engine.GetGlobal("counter"));
+
+            // 引擎侧写全局 → Co 侧读取
+            engine.SetGlobal("counter", 100);
+            Assert.Equal(105, engine.Call("Scale", 5));
+        }
+
+        [Fact]
+        public void IlEmit_CrossSubmission_GlobalNotRebuilt_IsKnownLimit()
+        {
+            // 已知限制固化：IlEmit 每次 DoString 重新发射**本层** submission（IlEmitter 不遍历 previous 链，
+            // 同 Evaluator），前次提交的全局静态字段不进新程序集 → 第二次提交后 GetGlobal 返回 null。
+            // 相比 Interpreter 的字典持久（跨提交保留），是 IlEmit 后续缺口（IlEmitter previous 链合并）。
+            // 文档：docs/嵌入式引擎API.md §12。
+            using var engine = new CocoaEngine(EngineBackend.IlEmit);
+            engine.DoString(@"var counter = 100");
+            Assert.Equal(100, engine.GetGlobal("counter"));
+
+            var second = engine.DoString(@"var other = 1");
+            Assert.True(second.Diagnostics.IsEmpty);
+            Assert.Null(engine.GetGlobal("counter"));
         }
 
         [Fact]
