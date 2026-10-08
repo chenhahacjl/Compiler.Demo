@@ -1100,10 +1100,12 @@ function Main()
             Assert.Equal("0\r\n1\r\n2\r\n", output);
         }
 
-        [Fact]
-        public void NativeSource_Interface_ReportsUnsupported()
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
+        public void NativeSource_Interface_Dispatch(string target)
         {
-            var syntaxTree = SyntaxTree.Parse(@"using System
+            var output = CompileAndRun(@"using System
 
 public interface IShape
 {
@@ -1122,13 +1124,10 @@ function Main()
 {
     var s: IShape = new Circle()
     Console.WriteLine(s.Area())
-}");
-            var compilation = Compilation.Create(syntaxTree);
-            TargetPlatform.TryParse(X64, out var platform);
-            var diagnostics = compilation.EmitNative("test", GetExePath("native-interface", X64), platform);
-            Assert.NotEmpty(diagnostics);
-            // 6e-M19 M4：接口分派未随对象模型落地，仍明确拒绝（原"实例成员类拒绝"门禁已移除）
-            Assert.Contains(diagnostics, d => d.Message.Contains("interface 'IShape' 暂不支持 native 后端"));
+}", "native-interface", target);
+
+            // 6e-M19 M4/B3：接口方法分派经 vtable 虚分派到实现类
+            Assert.Equal("1\r\n", output);
         }
 
         [Theory]

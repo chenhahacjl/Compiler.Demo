@@ -98,14 +98,27 @@ function Main(): i32
         [Theory]
         [InlineData("windows-x64")]
         [InlineData("windows-x86")]
-        public void NativeE2e_FacadeInterface_Unsupported(string target)
+        public void NativeE2e_FacadeInterface(string target)
         {
-            // Cocoa 接口 native 后端暂不支持（接口分派随后续里程碑落地，与 facade 无关）；native 端负例：
-            // 编译报"interface 暂不支持 native 后端"。
+            // B3：facade 接口 native 端已支持——接口方法经 vtable 虚分派到实现类（与 Evaluator/IL 三端一致）。
             TargetPlatform.TryParse(target, out var platform);
+            var dir = Path.Combine(Path.GetTempPath(), "cocoa-facade-iface-native", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            var exePath = Path.Combine(dir, "fi-" + target + ".exe");
             var compilation = Compilation.Create("Main", References(), SyntaxTree.Parse(Template));
-            var diagnostics = compilation.EmitNative("fisdk", Path.Combine(Path.GetTempPath(), "fi-" + target + ".exe"), platform);
-            Assert.True(diagnostics.Any(d => d.Message.Contains("暂不支持 native 后端")), "got: " + string.Join(" | ", diagnostics.Select(d => d.Message)));
+            var diagnostics = compilation.EmitNative("fisdk", exePath, platform);
+            Assert.True(!diagnostics.HasErrors(), "got: " + string.Join(" | ", diagnostics.Select(d => d.Message)));
+            Assert.True(File.Exists(exePath));
+
+            var psi = new ProcessStartInfo(exePath) { RedirectStandardOutput = true, UseShellExecute = false };
+            using var process = Process.Start(psi)!;
+            using var output = new MemoryStream();
+            var outputTask = process.StandardOutput.BaseStream.CopyToAsync(output);
+            Assert.True(process.WaitForExit(20000));
+            outputTask.Wait();
+            var stdout = Encoding.Unicode.GetString(output.ToArray()).Replace("\r\n", "\n").Replace("\r", "\n");
+            Assert.True(process.ExitCode == 0, "exit=" + process.ExitCode);
+            Assert.Equal(Expected, stdout);
         }
     }
 }

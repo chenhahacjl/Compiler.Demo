@@ -179,6 +179,23 @@ namespace Cocoa.CodeGen.Native
                         slots[root] = next++;
                     }
                 }
+
+                // 接口方法虚根：类实现接口 → 接口方法进 vtable（实现方法经 FindImplementation 签名匹配关联）
+                foreach (var iface in classType.GetAllInterfaces())
+                {
+                    foreach (var method in iface.Methods)
+                    {
+                        if (method.IsConstructor || method.IsStatic)
+                        {
+                            continue;
+                        }
+
+                        if (!slots.ContainsKey(method))
+                        {
+                            slots[method] = next++;
+                        }
+                    }
+                }
             }
 
             return slots;
@@ -220,6 +237,31 @@ namespace Cocoa.CodeGen.Native
         /// <summary>类 C 对虚根 root 的生效实现：从 C 沿链向上找最近声明（含 C 自身），返回 null = 无用户实现（用运行时默认）。</summary>
         public static FunctionSymbol? FindImplementation(NamedTypeSymbol classType, FunctionSymbol root)
         {
+            // 接口方法根：实现类方法按签名匹配（接口方法无 OverriddenMethod；C# 语义 = 同名同参数同返回的实现）
+            if (root.ContainingClass is { TypeKind: TypeKind.Interface } iface && classType.GetAllInterfaces().Contains(iface))
+            {
+                for (var current = classType; current != null && !current.IsSystemObjectRoot; current = current.BaseType)
+                {
+                    foreach (var method in current.Methods)
+                    {
+                        if (method.IsConstructor || method.IsStatic || method.IsAbstract)
+                        {
+                            continue;
+                        }
+
+                        if (string.Equals(method.Name, root.Name, StringComparison.Ordinal) &&
+                            method.Parameters.Length == root.Parameters.Length &&
+                            TypeNameEqual(method.ReturnType, root.ReturnType) &&
+                            method.Parameters.Select(p => TypeName(p.Type)).SequenceEqual(root.Parameters.Select(p => TypeName(p.Type))))
+                        {
+                            return method;
+                        }
+                    }
+                }
+
+                return null;
+            }
+
             var seen = new HashSet<NamedTypeSymbol>();
             for (var current = classType; current != null && !current.IsSystemObjectRoot && seen.Add(current); current = current.BaseType)
             {
@@ -243,6 +285,24 @@ namespace Cocoa.CodeGen.Native
         // ------------------------------------------------------------------
         // 命名
         // ------------------------------------------------------------------
+
+        /// <summary>类型身份名（基元/命名/数组/delegate 全名；接口签名匹配用，跨实例同类型 FullName 一致）。</summary>
+        public static string TypeName(TypeSymbol type)
+        {
+            if (type is NamedTypeSymbol named)
+            {
+                return named.FullName;
+            }
+
+            if (type.ElementType != null)
+            {
+                return TypeName(type.ElementType) + "[]";
+            }
+
+            return type.Name;
+        }
+
+        public static bool TypeNameEqual(TypeSymbol a, TypeSymbol b) => string.Equals(TypeName(a), TypeName(b), StringComparison.Ordinal);
 
         /// <summary>vtable 数据项 key。</summary>
         public static string VTableKey(NamedTypeSymbol classType) => "$vt:" + classType.FullName;

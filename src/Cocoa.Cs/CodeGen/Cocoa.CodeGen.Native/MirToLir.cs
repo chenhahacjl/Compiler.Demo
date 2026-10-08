@@ -189,13 +189,19 @@ namespace Cocoa.CodeGen.Native
             }
         }
 
-        /// <summary>类继承链是否包含虚根的声明类。</summary>
+        /// <summary>类继承链是否包含虚根的声明类（接口根：类实现的接口含声明接口）。</summary>
         private static bool InheritsRoot(NamedTypeSymbol classType, FunctionSymbol root)
         {
             var declaringClass = root.ContainingClass;
             if (declaringClass == null)
             {
                 return false;
+            }
+
+            // 接口方法根：类实现该接口 → 视为继承
+            if (declaringClass.TypeKind == TypeKind.Interface)
+            {
+                return classType.GetAllInterfaces().Contains(declaringClass);
             }
 
             var seen = new HashSet<NamedTypeSymbol>();
@@ -378,10 +384,36 @@ namespace Cocoa.CodeGen.Native
                 }
             }
 
+            // B3 接口方法虚根：类实现接口 → 接口方法登记为虚根，实现方法经 FindImplementation 签名匹配入队
+            foreach (var ifaceMethod in EnumerateInterfaceMethods(classType))
+            {
+                if (_virtualRoots.Add(ifaceMethod))
+                {
+                    EnqueueImplementations(ifaceMethod, pendingFunctions);
+                }
+            }
+
             // 已知全部虚根在本类的生效实现
             foreach (var root in _virtualRoots)
             {
                 EnqueueImplementation(classType, root, pendingFunctions);
+            }
+        }
+
+        /// <summary>类实现的全部接口的非构造/非静态方法（B3：接口方法虚根的候选根）。</summary>
+        private static IEnumerable<FunctionSymbol> EnumerateInterfaceMethods(NamedTypeSymbol classType)
+        {
+            foreach (var iface in classType.GetAllInterfaces())
+            {
+                foreach (var method in iface.Methods)
+                {
+                    if (method.IsConstructor || method.IsStatic)
+                    {
+                        continue;
+                    }
+
+                    yield return method;
+                }
             }
         }
 

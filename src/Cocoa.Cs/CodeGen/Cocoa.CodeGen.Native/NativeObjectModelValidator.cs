@@ -11,7 +11,7 @@ namespace Cocoa.CodeGen.Native
     /// 6e-M19 M4：native 对象模型放行校验。M4 后用户类（字段/方法/继承/多态）全面支持，
     /// 仍不支持的形状给出明确诊断（不静默错编）：
     ///   - Object/Type 成员面调用的 receiver 为 any / 数组 / 枚举（无 vtable 表示，装箱未实现）
-    ///   - 接口声明与接口分派（M5/后续里程碑）
+    ///   - 接口类型 is/as 判定（binder 三后端一致先拒；接口方法分派 B3 已支持）
     ///   - 静态构造函数/静态字段初始化器（native 无 .cctor 触发时机）
     ///   - throw 语句 / try/catch（native 无异常机制；zero-catch try/finally 由 MirToLir 直接支持）
     /// </summary>

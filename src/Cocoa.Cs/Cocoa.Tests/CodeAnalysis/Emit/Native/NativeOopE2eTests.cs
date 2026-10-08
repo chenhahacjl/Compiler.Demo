@@ -35,7 +35,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
             var exePath = GetExePath(name, platform);
             var diagnostics = compilation.EmitNative(name, exePath, platform);
 
-            Assert.Empty(diagnostics);
+            Assert.True(!diagnostics.HasErrors(), "emit diags: " + string.Join(" | ", diagnostics.Select(d => d.Message)));
             Assert.True(File.Exists(exePath));
 
             var psi = new ProcessStartInfo(exePath)
@@ -393,8 +393,71 @@ function Main()
             Assert.Equal("0\r\n2\r\n3\r\n24\r\n", stdout);
         }
 
+        /// <summary>B3：接口方法虚分派——接口 receiver 调用的方法经 vtable 分派到实现类。</summary>
+        [Theory]
+        [MemberData(nameof(GetPlatforms))]
+        public void Oop_Interface_Dispatch(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
+public interface IShape
+{
+    function Area(): i32
+}
+
+public class Rect extends IShape
+{
+    private field _w: i32
+    private field _h: i32
+
+    public constructor(w: i32, h: i32)
+    {
+        _w = w
+        _h = h
+    }
+
+    public function Area(): i32
+    {
+        return _w * _h
+    }
+}
+
+public class Circle extends IShape
+{
+    private field _r: i32
+
+    public constructor(r: i32)
+    {
+        _r = r
+    }
+
+    public function Area(): i32
+    {
+        return _r * _r * 3
+    }
+}
+
+function ShapeArea(s: IShape): i32
+{
+    return s.Area()
+}
+
+function Main()
+{
+    var r = new Rect(3, 4)
+    var c = new Circle(2)
+    Console.WriteLine(r.Area())
+    Console.WriteLine(ShapeArea(r))
+    Console.WriteLine(ShapeArea(c))
+    Console.WriteLine(ShapeArea(new Rect(5, 6)))
+}", "oop-iface", (TargetPlatform)platform);
+            Assert.Equal(0, exitCode);
+            Assert.Equal("12\n12\n12\n30\n", stdout.Replace("\r\n", "\n"));
+        }
+
+        /// <summary>B3：接口类型 is/as 判定——binder 三后端一致先拒（接口分派已支持；is/as 接口判定为后续里程碑）。</summary>
         [Fact]
-        public void Oop_Interface_StillRejected()
+        public void Oop_Interface_IsAs_StillRejected()
         {
             var syntaxTree = SyntaxTree.Parse(@"using System
 
@@ -403,14 +466,73 @@ public interface IShape
     function Area(): i32
 }
 
+public class Rect extends IShape
+{
+    public function Area(): i32
+    {
+        return 3
+    }
+}
+
 function Main()
 {
-    var x: i32 = 0
-    Console.WriteLine(x)
+    var r = new Rect()
+    Console.WriteLine(r is IShape)
 }");
             var compilation = Compilation.Create(syntaxTree);
-            var diagnostics = compilation.EmitNative("oop-iface", Path.Combine(Path.GetTempPath(), "cocoa-native-oop-iface.exe"), new TargetPlatform(TargetOS.Windows, Architecture.X64));
-            Assert.Contains(diagnostics, d => d.Message.Contains("interface 'IShape' 暂不支持 native 后端"));
+            var diagnostics = compilation.EmitNative("oop-iface-is", Path.Combine(Path.GetTempPath(), "cocoa-native-oop-iface-is.exe"), new TargetPlatform(TargetOS.Windows, Architecture.X64));
+            Assert.Contains(diagnostics, d => d.Message.Contains("is not a valid target for 'is'/'as'"));
+        }
+
+        /// <summary>B3：接口实现经基类继承——派生类沿继承链取基类实现（FindImplementation 类链签名匹配）。</summary>
+        [Theory]
+        [MemberData(nameof(GetPlatforms))]
+        public void Oop_Interface_InheritedImplementation(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
+public interface IGreeter
+{
+    function Greet(): string
+}
+
+public class BaseGreeter extends IGreeter
+{
+    private field _who: string
+
+    public constructor(who: string)
+    {
+        _who = who
+    }
+
+    public function Greet(): string
+    {
+        return ""Hi "" + _who
+    }
+}
+
+public class LoudGreeter extends BaseGreeter
+{
+    public constructor(who: string) extends base(who)
+    {
+    }
+}
+
+function Echo(g: IGreeter): string
+{
+    return g.Greet()
+}
+
+function Main()
+{
+    var b = new BaseGreeter(""Bob"")
+    var l = new LoudGreeter(""Ann"")
+    Console.WriteLine(b.Greet())
+    Console.WriteLine(Echo(b))
+    Console.WriteLine(Echo(l))
+}", "oop-iface-inherit", (TargetPlatform)platform);
+            Assert.Equal(0, exitCode);
+            Assert.Equal("Hi Bob\nHi Bob\nHi Ann\n", stdout.Replace("\r\n", "\n"));
         }
 
         [Fact]

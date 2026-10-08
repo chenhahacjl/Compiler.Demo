@@ -186,7 +186,7 @@ namespace Cocoa.CodeAnalysis
             ReportError(location, message);
         }
 
-        /// <summary>6e-M19 M5-b：is/as 目标须为非接口类（接口分派 native 未实现、数组无类型对象）。</summary>
+        /// <summary>6e-M19 M5-b：is/as 目标须为非接口类（接口 is/as 判定三后端一致先拒，接口方法分派 B3 已支持）。</summary>
         public void ReportIsAsUnsupportedTarget(TextLocation location, string targetName)
         {
             var message = $"'{targetName}' is not a valid target for 'is'/'as'. Only non-interface class types are supported.";

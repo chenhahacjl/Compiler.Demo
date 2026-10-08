@@ -843,7 +843,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundErrorExpression(ownerSyntax);
             }
 
-            // 目标约束：非接口类或 string（接口分派 native 未实现、数组无类型对象——三后端一致先拒）
+            // 目标约束：非接口类或 string（接口 is/as 判定三后端一致先拒；接口方法分派 B3 已支持、数组无类型对象）
             var targetClass = target as NamedTypeSymbol;
 
             // `is/as String` 解析为 System.String 承载类（facade/外部）→ 归一为基元 string
