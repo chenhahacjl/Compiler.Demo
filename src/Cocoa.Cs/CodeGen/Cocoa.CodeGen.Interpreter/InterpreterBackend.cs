@@ -23,13 +23,22 @@ namespace Cocoa.CodeGen.Interpreter
 
         /// <summary>把解释器求值实现注册到 Core（宿主/测试模块初始化时调用）。</summary>
         public static void Register()
-            => Compilation.RegisterInterpreterEvaluator(Evaluate);
+        {
+            Compilation.RegisterInterpreterEvaluator(Evaluate);
+            Compilation.RegisterInterpreterFunctionEvaluator(EvaluateFunction);
+        }
 
         private static object? Evaluate(BoundProgram program, string[]? args, Dictionary<VariableSymbol, object> variables)
         {
             var evaluator = new Evaluator(program, variables);
 
             return args == null ? evaluator.Evaluate() : evaluator.Evaluate(args);
+        }
+
+        private static object? EvaluateFunction(BoundProgram program, Cocoa.CodeAnalysis.Symbols.FunctionSymbol function, object?[] args, Dictionary<VariableSymbol, object> variables)
+        {
+            var evaluator = new Evaluator(program, variables);
+            return evaluator.EvaluateFunction(function, args);
         }
     }
 }

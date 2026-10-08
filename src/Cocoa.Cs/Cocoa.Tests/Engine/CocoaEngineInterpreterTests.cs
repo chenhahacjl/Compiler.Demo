@@ -119,5 +119,86 @@ return 42");
             engine.Dispose();
             Assert.Throws<ObjectDisposedException>(() => engine.DoString("1"));
         }
+
+        [Fact]
+        public void Call_AddsTwoInts()
+        {
+            using var engine = new CocoaEngine();
+            var declared = engine.DoString(@"function Add(a: i32, b: i32): i32 { return a + b }");
+            Assert.True(declared.Diagnostics.IsEmpty, string.Join("\n", declared.Diagnostics.Select(d => d.Message)));
+
+            var result = engine.Call("Add", 21, 21);
+            Assert.Equal(42, result);
+        }
+
+        [Fact]
+        public void Call_StringParameter()
+        {
+            using var engine = new CocoaEngine();
+            engine.DoString(@"function Greet(name: string): string { return ""Hello "" + name }");
+
+            var result = engine.Call("Greet", "Cocoa");
+            Assert.Equal("Hello Cocoa", result);
+        }
+
+        [Fact]
+        public void Call_Void_ReturnsNull()
+        {
+            using var engine = new CocoaEngine();
+            engine.DoString(@"function Noop() { var x = 1 }");
+
+            var result = engine.Call("Noop");
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public void Call_ReadsGlobalVariable_AcrossSubmissions()
+        {
+            using var engine = new CocoaEngine();
+            engine.DoString(@"var factor = 2
+function Scale(x: i32): i32 { return x * factor }");
+
+            Assert.Equal(10, engine.Call("Scale", 5));
+            engine.SetGlobal("factor", 3);
+            Assert.Equal(15, engine.Call("Scale", 5));
+        }
+
+        [Fact]
+        public void Call_UnknownFunction_Throws()
+        {
+            using var engine = new CocoaEngine();
+            engine.DoString(@"function Known() { }");
+
+            var ex = Assert.Throws<ArgumentException>(() => engine.Call("Unknown"));
+            Assert.Contains("Unknown", ex.Message);
+        }
+
+        [Fact]
+        public void Call_BeforeAnySubmission_Throws()
+        {
+            using var engine = new CocoaEngine();
+            var ex = Assert.Throws<ArgumentException>(() => engine.Call("F"));
+            Assert.Contains("未找到可调用的顶层函数", ex.Message);
+        }
+
+        [Fact]
+        public void Call_WrongArgumentCount_Throws()
+        {
+            using var engine = new CocoaEngine();
+            engine.DoString(@"function Add(a: i32, b: i32): i32 { return a + b }");
+
+            Assert.Throws<ArgumentException>(() => engine.Call("Add", 1));
+        }
+
+        [Fact]
+        public void Call_ArgumentTypeMapping_ConvertsIntegral()
+        {
+            using var engine = new CocoaEngine();
+            engine.DoString(@"function Twice(x: i32): i32 { return x * 2 }");
+
+            // long → i32 编组转换
+            var result = engine.Call("Twice", 10L);
+            Assert.Equal(20, result);
+        }
     }
 }

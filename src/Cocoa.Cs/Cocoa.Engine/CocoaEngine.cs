@@ -147,6 +147,39 @@ namespace Cocoa.Engine
             _variables.Clear();
         }
 
+        /// <summary>
+        /// 按名调用顶层函数（脚本语义等价 Lua 全局函数）。实参以 <c>object?[]</c> 传入，
+        /// 按目标函数签名自动映射（见 docs/嵌入式引擎API.md §8 值编组）；数量/类型不匹配抛
+        /// <see cref="ArgumentException"/>；<c>void</c> 返回 <see langword="null"/>。
+        /// 与 <see cref="DoString"/> 共享 submission 链：可先声明函数后 <see cref="Call"/>，也可先
+        /// <see cref="Call"/> 再 <see cref="DoString"/>（函数在链上先注册后使用）。
+        /// </summary>
+        public object? Call(string functionName, params object?[] args)
+        {
+            ThrowIfDisposed();
+
+            if (_previous == null)
+            {
+                throw new ArgumentException($"未找到可调用的顶层函数 '{functionName}'（引擎尚无任何脚本提交）", nameof(functionName));
+            }
+
+            try
+            {
+                var result = _previous.EvaluateFunction(functionName, args, _variables);
+                if (result.Diagnostics.HasErrors())
+                {
+                    throw new EngineError(string.Join("\n", result.Diagnostics.Select(d => d.Message)), result.Diagnostics);
+                }
+
+                return result.Value;
+            }
+            catch (Exception ex) when (ex is not ArgumentException and not EngineError)
+            {
+                Error?.Invoke(this, new EngineError(ex.Message));
+                throw;
+            }
+        }
+
         private VariableSymbol? FindVariable(string name)
         {
             var submission = _previous;

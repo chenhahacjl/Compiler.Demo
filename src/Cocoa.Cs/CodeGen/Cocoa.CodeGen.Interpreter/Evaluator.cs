@@ -151,6 +151,93 @@ namespace Cocoa.CodeGen.Interpreter
             }
         }
 
+        /// <summary>
+        /// 嵌入式引擎 Call 入口：按名求值指定顶层函数（带实参）。复用 InvokeFunction 的
+        /// 入 locals / 求值 / 出栈骨架（无 this、无 closure 环境——顶层函数一般无捕获，防御性支持）。
+        /// </summary>
+        public object? EvaluateFunction(FunctionSymbol function, object?[] rawArgs)
+        {
+            if (!_functions.TryGetValue(function, out var body))
+            {
+                throw new InvalidOperationException($"函数 '{function.Name}' 未在可调用集（submission 链）中");
+            }
+
+            // 实参数量校验 + 按签名映射（值编组：object?[] → 各参数类型）
+            if (rawArgs.Length != function.Parameters.Length)
+            {
+                throw new ArgumentException($"函数 '{function.Name}' 需要 {function.Parameters.Length} 个实参，收到 {rawArgs.Length}");
+            }
+
+            var argumentValues = new object?[rawArgs.Length];
+            for (var i = 0; i < rawArgs.Length; i++)
+            {
+                argumentValues[i] = CoerceArgument(rawArgs[i], function.Parameters[i].Type, function.Name, i);
+            }
+
+            var locals = new Dictionary<VariableSymbol, object>();
+            for (var i = 0; i < function.Parameters.Length; i++)
+            {
+                locals[function.Parameters[i]] = argumentValues[i]!;
+            }
+
+            _locals.Push(locals);
+
+            var usesEnvironment = function.CapturedVariables is { Count: > 0 };
+            if (usesEnvironment)
+            {
+                _closureEnvironments.Push(CreateEnvironment(function, argumentValues));
+            }
+
+            try
+            {
+                _frames.Push(new DebugFrame(function, locals));
+                try
+                {
+                    return EvaluateStatement(body);
+                }
+                finally
+                {
+                    _frames.Pop();
+                }
+            }
+            finally
+            {
+                if (usesEnvironment)
+                {
+                    _closureEnvironments.Pop();
+                }
+
+                _locals.Pop();
+            }
+        }
+
+        private static object? CoerceArgument(object? value, TypeSymbol targetType, string functionName, int index)
+        {
+            if (value == null)
+            {
+                return null;
+            }
+
+            var actual = value.GetType();
+            switch (targetType.Name)
+            {
+                case "int" when actual == typeof(int):
+                case "double" when actual == typeof(double):
+                case "bool" when actual == typeof(bool):
+                case "char" when actual == typeof(char):
+                case "byte" when actual == typeof(byte):
+                case "string" when actual == typeof(string):
+                    return value;
+                case "int": return Convert.ToInt32(value);
+                case "double": return Convert.ToDouble(value);
+                case "bool": return Convert.ToBoolean(value);
+                case "char": return Convert.ToChar(value);
+                case "byte": return Convert.ToByte(value);
+                default:
+                    throw new ArgumentException($"函数 '{functionName}' 实参 {index}：无法将 .NET 类型 '{actual}' 编组为 Cocoa 类型 '{targetType.Name}'");
+            }
+        }
+
     }
 
     internal sealed class YieldBreakException : Exception

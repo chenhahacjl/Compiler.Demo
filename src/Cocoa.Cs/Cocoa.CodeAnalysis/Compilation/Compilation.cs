@@ -52,6 +52,16 @@ namespace Cocoa.CodeAnalysis
         public static void RegisterInterpreterEvaluator(Func<BoundProgram, string[]?, Dictionary<VariableSymbol, object>, object?> evaluator)
             => _interpreterEvaluator = evaluator;
 
+        /// <summary>
+        /// 解释器「按名调用顶层函数」委托（嵌入式引擎 Call 路径）：由 <c>Cocoa.CodeGen.Interpreter</c>
+        /// 经 <see cref="RegisterInterpreterFunctionEvaluator"/> 注册。Core 自身不引用后端。
+        /// </summary>
+        private static volatile Func<BoundProgram, FunctionSymbol, object?[], Dictionary<VariableSymbol, object>, object?>? _interpreterFunctionEvaluator;
+
+        /// <summary>注册解释器「按名调用顶层函数」实现（后端/宿主启动时调用；Core 自身不引用后端）。</summary>
+        public static void RegisterInterpreterFunctionEvaluator(Func<BoundProgram, FunctionSymbol, object?[], Dictionary<VariableSymbol, object>, object?> evaluator)
+            => _interpreterFunctionEvaluator = evaluator;
+
         /// <summary>绑定全局作用域（经 <see cref="CocoaBinder"/>.BindGlobalScope 静态编排）。</summary>
         public BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<SyntaxTree> syntaxTrees, string entryPointName, string[]? references, ImmutableArray<CoaProgram> codLibraries)
             => CocoaBinder.BindGlobalScope(isScript, previous, syntaxTrees, entryPointName, references, codLibraries);
@@ -261,6 +271,56 @@ namespace Cocoa.CodeAnalysis
             var value = evaluator(program, args, variables);
 
             return new EvaluationResult(program.Diagnostics, value);
+        }
+
+        /// <summary>
+        /// 嵌入式引擎 Call 路径：按名在 submission 链（含 previous，Latest 优先）查找顶层函数并带实参求值。
+        /// 未找到抛 <see cref="ArgumentException"/>；运行期异常原样上抛（引擎宿主可订阅 Error 事件）。
+        /// </summary>
+        public EvaluationResult EvaluateFunction(string name, object?[] args, Dictionary<VariableSymbol, object> variables)
+        {
+            if (GlobalScope.Diagnostics.HasErrors())
+            {
+                return new EvaluationResult(GlobalScope.Diagnostics, null);
+            }
+
+            var program = GetProgram();
+
+            if (program.Diagnostics.HasErrors())
+            {
+                return new EvaluationResult(program.Diagnostics, null);
+            }
+
+            var function = FindFunction(name);
+            if (function == null)
+            {
+                throw new ArgumentException($"未找到可调用的顶层函数 '{name}'", nameof(name));
+            }
+
+            var evaluator = _interpreterFunctionEvaluator
+                ?? throw new InvalidOperationException("解释器按名调用后端未注册（Cocoa.CodeGen.Interpreter 未初始化）");
+
+            var value = evaluator(program, function, args, variables);
+
+            return new EvaluationResult(program.Diagnostics, value);
+        }
+
+        /// <summary>在 submission 链（含 previous，Latest 优先）查找同名顶层函数。</summary>
+        private FunctionSymbol? FindFunction(string name)
+        {
+            var current = this;
+            while (current != null)
+            {
+                var function = current.Functions.FirstOrDefault(f => string.Equals(f.Name, name, StringComparison.Ordinal));
+                if (function != null)
+                {
+                    return function;
+                }
+
+                current = current.Previous;
+            }
+
+            return null;
         }
 
 
