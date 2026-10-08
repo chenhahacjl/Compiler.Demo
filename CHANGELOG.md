@@ -20,6 +20,17 @@
 - 测试：`WithExpressionThreeBackendTests` 6 例 + `InitAccessorThreeBackendTests` 5 例 + `RequiredMemberThreeBackendTests` 5 例 + `GlobalUsingThreeBackendTests` 5 例 + `FileScopedTypeThreeBackendTests` 6 例（各 Evaluator / IL(net9.0) / Native(x86+x64) 端到端 + 绑定形态/负例）。定向回归 810+128 通过。
 - **显式接口实现诊断**：`function IReader.Read()` 解析已支持，但运行时分派需 IL MethodImpl 槽 + native 接口槽——加清晰编译期诊断「运行时分派尚未实现」，杜绝「编译通过 → 运行时 TypeLoadException」；排期改后置（见对照表 §7 #12）。
 
+---
+
+## 未发布（2026-10-08）
+
+### 编译器质量：D3 诊断码（`Diagnostic.Code` + `--nowarn` 过滤）✅
+- **`Diagnostic.Code`**（COC1001+）：首梯队 6 码——未定义类型 COC1001 / 未定义函数 COC1002 / 未定义变量 COC1003 / 已声明 COC1004 / 元数不匹配 COC1005 / 只读赋值 COC1006；`DiagnosticBag.ReportError/ReportWarning` 可选 code 参数。
+- **`DiagnosticExtensions.ApplyNowarn`**：按码过滤压制警告（保留全部错误）——`--nowarn:CODE` 挂点。
+- **关键约束**：`ToString()` 保持 Message（不含码）——保护自举双后端诊断逐字节差分（M9-a4）与 CLI 输出稳定；码作独立元数据，CLI 输出加码镜像自举侧后再做。
+- 测试 `DiagnosticCodeTests` 6 例（各码赋值 + ToString 不变 + ApplyNowarn 过滤）。
+- 文档：语义债务 D3 状态翻转；其余 ~80 个 Report 方法按需渐进补码。
+
 ## 未发布（2026-10-01）
 
 ### 语言特性：模式匹配 / 嵌套类 / 空条件访问 / 溢出控制 / 运算符重载（2026-09-29 ~ 10-01）

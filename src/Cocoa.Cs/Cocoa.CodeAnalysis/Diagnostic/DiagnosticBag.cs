@@ -22,15 +22,15 @@ namespace Cocoa.CodeAnalysis
             _diagnostics.AddRange(diagnostics);
         }
 
-        public void ReportError(TextLocation location, string message)
+        public void ReportError(TextLocation location, string message, string? code = null)
         {
-            var diagnostic = Diagnostic.Error(location, message);
+            var diagnostic = Diagnostic.Error(location, message, code);
             _diagnostics.Add(diagnostic);
         }
 
-        public void ReportWarning(TextLocation location, string message)
+        public void ReportWarning(TextLocation location, string message, string? code = null)
         {
-            var diagnostic = Diagnostic.Warning(location, message);
+            var diagnostic = Diagnostic.Warning(location, message, code);
             _diagnostics.Add(diagnostic);
         }
 
@@ -103,7 +103,7 @@ namespace Cocoa.CodeAnalysis
         public void ReportUndefinedVariable(TextLocation location, string name)
         {
             var message = $"Variable '{name}' doesn't exist.";
-            ReportError(location, message);
+            ReportError(location, message, "COC1003");
         }
 
         public void ReportNotAVariable(TextLocation location, string name)
@@ -115,7 +115,7 @@ namespace Cocoa.CodeAnalysis
         public void ReportUndefinedType(TextLocation location, string name)
         {
             var message = $"Type '{name}' doesn't exist.";
-            ReportError(location, message);
+            ReportError(location, message, "COC1001");
         }
 
         public void ReportUnsupported128BitType(TextLocation location, string name)
@@ -221,13 +221,13 @@ namespace Cocoa.CodeAnalysis
         public void ReportSymbolAlreadyDeclared(TextLocation location, string name)
         {
             var message = $"'{name}' is already declared.";
-            ReportError(location, message);
+            ReportError(location, message, "COC1004");
         }
 
         public void ReportCannotAssign(TextLocation location, string name)
         {
             var message = $"Variable '{name}' is read-only and cannot be assigned to.";
-            ReportError(location, message);
+            ReportError(location, message, "COC1006");
         }
 
         public void ReportIndexRequiresArray(TextLocation location, TypeSymbol type)
@@ -263,7 +263,7 @@ namespace Cocoa.CodeAnalysis
         public void ReportUndefinedFunction(TextLocation location, string name)
         {
             var message = $"Function '{name}' doesn't exist.";
-            ReportError(location, message);
+            ReportError(location, message, "COC1002");
         }
 
         public void ReportNotAFunction(TextLocation location, string name)
@@ -275,7 +275,7 @@ namespace Cocoa.CodeAnalysis
         public void ReportWrongArgumentCount(TextLocation location, string name, int expectedCount, int actualCount)
         {
             var message = $"Function '{name}' requires {expectedCount} arguments but was given {actualCount}.";
-            ReportError(location, message);
+            ReportError(location, message, "COC1005");
         }
 
         public void ReportNoMatchingOverload(TextLocation location, string name)
