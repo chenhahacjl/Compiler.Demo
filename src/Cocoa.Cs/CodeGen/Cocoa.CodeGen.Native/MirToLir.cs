@@ -78,11 +78,25 @@ namespace Cocoa.CodeGen.Native
 
         public static LirProgram Generate(BoundProgram program, TargetPlatform platform)
         {
+            var result = GenerateWithSnapshot(program, platform);
+            return result.Program;
+        }
+
+        /// <summary>发射 + 捕获「发射后实际符号集」快照（M2，纯暴露不加逻辑：发射路径与 <see cref="Generate"/> 完全一致）。</summary>
+        public static NativeEmitResult GenerateWithSnapshot(BoundProgram program, TargetPlatform platform)
+        {
             var generator = new MirToLir(program, platform);
             generator.ComputeTopLevelOverloads();
             generator.EmitProgram();
             generator.EmitVTableData();
-            return generator._irProgram;
+            return new NativeEmitResult(generator._irProgram, generator.CaptureSnapshot());
+        }
+
+        /// <summary>M2：从内部发射状态捕获只读符号快照（存活类 + 实际发射函数），纯暴露不加逻辑。</summary>
+        internal EmittedSymbolSnapshot CaptureSnapshot()
+        {
+            var classes = _liveClasses.OrderBy(c => c.FullName, System.StringComparer.Ordinal).ToImmutableArray();
+            return new EmittedSymbolSnapshot(classes, _functionMap.ToImmutableDictionary());
         }
 
         /// <summary>程序内同名顶层函数（同命名空间）超过一个 → 该名进入重载组，native 名字 mangle。</summary>
