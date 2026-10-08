@@ -21,7 +21,13 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             if (Current.Kind == SyntaxKind.UsingKeyword)
             {
-                return ParseUsingDirective();
+                return ParseUsingDirective(isGlobal: false);
+            }
+
+            if (Current.Kind == SyntaxKind.GlobalKeyword && Peek(1).Kind == SyntaxKind.UsingKeyword)
+            {
+                var globalToken = NextToken();
+                return ParseUsingDirective(isGlobal: true, globalToken: globalToken);
             }
 
             if (Current.Kind == SyntaxKind.NamespaceKeyword)
@@ -697,12 +703,12 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new ImportBlockSyntax(_syntaxTree, importKeyword, nameTokens, blockOpenParen, blockCharsetKey, blockCharsetValue, blockCloseParen, openBraceToken, members.ToImmutable(), closeBraceToken);
         }
 
-        private MemberSyntax ParseUsingDirective()
+        private MemberSyntax ParseUsingDirective(bool isGlobal, SyntaxToken? globalToken = null)
         {
-            return ParseUsingDirectiveCore();
+            return ParseUsingDirectiveCore(isGlobal, globalToken);
         }
 
-        private MemberSyntax ParseUsingDirectiveCore()
+        private MemberSyntax ParseUsingDirectiveCore(bool isGlobal, SyntaxToken? globalToken)
         {
             var usingKeyword = MatchToken(SyntaxKind.UsingKeyword);
             SyntaxToken? staticKeyword = null;
@@ -724,7 +730,11 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             var nameTokens = ParseQualifiedName();
 
-            return new UsingDirectiveSyntax(_syntaxTree, usingKeyword, staticKeyword, aliasToken, equalsToken, nameTokens);
+            var modifiers = isGlobal && globalToken != null
+                ? ImmutableArray.Create(globalToken)
+                : ImmutableArray<SyntaxToken>.Empty;
+
+            return new UsingDirectiveSyntax(_syntaxTree, usingKeyword, staticKeyword, aliasToken, equalsToken, nameTokens, modifiers);
         }
 
         private MemberSyntax ParseNamespaceDeclaration()

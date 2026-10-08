@@ -262,5 +262,6 @@ ColonToken,               // :
         WithExpression = 245,  // with 表达式：expr with { 成员 = 值, ... }
         InitKeyword = 246,     // init（仅初始化访问器，C# 9：构造上下文内可赋值）
         RequiredKeyword = 247, // required（必需成员修饰符，C# 11：构造器必须赋值）
+        GlobalKeyword = 248,   // global（`global using X;` 全局 using 前缀，C# 10）
     }
 }

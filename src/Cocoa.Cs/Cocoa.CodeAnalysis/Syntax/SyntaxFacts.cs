@@ -113,6 +113,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.ForeachKeyword;
                 case "get":
                     return SyntaxKind.GetKeyword;
+                case "global":
+                    return SyntaxKind.GlobalKeyword;
                 case "set":
                     return SyntaxKind.SetKeyword;
                 case "property":
@@ -413,6 +415,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "foreach";
                 case SyntaxKind.GetKeyword:
                     return "get";
+                case SyntaxKind.GlobalKeyword:
+                    return "global";
                 case SyntaxKind.InKeyword:
                     return "in";
                 case SyntaxKind.InitKeyword:

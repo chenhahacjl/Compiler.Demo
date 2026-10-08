@@ -291,6 +291,16 @@ namespace Cocoa.CodeAnalysis.Syntax
         private SyntaxNode BuildUsingDirective(SyntaxTree syntaxTree, int position)
         {
             var slot = 0;
+
+            // 前置 Modifiers（global using 的 GlobalKeyword；GetChildren 先 yield Modifiers）
+            var modifiers = ImmutableArray.CreateBuilder<SyntaxToken>();
+            while (slot < _green.SlotCount && _green.GetSlot(slot)!.Kind == SyntaxKind.GlobalKeyword)
+            {
+                modifiers.Add((SyntaxToken)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position));
+                position += _green.GetSlot(slot)!.Width;
+                slot++;
+            }
+
             var usingKeyword = (SyntaxToken)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
             position += _green.GetSlot(slot)!.Width;
             slot++;
@@ -323,7 +333,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 position += _green.GetSlot(i)!.Width;
             }
 
-            return new UsingDirectiveSyntax(syntaxTree, usingKeyword, staticKeyword, aliasToken, equalsToken, nameTokens.ToImmutable());
+            return new UsingDirectiveSyntax(syntaxTree, usingKeyword, staticKeyword, aliasToken, equalsToken, nameTokens.ToImmutable(), modifiers.ToImmutable());
         }
 
         private static bool IsBaseTypeSlot(SyntaxKind kind) => kind is
