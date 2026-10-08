@@ -393,6 +393,7 @@ namespace Cocoa.CodeAnalysis.Binding
             classType.TypeKind = isStruct ? TypeKind.Struct : TypeKind.Class;
             classType.IsAbstract = parts.Any(p => p.Syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.AbstractKeyword));
             classType.IsSealed = isStruct || parts.Any(p => p.Syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.SealedKeyword));
+            classType.IsFileScoped = parts.Any(p => p.Syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.FileKeyword));
             DocumentationBackfill.BackfillDocumentation(classType, primary.Syntax, _diagnostics);
 
             // struct 约束（MVP）：常规 struct 不可有基类/接口、不可 abstract、不可 facade；

@@ -156,6 +156,9 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         public bool IsStatic => IsAbstract && IsSealed;
 
+        /// <summary>file 文件范围类型（C# 11）：仅在本源码文件内可见（类型解析时跨树过滤）。</summary>
+        public bool IsFileScoped { get; set; }
+
         /// <summary>是否为枚举（6e-M26 并入 NamedTypeSymbol）。</summary>
         public bool IsEnum => TypeKind == TypeKind.Enum;
 

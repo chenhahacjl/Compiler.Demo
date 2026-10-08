@@ -580,6 +580,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.ReadonlyKeyword:
                 case SyntaxKind.PartialKeyword:
                 case SyntaxKind.RequiredKeyword:
+                case SyntaxKind.FileKeyword:
                     return true;
                 default:
                     return false;

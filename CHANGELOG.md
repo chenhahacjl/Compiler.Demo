@@ -16,7 +16,8 @@
 - **`init` 访问器**：`property X: int { get init }`——语法（`InitKeyword`）+ 绑定（`set_X` 标记 `IsInitAccessor`）+ 强制（仅所属类构造上下文可赋值，`_function.IsConstructor` 判定，非构造赋值报诊断）；发射复用 setter 管线零改动。
 - **`required` 成员**：`required field/property`（`RequiredKeyword` 修饰符）——绑定标记 `IsRequired`；构造体绑定完成后按名收集赋值，缺省报诊断「required 成员 'X' 必须由构造器赋值」（BuildFunctionBody 钩子）。
 - **`global using`（C# 10）✅**：`global using System`——语法（`GlobalKeyword` + using 修饰符、绿节点工厂、`IsGlobal`）；本编译器全局作用域已跨文件聚合 using，语义等价普通顶层 using。
-- 测试：`WithExpressionThreeBackendTests` 6 例 + `InitAccessorThreeBackendTests` 5 例 + `RequiredMemberThreeBackendTests` 5 例 + `GlobalUsingThreeBackendTests` 5 例（各 Evaluator / IL(net9.0) / Native(x86+x64) 端到端 + 绑定形态/负例）。定向回归 682+21 通过。
+- **`file` 类型（C# 11）✅**：`file class Foo`——语法（`FileKeyword` 修饰符）+ 绑定（`IsFileScoped`）+ 类型解析跨树过滤（`LookupType` 检查当前函数/类的声明树与目标树，跨文件不可见视为未定义）；三后端零发射改动。
+- 测试：`WithExpressionThreeBackendTests` 6 例 + `InitAccessorThreeBackendTests` 5 例 + `RequiredMemberThreeBackendTests` 5 例 + `GlobalUsingThreeBackendTests` 5 例 + `FileScopedTypeThreeBackendTests` 6 例（各 Evaluator / IL(net9.0) / Native(x86+x64) 端到端 + 绑定形态/负例）。定向回归 810+128 通过。
 - **显式接口实现诊断**：`function IReader.Read()` 解析已支持，但运行时分派需 IL MethodImpl 槽 + native 接口槽——加清晰编译期诊断「运行时分派尚未实现」，杜绝「编译通过 → 运行时 TypeLoadException」；排期改后置（见对照表 §7 #12）。
 
 ## 未发布（2026-10-01）

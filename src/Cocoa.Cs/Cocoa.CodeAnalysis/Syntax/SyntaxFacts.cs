@@ -107,6 +107,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.ElseKeyword;
                 case "false":
                     return SyntaxKind.FalseKeyword;
+                case "file":
+                    return SyntaxKind.FileKeyword;
                 case "for":
                     return SyntaxKind.ForKeyword;
                 case "foreach":
@@ -409,6 +411,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "else";
                 case SyntaxKind.FalseKeyword:
                     return "false";
+                case SyntaxKind.FileKeyword:
+                    return "file";
                 case SyntaxKind.ForKeyword:
                     return "for";
                 case SyntaxKind.ForeachKeyword:

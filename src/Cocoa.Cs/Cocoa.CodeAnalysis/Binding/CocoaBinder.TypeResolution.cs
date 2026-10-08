@@ -71,7 +71,15 @@ namespace Cocoa.CodeAnalysis.Binding
             var lookup = _scope.TryLookupSymbol(name);
             if (lookup is TypeSymbol declaredType)
             {
-                return declaredType;
+                // file 文件范围类型（C# 11）：跨文件不可见 → 视为未定义
+                if (declaredType is NamedTypeSymbol declaredNamed && declaredNamed.IsFileScoped && !IsFileVisible(declaredNamed))
+                {
+                    // fall through 到未定义路径
+                }
+                else
+                {
+                    return declaredType;
+                }
             }
 
             // 6e-M19 M2-a：System.Object 内建单例（用户同名类已由上方 scope 命中短路；小写关键字与 C# 原名皆可）
@@ -737,6 +745,23 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 _diagnostics.ReportSymbolAlreadyDeclared(syntax.Identifier.Location, syntax.Identifier.Text);
             }
+        }
+
+        /// <summary>
+        /// file 文件范围类型可见性（C# 11）：当前绑定上下文所在源码文件与目标类型的声明文件
+        /// 一致（或无法判定）即可见。当前文件以 `_function`/`_currentClass` 的声明语法树推断。
+        /// </summary>
+        private bool IsFileVisible(NamedTypeSymbol fileScopedType)
+        {
+            var targetTree = fileScopedType.Declaration?.SyntaxTree;
+            if (targetTree == null)
+            {
+                return true;
+            }
+
+            var currentTree = _function?.Declaration?.SyntaxTree
+                              ?? _currentClass?.Declaration?.SyntaxTree;
+            return currentTree == null || ReferenceEquals(currentTree, targetTree);
         }
     }
 }
