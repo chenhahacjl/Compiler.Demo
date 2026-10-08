@@ -40,7 +40,7 @@ namespace Cocoa.Cli
                 {
                     case "-p":
                     case "--path":
-                        if (!TryTakeValue(args, ref i, inlineValue, out projectPath))
+                        if (!CliHelper.TryTakeValue(args, ref i, inlineValue, out projectPath))
                         {
                             return 1;
                         }
@@ -48,14 +48,14 @@ namespace Cocoa.Cli
                         break;
                     case "-f":
                     case "--format":
-                        if (!TryTakeValue(args, ref i, inlineValue, out formatText))
+                        if (!CliHelper.TryTakeValue(args, ref i, inlineValue, out formatText))
                         {
                             return 1;
                         }
 
                         break;
                     case "--platform":
-                        if (!TryTakeValue(args, ref i, inlineValue, out platformText))
+                        if (!CliHelper.TryTakeValue(args, ref i, inlineValue, out platformText))
                         {
                             return 1;
                         }
@@ -63,7 +63,7 @@ namespace Cocoa.Cli
                         break;
                     case "-o":
                     case "--output":
-                        if (!TryTakeValue(args, ref i, inlineValue, out outputFile))
+                        if (!CliHelper.TryTakeValue(args, ref i, inlineValue, out outputFile))
                         {
                             return 1;
                         }
@@ -71,7 +71,7 @@ namespace Cocoa.Cli
                         break;
                     case "-r":
                     case "--reference":
-                        if (!TryTakeValue(args, ref i, inlineValue, out var reference))
+                        if (!CliHelper.TryTakeValue(args, ref i, inlineValue, out var reference))
                         {
                             return 1;
                         }
@@ -80,14 +80,14 @@ namespace Cocoa.Cli
                         break;
                     case "-b":
                     case "--backend":
-                        if (!TryTakeValue(args, ref i, inlineValue, out backendText))
+                        if (!CliHelper.TryTakeValue(args, ref i, inlineValue, out backendText))
                         {
                             return 1;
                         }
 
                         break;
                     case "--dotnet-runtime":
-                        if (!TryTakeValue(args, ref i, inlineValue, out dotnetRuntimeText))
+                        if (!CliHelper.TryTakeValue(args, ref i, inlineValue, out dotnetRuntimeText))
                         {
                             return 1;
                         }
@@ -244,26 +244,6 @@ else if (extension.Equals(".coproj", StringComparison.OrdinalIgnoreCase))
                 Console.Error.WriteLine($"error: file '{ex.FileName ?? ex.Message}' doesn't exist!");
                 return 1;
             }
-        }
-
-        private static bool TryTakeValue(string[] args, ref int index, string? inlineValue, out string value)
-        {
-            if (inlineValue != null)
-            {
-                value = inlineValue;
-                return true;
-            }
-
-            if (index + 1 >= args.Length)
-            {
-                Console.Error.WriteLine($"error: option '{args[index]}' requires a value");
-                value = "";
-                return false;
-            }
-
-            index++;
-            value = args[index];
-            return true;
         }
 
         private static void PrintHelp()

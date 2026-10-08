@@ -108,7 +108,7 @@ namespace Cocoa.Cli
                 {
                     case "-r":
                     case "--reference":
-                        if (!TryTakeValue(args, ref i, inlineValue, out var reference))
+                        if (!CliHelper.TryTakeValue(args, ref i, inlineValue, out var reference))
                         {
                             return 1;
                         }
@@ -117,14 +117,14 @@ namespace Cocoa.Cli
                         break;
                     case "-o":
                     case "--output":
-                        if (!TryTakeValue(args, ref i, inlineValue, out outputPath))
+                        if (!CliHelper.TryTakeValue(args, ref i, inlineValue, out outputPath))
                         {
                             return 1;
                         }
 
                         break;
                     case "--dotnet-module":
-                        if (!TryTakeValue(args, ref i, inlineValue, out moduleName))
+                        if (!CliHelper.TryTakeValue(args, ref i, inlineValue, out moduleName))
                         {
                             return 1;
                         }
@@ -132,21 +132,21 @@ namespace Cocoa.Cli
                         break;
                     case "-b":
                     case "--backend":
-                        if (!TryTakeValue(args, ref i, inlineValue, out backendText))
+                        if (!CliHelper.TryTakeValue(args, ref i, inlineValue, out backendText))
                         {
                             return 1;
                         }
 
                         break;
                     case "--platform":
-                        if (!TryTakeValue(args, ref i, inlineValue, out platformText))
+                        if (!CliHelper.TryTakeValue(args, ref i, inlineValue, out platformText))
                         {
                             return 1;
                         }
 
                         break;
                     case "--dotnet-runtime":
-                        if (!TryTakeValue(args, ref i, inlineValue, out dotnetRuntimeText))
+                        if (!CliHelper.TryTakeValue(args, ref i, inlineValue, out dotnetRuntimeText))
                         {
                             return 1;
                         }
@@ -154,7 +154,7 @@ namespace Cocoa.Cli
                         break;
                     case "--nowarn":
                         // D3：`--nowarn:COC1001,COC1002` 或 `--nowarn COC1001,COC1002`——按诊断码压制警告
-                        if (!TryTakeValue(args, ref i, inlineValue, out var nowarnText))
+                        if (!CliHelper.TryTakeValue(args, ref i, inlineValue, out var nowarnText))
                         {
                             return 1;
                         }
@@ -403,26 +403,6 @@ namespace Cocoa.Cli
             }
 
             return ok;
-        }
-
-        private static bool TryTakeValue(string[] args, ref int index, string? inlineValue, out string value)
-        {
-            if (inlineValue != null)
-            {
-                value = inlineValue;
-                return true;
-            }
-
-            if (index + 1 >= args.Length)
-            {
-                Console.Error.WriteLine($"error: option '{args[index]}' requires a value");
-                value = "";
-                return false;
-            }
-
-            index++;
-            value = args[index];
-            return true;
         }
 
         private static CodeBackend? ParseBackend(string? text)
