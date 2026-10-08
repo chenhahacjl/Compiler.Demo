@@ -2576,13 +2576,15 @@ namespace Cocoa.CodeAnalysis.Binding
             if (isSyscall)
             {
                 var builtin = BuiltinFunctions.GetByName(syntax.Identifier.Text);
-                if (builtin == null)
-                {
-                    _diagnostics.ReportSyscallFunctionUnknown(syntax.Identifier.Location, syntax.Identifier.Text);
-                }
-                else
+                if (builtin != null)
                 {
                     builtinKind = builtin.BuiltinKind;
+                }
+                else if (SyscallCallbackResolver?.Invoke(syntax.Identifier.Text) != true)
+                {
+                    // 嵌入式引擎回调（RegisterCallback）：CocoaBinder.SyscallCallbackResolver 命中时
+                    // 该 syscall 是引擎注册的 C# 回调（Evaluator 求值期查回调表），不报未知。
+                    _diagnostics.ReportSyscallFunctionUnknown(syntax.Identifier.Location, syntax.Identifier.Text);
                 }
 
                 if (syntax.Body != null)

@@ -27,6 +27,10 @@ namespace Cocoa.Engine
             {
                 Cocoa.CodeGen.Managed.Writer.ManagedBackend.Register();
             }
+
+            // 引擎回调绑定放行（进程级静态，docs/嵌入式引擎API.md §10 已知边界）：syscall 声明
+            // 未命中内置表时，回调此委托裁决是否为引擎注册回调（命中则不再报 SyscallFunctionUnknown）。
+            Cocoa.CodeAnalysis.Binding.CocoaBinder.SyscallCallbackResolver = InterpreterBackend.HasCallback;
         }
 
         public CocoaEngine(EngineOptions options)
@@ -140,12 +144,34 @@ namespace Cocoa.Engine
             _variables[symbol] = value!;
         }
 
+        /// <summary>
+        /// 把 C# 委托注册为 Co 侧可调用的回调（核心能力）。Co 侧以 <c>syscall function</c> 声明
+        /// （容器类内、无函数体、隐含 static）：绑定未命中内置表时按此回调表裁决。
+        /// 须在触发绑定的 <see cref="DoString"/> / <see cref="Call"/> 之前注册；同名重注册覆盖。
+        /// </summary>
+        public void RegisterCallback(string name, Delegate handler)
+        {
+            ThrowIfDisposed();
+            InterpreterBackend.RegisterCallback(name, handler);
+            _callbacks[name] = handler;
+        }
+
+        /// <summary>移除已注册回调。</summary>
+        public void UnregisterCallback(string name)
+        {
+            ThrowIfDisposed();
+            InterpreterBackend.UnregisterCallback(name);
+            _callbacks.Remove(name);
+        }
+
         /// <summary>重置引擎状态：清空 submission 链与全局变量字典。</summary>
         public void Reset()
         {
             _previous = null;
             _variables.Clear();
         }
+
+        private readonly Dictionary<string, Delegate> _callbacks = new(StringComparer.Ordinal);
 
         /// <summary>
         /// 按名调用顶层函数（脚本语义等价 Lua 全局函数）。实参以 <c>object?[]</c> 传入，

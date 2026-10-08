@@ -16,6 +16,13 @@ namespace Cocoa.CodeAnalysis.Binding
     /// </summary>
     public sealed partial class CocoaBinder
     {
+        /// <summary>
+        /// 嵌入式引擎回调放行钩子（M3）：syscall 声明未命中内置表时回调此委托；
+        /// 返回 true 表示该名为引擎注册的 C# 回调（不再报 SyscallFunctionUnknown）。
+        /// 进程级静态委托：REPL/CLI 不注册 → 行为不变；CocoaEngine 注册后按回调表裁决。
+        /// </summary>
+        public static Func<string, bool>? SyscallCallbackResolver;
+
         private readonly DiagnosticBag _diagnostics = new DiagnosticBag();
         private readonly bool _isScript;
         private readonly FunctionSymbol? _function;
@@ -781,7 +788,8 @@ namespace Cocoa.CodeAnalysis.Binding
             // F2 共享绑定服务（A3-3）：构造链（base/this）+ 字段初始化器 → 函数体前缀（见 BuildConstructorPrefix）
             body = BuildConstructorPrefix(binder, function, bodySyntax ?? function.Syntax!, body);
 
-            var returnCheckLocation = function.ReturnType != TypeSymbol.Void && !function.IsAbstract
+            // extern / 引擎回调 syscall / abstract 等无本体的非 void 函数不校验全路径返回（无实现可校验）
+            var returnCheckLocation = function.ReturnType != TypeSymbol.Void && bodySyntax != null && !function.IsAbstract
                 ? (function.Declaration != null ? ((FunctionDeclarationSyntax)function.Declaration).Identifier.Location : bodyLocation!.Location)
                 : (TextLocation?)null;
 

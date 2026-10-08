@@ -200,5 +200,89 @@ function Scale(x: i32): i32 { return x * factor }");
             var result = engine.Call("Twice", 10L);
             Assert.Equal(20, result);
         }
+
+        [Fact]
+        public void RegisterCallback_CoCallsCSharp()
+        {
+            using var engine = new CocoaEngine();
+            engine.RegisterCallback("HostAdd", (Func<int, int, int>)((a, b) => a * b));
+
+            var declared = engine.DoString(@"class Host
+{
+    syscall function HostAdd(a: i32, b: i32): i32
+}
+Host.HostAdd(3, 4)");
+            Assert.True(declared.Diagnostics.IsEmpty, string.Join("\n", declared.Diagnostics.Select(d => d.Message)));
+            Assert.Equal(12, declared.Value);
+        }
+
+        [Fact]
+        public void RegisterCallback_VoidAction()
+        {
+            using var engine = new CocoaEngine();
+            var invoked = false;
+            engine.RegisterCallback("Notify", (Action)(() => invoked = true));
+
+            var declared = engine.DoString(@"class Host
+{
+    syscall function Notify(): void
+}
+Host.Notify()");
+            Assert.True(declared.Diagnostics.IsEmpty, string.Join("\n", declared.Diagnostics.Select(d => d.Message)));
+            Assert.True(invoked);
+        }
+
+        [Fact]
+        public void RegisterCallback_StringArgument()
+        {
+            using var engine = new CocoaEngine();
+            engine.RegisterCallback("Greet", (Func<string, string>)(s => "hi " + s));
+
+            var declared = engine.DoString(@"class Host
+{
+    syscall function Greet(name: string): string
+}
+Host.Greet(""world"")");
+            Assert.True(declared.Diagnostics.IsEmpty, string.Join("\n", declared.Diagnostics.Select(d => d.Message)));
+            Assert.Equal("hi world", declared.Value);
+        }
+
+        [Fact]
+        public void RegisterCallback_InteractionWithCall()
+        {
+            using var engine = new CocoaEngine();
+            engine.RegisterCallback("Scale", (Func<int, int>)(x => x * 2));
+
+            var declared = engine.DoString(@"class Host
+{
+    syscall function Scale(x: i32): i32
+}
+
+var n = Host.Scale(21)
+function GetN(): i32 { return n }");
+            Assert.True(declared.Diagnostics.IsEmpty, string.Join("\n", declared.Diagnostics.Select(d => d.Message)));
+
+            Assert.Equal(42, engine.Call("GetN"));
+        }
+
+        [Fact]
+        public void UnregisterCallback_ThenUnknownSyscall()
+        {
+            using var engine = new CocoaEngine();
+            engine.RegisterCallback("Temp", (Action)(() => { }));
+            engine.UnregisterCallback("Temp");
+
+            var declared = engine.DoString(@"class Host
+{
+    syscall function Temp(): void
+}
+
+function Main()
+{
+    Host.Temp()
+}");
+            // 回调已移除 → syscall 未命中 → 编译诊断 SyscallFunctionUnknown
+            Assert.True(declared.Diagnostics.HasErrors());
+        }
     }
 }

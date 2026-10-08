@@ -28,6 +28,20 @@ namespace Cocoa.CodeGen.Interpreter
             Compilation.RegisterInterpreterFunctionEvaluator(EvaluateFunction);
         }
 
+        /// <summary>
+        /// 注册/移除引擎回调（M3，Co→C#）：syscall 声明的函数名 → C# Delegate。
+        /// 实例表由引擎持有（隔离），此处登记目录供 <see cref="Cocoa.CodeAnalysis.Binding.CocoaBinder"/>
+        /// syscall 绑定放行与 Evaluator 求值分派。
+        /// </summary>
+        public static void RegisterCallback(string name, Delegate handler)
+            => Evaluator._callbacks[name] = handler;
+
+        public static void UnregisterCallback(string name)
+            => Evaluator._callbacks.Remove(name);
+
+        public static bool HasCallback(string name)
+            => Evaluator._callbacks.ContainsKey(name);
+
         private static object? Evaluate(BoundProgram program, string[]? args, Dictionary<VariableSymbol, object> variables)
         {
             var evaluator = new Evaluator(program, variables);

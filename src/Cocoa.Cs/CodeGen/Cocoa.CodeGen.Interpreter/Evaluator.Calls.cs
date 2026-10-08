@@ -18,11 +18,50 @@ namespace Cocoa.CodeGen.Interpreter
         // File 句柄原语（Evaluator 腿）：i64 句柄 ↔ BCL FileStream
         private static readonly Dictionary<long, FileStream> _fileHandles = new Dictionary<long, FileStream>();
         private static long _fileHandleCounter;
+
+        /// <summary>
+        /// 嵌入式引擎回调表（M3，Co→C# 回调）：syscall 声明的函数名 → C# Delegate。
+        /// 进程级静态（docs/嵌入式引擎API.md §10 已知边界）；经 <see cref="InterpreterBackend"/> 注册/移除。
+        /// </summary>
+        internal static readonly Dictionary<string, Delegate> _callbacks = new(StringComparer.Ordinal);
+
+        /// <summary>引擎回调分派：按函数名查回调表，命中则反射调用 Delegate（含参数反射编组）。</summary>
+        internal static bool TryInvokeCallback(string functionName, object?[] args, out object? result)
+        {
+            if (_callbacks.TryGetValue(functionName, out var handler))
+            {
+                result = handler.DynamicInvoke(args);
+                return true;
+            }
+
+            result = null;
+            return false;
+        }
+        /// <summary>求值调用实参（byref 实参取值），供引擎回调分派传参。</summary>
+        private object?[] EvaluateArguments(BoundCallExpression node)
+        {
+            var result = new object?[node.Arguments.Length];
+            for (var i = 0; i < node.Arguments.Length; i++)
+            {
+                result[i] = node.Arguments[i] is BoundByRefArgument byRef
+                    ? ByRefBox.Deref(EvaluateByRefSlot(byRef))
+                    : EvaluateExpression(node.Arguments[i]);
+            }
+
+            return result;
+        }
+
         private object? EvaluateCallExpression(BoundCallExpression node)
         {
             if (node.Function.BuiltinKind != null)
             {
                 return EvaluateBuiltinCall(node.Function, node.Arguments);
+            }
+
+            // 嵌入式引擎回调（M3）：函数名在引擎回调表 → 调 C# Delegate（显式注册名优先于空 body 的 syscall 声明）。
+            if (TryInvokeCallback(node.Function.Name, EvaluateArguments(node), out var callbackResult))
+            {
+                return callbackResult;
             }
 
             var locals = new Dictionary<VariableSymbol, object>();
