@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    M5 示例：CocoaEngine 嵌入式脚本引擎宿主（独立 C# 控制台工程）。
+    演示 DoString / Call / RegisterCallback / GetGlobal.SetGlobal / Output 事件全链路。
+    按 docs/嵌入式引擎API.md §11：本工程为 C# 宿主，不纳入 samples.cosln 聚合。
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>CsHost</AssemblyName>
+    <RootNamespace>Cocoa.Host</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Cocoa.Cs\Cocoa.Engine\Cocoa.Engine.csproj" />
+  </ItemGroup>
+
+  <!-- 系统库开箱可用：把 System.Core.coa 复制到宿主输出目录（SystemLibrary.Load 从 bin 目录发现） -->
+  <ItemGroup>
+    <None Include="..\..\..\src\Cocoa.SDK\out\System.Core.coa" Link="System.Core.coa" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

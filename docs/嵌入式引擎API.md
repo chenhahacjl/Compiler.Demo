@@ -1,6 +1,6 @@
 # Cocoa 嵌入式引擎 API
 
-> 状态：📋 定稿未开工（2026-10-07）
+> 状态：✅ 实施完成（2026-10-08）；Interpreter 后端完整（DoString/Call/RegisterCallback/全局变量/Output），IlEmit 后端（DoString/Call/Value；全局变量与 Output 为文档化限制）
 > 定位：面向 C# / .NET 宿主程序 —— 在宿主进程内嵌入执行 Cocoa（`.co`）脚本的运行库 API 手册，等价 Lua 的宿主嵌入模型（`lua_State` / `luaL_dostring` / `lua_register`）。
 > 相关：[快速上手](快速上手.md)、[互操作手册](互操作手册.md)、[编译手册](编译手册.md)
 
@@ -295,12 +295,23 @@ Co 值 ↔ .NET 对象的映射契约（Interpreter 后端透明；IlEmit 反射
 
 可运行示例见 `samples/Scripting/CsHost/`（独立 C# 控制台工程 + `.co` 脚本，展示 `DoString` / `Call` / `RegisterCallback` / `GetGlobal` / `Output` 全链路）。该工程是 C# 宿主，不纳入 `samples.cosln` 聚合。
 
+```csharp
+using Cocoa.Engine;
+using var engine = new CocoaEngine();
+engine.RegisterCallback("Mul", (Func<int, int, int>)((a, b) => a * b));
+engine.DoString("class Host { syscall function Mul(a, b) ... }");  // 见完整脚本
+engine.Call("Bump", 5);   // 跨提交读全局变量
+```
+
+运行：`dotnet run --project samples/Scripting/CsHost/CsHost.csproj`（需先构建 System.Core.coa，随 SDK 输出自动复制）。
+
 ---
 
 ## 12. 限制
 
 - `Call` 暂不支持类静态方法 / 实例方法调用（后续增量）；
 - `SetGlobal` 不自动创建隐式全局（静态语言语义）；
-- `Output` 事件仅 `Interpreter` 后端；
+- `Output` 事件仅 `Interpreter` 后端（IlEmit 反射调用直连 BCL Console）；
+- IlEmit 后端全局变量读写（`GetGlobal`/`SetGlobal`）暂不支持——script 顶层变量在 IL 中是单函数局部，未提升为静态字段（IL 后端通用缺口，后续里程碑；Interpreter 后端完整）；
 - `IlEmit` 后端须 netcore 目标（netfx 产物无法被现代宿主加载）；
 - native 后端不参与（宿主是 .NET 进程，无法嵌入 native 产物）。
