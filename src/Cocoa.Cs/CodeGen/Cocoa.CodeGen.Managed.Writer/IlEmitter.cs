@@ -133,7 +133,7 @@ namespace Cocoa.CodeGen.Managed.Writer
             // 枚举顺序跨运行不稳定，导致方法体/MemberRef/#US 注册顺序变化、构建不可复现。
             // 统一按确定性键排序后再迭代（FunctionSortKey：Ordinal 组合键），保证发射顺序可复现。
             var orderedFunctions = program.Functions.Keys
-                .OrderBy(FunctionSortKey, StringComparer.Ordinal)
+                .OrderBy(SymbolSorting.FunctionSortKey, StringComparer.Ordinal)
                 .ToList();
 
             // 1. 收集 class（基类在前）→ 建 IlTypeDef + 字段
@@ -1147,15 +1147,6 @@ namespace Cocoa.CodeGen.Managed.Writer
             }
 
             throw new System.Exception($"Unexpected type {type}");
-        }
-
-        /// <summary>6e-M26：函数确定性排序键（ContainingClass.FullName + 命名空间 + 方法名 + 参数签名，Ordinal）。
-        /// 保证 program.Functions（ImmutableDictionary，引用哈希进程随机）的发射顺序可复现。</summary>
-        private static string FunctionSortKey(FunctionSymbol function)
-        {
-            var owner = function.ContainingClass?.FullName ?? "";
-            var parameters = string.Join(",", function.Parameters.Select(p => p.Type.ToString()));
-            return $"{owner}|{function.Namespace}|{function.Name}|{parameters}";
         }
 
         /// <summary>类型名编码进方法名后缀（`int[]` 的 `[]` 非法，转下划线）。</summary>

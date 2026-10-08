@@ -226,7 +226,7 @@ namespace Cocoa.CodeGen.Native
             // 按确定性键排序，保证 native 产物函数顺序可复现。
             var functionsToEmit = _program.Functions
                 .Where(kv => reachable.Contains(kv.Key))
-                .OrderBy(kv => FunctionSortKey(kv.Key), StringComparer.Ordinal)
+                .OrderBy(kv => SymbolSorting.FunctionSortKey(kv.Key), StringComparer.Ordinal)
                 .ToArray();
 
             foreach (var (function, body) in functionsToEmit)
@@ -259,14 +259,6 @@ namespace Cocoa.CodeGen.Native
             {
                 EmitFunction(_functionMap[function], function, body);
             }
-        }
-
-        /// <summary>6e-M26：函数确定性排序键（ContainingClass.FullName + 命名空间 + 方法名 + 参数签名，Ordinal）。</summary>
-        private static string FunctionSortKey(FunctionSymbol function)
-        {
-            var owner = function.ContainingClass?.FullName ?? "";
-            var parameters = string.Join(",", function.Parameters.Select(p => p.Type.ToString()));
-            return $"{owner}|{function.Namespace}|{function.Name}|{parameters}";
         }
 
         // ------------------------------------------------------------------
