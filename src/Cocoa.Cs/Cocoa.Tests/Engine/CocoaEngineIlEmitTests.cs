@@ -87,19 +87,22 @@ function Scale(x: i32): i32 { counter = counter + x; return counter }");
         }
 
         [Fact]
-        public void IlEmit_CrossSubmission_GlobalNotRebuilt_IsKnownLimit()
+        public void IlEmit_CrossSubmission_GlobalPersists()
         {
-            // 已知限制固化：IlEmit 每次 DoString 重新发射**本层** submission（IlEmitter 不遍历 previous 链，
-            // 同 Evaluator），前次提交的全局静态字段不进新程序集 → 第二次提交后 GetGlobal 返回 null。
-            // 相比 Interpreter 的字典持久（跨提交保留），是 IlEmit 后续缺口（IlEmitter previous 链合并）。
-            // 文档：docs/嵌入式引擎API.md §12。
+            // IlEmitter previous 链合并 + IlEmitSession 旧值注入 → 跨提交全局变量持久
+            // （与新提交重新初始化的覆盖语义一致；函数跨提交亦可调）。
             using var engine = new CocoaEngine(EngineBackend.IlEmit);
-            engine.DoString(@"var counter = 100");
+            var first = engine.DoString(@"var counter = 100
+function Scale(x: i32): i32 { counter = counter + x; return counter }");
+            Assert.True(first.Diagnostics.IsEmpty, string.Join("\n", first.Diagnostics.Select(d => d.Message)));
             Assert.Equal(100, engine.GetGlobal("counter"));
 
             var second = engine.DoString(@"var other = 1");
-            Assert.True(second.Diagnostics.IsEmpty);
-            Assert.Null(engine.GetGlobal("counter"));
+            Assert.True(second.Diagnostics.IsEmpty, string.Join("\n", second.Diagnostics.Select(d => d.Message)));
+
+            // 跨提交：变量值保留，函数仍可调
+            Assert.Equal(100, engine.GetGlobal("counter"));
+            Assert.Equal(105, engine.Call("Scale", 5));
         }
 
         [Fact]

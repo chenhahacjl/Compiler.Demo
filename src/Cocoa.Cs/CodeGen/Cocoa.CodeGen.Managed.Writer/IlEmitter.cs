@@ -136,7 +136,13 @@ namespace Cocoa.CodeGen.Managed.Writer
             // 6e-M26：FunctionSymbol 走默认引用 GetHashCode（进程随机）→ program.Functions（ImmutableDictionary）
             // 枚举顺序跨运行不稳定，导致方法体/MemberRef/#US 注册顺序变化、构建不可复现。
             // 统一按确定性键排序后再迭代（FunctionSortKey：Ordinal 组合键），保证发射顺序可复现。
-            var orderedFunctions = program.Functions.Keys
+            //
+            // 脚本 submission 链（引擎 IlEmit）：B 层只绑定本层 globalScope.Functions，previous 层
+            // 的函数/体在 program.Previous 链上。与 Evaluator 的合并语义一致（latest 优先覆盖，indexer
+            // overwrite）：沿链收集全量函数体，新提交同名函数覆盖旧提交（REPL 重定义语义）。
+            var allFunctions = CollectMergedFunctions(program);
+
+            var orderedFunctions = allFunctions.Keys
                 .OrderBy(SymbolSorting.FunctionSortKey, StringComparer.Ordinal)
                 .ToList();
 
@@ -322,7 +328,7 @@ namespace Cocoa.CodeGen.Managed.Writer
                 var method = _methods[function];
                 methods.Add(method);
                 _entryVoidMain = _entryFunction == function && function.ReturnType == TypeSymbol.Void;
-                var (code, localSigToken, maxStack, exceptionTable) = EmitFunctionBody(method, function, program.Functions[function]);
+                var (code, localSigToken, maxStack, exceptionTable) = EmitFunctionBody(method, function, allFunctions[function]);
                 bodies.Add(new ManagedPEWriter.MethodBodyBlob(code, localSigToken, (ushort)maxStack, exceptionTable));
             }
 
@@ -404,14 +410,35 @@ namespace Cocoa.CodeGen.Managed.Writer
         private static HashSet<GlobalVariableSymbol> CollectGlobalVariables(BoundProgram program)
         {
             var result = new HashSet<GlobalVariableSymbol>();
-            foreach (var (_, body) in program.Functions)
+            for (var current = program; current != null; current = current.Previous)
             {
-                CollectGlobalVariables(body, result);
+                foreach (var (_, body) in current.Functions)
+                {
+                    CollectGlobalVariables(body, result);
+                }
+
+                foreach (var (_, body) in current.RawFunctions)
+                {
+                    CollectGlobalVariables(body, result);
+                }
             }
 
-            foreach (var (_, body) in program.RawFunctions)
+            return result;
+        }
+
+        /// <summary>
+        /// 脚本 submission 链合并：沿 <paramref name="program"/> + Previous 链收集全部函数体（latest 优先覆盖，
+        /// 对齐 Evaluator 的 indexer-overwrite 语义）。非 script 链（previous == null）原样返回本层。
+        /// </summary>
+        private static Dictionary<FunctionSymbol, BoundBlockStatement> CollectMergedFunctions(BoundProgram program)
+        {
+            var result = new Dictionary<FunctionSymbol, BoundBlockStatement>();
+            for (var current = program; current != null; current = current.Previous)
             {
-                CollectGlobalVariables(body, result);
+                foreach (var kv in current.Functions)
+                {
+                    result[kv.Key] = kv.Value; // indexer overwrite：新提交优先
+                }
             }
 
             return result;

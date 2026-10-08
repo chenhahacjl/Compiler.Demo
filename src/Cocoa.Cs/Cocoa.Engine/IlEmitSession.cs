@@ -22,6 +22,7 @@ namespace Cocoa.Engine
         private readonly List<string> _references = new();
         private readonly IlTarget _target;
         private Assembly? _assembly;
+        private Assembly? _previousAssembly;
         private readonly string _tempDir;
         private int _emitSeq;
 
@@ -127,6 +128,33 @@ namespace Cocoa.Engine
             return topLevel?.GetField("GV_" + name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
         }
 
+        /// <summary>跨提交持久：previous 程序集已发射的 GV_* 全局变量值 → 新程序集同名静态字段。</summary>
+        private static void InjectPreviousGlobalValues(Assembly next, Assembly previous)
+        {
+            var prevTop = previous.GetType("<CocoaTopLevel>");
+            var nextTop = next.GetType("<CocoaTopLevel>");
+            if (prevTop == null || nextTop == null)
+            {
+                return;
+            }
+
+            foreach (var prevField in prevTop.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
+            {
+                if (!prevField.Name.StartsWith("GV_", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                var nextField = nextTop.GetField(prevField.Name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+                if (nextField == null)
+                {
+                    continue;
+                }
+
+                nextField.SetValue(null, prevField.GetValue(null));
+            }
+        }
+
         private EngineResult EmitAndInvoke(Compilation compilation, bool invokeEval)
         {
             // 发射到临时 dll（netcore 库形态：无 apphost/runtimeconfig，可反射加载）
@@ -142,6 +170,15 @@ namespace Cocoa.Engine
             // 内存加载（共享默认上下文，避免 LoadFile 独立上下文跨程序集 CLR 内部错误）
             var bytes = File.ReadAllBytes(path);
             _assembly = Assembly.Load(bytes);
+
+            // 跨提交持久：把 previous 程序集已发射全局变量（GV_*）的值注入新程序集同名静态字段，
+            // 使旧提交赋值的全局变量在新提交（重新发射）后保持——新提交里若脚本重新初始化会覆盖（stsfld）。
+            if (_previousAssembly != null)
+            {
+                InjectPreviousGlobalValues(_assembly, _previousAssembly);
+            }
+
+            _previousAssembly = _assembly;
 
             if (!invokeEval)
             {

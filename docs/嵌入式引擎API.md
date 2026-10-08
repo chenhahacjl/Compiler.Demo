@@ -1,6 +1,6 @@
 # Cocoa 嵌入式引擎 API
 
-> 状态：✅ 实施完成（2026-10-08）；Interpreter 后端完整（DoString/Call/RegisterCallback/全局变量/Output），IlEmit 后端（DoString/Call/Value/全局变量；Output 为文档化限制）
+> 状态：✅ 实施完成（2026-10-08）；Interpreter 后端完整（DoString/Call/RegisterCallback/全局变量/Output），IlEmit 后端（DoString/Call/Value/全局变量，含跨提交持久；Output 为文档化限制）
 > 定位：面向 C# / .NET 宿主程序 —— 在宿主进程内嵌入执行 Cocoa（`.co`）脚本的运行库 API 手册，等价 Lua 的宿主嵌入模型（`lua_State` / `luaL_dostring` / `lua_register`）。
 > 相关：[快速上手](快速上手.md)、[互操作手册](互操作手册.md)、[编译手册](编译手册.md)
 
@@ -313,6 +313,7 @@ engine.Call("Bump", 5);   // 跨提交读全局变量
 - `SetGlobal` 不自动创建隐式全局（静态语言语义）；
 - `Output` 事件仅 `Interpreter` 后端（IlEmit 反射调用直连 BCL Console）；
 - IlEmit 后端全局变量读写在**单个已发射程序集内**可用（`GetGlobal`/`SetGlobal` 反射读写静态字段）；
-  跨提交持久为残留限制——每次 `DoString` 重新发射会使顶层变量按脚本初始值重置（Interpreter 后端字典持久不重置）；
+  跨提交持久已支持——IlEmitter 收集 previous 链全部函数/全局字段合并发射，IlEmitSession 把旧程序集
+  全局值注入新程序集（新提交脚本显式重新初始化时覆盖，语义与 Interpreter 字典持久一致）；
 - `IlEmit` 后端须 netcore 目标（netfx 产物无法被现代宿主加载）；
 - native 后端不参与（宿主是 .NET 进程，无法嵌入 native 产物）。
