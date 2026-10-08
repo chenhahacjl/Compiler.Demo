@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Cocoa.CodeGen.PE;
+using static Cocoa.CodeGen.PE.PeBinary;
 
 using Cocoa.CodeGen.Managed.Structure;
  using Cocoa.CodeGen.Managed.Reader;
@@ -245,33 +246,13 @@ namespace Cocoa.CodeGen.Managed.Writer
             var block = new byte[12];
             WriteUInt32(block, 0, (int)page);
             WriteUInt32(block, 4, 12);
-            WriteUInt16(block, 8, (ushort)(((int)PeRelocType.HighLow << 12) | offsetInPage));
-            WriteUInt16(block, 10, 0); // ABS 终止
+            PeBinary.WriteUInt16(block, 8, (ushort)(((int)PeRelocType.HighLow << 12) | offsetInPage));
+            PeBinary.WriteUInt16(block, 10, 0); // ABS 终止
 
             directories.Add((PeDataDirectoryEntry.BaseReloc, relocRva, 12));
             // .reloc 必须为 Discardable|Read|InitData（0x42000040，不可写）：
             // CLR 4.8 对可写（0xC0000040）的 .reloc 节镜像报 0x80131018 not an assembly manifest。
             sections.Add(new PeSectionSpec(".reloc", block, relocRva, 0x42000040));
-        }
-
-        private static void WriteUInt32(byte[] bytes, int offset, int value)
-        {
-            bytes[offset] = (byte)value;
-            bytes[offset + 1] = (byte)(value >> 8);
-            bytes[offset + 2] = (byte)(value >> 16);
-            bytes[offset + 3] = (byte)(value >> 24);
-        }
-
-        private static void WriteUInt16(byte[] bytes, int offset, ushort value)
-        {
-            bytes[offset] = (byte)value;
-            bytes[offset + 1] = (byte)(value >> 8);
-        }
-
-        private static int Align(int value, int alignment)
-        {
-            var remainder = value % alignment;
-            return remainder == 0 ? value : value + alignment - remainder;
         }
 
         private static void WriteFatMethodHeader(Stream section, MethodBodyBlob body)

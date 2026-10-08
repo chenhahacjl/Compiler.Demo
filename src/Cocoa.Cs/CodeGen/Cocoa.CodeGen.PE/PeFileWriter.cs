@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Cocoa.Targeting;
 using System.Linq;
+using static Cocoa.CodeGen.PE.PeBinary;
 
 namespace Cocoa.CodeGen.PE
 {
@@ -31,12 +32,6 @@ namespace Cocoa.CodeGen.PE
         public static int ComputeIdataRva(int codeLength, int dataLength)
         {
             return Align(ComputeDataRva(codeLength) + dataLength, SectionAlignment);
-        }
-
-        private static int Align(int value, int alignment)
-        {
-            var remainder = value % alignment;
-            return remainder == 0 ? value : value + alignment - remainder;
         }
 
         public static long ImageBaseOf(Architecture architecture)
@@ -203,20 +198,5 @@ namespace Cocoa.CodeGen.PE
             blob.Add((byte)(value >> 8));
         }
 
-        private static void WriteUInt32(byte[] bytes, int offset, int value)
-        {
-            bytes[offset] = (byte)value;
-            bytes[offset + 1] = (byte)(value >> 8);
-            bytes[offset + 2] = (byte)(value >> 16);
-            bytes[offset + 3] = (byte)(value >> 24);
-        }
-
-        private static void WriteUInt64(byte[] bytes, int offset, long value)
-        {
-            for (var i = 0; i < 8; i++)
-            {
-                bytes[offset + i] = (byte)(value >> (i * 8));
-            }
-        }
     }
 }

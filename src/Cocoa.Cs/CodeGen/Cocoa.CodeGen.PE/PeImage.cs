@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using static Cocoa.CodeGen.PE.PeBinary;
 
 namespace Cocoa.CodeGen.PE
 {
@@ -264,18 +265,7 @@ namespace Cocoa.CodeGen.PE
             return result;
         }
 
-        private static uint Align(uint value, uint alignment)
-        {
-            var remainder = value % alignment;
-            return remainder == 0 ? value : value + alignment - remainder;
         }
-
-        private static int Align(int value, int alignment)
-        {
-            var remainder = value % alignment;
-            return remainder == 0 ? value : value + alignment - remainder;
-        }
-    }
 
     /// <summary>PE 镜像读取器：RVA↔文件偏移换算 + 目录解析（磁盘镜像语义）。</summary>
     public sealed class PeImageReader
