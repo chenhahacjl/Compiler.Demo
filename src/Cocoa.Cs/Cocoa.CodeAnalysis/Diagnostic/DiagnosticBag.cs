@@ -458,7 +458,7 @@ namespace Cocoa.CodeAnalysis
         public void ReportUnresolvedUsing(TextLocation location, string name)
         {
             var message = $"Using namespace '{name}' could not be resolved in the program, references, or .coa libraries. (Cocoa 不绑定 .NET BCL：System.* 等需自带 System.Core 标准库 / 显式引用)";
-            ReportWarning(location, message);
+            ReportWarning(location, message, "COC2001");
         }
 
         /// <summary>`using static` 目标必须是类（6e-M18，C# 同构：导入类静态成员）。</summary>

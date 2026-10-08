@@ -25,8 +25,9 @@
 ## 未发布（2026-10-08）
 
 ### 编译器质量：D3 诊断码（`Diagnostic.Code` + `--nowarn` 过滤）✅
-- **`Diagnostic.Code`**（COC1001+）：首梯队 6 码——未定义类型 COC1001 / 未定义函数 COC1002 / 未定义变量 COC1003 / 已声明 COC1004 / 元数不匹配 COC1005 / 只读赋值 COC1006；`DiagnosticBag.ReportError/ReportWarning` 可选 code 参数。
-- **`DiagnosticExtensions.ApplyNowarn`**：按码过滤压制警告（保留全部错误）——`--nowarn:CODE` 挂点。
+- **`Diagnostic.Code`**（COC1001+）：首梯队 6 错误码——未定义类型 COC1001 / 未定义函数 COC1002 / 未定义变量 COC1003 / 已声明 COC1004 / 元数不匹配 COC1005 / 只读赋值 COC1006 + 警告码 COC2001（using 未解析）；`DiagnosticBag.ReportError/ReportWarning` 可选 code 参数。
+- **`DiagnosticExtensions.ApplyNowarn`**：按码过滤压制警告（保留全部错误）。
+- **CLI `--nowarn:<codes>`** 接线：直接编译与 `.coa` 部署路径（`--nowarn:COC2001` 实测压制 using 未解析警告）。
 - **关键约束**：`ToString()` 保持 Message（不含码）——保护自举双后端诊断逐字节差分（M9-a4）与 CLI 输出稳定；码作独立元数据，CLI 输出加码镜像自举侧后再做。
 - 测试 `DiagnosticCodeTests` 6 例（各码赋值 + ToString 不变 + ApplyNowarn 过滤）。
 - 文档：语义债务 D3 状态翻转；其余 ~80 个 Report 方法按需渐进补码。

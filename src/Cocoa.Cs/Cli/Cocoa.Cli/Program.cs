@@ -90,6 +90,7 @@ namespace Cocoa.Cli
             var referencePaths = new List<string>();
             var sourcePaths = new List<string>();
             var helpRequested = false;
+            var nowarnCodes = System.Collections.Immutable.ImmutableHashSet<string>.Empty;
 
             for (var i = 0; i < args.Length; i++)
             {
@@ -150,6 +151,16 @@ namespace Cocoa.Cli
                             return 1;
                         }
 
+                        break;
+                    case "--nowarn":
+                        // D3：`--nowarn:COC1001,COC1002` 或 `--nowarn COC1001,COC1002`——按诊断码压制警告
+                        if (!TryTakeValue(args, ref i, inlineValue, out var nowarnText))
+                        {
+                            return 1;
+                        }
+
+                        var codes = nowarnText.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                        nowarnCodes = nowarnCodes.Union(codes);
                         break;
                     case "-?":
                     case "-h":
@@ -310,16 +321,18 @@ namespace Cocoa.Cli
                 return 1;
             }
 
-            if (diagnostics.HasErrors())
+            var printedDiagnostics = diagnostics.ApplyNowarn(nowarnCodes);
+
+            if (printedDiagnostics.HasErrors())
             {
-                Console.Error.WriteDiagnostics(diagnostics);
+                Console.Error.WriteDiagnostics(printedDiagnostics);
 
                 return 1;
             }
 
-            if (diagnostics.Any())
+            if (printedDiagnostics.Any())
             {
-                Console.Error.WriteDiagnostics(diagnostics);
+                Console.Error.WriteDiagnostics(printedDiagnostics);
             }
 
             // 动态链接部署（阶段 C，对齐 ProjectBuilder.cs:195-209）：被消费 `.coa` 库按需生成
@@ -332,7 +345,7 @@ namespace Cocoa.Cli
                     outputDir = ".";
                 }
 
-                if (!EnsureManagedDlls(compilation.CodLibraries, outputDir, effectiveTarget))
+                if (!EnsureManagedDlls(compilation.CodLibraries, outputDir, effectiveTarget, nowarnCodes))
                 {
                     return 1;
                 }
@@ -347,7 +360,7 @@ namespace Cocoa.Cli
         /// 动态链接：确保被消费 `.coa` 库的托管 dll（X.Managed.dll）在输出目录就绪——
         /// 缺失或 stamp（cod sha256）过期 → 从 cod 现场再生（与 cocoa build 同机制）。
         /// </summary>
-        private static bool EnsureManagedDlls(System.Collections.Immutable.ImmutableArray<Cocoa.CodeAnalysis.Serialization.CoaProgram> libraries, string outputDirectory, IlTarget target)
+        private static bool EnsureManagedDlls(System.Collections.Immutable.ImmutableArray<Cocoa.CodeAnalysis.Serialization.CoaProgram> libraries, string outputDirectory, IlTarget target, System.Collections.Immutable.ImmutableHashSet<string> nowarnCodes)
         {
             try
             {
@@ -381,7 +394,7 @@ namespace Cocoa.Cli
                 var diagnostics = CoaLibraryCompiler.EmitManagedDll(library, managedDll, target, libraries);
                 if (diagnostics.HasErrors())
                 {
-                    Console.Error.WriteDiagnostics(diagnostics);
+                    Console.Error.WriteDiagnostics(diagnostics.ApplyNowarn(nowarnCodes));
                     ok = false;
                     continue;
                 }
@@ -461,6 +474,7 @@ namespace Cocoa.Cli
             Console.WriteLine("  --platform <arch>  The native target architecture: x86 or x64 (default x64). Only used with -b native");
             Console.WriteLine("  --dotnet-runtime <tfm>  The .NET target framework: net40~net48 (netfx, default net48) or net8.0/net9.0 (netcore). Only used with -b dotnet");
             Console.WriteLine("  --dotnet-module <name>  The module name (dotnet backend only; defaults to the output file name)");
+            Console.WriteLine("  --nowarn:<codes>  Suppress warnings by diagnostic code (comma-separated, e.g. COC2001)");
             Console.WriteLine("  -i, --interactive   Launches the interactive REPL");
             Console.WriteLine("  -?, -h, --help      Prints help");
         }
