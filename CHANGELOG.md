@@ -32,6 +32,16 @@
 - 测试 `DiagnosticCodeTests` 6 例（各码赋值 + ToString 不变 + ApplyNowarn 过滤）。
 - 文档：语义债务 D3 状态翻转；其余 ~80 个 Report 方法按需渐进补码。
 
+---
+
+## 未发布（2026-10-08）
+
+### 语言特性：集合表达式（C# 12）+ D1 复核销账 ✅
+- **`[1, 2, 3]` / `[..[10, 20], 4]`**：新 `CollectionExpression` 语法节点 + primary 解析 + 绿节点工厂——绑定降级为数组创建（`BoundArrayCreationExpression`，三后端零发射改动）；元素类型从首个元素推导（空集合默认 `i32[]`）；`..` 字面量数组 spread 展平。
+- **限制**：变量 spread（`[..a]`）暂报清晰诊断「spread 目前仅支持编译期字面量数组」（运行期数组合并留后续）。
+- 测试 `CollectionExpressionThreeBackendTests` 6 例（Evaluator / IL(net9.0) / Native x86+x64 端到端 + 绑定树形态断言 + 变量 spread 负例）。回归 414 通过。
+- **D1 复核销账**：重载转换计分（`ResolveOverloadByScore` 隐式转换罚分 + better-conversion-target 竞拍）早已实现——语义债务 D1 翻转为已实现。
+
 ## 未发布（2026-10-01）
 
 ### 语言特性：模式匹配 / 嵌套类 / 空条件访问 / 溢出控制 / 运算符重载（2026-09-29 ~ 10-01）

@@ -264,5 +264,6 @@ ColonToken,               // :
         RequiredKeyword = 247, // required（必需成员修饰符，C# 11：构造器必须赋值）
         GlobalKeyword = 248,   // global（`global using X;` 全局 using 前缀，C# 10）
         FileKeyword = 249,     // file（文件范围类型修饰符，C# 11）
+        CollectionExpression = 250, // 集合表达式：`[1, 2, 3]` / `[..a, 4]`（C# 12）
     }
 }

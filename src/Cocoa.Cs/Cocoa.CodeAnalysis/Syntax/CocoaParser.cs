@@ -368,6 +368,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.NewKeyword:
                     return ParseArrayCreationExpression();
 
+                case SyntaxKind.OpenBracketToken:
+                    // 集合表达式（C# 12）：`[1, 2, 3]` / `[..a, 4]`。左括号 primary 入口。
+                    return ParseCollectionExpression();
+
                 case SyntaxKind.FalseKeyword:
                 case SyntaxKind.TrueKeyword:
                     return ParseBooleanLiteral();
@@ -1110,11 +1114,44 @@ namespace Cocoa.CodeAnalysis.Syntax
             return expression;
         }
 
+        private ExpressionSyntax ParseCollectionExpression()
+        {
+            var openBracketToken = MatchToken(SyntaxKind.OpenBracketToken);
+            var elements = ImmutableArray.CreateBuilder<SyntaxNode>();
+
+            while (Current.Kind != SyntaxKind.CloseBracketToken && Current.Kind != SyntaxKind.EndOfFileToken)
+            {
+                // spread `..a`：范围展开元素 → RangeExpression（`..` 后接元素），绑定侧识别现场展开
+                if (Current.Kind == SyntaxKind.DotDotToken)
+                {
+                    var dotDotToken = NextToken();
+                    var spreadExpr = ParseExpression();
+                    elements.Add(new RangeExpressionSyntax(_syntaxTree, left: null, dotDotToken, right: spreadExpr));
+                }
+                else
+                {
+                    elements.Add(ParseExpression());
+                }
+
+                if (Current.Kind == SyntaxKind.CommaToken)
+                {
+                    elements.Add(NextToken());
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            var closeBracketToken = MatchToken(SyntaxKind.CloseBracketToken);
+            return new CollectionExpressionSyntax(_syntaxTree, openBracketToken,
+                new SeparatedSyntaxList<ExpressionSyntax>(elements.ToImmutable()), closeBracketToken);
+        }
+
         private ExpressionSyntax ParseArrayCreationExpression()
         {
             var newKeyword = MatchToken(SyntaxKind.NewKeyword);
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
-
             while (Current.Kind == SyntaxKind.DotToken &&
                    Peek(1).Kind == SyntaxKind.IdentifierToken)
             {

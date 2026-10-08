@@ -308,6 +308,25 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new WithExpressionSyntax(syntaxTree, expression, withKeyword, openBrace, assignments, closeBrace);
         }
 
+        private SyntaxNode BuildCollectionExpression(SyntaxTree syntaxTree, int position)
+        {
+            var slot = 0;
+            var openBracket = (SyntaxToken)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += _green.GetSlot(slot)!.Width;
+            slot++;
+
+            var nodesAndSeparators = ImmutableArray.CreateBuilder<SyntaxNode>();
+            for (var i = slot; i < _green.SlotCount - 1; i++)
+            {
+                nodesAndSeparators.Add(_green.GetSlot(i)!.CreateTypedRed(syntaxTree, position));
+                position += _green.GetSlot(i)!.Width;
+            }
+
+            var closeBracket = (SyntaxToken)_green.GetSlot(_green.SlotCount - 1)!.CreateTypedRed(syntaxTree, position);
+            var elements = new SeparatedSyntaxList<ExpressionSyntax>(nodesAndSeparators.ToImmutable());
+            return new CollectionExpressionSyntax(syntaxTree, openBracket, elements, closeBracket);
+        }
+
         private SyntaxNode BuildElementAccessExpression(SyntaxTree syntaxTree, int position)
         {
             var expression = (ExpressionSyntax)_green.GetSlot(0)!.CreateTypedRed(syntaxTree, position);

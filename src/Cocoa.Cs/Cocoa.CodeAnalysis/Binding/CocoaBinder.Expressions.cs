@@ -1016,6 +1016,82 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundObjectCreationExpression(syntax, classType, arguments.ToImmutable(), ctor);
         }
 
+        /// <summary>
+        /// 集合表达式（C# 12）：`[1, 2, 3]` / `[..a, 4]`。降级为数组创建——
+        /// 元素类型从首个非 spread 元素推导（空集合降级 i32[]）；`..x` spread 把 x（同元素数组）展开。
+        /// </summary>
+        private BoundExpression BindCollectionExpression(CollectionExpressionSyntax syntax)
+        {
+            // 元素类型推导：首个字面元素类型（spread 元素按其数组元素类型）
+            TypeSymbol? inferredElement = null;
+            foreach (var elementSyntax in syntax.Elements)
+            {
+                if (elementSyntax is RangeExpressionSyntax spreadSyntax && spreadSyntax.Right != null)
+                {
+                    var spreadType = BindExpression(spreadSyntax.Right);
+                    if (spreadType.Type is ArrayTypeSymbol at)
+                    {
+                        inferredElement ??= at.ElementType;
+                    }
+                }
+                else
+                {
+                    var elementType = BindExpression(elementSyntax).Type;
+                    if (elementType != TypeSymbol.Error)
+                    {
+                        inferredElement ??= elementType;
+                    }
+                }
+            }
+
+            // 空集合 + 无目标类型 → 默认 int[]（i32[]）
+            var element = inferredElement ?? TypeSymbol.Int32;
+            var arrayType = TypeSymbol.ArrayOf(element);
+
+            var initializers = ImmutableArray.CreateBuilder<BoundExpression>();
+            foreach (var elementSyntax in syntax.Elements)
+            {
+                if (elementSyntax is RangeExpressionSyntax spreadSyntax && spreadSyntax.Right != null)
+                {
+                    var spread = BindExpression(spreadSyntax.Right);
+                    if (spread.Type is not ArrayTypeSymbol spreadArray ||
+                        spreadArray.ElementType != element)
+                    {
+                        _diagnostics.ReportError(spreadSyntax.Right.Location,
+                            $"集合表达式 spread '..' 的操作数必须是 '{element}[]' 数组。");
+                        continue;
+                    }
+
+                    AppendSpread(initializers, spread);
+                }
+                else
+                {
+                    initializers.Add(BindConversion(elementSyntax.Location, BindExpression(elementSyntax), element));
+                }
+            }
+
+            var length = new BoundLiteralExpression(syntax, initializers.Count);
+            return new BoundArrayCreationExpression(syntax, arrayType, length, initializers.ToImmutable());
+        }
+
+        /// <summary>把已绑定的数组表达式逐元素加入集合初始值列表（spread 展平）。</summary>
+        private void AppendSpread(ImmutableArray<BoundExpression>.Builder initializers, BoundExpression spread)
+        {
+            if (spread is BoundArrayCreationExpression { Initializers.Length: > 0 } arrayLiteral)
+            {
+                // 编译期字面量数组：直接透传元素
+                foreach (var item in arrayLiteral.Initializers)
+                {
+                    initializers.Add(item);
+                }
+
+                return;
+            }
+
+            _diagnostics.ReportError(spread.Syntax.Location,
+                "集合表达式 spread 目前仅支持编译期字面量数组（如 `[..[1,2]]`）；变量 spread 请改用显式循环。");
+        }
+
         private BoundExpression BindElementAccessExpression(ElementAccessExpressionSyntax syntax)
         {
             // ^n (index from end) → new Index(n, fromEnd: true)
