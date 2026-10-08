@@ -73,7 +73,8 @@ namespace Cocoa.CodeAnalysis.Symbols
             new(BuiltinKind.TypeFullName, BuiltinBackend.All, null),
             new(BuiltinKind.Sha256Hash, BuiltinBackend.All, null),
             new(BuiltinKind.LaunchProcess, BuiltinBackend.All, null),
-            new(BuiltinKind.CopyRange, BuiltinBackend.All, null));
+            new(BuiltinKind.CopyRange, BuiltinBackend.All, null),
+            new(BuiltinKind.SelfIntrospect, BuiltinBackend.All, null));
 
         public static BuiltinCoverageRow? Get(BuiltinKind kind) => Rows.FirstOrDefault(r => r.Kind == kind);
 

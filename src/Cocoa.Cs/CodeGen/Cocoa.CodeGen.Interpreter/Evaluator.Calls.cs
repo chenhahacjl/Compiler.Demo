@@ -527,6 +527,9 @@ namespace Cocoa.CodeGen.Interpreter
                     Array.Copy(source, start, result, 0, count);
                     return result;
                 }
+                case BuiltinKind.SelfIntrospect:
+                    // 解释器产物无 .cocoa 载体（仅 native 内嵌）——恒 false
+                    return false;
                 default:
                     throw new InvalidOperationException($"Evaluator 后端未实现内建原语 {function.BuiltinKind}；覆盖登记见 BuiltinCoverage");
             }

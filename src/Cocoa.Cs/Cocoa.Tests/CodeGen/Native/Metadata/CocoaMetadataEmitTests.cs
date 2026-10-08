@@ -157,5 +157,31 @@ function Main(): i32
             Assert.True(cocoa.Length > 0, ".cocoa 节缺失");
             Assert.Equal("COCOA", Encoding.ASCII.GetString(cocoa, 0, 5));
         }
+
+        /// <summary>
+        /// M6：运行期内存自省冒烟——程序运行期经 SelfIntrospect（GetModuleHandleW → 内存节表 → 魔数校验）
+        /// 探到自身 .cocoa 节 → Main 返回 0；探不到返回 1（挂）。
+        /// </summary>
+        [Theory]
+        [MemberData(nameof(GetPlatforms))]
+        public void SelfIntrospect_DetectsOwnCocoaSection(object platform)
+        {
+            var target = (TargetPlatform)platform;
+            var exePath = EmitNative(@"using System
+
+class Runtime
+{
+    syscall function SelfIntrospect(): bool
+}
+
+function Main(): i32
+{
+    if !Runtime.SelfIntrospect() return 1
+    return 0
+}", "cocoa-selfintrospect", target);
+
+            var run = Run(exePath);
+            Assert.Equal(0, run.ExitCode);
+        }
     }
 }

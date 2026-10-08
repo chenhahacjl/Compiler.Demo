@@ -317,6 +317,10 @@ namespace Cocoa.CodeGen.Managed.Writer
                     il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)dstLocal);              // [dst]
                     break;
                 }
+                case BuiltinKind.SelfIntrospect:
+                    // IL 产物无 .cocoa 节（仅 native 内嵌）——恒 false
+                    il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));
+                    break;
                 default:
                     throw new InvalidOperationException($"IL 后端未实现内建原语 {function.BuiltinKind}；覆盖登记见 BuiltinCoverage");
             }

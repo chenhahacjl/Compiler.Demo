@@ -22,6 +22,8 @@ namespace Cocoa.CodeGen.Native
             "GetStdHandle", "WriteFile", "ReadFile", "ExitProcess", "VirtualAlloc", "VirtualFree",
             "GetFileType", "ReadConsoleW", "WriteConsoleW", "GetCommandLineW", "Sleep",
             "ReadConsoleInputW", "GetNumberOfConsoleInputEvents", "Beep",
+            // M6：运行期内存自省——GetModuleHandleW(NULL) 取自身镜像基址
+            "GetModuleHandleW",
             // Y-P0-1：文件 IO / 环境 syscall（G7-部分补齐；文件读写经 Win32 kernel32 低参 API，对标 .NET FileStream 底层）。
             "GetFileAttributesW", "DeleteFileW", "CopyFileW", "GetCurrentDirectoryW",
             "SetCurrentDirectoryW", "GetEnvironmentVariableW", "GetModuleFileNameW",
@@ -264,6 +266,8 @@ namespace Cocoa.CodeGen.Native
                 EmitGetCurrentDirectory();
                 _ = BeginFunction("GetExecutablePath");
                 EmitGetExecutablePath();
+                _ = BeginFunction("SelfIntrospect");
+                EmitSelfIntrospect();
                 _ = BeginFunctionTyped("SetCurrentDirectory", new[] { 8 }, LirType.Addr);
                 EmitSetCurrentDirectory();
                 _ = BeginFunctionTyped("FileReadAllBytes", new[] { 8 }, LirType.Addr);

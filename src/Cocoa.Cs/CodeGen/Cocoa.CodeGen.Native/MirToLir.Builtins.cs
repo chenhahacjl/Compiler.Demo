@@ -301,9 +301,16 @@ namespace Cocoa.CodeGen.Native
                 }
                 case BuiltinKind.TickCount:
                 {
-                    var result = AllocateRegister(4);
-                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("TickCount"), LirOperand.Constant(0)));
-                    return result;
+                    var result1 = AllocateRegister(4);
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result1, LirOperand.Runtime("TickCount"), LirOperand.Constant(0)));
+                    return result1;
+                }
+                case BuiltinKind.SelfIntrospect:
+                {
+                    // M6：运行期内省——GetModuleHandleW(NULL) → 基址 → 内存节表 → .cocoa 魔数校验（运行期 SelfIntrospect）
+                    var result2 = AllocateRegister(4);
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result2, LirOperand.Runtime("SelfIntrospect"), LirOperand.Constant(0)));
+                    return result2;
                 }
                 case BuiltinKind.Exit:
                 {

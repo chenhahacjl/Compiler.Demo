@@ -70,9 +70,14 @@ FileWriteAllBytes,
         TypeName,
         TypeFullName,
 
-        // ---- 数组切片（P1-2 .. Range 运算符）----
-        CopyRange,
-    }
+// ---- 数组切片（P1-2 .. Range 运算符）----
+          CopyRange,
+
+          // ---- .cocoa 运行期内存自省（M6，native-only）----
+          // 运行期 GetModuleHandle(NULL) → 基址 → 内存节表 RVA → 读自身 .cocoa 节并校验魔数。
+          // 仅 native 产物内嵌 .cocoa；Evaluator/IL 无此载体 → 返回 false。
+          SelfIntrospect,
+      }
 
         /// <summary>内置函数规格：名称/签名 + 种类（功能层声明）。</summary>
     internal sealed record BuiltinSpec(BuiltinKind Kind, string Name, TypeSymbol ReturnType, (string Name, TypeSymbol Type)[] Parameters);
@@ -122,7 +127,8 @@ FileWriteAllBytes,
             new BuiltinSpec(BuiltinKind.CreateDirectory, "CreateDirectory", TypeSymbol.Void, new[] { ("path", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.SetCurrentDirectory, "SetCurrentDirectory", TypeSymbol.Void, new[] { ("path", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.Sha256Hash, "Sha256Hash", TypeSymbol.ArrayOf(TypeSymbol.UInt8), new[] { ("data", TypeSymbol.ArrayOf(TypeSymbol.UInt8)) }),
-            new BuiltinSpec(BuiltinKind.LaunchProcess, "LaunchProcess", TypeSymbol.Int32, new[] { ("path", TypeSymbol.String), ("args", TypeSymbol.String), ("workdir", TypeSymbol.String) }));
+            new BuiltinSpec(BuiltinKind.LaunchProcess, "LaunchProcess", TypeSymbol.Int32, new[] { ("path", TypeSymbol.String), ("args", TypeSymbol.String), ("workdir", TypeSymbol.String) }),
+            new BuiltinSpec(BuiltinKind.SelfIntrospect, "SelfIntrospect", TypeSymbol.Boolean, System.Array.Empty<(string, TypeSymbol)>()));
 
         /// <summary>
         /// 输出字符串并换行: void WriteLine(any text)（Console.WriteLine）
@@ -205,6 +211,7 @@ FileWriteAllBytes,
         public static readonly FunctionSymbol SetCurrentDirectory = Create(BuiltinKind.SetCurrentDirectory);
         public static readonly FunctionSymbol Sha256Hash = Create(BuiltinKind.Sha256Hash);
         public static readonly FunctionSymbol LaunchProcess = Create(BuiltinKind.LaunchProcess);
+        public static readonly FunctionSymbol SelfIntrospect = Create(BuiltinKind.SelfIntrospect);
 
         private static FunctionSymbol Create(BuiltinKind kind)
         {
@@ -261,6 +268,7 @@ FileWriteAllBytes,
                 BuiltinKind.SetCurrentDirectory => SetCurrentDirectory,
                 BuiltinKind.Sha256Hash => Sha256Hash,
                 BuiltinKind.LaunchProcess => LaunchProcess,
+                BuiltinKind.SelfIntrospect => SelfIntrospect,
                 _ => null,
             };
         }
