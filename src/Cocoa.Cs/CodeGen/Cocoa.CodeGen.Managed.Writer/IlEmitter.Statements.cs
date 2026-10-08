@@ -122,6 +122,12 @@ namespace Cocoa.CodeGen.Managed.Writer
                 if (node.Expression != null)
                 {
                     EmitExpression(il, node.Expression);
+                    var boxedName = _currentMethodReturnType == TypeSymbol.Any ? BoxedTypeName(node.Expression.Type) : null;
+                    if (boxedName != null)
+                    {
+                        il.Emit(IlOpCodeTable.Get("Box"), _framework.RequireType(boxedName));
+                    }
+
                     if (!_returnExitHasValue)
                     {
                         _returnExitHasValue = true;
@@ -143,6 +149,15 @@ namespace Cocoa.CodeGen.Managed.Writer
             if (node.Expression != null)
             {
                 EmitExpression(il, node.Expression);
+
+                // any/object 返回方法：值类型返回显式 box（$eval 等 script 顶层表达式；
+                // Binder 把顶层表达式转 ReturnStatement 时表达类型保持 int，但方法签名返回 any）
+                if (_currentMethodReturnType == TypeSymbol.Any &&
+                    IsValueTypeSymbol(node.Expression.Type) &&
+                    BoxedTypeName(node.Expression.Type) != null)
+                {
+                    il.Emit(IlOpCodeTable.Get("Box"), _framework.RequireType(BoxedTypeName(node.Expression.Type)!));
+                }
             }
             else if (_entryVoidMain)
             {

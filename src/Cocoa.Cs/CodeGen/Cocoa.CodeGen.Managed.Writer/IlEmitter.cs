@@ -46,6 +46,7 @@ namespace Cocoa.CodeGen.Managed.Writer
 
         private FunctionSymbol? _entryFunction;
         private bool _entryVoidMain;
+        private TypeSymbol _currentMethodReturnType = TypeSymbol.Void;
 
         private readonly IlTypeDef _typeDefinition;
         /// <summary>库产物（emitLibrary）：类型/方法统一按 public 发布（分发面即公共契约）。</summary>
@@ -550,6 +551,7 @@ namespace Cocoa.CodeGen.Managed.Writer
             _temporaryLocalIndices.Clear();
             _syntheticTemporaryLocalIndices.Clear();
             _currentMethodIsInstance = !method.IsStatic;
+            _currentMethodReturnType = function.ReturnType;
             _returnExitTarget = null;
             _returnExitHasValue = false;
             _returnExitTemp = -1;

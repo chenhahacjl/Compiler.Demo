@@ -3,6 +3,7 @@ using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeGen.Interpreter;
+using Cocoa.CodeGen.Managed.Writer;
 
 namespace Cocoa.Engine
 {
@@ -17,15 +18,22 @@ namespace Cocoa.Engine
         private readonly Dictionary<VariableSymbol, object> _variables = new();
         private readonly List<string> _references = new();
         private readonly EngineBackend _backend;
+        private readonly IlEmitSession? _ilSession;
+        private readonly Dictionary<string, Delegate> _callbacks = new(StringComparer.Ordinal);
         private bool _disposed;
 
         public CocoaEngine(EngineBackend backend = EngineBackend.Interpreter)
         {
             _backend = backend;
             InterpreterBackend.Register();
-            if (backend == EngineBackend.IlEmit)
+            ManagedBackend.Register(); // 回调经注册表统一（IlEmit 后端也需发射委托）
+            if (backend != EngineBackend.IlEmit)
             {
-                Cocoa.CodeGen.Managed.Writer.ManagedBackend.Register();
+                _ilSession = null;
+            }
+            else
+            {
+                _ilSession = new IlEmitSession();
             }
 
             // 引擎回调绑定放行（进程级静态，docs/嵌入式引擎API.md §10 已知边界）：syscall 声明
@@ -46,6 +54,8 @@ namespace Cocoa.Engine
                     }
                 }
             }
+
+            _ilSession?.SetReferences(_references);
         }
 
         /// <summary>脚本输出（仅 Interpreter 后端；WriteLine/Write 拦截后发往订阅者）。</summary>
@@ -66,6 +76,11 @@ namespace Cocoa.Engine
         public EngineResult DoString(string code)
         {
             ThrowIfDisposed();
+
+            if (_backend == EngineBackend.IlEmit)
+            {
+                return _ilSession!.DoString(code);
+            }
 
             var syntaxTree = SyntaxTree.Parse(code);
             var compilation = Compilation.CreateScript(
@@ -112,10 +127,15 @@ namespace Cocoa.Engine
             }
         }
 
-        /// <summary>读取脚本已声明的顶层全局变量；未声明名称返回 null。</summary>
+        /// <summary>读取脚本已声明的顶层全局变量；未声明名称返回 null。IlEmit 后端不支持（见 <see cref="SetGlobal"/>）。</summary>
         public object? GetGlobal(string name)
         {
             ThrowIfDisposed();
+
+            if (_backend == EngineBackend.IlEmit)
+            {
+                throw new NotSupportedException("IlEmit 后端暂不支持全局变量读写（script 顶层变量未提升为静态字段——引擎 API §12 已知限制）");
+            }
 
             var symbol = FindVariable(name);
             if (symbol == null)
@@ -129,11 +149,16 @@ namespace Cocoa.Engine
 
         /// <summary>
         /// 写入已声明的顶层全局变量。Cocoa 为静态语言：未声明变量抛 <see cref="ArgumentException"/>
-        /// （不自动创建隐式全局）。
+        /// （不自动创建隐式全局）。IlEmit 后端抛 <see cref="NotSupportedException"/>。
         /// </summary>
         public void SetGlobal(string name, object? value)
         {
             ThrowIfDisposed();
+
+            if (_backend == EngineBackend.IlEmit)
+            {
+                throw new NotSupportedException("IlEmit 后端暂不支持全局变量读写（script 顶层变量未提升为静态字段——引擎 API §12 已知限制）");
+            }
 
             var symbol = FindVariable(name);
             if (symbol == null)
@@ -169,9 +194,8 @@ namespace Cocoa.Engine
         {
             _previous = null;
             _variables.Clear();
+            _ilSession?.Reset();
         }
-
-        private readonly Dictionary<string, Delegate> _callbacks = new(StringComparer.Ordinal);
 
         /// <summary>
         /// 按名调用顶层函数（脚本语义等价 Lua 全局函数）。实参以 <c>object?[]</c> 传入，
@@ -183,6 +207,11 @@ namespace Cocoa.Engine
         public object? Call(string functionName, params object?[] args)
         {
             ThrowIfDisposed();
+
+            if (_backend == EngineBackend.IlEmit)
+            {
+                return _ilSession!.Call(functionName, args);
+            }
 
             if (_previous == null)
             {
@@ -234,6 +263,7 @@ namespace Cocoa.Engine
         public void Dispose()
         {
             _disposed = true;
+            _ilSession?.Dispose();
         }
     }
 }
