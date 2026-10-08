@@ -30,6 +30,7 @@
 | [plan/UI库规划.md](plan/UI库规划.md) | UI 生态系统：Handle 句柄类型 + System.UI 立即模式库（6e-M25；**阶段 1–5 已完成**：核心 + Win32 GDI 轮询后端 + 完整控件集/输入/滚动 + 主题/样式栈 + WinForms 命名 + native extern 编组 + 声明式语法糖/一控件一文件；示例 BasicUI/AdvancedUI/NativeUI/DeclarativeUI；实施记录见 §13–§17） |
 | [plan/Stage5-语言特性补全路线图.md](plan/Stage5-语言特性补全路线图.md) | Stage 5 语言特性补全路线（Phase 1-5 + 模式匹配 + using 已实现；被后续阶段覆盖，历史参考） |
 | [plan/Stage6-Native后端对齐设计.md](plan/Stage6-Native后端对齐设计.md) | Native 后端对齐设计（N1-N3：lock/Index/Range/yield；N3 方案 B 定稿） |
+| [plan/产物元数据节设计.md](plan/产物元数据节设计.md) | native 产物内嵌 `.cocoa` 元数据节（`"COCOA"` 魔数 + 多流符号表，工具链/运行期自省）——📋 定稿，M1~M7 推进中 |
 
 ## 3. archive/ — 已实现 · 设计依据保留（🛑 归档）
 
