@@ -54,6 +54,8 @@ namespace Cocoa.Cli
                     return CleanCommand.Run(args.Skip(1).ToArray());
                 case "dump":
                     return DumpCommand.Run(args.Skip(1).ToArray());
+                case "inspect":
+                    return InspectCommand.Run(args.Skip(1).ToArray());
                 case "-i":
                 case "--interactive":
                     RunInteractive();
