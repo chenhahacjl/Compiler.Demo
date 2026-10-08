@@ -21,4 +21,5 @@
   </Folder>
   <Project Path="Cocoa.Build/Cocoa.Build.csproj" />
   <Project Path="Cocoa.Tests/Cocoa.Tests.csproj" />
+  <Project Path="Cocoa.Tests.SelfHosting/Cocoa.Tests.SelfHosting.csproj" />
 </Solution>

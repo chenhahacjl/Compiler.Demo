@@ -27,6 +27,7 @@
 | `Cocoa.Cli` | `Cocoa.Cli` | **`cocoa`** | 主 CLI（子命令 new/build/run/list/add/remove/clean/-i） |
 | `Cocoa.Cli.Repl` | `Cocoa.Cli.Repl` | 同名 | REPL：终端渲染、补全、元命令 |
 | `Cocoa.Tests` | 各测试 ns | — | 全量测试（基线见 §7） |
+| `Cocoa.Tests.SelfHosting` | `Cocoa.Tests.*`（保留原名） | — | 自举/差分测试（阶段 8：Bootstrapper*/Corpus_*/Scaffold*/*DifferentialTests/Golden，独立工程）；**渐进迁移源**——逐个用 `.co` 重写进 `src/Cocoa.Co/Cocoa.Tests/*.co` 后删除，归零即自举测试框架成熟 |
 
 ## 3. 依赖方向
 
@@ -83,7 +84,9 @@ ManagedBackend.Register(); NativeBackend.Register(); InterpreterBackend.Register
 ## 8. 验证与提交纪律
 
 - 验证：`dotnet build src/Cocoa.Cs/Cocoa.slnx --no-incremental`（增量构建在 stash/mtime 往返后会用陈旧二进制骗人）
-  + `dotnet test src/Cocoa.Cs/Cocoa.Tests` 全量。
+  + `dotnet test src/Cocoa.Cs/Cocoa.Tests` 全量（**C# 特性快速回路**，不含自举/差分）。
+- 自举/差分测试在独立工程 `Cocoa.Tests.SelfHosting`（阶段 8 相关、依赖 `src/Cocoa.Co` 语料与 `%TEMP%` 产物）：
+  `dotnet test src/Cocoa.Cs/Cocoa.Tests.SelfHosting`。开发 Cocoa.Cs 特性时默认只跑前一个即可。
 - 标准库重建：改 `src/Cocoa.SDK/` 后跑 `tools\build-sdk.cmd`（产物收集到 `src/Cocoa.Cs/libs/` 与 `tools\cocoa-sdk/` 并自动分发）。
 - 每步独立 commit；重构前缀 `refactor(...)`，文档类用 `docs(...)`；文档与进度日志随每步更新。
 - 源文件 UTF-8；测试期望字符串注意 `\r\n` 与 Unicode 控制台输出（native exe 输出为 UTF-16）。
