@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace Cocoa.CodeGen.Interpreter
 {
-    // TODO: Get rid of evaluator in favor of IlEmitter
+    // 注意：Evaluator 是活跃后端——REPL 求值、DebuggerSession、测试 Evaluate 均消费；仅当 REPL/调试迁向 IlEmitter 后再评估移除。
     /// <summary>
     /// 求值器
     /// </summary>
