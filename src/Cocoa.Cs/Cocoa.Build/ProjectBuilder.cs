@@ -55,24 +55,11 @@ namespace Cocoa.Build
                 return ProjectBuildResult.Failed;
             }
 
-            var references = new List<string>();
-            foreach (var reference in project.References.Concat(options.ReferenceOverrides))
+            var references = CollectReferences(project, options, messageWriter, out var referenceError);
+            if (referenceError != null)
             {
-                var path = Path.IsPathRooted(reference)
-                    ? reference
-                    : Path.GetFullPath(Path.Combine(project.Directory, reference));
-
-                if (path.EndsWith(".coa", StringComparison.OrdinalIgnoreCase))
-                {
-                    // `.coa` 语义层程序集引用：Compilation 加载 + 符号注入 + BoundProgram 合并
-                }
-                else if (!File.Exists(path))
-                {
-                    messageWriter.WriteLine($"error: file '{path}' doesn't exist!");
-                    return ProjectBuildResult.Failed;
-                }
-
-                references.Add(path);
+                messageWriter.WriteLine(referenceError);
+                return ProjectBuildResult.Failed;
             }
 
             foreach (var import in project.Imports)
@@ -274,6 +261,41 @@ namespace Cocoa.Build
             messageWriter.WriteLine(outputFile);
 
             return new ProjectBuildResult(success: true, upToDate: false);
+        }
+
+        /// <summary>
+        /// 收集项目引用（project.References + 命令行 overrides）：`.coa`/`.dll` 校验存在性，
+        /// 全部合法返回引用列表；遇缺失文件返回 error 消息（调用方负责打印并判失败）。
+        /// `.coa` 语义层程序集引用由 Compilation 加载（符号注入 + BoundProgram 合并），此处仅登记路径。
+        /// </summary>
+        private static List<string> CollectReferences(
+            CocoaProjectFile project,
+            ProjectBuildOptions options,
+            TextWriter messageWriter,
+            out string? error)
+        {
+            var references = new List<string>();
+            foreach (var reference in project.References.Concat(options.ReferenceOverrides))
+            {
+                var path = Path.IsPathRooted(reference)
+                    ? reference
+                    : Path.GetFullPath(Path.Combine(project.Directory, reference));
+
+                if (path.EndsWith(".coa", StringComparison.OrdinalIgnoreCase))
+                {
+                    // `.coa` 语义层程序集引用：Compilation 加载 + 符号注入 + BoundProgram 合并
+                }
+                else if (!File.Exists(path))
+                {
+                    error = $"error: file '{path}' doesn't exist!";
+                    return references;
+                }
+
+                references.Add(path);
+            }
+
+            error = null;
+            return references;
         }
 
         /// <summary>
