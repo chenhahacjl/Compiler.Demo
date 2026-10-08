@@ -39,7 +39,7 @@ namespace Cocoa.CodeGen.PE
             return architecture == Architecture.X86 ? 0x400000 : 0x140000000;
         }
 
-        public static void Write(string outputPath, byte[] code, byte[] data, int entryPointRva, IReadOnlyList<PefileImport> imports, Architecture architecture, IReadOnlyList<int>? dataAbsoluteFixups = null, ushort subsystem = PeSubsystemWindowsCui)
+        public static void Write(string outputPath, byte[] code, byte[] data, int entryPointRva, IReadOnlyList<PefileImport> imports, Architecture architecture, IReadOnlyList<int>? dataAbsoluteFixups = null, ushort subsystem = PeSubsystemWindowsCui, byte[]? cocoaMetadata = null)
         {
             var pe32 = architecture == Architecture.X86;
 
@@ -96,6 +96,7 @@ namespace Cocoa.CodeGen.PE
             var relocOffsets = dataAbsoluteFixups != null ? dataAbsoluteFixups.Distinct().OrderBy(x => x).ToList() : new List<int>();
             byte[] relocBlob;
             var relocRva = 0u;
+            uint cocoaRva = 0;
             if (relocOffsets.Count > 0)
             {
                 relocRva = (uint)Align(idataRva + importLayout.Blob.Length, SectionAlignment);
@@ -105,6 +106,13 @@ namespace Cocoa.CodeGen.PE
             else
             {
                 relocBlob = Array.Empty<byte>();
+            }
+
+            // M4：.cocoa 元数据节（native 产物内嵌符号表）——紧随既有节之后布局，与其他节互不重叠。
+            if (cocoaMetadata != null && cocoaMetadata.Length > 0)
+            {
+                var afterReloc = relocRva == 0 ? (uint)Align(idataRva + importLayout.Blob.Length, SectionAlignment) : relocRva + (uint)Align(relocBlob.Length, SectionAlignment);
+                cocoaRva = afterReloc;
             }
 
             // 各节虚拟末端（对齐后）必须恰好落在下一节起点（Windows 加载器按相邻节连续校验）。
@@ -119,6 +127,11 @@ namespace Cocoa.CodeGen.PE
             if (relocBlob.Length > 0)
             {
                 sections.Add(new(".reloc", relocBlob, relocRva, PeSectionCharacteristics.Data | PeSectionCharacteristics.MemDiscardable));
+            }
+
+            if (cocoaMetadata != null && cocoaMetadata.Length > 0)
+            {
+                sections.Add(new(".cocoa", cocoaMetadata, cocoaRva, PeSectionCharacteristics.Data | PeSectionCharacteristics.MemDiscardable));
             }
 
             // 原生镜像：.text 按 4KB 页分页成多个节（.text/.textN），节表须容纳全部节头（每节 40 字节）。

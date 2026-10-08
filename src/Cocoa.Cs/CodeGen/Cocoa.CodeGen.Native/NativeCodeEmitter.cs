@@ -8,6 +8,7 @@ using Cocoa.CodeGen.PE;
  using Cocoa.Targeting;
 
 using Cocoa.CodeAnalysis;
+using Cocoa.CodeGen.Native.Metadata;
 
 
 namespace Cocoa.CodeGen.Native
@@ -28,7 +29,8 @@ namespace Cocoa.CodeGen.Native
 
             var entryLabel = a.CreateLabel();
 
-            var ir = MirToLir.Generate(program, platform);
+            var emit = MirToLir.GenerateWithSnapshot(program, platform);
+            var ir = emit.Program;
             RuntimeEmitterLir.Append(ir, platform);
 
             // 与 LirToAssembler 的 IR dump 同一开关（重构阶段 1a/A6：不再无条件落盘）
@@ -45,7 +47,9 @@ namespace Cocoa.CodeGen.Native
             var code = a.ToArray();
             var entryPointRva = PeFileWriter.TextRva + a.GetLabelOffset(result.StubLabel);
             // M4a：数据段绝对地址槽 → .reloc（ASLR 下加载器同步修正 vtable 函数/名字指针）
-            PeFileWriter.Write(outputPath, code, a.GetData(), entryPointRva, result.Imports, platform.Arch, a.DataAbsoluteFixups, subsystem);
+            // M4：.cocoa 元数据节默认强制内嵌（设计稿：体积接受；无 strip 选项）
+            var cocoaMetadata = new CocoaMetadataBuilder(emit.Symbols).Build();
+            PeFileWriter.Write(outputPath, code, a.GetData(), entryPointRva, result.Imports, platform.Arch, a.DataAbsoluteFixups, subsystem, cocoaMetadata);
         }
     }
 }
