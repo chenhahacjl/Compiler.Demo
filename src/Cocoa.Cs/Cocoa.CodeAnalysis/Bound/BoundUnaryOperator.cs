@@ -35,6 +35,13 @@ namespace Cocoa.CodeAnalysis.Binding
         /// <summary>是否走用户定义运算符路径（发射层分派判据）。</summary>
         public bool IsUserDefined => UserDefinedMethod != null;
 
+        /// <summary>内建一元运算符语义符号（语义视图，供反射/诊断/重载解析；发射仍按 kind 直分派）。</summary>
+        public FunctionSymbol? BuiltinOperatorSymbol =>
+            UserDefinedMethod == null
+                ? Binding.BuiltInOperators.CreateOperatorSymbol(
+                    new Binding.UnaryOperatorSignature(Kind, OperandType, ResultType))
+                : null;
+
         /// <summary>
         /// 构造用户定义运算符绑定：<paramref name="kind"/> 取词法 token 翻译出的内建语义 kind，
         /// 仅供诊断/打印保留运算符字面；发射层以 <see cref="UserDefinedMethod"/> 为准。

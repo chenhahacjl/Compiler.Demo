@@ -1,5 +1,6 @@
 using Cocoa.CodeAnalysis.Symbols;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 
 namespace Cocoa.CodeAnalysis.Binding
@@ -231,6 +232,106 @@ namespace Cocoa.CodeAnalysis.Binding
             ops.Add(new(BoundUnaryOperatorKind.Negation, TypeSymbol.Decimal, TypeSymbol.Decimal));
 
             return ops.ToArray();
+        }
+
+        /// <summary>
+        /// 内建二元签名 → 语义符号（对齐 Roslyn <c>CommonCreateBuiltinOperator</c>）：按 CLR 约定合成
+        /// `op_*` 方法符号（<see cref="OperatorNames.ToMetadataName"/>）。语义视图用——供反射/诊断/
+        /// 重载解析候选比较，不携带方法体，发射仍按 kind 直分派。构建结果缓存（同签名共享实例）。
+        /// </summary>
+        private static readonly Dictionary<(BoundBinaryOperatorKind, TypeSymbol, TypeSymbol), FunctionSymbol> _binarySymbolCache = new();
+
+        public static FunctionSymbol? CreateOperatorSymbol(BinaryOperatorSignature signature)
+        {
+            var key = (signature.Kind, signature.LeftType, signature.RightType);
+            if (_binarySymbolCache.TryGetValue(key, out var cached))
+            {
+                return cached;
+            }
+
+            var kind = ToOperatorKind(signature.Kind);
+            if (kind == null)
+            {
+                return null; // ReferenceEquals/NullCoalescing 等无用户对应运算符 → 无符号视图
+            }
+
+            var parameters = ImmutableArray.Create(
+                new ParameterSymbol("left", signature.LeftType, 0),
+                new ParameterSymbol("right", signature.RightType, 1));
+            var symbol = new FunctionSymbol(
+                OperatorNames.ToMetadataName(kind.Value),
+                parameters,
+                signature.ResultType,
+                builtinKind: signature.EmitKind);
+
+            _binarySymbolCache[key] = symbol;
+            return symbol;
+        }
+
+        /// <summary>内建一元签名 → 语义符号（`op_UnaryPlus` 等）。</summary>
+        private static readonly Dictionary<(BoundUnaryOperatorKind, TypeSymbol), FunctionSymbol> _unarySymbolCache = new();
+
+        public static FunctionSymbol? CreateOperatorSymbol(UnaryOperatorSignature signature)
+        {
+            var key = (signature.Kind, signature.OperandType);
+            if (_unarySymbolCache.TryGetValue(key, out var cached))
+            {
+                return cached;
+            }
+
+            var kind = ToOperatorKind(signature.Kind);
+            if (kind == null)
+            {
+                return null;
+            }
+
+            var parameters = ImmutableArray.Create(new ParameterSymbol("operand", signature.OperandType, 0));
+            var symbol = new FunctionSymbol(
+                OperatorNames.ToMetadataName(kind.Value),
+                parameters,
+                signature.ResultType,
+                builtinKind: signature.EmitKind);
+
+            _unarySymbolCache[key] = symbol;
+            return symbol;
+        }
+
+        /// <summary>内建二元 kind → 用户可声明运算符种类（合成符号按 CLR 约定命名；无对应用户运算符的返回 null）。</summary>
+        public static OperatorKind? ToOperatorKind(BoundBinaryOperatorKind kind)
+        {
+            return kind switch
+            {
+                BoundBinaryOperatorKind.Addition => OperatorKind.Addition,
+                BoundBinaryOperatorKind.Subtraction => OperatorKind.Subtraction,
+                BoundBinaryOperatorKind.Multiplication => OperatorKind.Multiplication,
+                BoundBinaryOperatorKind.Division => OperatorKind.Division,
+                BoundBinaryOperatorKind.Modulo => OperatorKind.Modulo,
+                BoundBinaryOperatorKind.ShiftLeft => OperatorKind.LeftShift,
+                BoundBinaryOperatorKind.ShiftRight => OperatorKind.RightShift,
+                BoundBinaryOperatorKind.BitwiseAnd => OperatorKind.BitwiseAnd,
+                BoundBinaryOperatorKind.BitwiseOr => OperatorKind.BitwiseOr,
+                BoundBinaryOperatorKind.BitwiseXor => OperatorKind.BitwiseXor,
+                BoundBinaryOperatorKind.Equals => OperatorKind.Equality,
+                BoundBinaryOperatorKind.NotEquals => OperatorKind.Inequality,
+                BoundBinaryOperatorKind.Less => OperatorKind.LessThan,
+                BoundBinaryOperatorKind.LessOrEquals => OperatorKind.LessThanOrEqual,
+                BoundBinaryOperatorKind.Greater => OperatorKind.GreaterThan,
+                BoundBinaryOperatorKind.GreaterOrEquals => OperatorKind.GreaterThanOrEqual,
+                _ => null,
+            };
+        }
+
+        /// <summary>内建一元 kind → 用户可声明运算符种类。</summary>
+        public static OperatorKind? ToOperatorKind(BoundUnaryOperatorKind kind)
+        {
+            return kind switch
+            {
+                BoundUnaryOperatorKind.Identity => OperatorKind.UnaryPlus,
+                BoundUnaryOperatorKind.Negation => OperatorKind.UnaryNegation,
+                BoundUnaryOperatorKind.LogicalNegation => OperatorKind.LogicalNot,
+                BoundUnaryOperatorKind.OnesComplement => OperatorKind.BitwiseComplement,
+                _ => null,
+            };
         }
     }
 }
