@@ -55,6 +55,7 @@ namespace Cocoa.CodeGen.Managed.Writer
             var methodSemanticsCount = _typeDefs.Sum(t => t.Properties.Sum(p => (p.Getter != null ? 1 : 0) + (p.Setter != null ? 1 : 0)));
             var paramCount = methodDefs.Sum(m => m.ParameterTypes.Count);
             var interfaceImplCount = _typeDefs.Sum(t => t.Interfaces.Count);
+            var methodImplCount = _typeDefs.Sum(t => t.MethodImpls.Count);
             var memberRefCount = _memberRefs.Count + _fieldRefs.Count;
             var typeSpecCount = _typeSpecs.Count;
             var customAttributeCount = _customAttributes.Count;
@@ -89,6 +90,7 @@ namespace Cocoa.CodeGen.Managed.Writer
             var memberForwardedIsBig = Math.Max(methodDefCount, fieldDefCount) > (1 << 15); // 1 位 tag（MemberForwarded: Field=0/MethodDef=1）
             var hasConstantIsBig = new[] { fieldDefCount, paramCount, propertyCount }.Max() > (1 << 14); // HasConstant: Field=0/Param=1/Property=2
             var hasSemanticsIsBig = Math.Max(propertyCount, 1) > (1 << 15); // HasSemantics: Event=0/Property=1
+            var methodDefOrRefIsBig = Math.Max(methodDefCount, memberRefCount) > (1 << 15); // MethodDefOrRef: MethodDef=0/MemberRef=1
 
             var heapSizes = (stringIsBig ? 0x01 : 0) | (guidIsBig ? 0x02 : 0) | (blobIsBig ? 0x04 : 0);
 
@@ -118,6 +120,7 @@ namespace Cocoa.CodeGen.Managed.Writer
             if (propertyMapCount > 0) SetValid(0x15); // PropertyMap
             if (propertyCount > 0) SetValid(0x17); // Property
             if (methodSemanticsCount > 0) SetValid(0x18); // MethodSemantics
+            if (methodImplCount > 0) SetValid(0x19); // MethodImpl（显式接口实现）
             if (moduleRefCount > 0) SetValid(0x1A); // ModuleRef
             if (implMapCount > 0) SetValid(0x1C); // ImplMap
             SetValid(0x20); // Assembly（始终 1 行）
@@ -143,6 +146,7 @@ namespace Cocoa.CodeGen.Managed.Writer
             WriteRowCount(propertyMapCount);    // PropertyMap
             WriteRowCount(propertyCount);       // Property
             WriteRowCount(methodSemanticsCount); // MethodSemantics
+            WriteRowCount(methodImplCount);     // MethodImpl
             WriteRowCount(moduleRefCount);  // ModuleRef
             // TypeSpec（0x1B）行数按表号序位于 ModuleRef(0x1A) 之后、ImplMap(0x1C) 之前
             WriteRowCount(typeSpecCount);
@@ -425,6 +429,42 @@ namespace Cocoa.CodeGen.Managed.Writer
                     writer.Write(entry.Semantics);
                     WriteRef(entry.MethodRow, methodDefIsBig);
                     WriteCoded((entry.PropertyRow << 1) | 1, hasSemanticsIsBig); // HasSemantics: Property, tag=1
+                }
+            }
+
+            // ---- MethodImpl（行：Class(TypeDef) + MethodBody(MethodDefOrRef) + MethodDeclaration(MethodDefOrRef)）----
+            // ECMA-335 II.22.29：表按 (Class, MethodBody, MethodDeclaration) 排序；本实现按 TypeDef 序 + 方法声明序添加即满足。
+            if (methodImplCount > 0)
+            {
+                var methodRowMap = new Dictionary<IlMethodDef, int>();
+                for (var i = 0; i < methodDefs.Count; i++)
+                {
+                    methodRowMap[methodDefs[i]] = i + 1;
+                }
+
+                // MethodDefOrRef coded：MethodDef=tag 0 / MemberRef=tag 1 → (row << 1) | tag
+                foreach (var typeDef in _typeDefs)
+                {
+                    if (typeDef.MethodImpls.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    var typeDefRowIndex = TypeDefRowOf(typeDef);
+                    foreach (var impl in typeDef.MethodImpls.OrderBy(m => methodRowMap[m.MethodBody]))
+                    {
+                        WriteRef(typeDefRowIndex, typeDefIsBig);
+                        WriteCoded(methodRowMap[impl.MethodBody] << 1, methodDefOrRefIsBig);
+                        if (impl.DeclarationDef != null)
+                        {
+                            WriteCoded(methodRowMap[impl.DeclarationDef] << 1, methodDefOrRefIsBig);
+                        }
+                        else
+                        {
+                            var memberRow = _memberRefIndex[impl.DeclarationRef!];
+                            WriteCoded((memberRow << 1) | 1, methodDefOrRefIsBig);
+                        }
+                    }
                 }
             }
 

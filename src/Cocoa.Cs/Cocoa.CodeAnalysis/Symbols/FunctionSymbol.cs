@@ -84,6 +84,12 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>override 方法在基类中的对应虚方法（沿继承链）。</summary>
         public FunctionSymbol? OverriddenMethod { get; set; }
 
+        /// <summary>
+        /// 显式接口实现（`function IReader.Read()`）：本方法作为目标接口成员（<c>IReader.Read</c>）的实现，
+        /// 仅经接口接收者调用（非限定名查找不命中）。非空 = 显式实现方法。
+        /// </summary>
+        public FunctionSymbol? ExplicitInterfaceMethod { get; set; }
+
         /// <summary>泛型方法类型参数（6e-M20；空 = 非泛型方法。实例化后的具体方法此列表为空）。</summary>
         public ImmutableArray<TypeParameterSymbol> TypeParameters { get; set; } = ImmutableArray<TypeParameterSymbol>.Empty;
 

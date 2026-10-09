@@ -562,6 +562,12 @@ namespace Cocoa.CodeGen.Interpreter
                         continue;
                     }
 
+                    // 显式接口实现（`function IShape.Area()`，名字为限定名）：按 ExplicitInterfaceMethod 引用直配槽位
+                    if (method.ExplicitInterfaceMethod != null && IsExplicitDispatchMatch(method, declared))
+                    {
+                        return method;
+                    }
+
                     if (method.Name != declared.Name || method.ReturnType != declared.ReturnType ||
                         method.Parameters.Length != declared.Parameters.Length)
                     {
@@ -586,6 +592,22 @@ namespace Cocoa.CodeGen.Interpreter
             }
 
             return null;
+        }
+
+        /// <summary>方法是否为 declared（接口成员）的显式实现（引用相等或跨实例同构复核）。</summary>
+        private static bool IsExplicitDispatchMatch(FunctionSymbol method, FunctionSymbol declared)
+        {
+            if (ReferenceEquals(method.ExplicitInterfaceMethod, declared))
+            {
+                return true;
+            }
+
+            var iface = method.ExplicitInterfaceMethod!.ContainingClass;
+            return iface != null && declared.ContainingClass != null &&
+                   iface.FullName == declared.ContainingClass.FullName &&
+                   method.ExplicitInterfaceMethod.Name == declared.Name &&
+                   method.ExplicitInterfaceMethod.Parameters.Length == declared.Parameters.Length &&
+                   method.ExplicitInterfaceMethod.ReturnType == declared.ReturnType;
         }
 
         private object?[] MaterializeArguments(BoundMemberCallExpression node)

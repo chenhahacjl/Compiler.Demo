@@ -288,6 +288,9 @@ namespace Cocoa.CodeGen.Managed.Writer
                 EmitFunctionDeclaration(function);
             }
 
+            // 2.6 显式接口实现 → MethodImpl 表（接口成员 ↔ 本类显式方法重定向；_methods 此刻已全量就绪）
+            RegisterExplicitInterfaceMethodImpls();
+
             // 2.5 属性定义（getter/setter 方法已发射）
             foreach (var classType in classes)
             {
@@ -542,7 +545,9 @@ namespace Cocoa.CodeGen.Managed.Writer
             var method = new IlMethodDef(name, returnType, parameterTypes, null, function.IsExtern ? function.DllName : null, function.EntryPoint, callingConvention, isStatic: !isInstance, charSet: function.CharSet == null ? IlCharSet.Unicode : ToIlCharSet(function.CharSet.Value))
             {
                 Visibility = _publishPublicSurface || (function.IsLambda && function.EnvironmentClass != null) ? IlVisibility.Public : ToIlVisibility(function.Visibility),
-                IsVirtual = function.IsVirtual || function.IsOverride || implementsInterfaceMember,
+                // 显式接口实现（`function IShape.Area()`）是 MethodImpl 的 MethodBody：CLR 要求其 virtual
+                // （C# 发射为 private final virtual newslot；仅 virtual 即可满足接口方法分派）
+                IsVirtual = function.IsVirtual || function.IsOverride || implementsInterfaceMember || function.ExplicitInterfaceMethod != null,
                 IsAbstract = function.IsAbstract,
                 IsSealed = function.IsSealed,
                 IsExplicitThis = false,
@@ -559,6 +564,48 @@ namespace Cocoa.CodeGen.Managed.Writer
 
             var declaringType = function.ContainingClass != null ? _classTypeDefs[function.ContainingClass] : _typeDefinition;
             _metadata.AddMethodDef(declaringType, method);
+        }
+
+        /// <summary>
+        /// 显式接口实现（`function IShape.Area()`）→ MethodImpl 表登记：
+        /// 接口成员（MethodDeclaration）的本类实现重定向到显式方法（MethodBody）。
+        /// 本程序集接口 TypeDef 的成员用 MethodDef；外部/facade 接口成员用 MemberRef。
+        /// </summary>
+        private void RegisterExplicitInterfaceMethodImpls()
+        {
+            foreach (var pair in _classTypeDefs)
+            {
+                var classType = pair.Key;
+                var typeDef = pair.Value;
+                foreach (var method in classType.Methods)
+                {
+                    if (method.ExplicitInterfaceMethod == null || !_methods.TryGetValue(method, out var bodyDef))
+                    {
+                        continue;
+                    }
+
+                    var ifaceMember = method.ExplicitInterfaceMethod;
+                    var iface = ifaceMember.ContainingClass;
+                    if (iface == null)
+                    {
+                        continue;
+                    }
+
+                    if (_methods.TryGetValue(ifaceMember, out var declarationDef))
+                    {
+                        typeDef.MethodImpls.Add(new IlMethodImpl(bodyDef, declarationDef, null));
+                    }
+                    else
+                    {
+                        // 外部/facade 接口：MemberRef 到接口成员（DefineMethodRef 已注册 MemberRef 表）
+                        var paramNames = ifaceMember.Parameters
+                            .Select(p => ToIlType(p.Type).FullName)
+                            .ToArray();
+                        var declarationRef = _framework.RequireMethod(iface.FullName, ifaceMember.Name, paramNames);
+                        typeDef.MethodImpls.Add(new IlMethodImpl(bodyDef, null, declarationRef));
+                    }
+                }
+            }
         }
 
         private void EmitClassDeclaration(NamedTypeSymbol classType, IlTypeRef multicastDelegateRef)

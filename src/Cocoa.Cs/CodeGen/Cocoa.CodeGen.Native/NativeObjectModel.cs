@@ -237,7 +237,8 @@ namespace Cocoa.CodeGen.Native
         /// <summary>类 C 对虚根 root 的生效实现：从 C 沿链向上找最近声明（含 C 自身），返回 null = 无用户实现（用运行时默认）。</summary>
         public static FunctionSymbol? FindImplementation(NamedTypeSymbol classType, FunctionSymbol root)
         {
-            // 接口方法根：实现类方法按签名匹配（接口方法无 OverriddenMethod；C# 语义 = 同名同参数同返回的实现）
+            // 接口方法根：实现类方法按签名匹配（接口方法无 OverriddenMethod；C# 语义 = 同名同参数同返回的实现）；
+            // 显式接口实现（`function IShape.Area()`，名字为限定名）按 ExplicitInterfaceMethod 引用直指槽位。
             if (root.ContainingClass is { TypeKind: TypeKind.Interface } iface && classType.GetAllInterfaces().Contains(iface))
             {
                 for (var current = classType; current != null && !current.IsSystemObjectRoot; current = current.BaseType)
@@ -247,6 +248,11 @@ namespace Cocoa.CodeGen.Native
                         if (method.IsConstructor || method.IsStatic || method.IsAbstract)
                         {
                             continue;
+                        }
+
+                        if (IsExplicitImplementation(method, root))
+                        {
+                            return method;
                         }
 
                         if (string.Equals(method.Name, root.Name, StringComparison.Ordinal) &&
@@ -341,6 +347,28 @@ namespace Cocoa.CodeGen.Native
             }
 
             return false;
+        }
+
+        /// <summary>方法是否为 root（接口成员，或其声明接口同构成员）的显式实现。</summary>
+        private static bool IsExplicitImplementation(FunctionSymbol method, FunctionSymbol root)
+        {
+            if (method.ExplicitInterfaceMethod == null)
+            {
+                return false;
+            }
+
+            if (ReferenceEquals(method.ExplicitInterfaceMethod, root))
+            {
+                return true;
+            }
+
+            // 防御：跨实例/跨网络同构（引用不等）时按 名 + 声明接口全名 + 签名 复核
+            var iface = method.ExplicitInterfaceMethod.ContainingClass;
+            return iface != null && root.ContainingClass != null &&
+                   iface.FullName == root.ContainingClass.FullName &&
+                   method.ExplicitInterfaceMethod.Name == root.Name &&
+                   method.ExplicitInterfaceMethod.Parameters.Length == root.Parameters.Length &&
+                   TypeNameEqual(method.ExplicitInterfaceMethod.ReturnType, root.ReturnType);
         }
 
         /// <summary>vtable 数据项 key。</summary>

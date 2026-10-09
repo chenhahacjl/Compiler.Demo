@@ -2001,7 +2001,8 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
-        /// <summary>查找类（含继承链）中对接口方法的实现：名称 + 参数类型 + 返回类型匹配且 public。</summary>
+        /// <summary>查找类（含继承链）中对接口方法的实现：名称 + 参数类型 + 返回类型匹配且 public；
+        /// 显式接口实现按 ExplicitInterfaceMethod 引用命中（限定名方法不在同名查找内）。</summary>
         private static FunctionSymbol? FindImplementation(NamedTypeSymbol classType, FunctionSymbol interfaceMethod)
         {
             for (var current = classType; current != null; current = current.BaseType)
@@ -2035,9 +2036,40 @@ namespace Cocoa.CodeAnalysis.Binding
 
                     return method;
                 }
+
+                // 显式接口实现（`function IReader.Read()`）：名字是限定名，按 ExplicitInterfaceMethod 引用直指槽位
+                foreach (var method in current.Methods)
+                {
+                    if (IsExplicitImplementation(method, interfaceMethod))
+                    {
+                        return method;
+                    }
+                }
             }
 
             return null;
+        }
+
+        /// <summary>方法是否为 interfaceMethod（或其声明接口同构成员）的显式实现。</summary>
+        private static bool IsExplicitImplementation(FunctionSymbol method, FunctionSymbol interfaceMethod)
+        {
+            if (method.ExplicitInterfaceMethod == null)
+            {
+                return false;
+            }
+
+            if (ReferenceEquals(method.ExplicitInterfaceMethod, interfaceMethod))
+            {
+                return true;
+            }
+
+            // 防御：跨网络同构（引用不等）时按 名 + 声明接口全名 + 签名 复核
+            var iface = method.ExplicitInterfaceMethod.ContainingClass;
+            return iface != null && interfaceMethod.ContainingClass != null &&
+                   iface.FullName == interfaceMethod.ContainingClass.FullName &&
+                   method.ExplicitInterfaceMethod.Name == interfaceMethod.Name &&
+                   method.ExplicitInterfaceMethod.Parameters.Length == interfaceMethod.Parameters.Length &&
+                   TypesMatchForInterfaceImplementation(method.ExplicitInterfaceMethod.ReturnType, interfaceMethod.ReturnType);
         }
 
         /// <summary>
@@ -2644,13 +2676,57 @@ namespace Cocoa.CodeAnalysis.Binding
 
             var declaredName = operatorKind.HasValue ? OperatorNames.ToMetadataName(operatorKind.Value) : syntax.Identifier.Text;
 
-            // 显式接口实现（`function IReader.Read()`）：解析层已支持（限定名合成单标识符），
-            // 但运行时分派需 IL MethodImpl 槽映射 + native 接口槽映射，尚未实现。
-            // 给清晰诊断，避免"编译通过 → 运行时 TypeLoadException"。
+            // 显式接口实现（`public function IReader.Read(): i32`）：解析层已合成限定名标识符。
+            // 显式方法以限定名注册（Name = "IReader.Read"），非限定 `doc.Read()` 查找不命中（C# 语义）；
+            // 三后端经 ExplicitInterfaceMethod 引用解析进接口槽（native vtable / IL MethodImpl / Evaluator 分派）。
+            FunctionSymbol? explicitInterfaceMethod = null;
             if (declaredName.IndexOf('.') >= 0)
             {
-                _diagnostics.ReportError(syntax.Identifier.Location,
-                    $"显式接口实现（function {declaredName}）的运行时分派尚未实现，请改用接口成员同名方法实现接口。");
+                var dot = declaredName.LastIndexOf('.');
+                var interfacePrefix = declaredName.Substring(0, dot);
+                var memberName = declaredName.Substring(dot + 1);
+                var interfaceType = LookupType(interfacePrefix) as NamedTypeSymbol;
+
+                if (interfaceType == null || interfaceType.TypeKind != TypeKind.Interface)
+                {
+                    _diagnostics.ReportError(syntax.Identifier.Location, $"显式接口实现 '{declaredName}' 的前缀 '{interfacePrefix}' 不是接口类型。");
+                }
+                else if (!classType.GetAllInterfaces().Contains(interfaceType))
+                {
+                    _diagnostics.ReportError(syntax.Identifier.Location, $"类 '{classType.Name}' 未实现接口 '{interfacePrefix}'，不能显式实现其成员。");
+                }
+                else
+                {
+                    var member = interfaceType.GetMethod(memberName);
+                    if (member == null)
+                    {
+                        _diagnostics.ReportError(syntax.Identifier.Location, $"接口 '{interfacePrefix}' 没有成员 '{memberName}'。");
+                    }
+                    else if (member.IsStatic || member.IsConstructor)
+                    {
+                        _diagnostics.ReportError(syntax.Identifier.Location, $"接口 '{interfacePrefix}' 的成员 '{memberName}' 不能显式实现（非实例方法）。");
+                    }
+                    else
+                    {
+                        var paramsMatch = parameters.Length == member.Parameters.Length;
+                        for (var i = 0; paramsMatch && i < parameters.Length; i++)
+                        {
+                            if (!TypesMatchForInterfaceImplementation(parameters[i].Type, member.Parameters[i].Type))
+                            {
+                                paramsMatch = false;
+                            }
+                        }
+
+                        if (!paramsMatch || !TypesMatchForInterfaceImplementation(type, member.ReturnType))
+                        {
+                            _diagnostics.ReportError(syntax.Identifier.Location, $"显式接口实现 '{declaredName}' 的签名与接口成员 '{memberName}' 不符。");
+                        }
+                        else
+                        {
+                            explicitInterfaceMethod = member;
+                        }
+                    }
+                }
             }
 
             // syscall 方法隐含 static（System.Runtime.Runtime.Print 类名调用）
@@ -2666,6 +2742,15 @@ namespace Cocoa.CodeAnalysis.Binding
             DocumentationBackfill.BackfillDocumentation(method, syntax, _diagnostics);
             // 类方法级 attribute（[Obsolete] 等）——此前类方法漏绑，导致调用点无法消费
             method.Attributes = BindAttributes(syntax.Attributes, syntax);
+
+            // 显式接口实现：绑定目标接口成员；显式实现本身非虚（sealed 语义，锁死槽位实现）
+            method.ExplicitInterfaceMethod = explicitInterfaceMethod;
+            if (explicitInterfaceMethod != null)
+            {
+                method.IsVirtual = false;
+                method.IsOverride = false;
+                method.IsAbstract = false;
+            }
 
             // 运算符声明的元数/宿主/形态校验 + 登记查找表
             if (operatorKind.HasValue)
