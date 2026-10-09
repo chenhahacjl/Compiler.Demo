@@ -71,6 +71,7 @@ public static class CocoaCompletionProvider
     {
         "int", "long", "short", "byte", "sbyte", "uint", "ulong", "float", "double",
         "bool", "char", "string", "object", "any", "nint", "nuint", "i32", "i64",
+        "decimal", "f16",
     };
 
     private static readonly (string Text, string Body)[] CocoaSnippets =

@@ -346,7 +346,7 @@ namespace Cocoa.CodeGen.Managed.Writer
 
             // decimal/half（非 IL 基元）：转换经 System.Convert（装箱 + To<X>），避免 op_Explicit 按返回类型重载歧义
             if (node.Expression.Type == TypeSymbol.Decimal || node.Type == TypeSymbol.Decimal ||
-                node.Expression.Type == TypeSymbol.Half || node.Type == TypeSymbol.Half)
+                node.Expression.Type == TypeSymbol.Float16 || node.Type == TypeSymbol.Float16)
             {
                 EmitDecimalHalfConversion(il, node.Expression.Type, node.Type);
                 return;
@@ -665,7 +665,7 @@ namespace Cocoa.CodeGen.Managed.Writer
             if (type == TypeSymbol.Float) return "System.Single";
             if (type == TypeSymbol.Double) return "System.Double";
             if (type == TypeSymbol.Decimal) return "System.Decimal";
-            if (type == TypeSymbol.Half) return "System.Half";
+            if (type == TypeSymbol.Float16) return "System.Half";
             if (type is NamedTypeSymbol { TypeKind: TypeKind.Enum }) return "System.Int32";
             return null;
         }

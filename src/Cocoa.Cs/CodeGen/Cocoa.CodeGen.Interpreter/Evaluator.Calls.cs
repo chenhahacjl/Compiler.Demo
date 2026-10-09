@@ -1054,7 +1054,7 @@ namespace Cocoa.CodeGen.Interpreter
 
                 return System.Convert.ToDecimal(value!);
             }
-            else if (node.Type == TypeSymbol.Half)
+            else if (node.Type == TypeSymbol.Float16)
             {
                 if (value is Half halfValue)
                 {

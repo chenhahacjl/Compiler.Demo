@@ -209,7 +209,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             [TypeSymbol.NativeInt32] = "@nint",
             [TypeSymbol.NativeUInt32] = "@nuint",
             [TypeSymbol.Decimal] = "@decimal",
-            [TypeSymbol.Half] = "@half",
+            [TypeSymbol.Float16] = "@f16",
         };
 
         /// <summary>基元权威编码反解（6e-G7 S1：.coa 类型流读侧）。</summary>

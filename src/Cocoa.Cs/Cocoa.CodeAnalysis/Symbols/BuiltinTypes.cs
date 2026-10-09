@@ -2,7 +2,8 @@ namespace Cocoa.CodeAnalysis.Symbols
 {
     /// <summary>
     /// 内建类型名解析（去 <c>Language</c> 门面后独立；Cocoa 简写词汇 + 共享基元名）。
-    /// 内建类型简写 i8/u8/i16/u16/i32/u32/i64/u64/f32/f64（+ i128/u128/f128 占位）。
+    /// 内建类型简写 i8/u8/i16/u16/i32/u32/i64/u64/f16/f32/f64（+ i128/u128/f128 占位；
+    /// f16 = 16 位半精度浮点（System.Half），与 f32/f64 简写一致）。
     /// </summary>
     public static class BuiltinTypes
     {
@@ -22,10 +23,10 @@ namespace Cocoa.CodeAnalysis.Symbols
             "u32" => TypeSymbol.UInt32,
             "i64" => TypeSymbol.Int64,
             "u64" => TypeSymbol.UInt64,
+            "f16" => TypeSymbol.Float16,
             "f32" => TypeSymbol.Float,
             "f64" => TypeSymbol.Double,
             "decimal" => TypeSymbol.Decimal,
-            "half" => TypeSymbol.Half,
             "i128" => TypeSymbol.Int128,
             "u128" => TypeSymbol.UInt128,
             "f128" => TypeSymbol.Float128,

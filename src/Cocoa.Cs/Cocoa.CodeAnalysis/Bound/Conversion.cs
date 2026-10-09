@@ -252,7 +252,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             // half（16 位半精度浮点）：与 f32/f64 双向显式（System.Half 无字面量后缀，经转换产生）
-            if (from == TypeSymbol.Half)
+            if (from == TypeSymbol.Float16)
             {
                 if (to == TypeSymbol.Float || to == TypeSymbol.Double)
                 {
@@ -265,7 +265,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            if (to == TypeSymbol.Half)
+            if (to == TypeSymbol.Float16)
             {
                 if (from == TypeSymbol.Float || from == TypeSymbol.Double)
                 {

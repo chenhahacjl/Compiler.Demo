@@ -12,10 +12,10 @@ using Xunit;
 namespace Cocoa.Tests.CodeAnalysis
 {
     /// <summary>
-    /// decimal / half（第二批数值类型）全链路：字面量后缀（m/M）、转换矩阵、算术/比较、
+    /// decimal / f16（第二批数值类型）全链路：字面量后缀（m/M）、转换矩阵、算术/比较、
     /// Evaluator 求值、IL（System.Decimal op_* / System.Half op_Explicit）、native 明确拒绝。
     /// </summary>
-    public class DecimalHalfTests
+    public class DecimalF16Tests
     {
         private static string[] References() => new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location };
 
@@ -71,13 +71,13 @@ function Main(): i32
         }
 
         [Fact]
-        public void Evaluator_Half_Conversions()
+        public void Evaluator_F16_Conversions()
         {
             var text = @"using System
 
 function Main(): i32
 {
-    var h: half = (half)1.5
+    var h: f16 = (f16)1.5
     var f: f32 = (f32)h
     var d: f64 = (f64)h
     Console.WriteLine(h)
@@ -119,13 +119,13 @@ function Main(): i32
         }
 
         [Fact]
-        public void IlE2e_Half_Conversions()
+        public void IlE2e_F16_Conversions()
         {
             var output = EmitIlAndRun(@"using System
 
 function Main(): i32
 {
-    var h: half = (half)1.5
+    var h: f16 = (f16)1.5
     var f: f32 = (f32)h
     var d: f64 = (f64)h
     Console.WriteLine(h)
@@ -155,19 +155,19 @@ function Main(): i32
         }
 
         [Fact]
-        public void Native_Half_Rejected()
+        public void Native_F16_Rejected()
         {
             var syntaxTree = SyntaxTree.Parse(@"using System
 
 function Main(): i32
 {
-    var h: half = (half)1.5
+    var h: f16 = (f16)1.5
     Console.WriteLine(h)
     return 0
 }");
             var compilation = Compilation.Create(syntaxTree);
-            var diagnostics = compilation.EmitNative("half", Path.Combine(Path.GetTempPath(), "cocoa-native-half.exe"), new TargetPlatform(TargetOS.Windows, Architecture.X64));
-            Assert.Contains(diagnostics, d => d.Message.Contains("half"));
+            var diagnostics = compilation.EmitNative("f16", Path.Combine(Path.GetTempPath(), "cocoa-native-f16.exe"), new TargetPlatform(TargetOS.Windows, Architecture.X64));
+            Assert.Contains(diagnostics, d => d.Message.Contains("f16"));
         }
 
         // ---- helpers ----------------------------------------------------------
@@ -191,7 +191,7 @@ function Main(): i32
 
         private static string EmitIlAndRun(string source)
         {
-            var dir = Path.Combine(Path.GetTempPath(), "cocoa-dec-half-tests", Guid.NewGuid().ToString("N"));
+            var dir = Path.Combine(Path.GetTempPath(), "cocoa-dec-f16-tests", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(dir);
             var exePath = Path.Combine(dir, "t.exe");
             var compilation = Compilation.Create("Main", References(), SyntaxTree.Parse(source));

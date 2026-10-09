@@ -811,7 +811,7 @@ namespace Cocoa.CodeGen.Managed.Writer
             }
 
             // half：float/double → half = op_Explicit(源)；half → float/double = op_Explicit(Half) 按返回消歧；half → string = box + Convert.ToString
-            if (from == TypeSymbol.Half || to == TypeSymbol.Half)
+            if (from == TypeSymbol.Float16 || to == TypeSymbol.Float16)
             {
                 EmitHalfConversion(il, from, to);
                 return;
@@ -823,7 +823,7 @@ namespace Cocoa.CodeGen.Managed.Writer
         /// <summary>half 转换：System.Half::op_Explicit 双向（float/double→half 按源参数唯一；half→float/double 按返回类型消歧）。</summary>
         private void EmitHalfConversion(IlAssembler il, TypeSymbol from, TypeSymbol to)
         {
-            if (from == TypeSymbol.Half)
+            if (from == TypeSymbol.Float16)
             {
                 if (to == TypeSymbol.Float || to == TypeSymbol.Double)
                 {
@@ -841,7 +841,7 @@ namespace Cocoa.CodeGen.Managed.Writer
                 throw new System.Exception($"Unexpected half conversion target '{to}'");
             }
 
-            if (to == TypeSymbol.Half && (from == TypeSymbol.Float || from == TypeSymbol.Double))
+            if (to == TypeSymbol.Float16 && (from == TypeSymbol.Float || from == TypeSymbol.Double))
             {
                 il.Emit(IlOpCodeTable.Get("Call"), _framework.RequireMethod("System.Half", "op_Explicit", new[] { from == TypeSymbol.Float ? "System.Single" : "System.Double" }));
                 return;

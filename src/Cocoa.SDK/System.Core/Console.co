@@ -85,8 +85,8 @@ namespace System
         }
 
         /// <summary>Writes a 16-bit half-precision float followed by a newline to the standard output.</summary>
-        /// <param name="text">The half to write.</param>
-        static function WriteLine(text: half): void
+        /// <param name="text">The f16 to write.</param>
+        static function WriteLine(text: f16): void
         {
             ConsoleSyscall.WriteLine(text)
         }
@@ -162,8 +162,8 @@ namespace System
         }
 
         /// <summary>Writes a 16-bit half-precision float to the standard output without a newline.</summary>
-        /// <param name="text">The half to write.</param>
-        static function Write(text: half): void
+        /// <param name="text">The f16 to write.</param>
+        static function Write(text: f16): void
         {
             ConsoleSyscall.Write(text)
         }

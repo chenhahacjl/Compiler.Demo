@@ -24,7 +24,7 @@
     (cls System.Boolean public iface:false ifaces:0 struct:false bclTarget:System.Boolean base:- methods:7 ToString[-@bool] Parse[-@string] Parse[-@string,-@bool] Equals[-@bool,-@bool] GetHashCode[-@bool] ToString[-@bool,-@string] TryParse[-@string,out:@bool] fields:0 events:0 props:0)
     (cls System.Byte public iface:false ifaces:0 struct:false bclTarget:System.Byte base:- methods:7 ToString[-@u8] CompareTo[-@u8,-@u8] Parse[-@string] Equals[-@u8,-@u8] GetHashCode[-@u8] ToString[-@u8,-@string] TryParse[-@string,out:@u8] fields:0 events:0 props:0)
     (cls System.Char public iface:false ifaces:0 struct:false bclTarget:System.Char base:- methods:17 ToString[-@char] Parse[-@string] CompareTo[-@char,-@char] IsDigit[-@char] IsLetter[-@char] IsWhiteSpace[-@char] ToUpper[-@char] ToLower[-@char] IsLetterOrDigit[-@char] IsControl[-@char] IsHexDigit[-@char] IsUpper[-@char] IsLower[-@char] Equals[-@char,-@char] GetHashCode[-@char] ToString[-@char,-@string] TryParse[-@string,out:@char] fields:0 events:0 props:0)
-    (cls System.Console internal iface:false ifaces:0 struct:false bclTarget:System.Console base:- methods:26 WriteLine WriteLine[-@string] WriteLine[-@i32] WriteLine[-@f64] WriteLine[-@bool] WriteLine[-@char] WriteLine[-@i64] WriteLine[-@u32] WriteLine[-@u64] WriteLine[-@f32] WriteLine[-@decimal] WriteLine[-@half] Write[-@string] Write[-@i32] Write[-@f64] Write[-@bool] Write[-@char] Write[-@i64] Write[-@u32] Write[-@u64] Write[-@f32] Write[-@decimal] Write[-@half] ReadLine ReadKey[-@bool] Beep[-@i32,-@i32] fields:0 events:0 props:0)
+    (cls System.Console internal iface:false ifaces:0 struct:false bclTarget:System.Console base:- methods:26 WriteLine WriteLine[-@string] WriteLine[-@i32] WriteLine[-@f64] WriteLine[-@bool] WriteLine[-@char] WriteLine[-@i64] WriteLine[-@u32] WriteLine[-@u64] WriteLine[-@f32] WriteLine[-@decimal] WriteLine[-@f16] Write[-@string] Write[-@i32] Write[-@f64] Write[-@bool] Write[-@char] Write[-@i64] Write[-@u32] Write[-@u64] Write[-@f32] Write[-@decimal] Write[-@f16] ReadLine ReadKey[-@bool] Beep[-@i32,-@i32] fields:0 events:0 props:0)
     (cls System.Convert public iface:false ifaces:0 struct:false bclTarget:System.Convert base:- methods:7 ToHexString[-@u8[]] FromHexString[-@string] HexValue[-@char] Base64Alphabet ToBase64String[-@u8[]] FromBase64String[-@string] Base64Value[-@char] fields:0 events:0 props:0)
     (cls System.Double public iface:false ifaces:0 struct:false bclTarget:System.Double base:- methods:10 ToString[-@f64] CompareTo[-@f64,-@f64] Equals[-@f64,-@f64] GetHashCode[-@f64] ToString[-@f64,-@string] TryParse[-@string,out:@f64] Parse[-@string] IsNaN[-@f64] IsInfinity[-@f64] IsFinite[-@f64] fields:0 events:0 props:0)
     (cls System.Environment internal iface:false ifaces:0 struct:false bclTarget:- base:- methods:4 GetEnvironmentVariable[-@string] GetCurrentDirectory SetCurrentDirectory[-@string] GetExecutablePath fields:0 events:0 props:0)
@@ -617,8 +617,8 @@
     (fn System.Core!System.Console.WriteLine[-@decimal] name:WriteLine tps:0 ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
       (par System.Core!System.Console.WriteLine[-@decimal]/text text @decimal 0 - -)
     )
-    (fn System.Core!System.Console.WriteLine[-@half] name:WriteLine tps:0 ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
-      (par System.Core!System.Console.WriteLine[-@half]/text text @half 0 - -)
+    (fn System.Core!System.Console.WriteLine[-@f16] name:WriteLine tps:0 ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
+      (par System.Core!System.Console.WriteLine[-@f16]/text text @f16 0 - -)
     )
     (fn System.Core!System.Console.Write[-@string] name:Write tps:0 ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
       (par System.Core!System.Console.Write[-@string]/text text @string 0 - -)
@@ -650,8 +650,8 @@
     (fn System.Core!System.Console.Write[-@decimal] name:Write tps:0 ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
       (par System.Core!System.Console.Write[-@decimal]/text text @decimal 0 - -)
     )
-    (fn System.Core!System.Console.Write[-@half] name:Write tps:0 ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
-      (par System.Core!System.Console.Write[-@half]/text text @half 0 - -)
+    (fn System.Core!System.Console.Write[-@f16] name:Write tps:0 ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
+      (par System.Core!System.Console.Write[-@f16]/text text @f16 0 - -)
     )
     (fn System.Core!System.Console.ReadLine[] name:ReadLine tps:0 ret:@string ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:0)
     (fn System.Core!System.Console.ReadKey[-@bool] name:ReadKey tps:0 ret:@char ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
@@ -3918,13 +3918,13 @@
         )
       )
     )
-    (body System.Core!System.Console.WriteLine[-@half]
+    (body System.Core!System.Console.WriteLine[-@f16]
       (block 1
         (exprstmt
           (membercall @void WriteLine System.Core!System.Syscall.ConsoleSyscall.WriteLine[-@any] 1
             (statictype System.Syscall.ConsoleSyscall)
             (conv @any
-              (var System.Core!System.Console.WriteLine[-@half]/text)
+              (var System.Core!System.Console.WriteLine[-@f16]/text)
             )
           )
         )
@@ -4050,13 +4050,13 @@
         )
       )
     )
-    (body System.Core!System.Console.Write[-@half]
+    (body System.Core!System.Console.Write[-@f16]
       (block 1
         (exprstmt
           (membercall @void Write System.Core!System.Syscall.ConsoleSyscall.Write[-@any] 1
             (statictype System.Syscall.ConsoleSyscall)
             (conv @any
-              (var System.Core!System.Console.Write[-@half]/text)
+              (var System.Core!System.Console.Write[-@f16]/text)
             )
           )
         )
@@ -18178,7 +18178,7 @@
     (doc M:System.Console.Write\(System.UInt32\) <summary>Writes\san\sunsigned\s32-bit\sinteger\sto\sthe\sstandard\soutput\swithout\sa\snewline.</summary>\n<param\sname="text">The\sunsigned\sinteger\sto\swrite.</param>)
     (doc M:System.Console.Write\(System.UInt64\) <summary>Writes\san\sunsigned\s64-bit\sinteger\sto\sthe\sstandard\soutput\swithout\sa\snewline.</summary>\n<param\sname="text">The\sunsigned\s64-bit\sinteger\sto\swrite.</param>)
     (doc M:System.Console.Write\(decimal\) <summary>Writes\sa\s128-bit\shigh-precision\sdecimal\sto\sthe\sstandard\soutput\swithout\sa\snewline.</summary>\n<param\sname="text">The\sdecimal\sto\swrite.</param>)
-    (doc M:System.Console.Write\(half\) <summary>Writes\sa\s16-bit\shalf-precision\sfloat\sto\sthe\sstandard\soutput\swithout\sa\snewline.</summary>\n<param\sname="text">The\shalf\sto\swrite.</param>)
+    (doc M:System.Console.Write\(f16\) <summary>Writes\sa\s16-bit\shalf-precision\sfloat\sto\sthe\sstandard\soutput\swithout\sa\snewline.</summary>\n<param\sname="text">The\sf16\sto\swrite.</param>)
     (doc M:System.Console.WriteLine <summary>Writes\san\sempty\sline\sto\sthe\sstandard\soutput.</summary>)
     (doc M:System.Console.WriteLine\(System.Boolean\) <summary>Writes\sa\sboolean\sfollowed\sby\sa\snewline\sto\sthe\sstandard\soutput.</summary>\n<param\sname="text">The\sboolean\sto\swrite.</param>)
     (doc M:System.Console.WriteLine\(System.Char\) <summary>Writes\sa\scharacter\sfollowed\sby\sa\snewline\sto\sthe\sstandard\soutput.</summary>\n<param\sname="text">The\scharacter\sto\swrite.</param>)
@@ -18190,7 +18190,7 @@
     (doc M:System.Console.WriteLine\(System.UInt32\) <summary>Writes\san\sunsigned\s32-bit\sinteger\sfollowed\sby\sa\snewline\sto\sthe\sstandard\soutput.</summary>\n<param\sname="text">The\sunsigned\sinteger\sto\swrite.</param>)
     (doc M:System.Console.WriteLine\(System.UInt64\) <summary>Writes\san\sunsigned\s64-bit\sinteger\sfollowed\sby\sa\snewline\sto\sthe\sstandard\soutput.</summary>\n<param\sname="text">The\sunsigned\s64-bit\sinteger\sto\swrite.</param>)
     (doc M:System.Console.WriteLine\(decimal\) <summary>Writes\sa\s128-bit\shigh-precision\sdecimal\sfollowed\sby\sa\snewline\sto\sthe\sstandard\soutput.</summary>\n<param\sname="text">The\sdecimal\sto\swrite.</param>)
-    (doc M:System.Console.WriteLine\(half\) <summary>Writes\sa\s16-bit\shalf-precision\sfloat\sfollowed\sby\sa\snewline\sto\sthe\sstandard\soutput.</summary>\n<param\sname="text">The\shalf\sto\swrite.</param>)
+    (doc M:System.Console.WriteLine\(f16\) <summary>Writes\sa\s16-bit\shalf-precision\sfloat\sfollowed\sby\sa\snewline\sto\sthe\sstandard\soutput.</summary>\n<param\sname="text">The\sf16\sto\swrite.</param>)
     (doc M:System.Convert.FromBase64String\(System.String\) <summary>Base64\s瀛楃涓?鈫?瀛楄妭鏁扮粍锛涢潪娉曞瓧绗?闀垮害\s鈫?绌烘暟缁勩€?/summary>)
     (doc M:System.Convert.FromHexString\(System.String\) <summary>鍗佸叚杩涘埗瀛楃涓诧紙澶у啓/灏忓啓鍧囧彲锛夆啋\s瀛楄妭鏁扮粍锛涘鏁伴暱搴︽垨闈炴硶瀛楃\s鈫?绌烘暟缁勩€?/summary>)
     (doc M:System.Convert.ToBase64String\(System.Byte[]\) <summary>瀛楄妭鏁扮粍\s鈫?Base64\s瀛楃涓诧紙'='\s濉厖锛夈€?/summary>)
@@ -18261,4 +18261,4 @@
     (doc T:System.String <summary>Represents\sa\ssequence\sof\scharacters.\sProvides\sstring\smanipulation\smethods.</summary>)
   )
 )
-(checksum sha256:e31bff958755a71862452a02bb00eddd33793ca9d0d006fb6dc896575f50081a)
+(checksum sha256:e028f71e80fea6715bd1d5692ed6d3bb7aec0fc62e7f1be4af9d91b522e03c68)

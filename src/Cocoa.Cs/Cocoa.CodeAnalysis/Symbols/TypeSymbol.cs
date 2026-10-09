@@ -30,10 +30,10 @@ namespace Cocoa.CodeAnalysis.Symbols
         // 原生整型（native int/uint，平台自适应：x86=32 位 / x64=64 位，对齐 C# nint/nuint = IntPtr/UIntPtr）
         public static readonly TypeSymbol NativeInt32 = new NamedTypeSymbol("nint", "", Visibility.Public, null) { SpecialType = SpecialType.System_IntPtr, TypeKind = TypeKind.Struct };
         public static readonly TypeSymbol NativeUInt32 = new NamedTypeSymbol("nuint", "", Visibility.Public, null) { SpecialType = SpecialType.System_UIntPtr, TypeKind = TypeKind.Struct };
-        // decimal（128 位高精度小数）与 half（16 位半精度浮点）：非 IL 基元——BCL struct（System.Decimal/System.Half），
+        // decimal（128 位高精度小数）与 f16（16 位半精度浮点）：非 IL 基元——BCL struct（System.Decimal/System.Half），
         // 运算/转换经静态方法调用；存储/装箱按值类型 struct 处理。
         public static readonly TypeSymbol Decimal = new NamedTypeSymbol("decimal", "", Visibility.Public, null) { SpecialType = SpecialType.System_Decimal, TypeKind = TypeKind.Struct };
-        public static readonly TypeSymbol Half = new NamedTypeSymbol("half", "", Visibility.Public, null) { SpecialType = SpecialType.System_Half, TypeKind = TypeKind.Struct };
+        public static readonly TypeSymbol Float16 = new NamedTypeSymbol("f16", "", Visibility.Public, null) { SpecialType = SpecialType.System_Half, TypeKind = TypeKind.Struct };
 
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<TypeSymbol, TypeSymbol> _arrayTypes = new System.Collections.Concurrent.ConcurrentDictionary<TypeSymbol, TypeSymbol>();
 
