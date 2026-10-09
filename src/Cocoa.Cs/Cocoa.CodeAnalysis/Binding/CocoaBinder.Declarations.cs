@@ -869,7 +869,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
                 else if (member is EventDeclarationSyntax eventDeclaration)
                 {
-                    BindEventDeclaration(eventDeclaration, classType);
+                    BindEventDeclaration(eventDeclaration, classType, classFunctions);
                 }
                 else if (member is DelegateDeclarationSyntax delegateDeclaration)
                 {
@@ -883,7 +883,7 @@ namespace Cocoa.CodeAnalysis.Binding
         /// 合成隐藏后备字段 `_<eventName>`（类型 = 处理器签名的数组，初值 null）。
         /// 订阅/触发的多播语义在语句级脱糖（TryBindEventSubscription / BindEventRaise），三后端零改动。
         /// </summary>
-        private void BindEventDeclaration(EventDeclarationSyntax syntax, NamedTypeSymbol classType)
+        private void BindEventDeclaration(EventDeclarationSyntax syntax, NamedTypeSymbol classType, List<FunctionSymbol> classFunctions)
         {
             var handlerType = BindTypeClause(syntax.HandlerType);
             if (handlerType == null)
@@ -936,6 +936,35 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 classType.AddField(new FieldSymbol("_" + eventName, TypeSymbol.ArrayOf(resolvedHandler), visibility, classType));
             }
+
+            // 访问器式事件（C# 式）：`event E: T { add {…} remove {…} }` —— 自定义 add/remove 方法对。
+            // 订阅 `+=`/`-=` 分派到 add_Name/remove_Name（TryBindEventSubscription 拦截）；其体可写后备字段 `_<name>`（触发仍走它）。
+            if (syntax.HasCustomAccessors)
+            {
+                BuildEventAccessor(syntax, classType, classFunctions, eventName, handlerType, syntax.AddBody, isAdd: true);
+                BuildEventAccessor(syntax, classType, classFunctions, eventName, handlerType, syntax.RemoveBody, isAdd: false);
+            }
+        }
+
+        /// <summary>合成事件访问器方法（add_Name / remove_Name）：value 隐式参数（类型 = 声明处理器类型，delegate 事件即 delegate 类）+ 用户体（经 PropertyAccessorSyntax 承载体，复用方法体绑定路径）。</summary>
+        private void BuildEventAccessor(EventDeclarationSyntax syntax, NamedTypeSymbol classType, List<FunctionSymbol> classFunctions, string eventName, TypeSymbol handlerType, BlockStatementSyntax? body, bool isAdd)
+        {
+            if (body == null)
+            {
+                return;
+            }
+
+            var accessorName = (isAdd ? "add_" : "remove_") + eventName;
+            var valueParameter = new ParameterSymbol("value", handlerType, 0);
+            var keywordToken = new SyntaxToken(syntax.SyntaxTree, CoreSyntax.SyntaxKind.IdentifierToken, syntax.Span.Start, isAdd ? "add" : "remove", isAdd ? "add" : "remove", ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+            var accessorSyntax = new PropertyAccessorSyntax(syntax.SyntaxTree, ImmutableArray<SyntaxToken>.Empty, keywordToken, body, semicolonToken: null);
+            var accessorMethod = new FunctionSymbol(accessorName, ImmutableArray.Create(valueParameter), TypeSymbol.Void,
+                syntax: accessorSyntax, containingClass: classType, visibility: Visibility.Public)
+            {
+                IsPropertyAccessor = true,
+            };
+            classType.AddMethod(accessorMethod);
+            classFunctions.Add(accessorMethod);
         }
 
         /// <summary>
@@ -992,6 +1021,14 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 _diagnostics.ReportCannotAccessMember(syntax.AssignmentToken.Location, eventName, eventSymbol.Visibility);
                 return new BoundBlockStatement(syntax, ImmutableArray<BoundStatement>.Empty);
+            }
+
+            // 访问器式事件（自定义 add/remove）：`+=`/`-=` 分派到 add_Name/remove_Name 方法（C# 语义）。
+            // 处理器绑定与字段式同一路径（裸函数名已是函数值、按签名归一）。
+            var accessorAdd = ownerClass.GetMethod("add_" + eventName);
+            if (accessorAdd != null)
+            {
+                return BuildAccessorEventSubscription(syntax, operatorKind, receiver, ownerClass, eventSymbol, accessorAdd);
             }
 
             var signature = eventSymbol.HandlerType;
@@ -1231,8 +1268,34 @@ namespace Cocoa.CodeAnalysis.Binding
             return BoundNodeFactory.Block(syntax, statements.ToArray());
         }
 
+        /// <summary>
+        /// 访问器式事件订阅：`e += f` / `e -= f` → `this.add_E(f)` / `this.remove_E(f)`（C# 语义——
+        /// 自定义 add/remove 体控制订阅行为）。处理器按事件签名归一（方法组/lambda → delegate/fnty）。
+        /// </summary>
+        private BoundStatement BuildAccessorEventSubscription(AssignmentExpressionSyntax syntax, CoreSyntax.SyntaxKind operatorKind, BoundExpression receiver, NamedTypeSymbol ownerClass, EventSymbol eventSymbol, FunctionSymbol addMethod)
+        {
+            var isAdd = operatorKind == CoreSyntax.SyntaxKind.PlusEqualsToken;
+            var targetMethod = isAdd ? addMethod : ownerClass.GetMethod("remove_" + eventSymbol.Name)!;
+            var handlerParamType = targetMethod.Parameters[0].Type;
+
+            var boundHandler = BindConversion(syntax.Expression, handlerParamType);
+            if (boundHandler is BoundFunctionValueExpression && boundHandler.Type != handlerParamType)
+            {
+                // 方法组/lambda → 访问器 value 类型（delegate 类）：包装 BoundConversion（IL newobj Handler::.ctor）
+                boundHandler = new BoundConversionExpression(syntax, handlerParamType, boundHandler);
+            }
+            else if (boundHandler.Type != handlerParamType && boundHandler.Type != TypeSymbol.Error)
+            {
+                boundHandler = BindConversion(boundHandler.Syntax.Location, boundHandler, handlerParamType);
+            }
+
+            var arguments = ImmutableArray.Create(boundHandler);
+            return new BoundExpressionStatement(syntax,
+                new BoundMemberCallExpression(syntax, receiver, targetMethod.Name, arguments, TypeSymbol.Void, targetMethod));
+        }
+
         /// <summary>6e-M22 委托真实类型化 M4：C# 式事件订阅/退订——后备字段为具名 delegate 类时走
-        /// `_<e> = Combine(_<e>, h)` / `Remove(_<e>, h)`（+= / -= 绑定层合成 delegate 二元运算，三后端经委托管道）。</summary>
+        /// `_&lt;e&gt; = Combine(_&lt;e&gt;, h)` / `Remove(_&lt;e&gt;, h)`（+= / -= 绑定层合成 delegate 二元运算，三后端经委托管道）。</summary>
         private BoundStatement BuildDelegateEventSubscription(AssignmentExpressionSyntax syntax, CoreSyntax.SyntaxKind operatorKind, BoundExpression receiver, FieldSymbol backingField, NamedTypeSymbol delegateBacking)
         {
             _labelCounter++;
@@ -1402,6 +1465,19 @@ namespace Cocoa.CodeAnalysis.Binding
             return field.Name.StartsWith("_", StringComparison.Ordinal) &&
                    field.ContainingClass != null &&
                    field.ContainingClass.GetEvent(field.Name[1..]) != null;
+        }
+
+        /// <summary>当前函数是否为事件 X 的自定义访问器（add_X / remove_X，PropertyAccessor 承载体）——
+        /// 访问器体内允许写事件后备字段 `_X`（自定义访问器管理存储）。</summary>
+        private bool IsInEventAccessor(FieldSymbol field)
+        {
+            if (_function == null || !_function.IsPropertyAccessor || _function.IsStatic)
+            {
+                return false;
+            }
+
+            var eventName = field.Name.Length > 1 ? field.Name[1..] : "";
+            return _function.Name == "add_" + eventName || _function.Name == "remove_" + eventName;
         }
 
         /// <summary>数组复制循环合成：`while i < source.Length { target[i] = source[i]; i++ }`（target 与 source 等长或更长）。</summary>

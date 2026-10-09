@@ -540,11 +540,11 @@ namespace Cocoa.CodeGen.Managed.Writer
                 var endValue = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
 
                 EmitExpression(il, node.Expression);
-                il.Emit(IlOpCodeTable.Get("Isinst"), ToBoxedIlType(node.TargetType));
+                il.Emit(IlOpCodeTable.Get("Isinst"), IsInstTypeToken(node.TargetType));
                 il.Emit(IlOpCodeTable.Get("Brfalse"), notMatch);
 
                 EmitExpression(il, node.Expression);
-                il.Emit(IlOpCodeTable.Get("Unbox_Any"), ToBoxedIlType(node.TargetType));
+                il.Emit(IlOpCodeTable.Get("Unbox_Any"), IsInstTypeToken(node.TargetType));
                 il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)slot);
 
                 il.Emit(IlOpCodeTable.Get("Ldc_I4_1"));
@@ -556,7 +556,7 @@ namespace Cocoa.CodeGen.Managed.Writer
             }
 
             EmitExpression(il, node.Expression);
-            il.Emit(IlOpCodeTable.Get("Isinst"), ToIlType(node.TargetType));
+            il.Emit(IlOpCodeTable.Get("Isinst"), IsInstTypeToken(node.TargetType));
             il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)slot);
 
             var elseLabel = new IlInstruction(IlOpCodeTable.Get("Nop"), null);

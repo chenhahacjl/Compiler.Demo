@@ -605,8 +605,9 @@ namespace Cocoa.CodeAnalysis.Binding
                  syntax.AssignmentToken.Kind == CoreSyntax.SyntaxKind.MinusEqualsToken))
             {
                 // 6e-M22 C5+ 多播：事件后备字段的 += / -= 已在语句级拦截（TryBindEventSubscription）；
-                // 事件不能直接赋值（含 `=`），只能经订阅语法或类内触发。
-                if (IsEventBackingField(memberTarget.Field))
+                // 事件不能直接赋值（含 `=`），只能经订阅语法或类内触发。自定义事件访问器（add_X/remove_X）体内豁免
+                //（访问器负责管理后备字段的存储）。
+                if (IsEventBackingField(memberTarget.Field) && !IsInEventAccessor(memberTarget.Field))
                 {
                     _diagnostics.ReportEventNotAValue(syntax.AssignmentToken.Location, memberTarget.Field.Name);
                     return new BoundErrorExpression(syntax);

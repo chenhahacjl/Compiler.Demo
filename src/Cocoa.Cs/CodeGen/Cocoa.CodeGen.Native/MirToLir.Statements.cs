@@ -507,6 +507,9 @@ namespace Cocoa.CodeGen.Native
                 case BoundNodeKind.ByRefArgument:
                     return EmitByRefArgument((BoundByRefArgument)node);
 
+                case BoundNodeKind.DeclarationPattern:
+                    return EmitDeclarationPattern((BoundDeclarationPattern)node);
+
                 case BoundNodeKind.ErrorExpression:
                     return EmitConst(0);
 

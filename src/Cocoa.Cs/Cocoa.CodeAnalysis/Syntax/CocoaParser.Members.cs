@@ -327,6 +327,41 @@ namespace Cocoa.CodeAnalysis.Syntax
                 new TypeClauseSyntax(_syntaxTree, null, SyntheticToken(SyntaxKind.IdentifierToken, pos, "string")), toStringBody));
         }
 
+        /// <summary>
+        /// 主构造函数（C# 12）：`class Point(x: i32, y: i32) { … }` 展开为
+        /// **私有捕获字段**（字段名 = 参数名：类体内裸名 `x` 可读、外部 `point.x` 被可见性拦截，
+        /// 即 C#「参数仅构造器捕获」语义）+ 隐式构造器（`this.x = x`）。
+        /// 与 record 位置参数的区别：字段私有、不生成 Equals/ToString/==。
+        /// </summary>
+        private void ExpandPrimaryConstructorMembers(SyntaxToken nameToken, SeparatedSyntaxList<ParameterSyntax> parameters, ImmutableArray<MemberSyntax>.Builder members)
+        {
+            var pos = nameToken.Span.Start;
+            var privateMods = ImmutableArray.Create(SyntheticToken(SyntaxKind.PrivateKeyword, pos, "private"));
+            var publicMods = ImmutableArray.Create(SyntheticToken(SyntaxKind.PublicKeyword, pos, "public"));
+
+            foreach (var p in parameters)
+            {
+                members.Add(new ClassFieldDeclarationSyntax(_syntaxTree, ImmutableArray<AttributeSyntax>.Empty, privateMods, p.Identifier, p.Type));
+            }
+
+            var ctorStatements = ImmutableArray.CreateBuilder<StatementSyntax>();
+            foreach (var p in parameters)
+            {
+                var thisAccess = new MemberAccessExpressionSyntax(_syntaxTree,
+                    new ThisExpressionSyntax(_syntaxTree, SyntheticToken(SyntaxKind.ThisKeyword, pos, "this")),
+                    SyntheticToken(SyntaxKind.DotToken, pos, "."), p.Identifier);
+                var assign = new AssignmentExpressionSyntax(_syntaxTree, thisAccess, SyntheticToken(SyntaxKind.EqualsToken, pos, "="), new NameExpressionSyntax(_syntaxTree, p.Identifier));
+                ctorStatements.Add(new ExpressionStatementSyntax(_syntaxTree, assign));
+            }
+
+            var ctorBody = new BlockStatementSyntax(_syntaxTree, SyntheticToken(SyntaxKind.OpenBraceToken, pos, "{"), ctorStatements.ToImmutable(), SyntheticToken(SyntaxKind.CloseBraceToken, pos, "}"));
+            members.Add(new ConstructorDeclarationSyntax(_syntaxTree, publicMods,
+                SyntheticToken(SyntaxKind.ConstructorKeyword, pos, "constructor"),
+                SyntheticToken(SyntaxKind.OpenParenthesisToken, pos, "("), parameters,
+                SyntheticToken(SyntaxKind.CloseParenthesisToken, pos, ")"), initializerKeyword: null,
+                new SeparatedSyntaxList<ExpressionSyntax>(ImmutableArray<SyntaxNode>.Empty), ctorBody));
+        }
+
         private ExpressionSyntax BuildRecordToString(SyntaxToken nameToken, SeparatedSyntaxList<ParameterSyntax> parameters, int pos)
         {
             ExpressionSyntax? expr = null;
@@ -965,6 +1000,18 @@ namespace Cocoa.CodeAnalysis.Syntax
                 : MatchToken(SyntaxKind.ClassKeyword);
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
             var typeParameters = ParseOptionalTypeParameterList();
+
+            // 主构造函数（C# 12）：`class Point(x: i32, y: i32) extends …` —— 参数表紧跟类名（类型参数后），
+            // 展开为私有捕获字段 + 隐式构造器（见 ExpandPrimaryConstructorMembers）。
+            var primaryCtorMembers = ImmutableArray.CreateBuilder<MemberSyntax>();
+            if (Current.Kind == SyntaxKind.OpenParenthesisToken)
+            {
+                var openParen = NextToken();
+                var primaryParameters = ParseParameterList();
+                MatchToken(SyntaxKind.CloseParenthesisToken);
+                ExpandPrimaryConstructorMembers(identifier, primaryParameters, primaryCtorMembers);
+            }
+
             var baseTypes = ImmutableArray.CreateBuilder<TypeClauseSyntax>();
 
             if (Current.Kind == SyntaxKind.ColonToken ||
@@ -991,7 +1038,18 @@ namespace Cocoa.CodeAnalysis.Syntax
             var members = ParseClassMemberList(identifier.Text);
             var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
 
-            return new ClassDeclarationSyntax(_syntaxTree, attributes, modifiers, classKeyword, identifier, typeParameters, baseTypes.ToImmutable(), whereClauses, openBraceToken, members, closeBraceToken);
+            // 主构造函数参数 + 显式实例构造器同时声明：MVP 未支持 `: this(…)` 链，明确拒绝
+            // （静态构造器不冲突，准予共存）。
+            if (primaryCtorMembers.Count > 0 &&
+                members.Any(m => m is ConstructorDeclarationSyntax ctor && !ctor.Modifiers.Any(mod => mod.Kind == SyntaxKind.StaticKeyword)))
+            {
+                ReportError(identifier.Location,
+                    "主构造函数参数与显式实例构造器不能同时声明（当前版本未支持 `: this(…)` 构造链），请改用字段初始化或普通构造器。");
+            }
+
+            primaryCtorMembers.AddRange(members);
+
+            return new ClassDeclarationSyntax(_syntaxTree, attributes, modifiers, classKeyword, identifier, typeParameters, baseTypes.ToImmutable(), whereClauses, openBraceToken, primaryCtorMembers.ToImmutable(), closeBraceToken);
         }
 
         private ImmutableArray<MemberSyntax> ParseClassMemberList(string className)
@@ -1435,7 +1493,31 @@ namespace Cocoa.CodeAnalysis.Syntax
                 NextToken();
             }
 
-            return new EventDeclarationSyntax(_syntaxTree, modifiers, eventKeyword, identifier, handlerType);
+            // 访问器式事件（C# 式）：`event E: T { add { … } remove { … } }` —— add/remove 为上下文标识符
+            BlockStatementSyntax? addBody = null, removeBody = null;
+            if (Current.Kind == SyntaxKind.OpenBraceToken)
+            {
+                MatchToken(SyntaxKind.OpenBraceToken);
+                while (Current.Kind == SyntaxKind.IdentifierToken &&
+                       (Current.Text == "add" || Current.Text == "remove"))
+                {
+                    var isAdd = Current.Text == "add";
+                    NextToken();
+                    var body = ParseBlockStatement();
+                    if (isAdd)
+                    {
+                        addBody = body;
+                    }
+                    else
+                    {
+                        removeBody = body;
+                    }
+                }
+
+                MatchToken(SyntaxKind.CloseBraceToken);
+            }
+
+            return new EventDeclarationSyntax(_syntaxTree, modifiers, eventKeyword, identifier, handlerType, addBody, removeBody);
         }
 
         private MemberSyntax ParseDelegateDeclaration(ImmutableArray<SyntaxToken> modifiers)

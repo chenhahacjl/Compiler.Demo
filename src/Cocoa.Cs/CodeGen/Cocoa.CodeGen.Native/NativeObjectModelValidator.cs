@@ -74,6 +74,18 @@ namespace Cocoa.CodeGen.Native
                 _diagnostics.ReportError(decimalLocation, "native 后端暂不支持 decimal/f16 类型（128 位高精度/16 位半精度需 System.Decimal/System.Half 运行期支持）。");
             }
 
+            // 声明模式（`expr is T var`）值类型 / string 目标：native `any` 无装箱运行时类型信息（值类型裸传、string 非 vtable 类），
+            // 走 EmitTypeChainCompare 会误读内存——编译期明确拒绝（Evaluator/IL 已支持）。
+            if (node.Kind == BoundNodeKind.DeclarationPattern && node.Syntax != null)
+            {
+                var patternType = ((BoundDeclarationPattern)node).TargetType;
+                if (patternType == TypeSymbol.String || patternType.IsValueType)
+                {
+                    var patternLocation = node.Syntax?.Location ?? _fallbackLocation;
+                    _diagnostics.ReportError(patternLocation, "native 后端暂不支持 string/值类型的声明模式（`expr is T var`，需装箱运行时类型信息）；请改用类/接口目标。");
+                }
+            }
+
             if (node.Kind == BoundNodeKind.MemberCallExpression &&
                 ((BoundMemberCallExpression)node).Method?.BuiltinKind != null &&
                 !((BoundMemberCallExpression)node).Method!.IsStatic)

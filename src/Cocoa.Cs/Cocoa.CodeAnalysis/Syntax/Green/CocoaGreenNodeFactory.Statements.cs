@@ -328,8 +328,25 @@ namespace Cocoa.CodeAnalysis.Syntax
             var identifier = (SyntaxToken)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
             position += _green.GetSlot(slot)!.Width;
             slot++;
-            var handlerType = (TypeClauseSyntax)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
-            return new EventDeclarationSyntax(syntaxTree, modifiers.ToImmutable(), eventKeyword, identifier, handlerType);
+var handlerType = (TypeClauseSyntax)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += _green.GetSlot(slot)!.Width;
+            slot++;
+
+            // 访问器式事件：add/remove 体（与 EventDeclarationSyntax.ToGreen 的 GetChildren 槽序一致）
+            BlockStatementSyntax? addBody = null, removeBody = null;
+            if (slot < _green.SlotCount && _green.GetSlot(slot) != null)
+            {
+                addBody = (BlockStatementSyntax)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+                position += _green.GetSlot(slot)!.Width;
+                slot++;
+            }
+
+            if (slot < _green.SlotCount && _green.GetSlot(slot) != null)
+            {
+                removeBody = (BlockStatementSyntax)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            }
+
+            return new EventDeclarationSyntax(syntaxTree, modifiers.ToImmutable(), eventKeyword, identifier, handlerType, addBody, removeBody);
         }
 
         private SyntaxNode BuildPropertyAccessor(SyntaxTree syntaxTree, int position)

@@ -86,6 +86,45 @@ namespace Cocoa.CodeGen.Native
             return result;
         }
 
+        /// <summary>声明模式（`expr is T var`）：类型链比对命中 → 绑定模式变量（值类型拆箱，引用直通）并得 true；否则 false。</summary>
+        private LirVirtualRegister EmitDeclarationPattern(BoundDeclarationPattern node)
+        {
+            var instructions = _currentFunction.Instructions;
+            var value = EmitExpression(node.Expression);
+            var targetType = node.TargetType;
+            var patternVar = GetVariable(node.Variable);
+            var result = AllocateRegister(4);
+
+            // EmitTypeChainCompare 尾部是 Jmp notFound——下列 const 必须置于各自分支内（EmitIsExpression 同构），
+            // 否则将成为不可达死代码、found 分支 Mov 用未初始化寄存器。
+            EmitTypeChainCompare(value, targetType, out var found, out var notFound, out var done);
+
+            Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(found)));
+            if (IsBoxableValueType(targetType))
+            {
+                var unboxed = EmitUnboxValue(value, targetType);
+                Add(instructions, new LirInstruction(LirOpCode.Mov, patternVar, LirOperand.Reg(unboxed)));
+            }
+            else
+            {
+                Add(instructions, new LirInstruction(LirOpCode.Mov, patternVar, LirOperand.Reg(value)));
+            }
+
+            var one = AllocateRegister(4);
+            Add(instructions, new LirInstruction(LirOpCode.Const, one, LirOperand.Constant(1)));
+            Add(instructions, new LirInstruction(LirOpCode.Mov, result, LirOperand.Reg(one)));
+            Add(instructions, new LirInstruction(LirOpCode.Jmp, LirOperand.Label(done)));
+
+            Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(notFound)));
+            var zero = AllocateRegister(4);
+            Add(instructions, new LirInstruction(LirOpCode.Const, zero, LirOperand.Constant(0)));
+            Add(instructions, new LirInstruction(LirOpCode.Mov, result, LirOperand.Reg(zero)));
+
+            Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(done)));
+
+            return result;
+        }
+
         /// <summary>发射 obj（可空）对目标类的类型链比较：null 短路未命中；命中/未命中，汇合三标签交调用方回填结果。</summary>
         private void EmitTypeChainCompare(LirVirtualRegister obj, TypeSymbol targetType, out int found, out int notFound, out int done)
         {
@@ -124,14 +163,14 @@ namespace Cocoa.CodeGen.Native
         }
 
         /// <summary>
-        /// 6e-M19 M5-b：x is/as T 的运行时命中范围 = 存活类中 T 的自身与全部后代（vtable 一一比对）。
-        /// 函数同时作为 vtable 固定槽默认实现（槽内容可能是用户 override，callreg 无法区分 ABI），
-        // 函数调用
+        /// 6e-M19 M5-b：x is/as T 的运行时命中范围 = 存活类中 T 的自身与全部后代（vtable 一一比对）；
+        /// 接口目标补实现它的存活类（IsBaseOf 只沿基类链，不含接口实现）。
         /// </summary>
         private IEnumerable<string> EnumerateDescendantVTableKeys(NamedTypeSymbol targetClass)
         {
             return _liveClasses
-                .Where(c => c == targetClass || targetClass.IsBaseOf(c))
+                .Where(c => c == targetClass || targetClass.IsBaseOf(c) ||
+                            (targetClass.IsInterface && c.GetAllInterfaces().Contains(targetClass)))
                 .OrderBy(c => c.FullName, System.StringComparer.Ordinal)
                 .Select(NativeObjectModel.VTableKey);
         }
