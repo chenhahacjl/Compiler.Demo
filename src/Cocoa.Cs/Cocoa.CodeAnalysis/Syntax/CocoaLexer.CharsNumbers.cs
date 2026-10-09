@@ -12,7 +12,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// <br/>
     /// 字符 => Token
     /// </summary>
-    public abstract partial class LexerBase
+    public sealed partial class CocoaLexer
     {
         private void ReadChar()
         {
