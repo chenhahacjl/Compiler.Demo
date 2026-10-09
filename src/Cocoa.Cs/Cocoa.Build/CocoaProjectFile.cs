@@ -13,12 +13,6 @@ namespace Cocoa.Build
         Cod,
     }
 
-    /// <summary>项目语言：去 C# 方言后仅 `Cocoa`（`.co`）。</summary>
-    public enum CocoaProjectLanguage
-    {
-        Cocoa,
-    }
-
     /// <summary>构建配置（替代旧版 `debug` bool）。</summary>
     public enum ProjectConfiguration
     {
@@ -66,7 +60,6 @@ namespace Cocoa.Build
             string filePath,
             string name,
             string? assemblyName,
-            CocoaProjectLanguage language,
             ProjectOutputFormat output,
             CodeBackend? backend,
             CocoaTargetOs targetOs,
@@ -92,7 +85,6 @@ namespace Cocoa.Build
             Directory = Path.GetDirectoryName(FilePath) ?? ".";
             Name = name;
             AssemblyName = assemblyName ?? name;
-            Language = language;
             Output = output;
             Backend = backend;
             TargetOs = targetOs;
@@ -119,9 +111,7 @@ namespace Cocoa.Build
         public string Directory { get; }
         public string Name { get; }
         public string AssemblyName { get; }
-        public CocoaProjectLanguage Language { get; }
-        public ProjectOutputFormat Output { get; }
-
+public ProjectOutputFormat Output { get; }
         /// <summary>代码生成后端（null = 用构建默认，即托管 DotNet）。</summary>
         public CodeBackend? Backend { get; }
 

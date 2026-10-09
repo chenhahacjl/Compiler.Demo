@@ -7,7 +7,7 @@ using System.Text;
 namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// 词法分析器 (Lexical Analyzer)（3b 收敛：方言无关词法逻辑收敛到共享 LexerBase，两方言薄壳继承）
+    /// 词法分析器 (Lexical Analyzer)（3b 收敛：词法逻辑收敛到共享 LexerBase，薄壳继承）
     /// <br/>
     /// 字符 => Token
     /// </summary>

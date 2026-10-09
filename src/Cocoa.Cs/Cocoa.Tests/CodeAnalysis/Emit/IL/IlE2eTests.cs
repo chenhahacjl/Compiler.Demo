@@ -2763,7 +2763,7 @@ function Main()
             var messages = GetEmitDiagnostics(@"
 public class Foo
 {
-    static Foo(i32 x)
+    static constructor(x: i32)
     {
     }
 }", "Main");

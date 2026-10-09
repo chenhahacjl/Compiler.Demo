@@ -227,9 +227,6 @@ var solution = $@"<Solution Version=""1"">
                 case LibraryTemplate:
                     return (
                         $@"<Project Version=""1"">
-  <PropertyGroup Label=""Language"">
-    <Language>Cocoa</Language>
-  </PropertyGroup>
   <PropertyGroup Label=""Assembly"">
     <AssemblyName>{name}</AssemblyName>
   </PropertyGroup>
@@ -263,9 +260,6 @@ var solution = $@"<Solution Version=""1"">
                 case CocoaTemplate:
                     return (
                         $@"<Project Version=""1"">
-  <PropertyGroup Label=""Language"">
-    <Language>Cocoa</Language>
-  </PropertyGroup>
   <PropertyGroup Label=""Assembly"">
     <AssemblyName>{name}</AssemblyName>
   </PropertyGroup>
@@ -301,9 +295,6 @@ var solution = $@"<Solution Version=""1"">
                 case SolutionTemplate:
                     return (
                         $@"<Project Version=""1"">
-  <PropertyGroup Label=""Language"">
-    <Language>Cocoa</Language>
-  </PropertyGroup>
   <PropertyGroup Label=""Assembly"">
     <AssemblyName>{name}</AssemblyName>
   </PropertyGroup>
@@ -334,9 +325,6 @@ function Main()
                 default: // console
                     return (
                         $@"<Project Version=""1"">
-  <PropertyGroup Label=""Language"">
-    <Language>Cocoa</Language>
-  </PropertyGroup>
   <PropertyGroup Label=""Assembly"">
     <AssemblyName>{name}</AssemblyName>
   </PropertyGroup>

@@ -4,7 +4,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
     /// Lambda 表达式（6e-M22 C2）：`(x: int, y: int) =&gt; expr | { ... }`、`() => expr` 等。
-    /// `.cs` 方言追加免括号单参 `x => expr`（OpenParenthesisToken 为 null）。
+    /// 追加免括号单参 `x => expr`（OpenParenthesisToken 为 null）。
     /// 绑定期 C3/C4 接入——C2 阶段 Binder 门禁报明确诊断。
     /// </summary>
     public sealed partial class LambdaExpressionSyntax : ExpressionSyntax

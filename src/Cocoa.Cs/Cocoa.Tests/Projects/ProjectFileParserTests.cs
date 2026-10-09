@@ -33,7 +33,6 @@ namespace Cocoa.Tests.Projects
 
             Assert.Equal("MyApp", project.AssemblyName);
             Assert.Equal("MyApp", project.Name);
-            Assert.Equal(CocoaProjectLanguage.Cocoa, project.Language);
             Assert.Equal(ProjectOutputFormat.Dll, project.Output);
             Assert.Equal(CocoaTargetOs.Windows, project.TargetOs);
             Assert.Equal("x86", project.Platform);
@@ -69,26 +68,6 @@ namespace Cocoa.Tests.Projects
             Assert.Null(project.DotnetRuntime);
             Assert.Null(project.OutputPath);
             Assert.Null(project.Entry);
-        }
-
-        [Fact]
-        public void ParseProject_MissingLanguage_Throws()
-        {
-            var text = "<Project Version=\"1\">\n" +
-                       "  <ItemGroup><Source Include=\"*.co\" /></ItemGroup>\n" +
-                       "</Project>";
-            var ex = Assert.Throws<ProjectFileFormatException>(() => ProjectFileParser.ParseProject(text, "x.coproj"));
-            Assert.Contains("Language", ex.Message);
-        }
-
-        [Fact]
-        public void ParseProject_InvalidLanguage_Throws()
-        {
-            var text = "<Project Version=\"1\">\n" +
-                       "  <PropertyGroup><Language>Fancy</Language></PropertyGroup>\n" +
-                       "  <ItemGroup><Source Include=\"*.co\" /></ItemGroup>\n" +
-                       "</Project>";
-            Assert.Throws<ProjectFileFormatException>(() => ProjectFileParser.ParseProject(text, "x.coproj"));
         }
 
         [Fact]

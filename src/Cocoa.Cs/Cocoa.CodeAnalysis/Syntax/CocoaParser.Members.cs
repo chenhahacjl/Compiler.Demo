@@ -98,16 +98,9 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return ParseDelegateDeclaration(modifiers);
             }
 
-            if (IsCSharpStyleTopLevelFunction())
-            {
-                ReportError(Current.Location, "Cocoa 顶层函数须用 function 关键字（如 `function Add(a: int, b: int): int`），不支持 C# 式 `返回类型 名称(...)`。");
-
-                return ParseCSharpStyleTopLevelFunction(modifiers);
-            }
-
             if (IsNoKeywordTopLevelFunction())
             {
-                ReportError(Current.Location, "顶层函数须用 function 关键字（Cocoa）或带返回类型（C#），不支持无关键字写法（如 `Main(): void`）。");
+                ReportError(Current.Location, "顶层函数须用 function 关键字，不支持无关键字写法（如 `Main(): void`）。");
                 return ParseNoKeywordTopLevelFunction(modifiers);
             }
 
@@ -396,54 +389,6 @@ namespace Cocoa.CodeAnalysis.Syntax
             return expr ?? new LiteralExpressionSyntax(_syntaxTree, SyntheticToken(SyntaxKind.StringToken, pos, "\"\"", ""));
         }
 
-        private bool IsCSharpStyleTopLevelFunction()
-        {
-            var offset = 0;
-            if (Peek(offset).Kind != SyntaxKind.IdentifierToken)
-            {
-                return false;
-            }
-
-            offset++;
-
-            if (Peek(offset).Kind == SyntaxKind.LessToken)
-            {
-                var afterAngles = ScanBalancedAngleSuffix(offset);
-                if (afterAngles < 0)
-                {
-                    return false;
-                }
-
-                offset = afterAngles;
-            }
-
-            while (Peek(offset).Kind == SyntaxKind.OpenBracketToken &&
-                   Peek(offset + 1).Kind == SyntaxKind.CloseBracketToken)
-            {
-                offset += 2;
-            }
-
-            if (Peek(offset).Kind != SyntaxKind.IdentifierToken)
-            {
-                return false;
-            }
-
-            offset++;
-
-            if (Peek(offset).Kind == SyntaxKind.LessToken)
-            {
-                var afterAngles = ScanBalancedAngleSuffix(offset);
-                if (afterAngles < 0)
-                {
-                    return false;
-                }
-
-                offset = afterAngles;
-            }
-
-            return Peek(offset).Kind == SyntaxKind.OpenParenthesisToken;
-        }
-
         private bool IsNoKeywordTopLevelFunction()
         {
             if (Current.Kind != SyntaxKind.IdentifierToken ||
@@ -475,14 +420,6 @@ namespace Cocoa.CodeAnalysis.Syntax
                     }
                 }
             }
-        }
-
-        private MemberSyntax ParseCSharpStyleTopLevelFunction(ImmutableArray<SyntaxToken> modifiers)
-        {
-            var type = ParsePrefixTypeClause();
-            var identifier = MatchToken(SyntaxKind.IdentifierToken);
-
-            return ParseCSharpStyleMethod(modifiers, type, identifier);
         }
 
         private MemberSyntax ParseNoKeywordTopLevelFunction(ImmutableArray<SyntaxToken> modifiers)
@@ -1130,9 +1067,6 @@ namespace Cocoa.CodeAnalysis.Syntax
                     ReportError(Current.Location, "类字段声明须加 field 关键字，如 `field " + Current.Text + ": ...`。");
                     return ParseClassFieldDeclaration(attributes, modifiers);
                 }
-
-                ReportError(Current.Location, "Cocoa 类成员须用 function/property/field/constructor 关键字且类型后置，不支持 C# 式 `类型 名称(...)`。");
-                return ParseCSharpStyleMember(modifiers, className);
             }
 
             _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.IdentifierToken);
@@ -1141,167 +1075,6 @@ namespace Cocoa.CodeAnalysis.Syntax
             var badMember = new ClassFieldDeclarationSyntax(_syntaxTree, ImmutableArray<AttributeSyntax>.Empty, modifiers, Current, new TypeClauseSyntax(_syntaxTree, badColon, badType));
             NextToken();
             return badMember;
-        }
-
-        private MemberSyntax ParseCSharpStyleMember(ImmutableArray<SyntaxToken> modifiers, string className)
-        {
-            if (Current.Kind == SyntaxKind.IdentifierToken &&
-                Peek(1).Kind == SyntaxKind.OpenParenthesisToken &&
-                Current.Text == className)
-            {
-                return ParseCSharpStyleConstructor(modifiers);
-            }
-
-            var type = ParsePrefixTypeClause();
-            var identifier = MatchToken(SyntaxKind.IdentifierToken);
-
-            if (Current.Kind == SyntaxKind.LessToken)
-            {
-                return ParseCSharpStyleMethod(modifiers, type, identifier);
-            }
-
-            switch (Current.Kind)
-            {
-                case SyntaxKind.SemicolonToken:
-                {
-                    MatchToken(SyntaxKind.SemicolonToken);
-                    return new ClassFieldDeclarationSyntax(_syntaxTree, ImmutableArray<AttributeSyntax>.Empty, modifiers, identifier, type);
-                }
-
-                case SyntaxKind.EqualsToken:
-                {
-                    var equalsToken = MatchToken(SyntaxKind.EqualsToken);
-                    var initializer = ParseExpression();
-                    return new ClassFieldDeclarationSyntax(_syntaxTree, ImmutableArray<AttributeSyntax>.Empty, modifiers, identifier, type, equalsToken, initializer);
-                }
-
-                case SyntaxKind.OpenBraceToken:
-                case SyntaxKind.FatArrowToken:
-                    return ParseCSharpStyleProperty(modifiers, type, identifier);
-
-                case SyntaxKind.OpenParenthesisToken:
-                    return ParseCSharpStyleMethod(modifiers, type, identifier);
-
-                default:
-                    _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.SemicolonToken);
-                    return new ClassFieldDeclarationSyntax(_syntaxTree, ImmutableArray<AttributeSyntax>.Empty, modifiers, identifier, type);
-            }
-        }
-
-        private MemberSyntax ParseCSharpStyleConstructor(ImmutableArray<SyntaxToken> modifiers)
-        {
-            MatchToken(SyntaxKind.IdentifierToken);
-            var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
-            var parameters = ParseParameterList();
-            var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
-
-            SyntaxToken? initializerKeyword = null;
-            var initializerArguments = new SeparatedSyntaxList<ExpressionSyntax>(ImmutableArray<SyntaxNode>.Empty);
-            if (Current.Kind == SyntaxKind.ColonToken ||
-                Current.Kind == SyntaxKind.ExtendsKeyword)
-            {
-                NextToken();
-                if (Current.Kind == SyntaxKind.BaseKeyword || Current.Kind == SyntaxKind.ThisKeyword)
-                {
-                    initializerKeyword = NextToken();
-                    var openParen = MatchToken(SyntaxKind.OpenParenthesisToken);
-                    initializerArguments = ParseArgumentList();
-                    MatchToken(SyntaxKind.CloseParenthesisToken);
-                }
-                else
-                {
-                    _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.BaseKeyword);
-                }
-            }
-
-            var body = ParseBlockStatement();
-
-            return new ConstructorDeclarationSyntax(_syntaxTree, modifiers, constructorKeyword: null, openParenthesisToken, parameters, closeParenthesisToken, initializerKeyword, initializerArguments, body);
-        }
-
-        private MemberSyntax ParseCSharpStyleMethod(ImmutableArray<SyntaxToken> modifiers, TypeClauseSyntax type, SyntaxToken identifier)
-        {
-            var typeParameters = ParseOptionalTypeParameterList();
-            var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
-            var parameters = ParseParameterList();
-            var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
-
-            var whereClauses = ParseWhereClauses();
-
-            BlockStatementSyntax? body = null;
-            if (Current.Kind == SyntaxKind.OpenBraceToken)
-            {
-                body = ParseBlockStatement();
-            }
-            else if (Current.Kind == SyntaxKind.SemicolonToken)
-            {
-                NextToken();
-            }
-            else if (Current.Kind == SyntaxKind.FatArrowToken)
-            {
-                var arrow = NextToken();
-                var expression = ParseExpression();
-                if (Current.Kind == SyntaxKind.SemicolonToken)
-                {
-                    NextToken();
-                }
-
-                body = SynthesizeExpressionBodyBlock(expression, arrow);
-            }
-
-            return new FunctionDeclarationSyntax(_syntaxTree, ImmutableArray<AttributeSyntax>.Empty, modifiers, functionKeyword: null, identifier, typeParameters, openParenthesisToken, parameters, closeParenthesisToken, type, body, whereClauses: whereClauses);
-        }
-
-        private MemberSyntax ParseCSharpStyleProperty(ImmutableArray<SyntaxToken> modifiers, TypeClauseSyntax type, SyntaxToken identifier)
-        {
-            if (Current.Kind == SyntaxKind.FatArrowToken)
-            {
-                var arrow = NextToken();
-                var expression = ParseExpression();
-                if (Current.Kind == SyntaxKind.SemicolonToken)
-                {
-                    NextToken();
-                }
-
-                return SynthesizeExpressionBodyProperty(modifiers, propertyKeyword: null, identifier, type, arrow, expression);
-            }
-
-            var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
-
-            PropertyAccessorSyntax? getter = null;
-            PropertyAccessorSyntax? setter = null;
-            while (Current.Kind != SyntaxKind.CloseBraceToken && Current.Kind != SyntaxKind.EndOfFileToken)
-            {
-                if (IsModifier(Current.Kind) || Current.Kind == SyntaxKind.GetKeyword || Current.Kind == SyntaxKind.SetKeyword || Current.Kind == SyntaxKind.InitKeyword)
-                {
-                    var accessor = ParsePropertyAccessor();
-                    if (accessor.IsGet)
-                    {
-                        getter = accessor;
-                    }
-                    else
-                    {
-                        setter = accessor;
-                    }
-                }
-                else
-                {
-                    _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.GetKeyword);
-                    NextToken();
-                }
-            }
-
-            var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
-
-            SyntaxToken? equalsToken = null;
-            ExpressionSyntax? initializer = null;
-            if (Current.Kind == SyntaxKind.EqualsToken)
-            {
-                equalsToken = MatchToken(SyntaxKind.EqualsToken);
-                initializer = ParseExpression();
-            }
-
-            return new PropertyDeclarationSyntax(_syntaxTree, ImmutableArray<AttributeSyntax>.Empty, modifiers, propertyKeyword: null, identifier, type, openBraceToken, getter, setter, closeBraceToken, ImmutableArray<ParameterSyntax>.Empty, equalsToken, initializer);
         }
 
         private TypeClauseSyntax ParsePrefixTypeClause()
@@ -1414,33 +1187,6 @@ namespace Cocoa.CodeAnalysis.Syntax
                 {
                     members.Add(ParsePropertyDeclaration(ImmutableArray<AttributeSyntax>.Empty, modifiers));
                 }
-                else if (Current.Kind == SyntaxKind.IdentifierToken &&
-                         (Peek(1).Kind == SyntaxKind.IdentifierToken ||
-                          (Peek(1).Kind == SyntaxKind.LessToken && IsGenericTypeNameAhead())))
-                {
-                    ReportError(Current.Location, "Cocoa 接口成员须用 function/property 关键字且类型后置，不支持 C# 式 `类型 名称`。");
-
-                    var type = ParsePrefixTypeClause();
-                    var memberIdentifier = MatchToken(SyntaxKind.IdentifierToken);
-
-                    if (Current.Kind == SyntaxKind.OpenBraceToken)
-                    {
-                        members.Add(ParseCSharpStyleProperty(modifiers, type, memberIdentifier));
-                    }
-                    else
-                    {
-                    var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
-                    var parameters = ParseParameterList();
-                    var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
-                    var csMemberWhereClauses = ParseWhereClauses();
-                    if (Current.Kind == SyntaxKind.SemicolonToken)
-                    {
-                        NextToken();
-                    }
-
-                    members.Add(new FunctionDeclarationSyntax(_syntaxTree, ImmutableArray<AttributeSyntax>.Empty, modifiers, functionKeyword: null, memberIdentifier, typeParameters: null, openParenthesisToken, parameters, closeParenthesisToken, type, body: null, whereClauses: csMemberWhereClauses));
-                    }
-                }
                 else
                 {
                     _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.FunctionKeyword);
@@ -1493,7 +1239,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 NextToken();
             }
 
-            // 访问器式事件（C# 式）：`event E: T { add { … } remove { … } }` —— add/remove 为上下文标识符
+            // 访问器式事件：`event E: T { add { … } remove { … } }` —— add/remove 为上下文标识符
             BlockStatementSyntax? addBody = null, removeBody = null;
             if (Current.Kind == SyntaxKind.OpenBraceToken)
             {
@@ -1796,7 +1542,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return new ParameterSyntax(_syntaxTree, modifier, identifier, type, equalsToken, defaultValue);
             }
 
-            ReportError(Current.Location, "Cocoa 参数须为 `名称: 类型`（类型后置），不支持 C# 式 `类型 名称`。");
+            ReportError(Current.Location, "Cocoa 参数须为 `名称: 类型`（类型后置）。");
+            return ParseParameterTailAsError(modifier);
+        }
+
+        private ParameterSyntax ParseParameterTailAsError(SyntaxToken? modifier)
+        {
             var csType = ParsePrefixTypeClause();
             var csIdentifier = MatchToken(SyntaxKind.IdentifierToken);
 

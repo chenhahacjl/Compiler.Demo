@@ -296,14 +296,5 @@ namespace Cocoa.Build
                 _ => throw new ProjectFileFormatException($"invalid RequestedExecutionLevel '{text}'. Expected: AsInvoker, HighestAvailable, RequireAdministrator", line),
             };
         }
-
-        internal static CocoaProjectLanguage ParseLanguage(string text, int line)
-        {
-            return text.ToLowerInvariant() switch
-            {
-                "cocoa" => CocoaProjectLanguage.Cocoa,
-                _ => throw new ProjectFileFormatException($"invalid Language '{text}'. Expected: cocoa", line),
-            };
-        }
     }
 }

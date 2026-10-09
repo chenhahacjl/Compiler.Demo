@@ -941,8 +941,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
         /// <summary>
         /// F2 共享绑定服务（Y-A3-3）：构造前缀——显式构造链 `base(...)`/`this(...)` + 字段初始化器，
-        /// 依序置于函数体开头。此算法是绑定期语义决策（需作用域/类型上下文），在两方言 binder 分叉
-        /// （CocoaBinder/CSharpBinder）时复用，不随方言复制。实例字段初始化器 → 每个实例构造函数；
+        /// 依序置于函数体开头。此算法是绑定期语义决策（需作用域/类型上下文）。实例字段初始化器 → 每个实例构造函数；
         /// 静态字段初始化器 → .cctor（body 即初始化语句）。
         /// </summary>
         internal static BoundBlockStatement BuildConstructorPrefix(CocoaBinder binder, FunctionSymbol function, CoreSyntax.SyntaxNode wrapSyntax, BoundBlockStatement body)

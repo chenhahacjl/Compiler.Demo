@@ -9,7 +9,7 @@ using System.Linq;
 namespace Cocoa.CodeAnalysis
 {
     /// <summary>
-    /// 语义模型（对齐 Roslyn <see cref="Microsoft.CodeAnalysis.SemanticModel"/>）。去 C# 方言后单语言单实现：
+    /// 语义模型（对齐 Roslyn <see cref="Microsoft.CodeAnalysis.SemanticModel"/>）。单语言单实现：
     /// 绑定树基础设施（Syntax→BoundNode 映射 / GetOperation / GetDiagnostics）与 Cocoa 名字解析
     /// （GetTypeInfo/GetDeclaredSymbol/GetSymbolInfo）合一。
     /// </summary>

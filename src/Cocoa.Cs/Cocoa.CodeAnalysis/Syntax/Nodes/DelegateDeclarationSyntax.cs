@@ -44,14 +44,14 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         public SyntaxToken CloseParenToken { get; }
 
-        /// <summary>`.cs` 结尾分号（`.co` 无）。</summary>
+        /// <summary>结尾分号（`.co` 常省略）。</summary>
         public SyntaxToken? SemicolonToken { get; }
 
-        /// <summary>是否为 C# 前置返回类型形态（`delegate int H(...)`；.co 形态返回类型冒号后置或省略）。</summary>
+        /// <summary>是否为前置返回类型形态（`delegate int H(...)`；通常返回类型冒号后置或省略）。</summary>
         private bool IsCStyle => ReturnType != null && ReturnType.ColonToken == null;
 
-        /// <summary>红→绿源序化：保证 `GreenRoot.ToString() == 源码` 对 `.cs`/`.co` 两形态成立。
-        /// （.co：delegate 名（参数）[: 返回类型]；.cs：delegate 返回类型 名（参数）;）。</summary>
+        /// <summary>红→绿源序化：保证 `GreenRoot.ToString() == 源码` 对两形态成立。
+        /// （delegate 名（参数）[: 返回类型]；或返回类型 名（参数）;）。</summary>
         public override GreenNode ToGreen()
         {
             var slots = ImmutableArray.CreateBuilder<GreenNode?>();

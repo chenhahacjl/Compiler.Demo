@@ -269,12 +269,6 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
         }
 
-        private bool IsGenericTypeNameAhead()
-        {
-            var afterAngles = ScanBalancedAngleSuffix(1);
-            return afterAngles > 0 && Peek(afterAngles).Kind == SyntaxKind.IdentifierToken;
-        }
-
         private SyntaxToken ParseClosingAngle()
         {
             if (_syntheticTokens.Count > 0 && _syntheticTokens.Peek().Kind == SyntaxKind.GreaterToken)
@@ -474,21 +468,6 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
 
             return type;
-        }
-
-        private TypeClauseSyntax ParseBaseTypeClause()
-        {
-            SyntaxToken prefixToken;
-            if (Current.Kind == SyntaxKind.ExtendsKeyword)
-            {
-                prefixToken = MatchToken(SyntaxKind.ExtendsKeyword);
-            }
-            else
-            {
-                prefixToken = MatchToken(SyntaxKind.ColonToken);
-            }
-
-            return CreateBaseTypeClause(prefixToken);
         }
 
         private TypeClauseSyntax CreateBaseTypeClause(SyntaxToken? prefixToken)

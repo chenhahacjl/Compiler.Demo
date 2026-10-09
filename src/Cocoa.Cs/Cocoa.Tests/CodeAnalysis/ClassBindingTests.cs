@@ -2215,7 +2215,7 @@ function Main()
 
 public class Foo
 {
-    static Foo(i32 x)
+    static constructor(x: i32)
     {
     }
 }

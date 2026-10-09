@@ -1028,7 +1028,7 @@ namespace Cocoa.CodeAnalysis.Binding
         internal TypeSymbol? BindTypeClauseForExpansion(TypeClauseSyntax syntax) => BindTypeClause(syntax);
 
         /// <summary>
-        /// 内建委托家族解析（6e-M22 C3，设计 §2.3）：编译器预合成、零 stdlib 依赖、两方言共享。
+        /// 内建委托家族解析（6e-M22 C3，设计 §2.3）：编译器预合成、零 stdlib 依赖。
         /// `Func&lt;A1..An,R&gt;` = (A..) -&gt; R（1~16 参）；`Action&lt;A1..An&gt;` = (A..) -&gt; void（0~16 参）；
         /// `Predicate&lt;T&gt;` = (T) -&gt; bool。非家族名返回 null 回落常规查找；命中但元数/绑定失败报诊断返回 Error 壳。
         /// </summary>
@@ -1127,7 +1127,7 @@ namespace Cocoa.CodeAnalysis.Binding
         /// </summary>
         private TypeSymbol? BindGenericTypeName(CoreSyntax.SyntaxToken identifier, ImmutableArray<TypeClauseSyntax> argumentClauses)
         {
-            // 内建委托家族（6e-M22 C3）：Func<…>/Action<…>/Predicate<T> → 结构化函数类型（两方言共享拼写）
+            // 内建委托家族（6e-M22 C3）：Func<…>/Action<…>/Predicate<T> → 结构化函数类型
             var familyResult = TryResolveDelegateFamily(identifier, argumentClauses);
             if (familyResult != null)
             {

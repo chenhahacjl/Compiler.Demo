@@ -56,7 +56,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                     }
                     else if (Current == '>')
                     {
-                        // 函数类型箭头（6e-M22 C2）：`(int) -> int`（cs 方言在解析层拒绝）
+                        // 函数类型箭头（6e-M22 C2）：`(int) -> int`
                         _position++;
                         _kind = SyntaxKind.ArrowToken;
                     }

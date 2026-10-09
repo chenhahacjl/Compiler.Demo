@@ -783,7 +783,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
                     if (isStatic)
                     {
-                        // 静态构造函数（C# 式 `static Foo()` / Cocoa 式 `static constructor()`）→ `.cctor` 符号
+                        // 静态构造函数（`static Foo()` / `static constructor()`）→ `.cctor` 符号
                         var location = constructorDeclaration.ConstructorKeyword != null
                             ? constructorDeclaration.ConstructorKeyword.Location
                             : constructorDeclaration.OpenParenthesisToken.Location;
@@ -927,7 +927,7 @@ namespace Cocoa.CodeAnalysis.Binding
             classType.AddEvent(eventSymbol);
 
             // 多播存储（6e-M22 委托真实类型化 M4）：
-            // 具名 delegate 处理器 → 委托类实例字段（C# 式 add/remove：Combine/Remove）；fnty 处理器 → 函数值数组（既有脱糖）
+            // 具名 delegate 处理器 → 委托类实例字段（add/remove：Combine/Remove）；fnty 处理器 → 函数值数组（既有脱糖）
             if (handlerType is NamedTypeSymbol { TypeKind: TypeKind.Delegate } delegateHandler)
             {
                 classType.AddField(new FieldSymbol("_" + eventName, delegateHandler, visibility, classType));
@@ -937,7 +937,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 classType.AddField(new FieldSymbol("_" + eventName, TypeSymbol.ArrayOf(resolvedHandler), visibility, classType));
             }
 
-            // 访问器式事件（C# 式）：`event E: T { add {…} remove {…} }` —— 自定义 add/remove 方法对。
+            // 访问器式事件：`event E: T { add {…} remove {…} }` —— 自定义 add/remove 方法对。
             // 订阅 `+=`/`-=` 分派到 add_Name/remove_Name（TryBindEventSubscription 拦截）；其体可写后备字段 `_<name>`（触发仍走它）。
             if (syntax.HasCustomAccessors)
             {
@@ -1035,7 +1035,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var backingField = ownerClass.GetField("_" + eventName)!;
             var handlerArray = TypeSymbol.ArrayOf(signature);
 
-            // 6e-M22 委托真实类型化 M4：事件迁移 C# 式——后备字段为具名 delegate 类时，
+            // 6e-M22 委托真实类型化 M4：事件迁移——后备字段为具名 delegate 类时，
             // 订阅/退订走 Delegate.Combine/Remove（`_<e> = Combine(_<e>, h)` / `Remove`），触发走 `Invoke`。
             if (backingField.Type is NamedTypeSymbol { TypeKind: TypeKind.Delegate } delegateBacking)
             {
@@ -1294,7 +1294,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 new BoundMemberCallExpression(syntax, receiver, targetMethod.Name, arguments, TypeSymbol.Void, targetMethod));
         }
 
-        /// <summary>6e-M22 委托真实类型化 M4：C# 式事件订阅/退订——后备字段为具名 delegate 类时走
+        /// <summary>6e-M22 委托真实类型化 M4：事件订阅/退订——后备字段为具名 delegate 类时走
         /// `_&lt;e&gt; = Combine(_&lt;e&gt;, h)` / `Remove(_&lt;e&gt;, h)`（+= / -= 绑定层合成 delegate 二元运算，三后端经委托管道）。</summary>
         private BoundStatement BuildDelegateEventSubscription(AssignmentExpressionSyntax syntax, CoreSyntax.SyntaxKind operatorKind, BoundExpression receiver, FieldSymbol backingField, NamedTypeSymbol delegateBacking)
         {
@@ -3206,7 +3206,7 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             var result = new BoundScope(null);
 
-            // 6e-M17 Step 3：移除内置函数隐式注入（C# 式强隔离）——print/input/random 等
+            // 6e-M17 Step 3：移除内置函数隐式注入（强隔离）——print/input/random 等
             // 不再全局裸可用；用户须 `using System.Console` 后 WriteLine/ReadLine，或
             // 经 System.Runtime（syscall 容器类，SystemLibrary 内建嵌入）显式调用。
 

@@ -119,12 +119,6 @@ namespace Cocoa.Build
 
         private static CocoaProjectFile BuildModel(CocoaProjectSpec spec, State state)
         {
-            var languageText = state.Get("Language");
-            if (string.IsNullOrEmpty(languageText))
-            {
-                throw new ProjectFileFormatException("missing required <Language> element in <PropertyGroup>");
-            }
-
             var filePath = spec.FilePath;
             var fileName = Path.GetFileNameWithoutExtension(filePath);
             var assemblyName = state.Get("AssemblyName") ?? fileName;
@@ -138,7 +132,6 @@ namespace Cocoa.Build
                 filePath,
                 fileName,
                 assemblyName,
-                ParseLanguage(languageText),
                 ParseOutput(state.Get("OutputType") ?? "Executable"),
                 ParseBackend(state.Get("Backend")),
                 ParseTargetOs(state.Get("TargetOS") ?? "Windows"),
@@ -175,15 +168,6 @@ namespace Cocoa.Build
                 AssemblyVersion = state.Get("AssemblyVersion"),
                 FileVersion = state.Get("FileVersion"),
                 ProjectGuid = state.Get("ProjectGuid"),
-            };
-        }
-
-        private static CocoaProjectLanguage ParseLanguage(string language)
-        {
-            return language.ToLowerInvariant() switch
-            {
-                "cocoa" => CocoaProjectLanguage.Cocoa,
-                _ => throw new ProjectFileFormatException($"invalid Language '{language}'. Expected: cocoa"),
             };
         }
 

@@ -83,7 +83,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                     statement = ParseTryStatement();
                     break;
                 default:
-                    statement = ParseDialectNativeStatement();
+                    statement = ParseDefaultStatement();
                     break;
             }
 
@@ -598,32 +598,28 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
         }
 
-        private StatementSyntax ParseDialectNativeStatement()
+        private StatementSyntax ParseDefaultStatement()
         {
             if (Peek(0).Kind == SyntaxKind.IdentifierToken &&
                 Peek(1).Kind == SyntaxKind.IdentifierToken)
             {
-                ReportError(Current.Location, "Cocoa 局部变量须用 var/let/const 声明且类型后置，不支持 C# 式 `类型 名称`。");
-                return ParseCSharpStyleVariableDeclaration();
+                ReportError(Current.Location, "Cocoa 局部变量须用 var/let/const 声明且类型后置。");
+
+                var type = ParsePrefixTypeClause();
+                var identifier = MatchToken(SyntaxKind.IdentifierToken);
+
+                SyntaxToken? equalsToken = null;
+                ExpressionSyntax? initializer = null;
+                if (Current.Kind == SyntaxKind.EqualsToken)
+                {
+                    equalsToken = MatchToken(SyntaxKind.EqualsToken);
+                    initializer = ParseExpression();
+                }
+
+                return new VariableDeclarationSyntax(_syntaxTree, keyword: null, identifier, type, equalsToken, initializer);
             }
 
             return ParseExpressionStatement();
-        }
-
-        private StatementSyntax ParseCSharpStyleVariableDeclaration()
-        {
-            var type = ParsePrefixTypeClause();
-            var identifier = MatchToken(SyntaxKind.IdentifierToken);
-
-            SyntaxToken? equalsToken = null;
-            ExpressionSyntax? initializer = null;
-            if (Current.Kind == SyntaxKind.EqualsToken)
-            {
-                equalsToken = MatchToken(SyntaxKind.EqualsToken);
-                initializer = ParseExpression();
-            }
-
-            return new VariableDeclarationSyntax(_syntaxTree, keyword: null, identifier, type, equalsToken, initializer);
         }
 
         private StatementSyntax ParseVariableDeclaration()
@@ -637,7 +633,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 Current.Kind == SyntaxKind.IdentifierToken &&
                 Peek(1).Kind == SyntaxKind.IdentifierToken)
             {
-                ReportError(Current.Location, "Cocoa 常量须为 `const x = 10` 或 `const x: int = 10`（类型后置），不支持 C# 式 `const int x = 10`。");
+                ReportError(Current.Location, "Cocoa 常量须为 `const x = 10` 或 `const x: int = 10`（类型后置）。");
                 var csType = ParsePrefixTypeClause();
                 var csIdentifier = MatchToken(SyntaxKind.IdentifierToken);
                 SyntaxToken? csEquals = null;

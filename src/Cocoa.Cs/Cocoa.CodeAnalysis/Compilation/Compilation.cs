@@ -132,7 +132,7 @@ namespace Cocoa.CodeAnalysis
             return CreateCompilation(isScript: true, previous, entryPointName: "Main", references: references, linkCodDynamically: false, syntaxTrees);
         }
 
-        /// <summary>构造编译对象（去 C# 方言后单语言，直接实例化）。</summary>
+        /// <summary>构造编译对象（单语言，直接实例化）。</summary>
         private static Compilation CreateCompilation(bool isScript, Compilation? previous, string entryPointName, string[]? references, bool linkCodDynamically, SyntaxTree[] syntaxTrees)
             => new Compilation(isScript, previous, entryPointName, references, linkCodDynamically, syntaxTrees);
 
