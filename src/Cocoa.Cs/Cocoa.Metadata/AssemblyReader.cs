@@ -1,10 +1,10 @@
-using Cocoa.CodeGen.Managed.Structure;
+using Cocoa.Metadata;
 using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Cocoa.CodeGen.Managed.Reader
+namespace Cocoa.Metadata
 {
     internal sealed class AssemblyReader
     {

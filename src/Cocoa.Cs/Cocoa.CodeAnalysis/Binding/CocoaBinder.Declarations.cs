@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis.Lowering;
+using Cocoa.CodeAnalysis.Lowering;
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.CodeAnalysis.Symbols;
@@ -9,8 +9,7 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
-using Cocoa.CodeGen.Managed.Structure;
- using Cocoa.CodeGen.Managed.Reader;
+using Cocoa.Metadata;
 namespace Cocoa.CodeAnalysis.Binding
 {
     /// <summary>

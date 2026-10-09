@@ -1,10 +1,10 @@
-using Cocoa.CodeGen.Managed.Structure;
+using Cocoa.Metadata;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace Cocoa.CodeGen.Managed.Reader
+namespace Cocoa.Metadata
 {
     /// <summary>从引用程序集解析出的方法信息（供 IlEmitter 构造 MemberRef）。</summary>
     public sealed class ResolvedMethodInfo

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Cocoa.CodeGen.Managed.Structure
+namespace Cocoa.Metadata
 {
     /// <summary>IL 元数据可见性（值域对齐符号模型 Visibility：Public/Internal/Protected/Private）。</summary>
     public enum IlVisibility

@@ -16,8 +16,7 @@
 |---|---|---|---|
 | `Cocoa.Targeting` | `Cocoa.Targeting` | 同名 | 目标常量：`TargetPlatform` / `IlTarget` |
 | `Cocoa.CodeAnalysis` | `Cocoa.CodeAnalysis` | 同名 | **编译器单装配件**（前端 + 绑定 + 降级 + 序列化）：Text / Syntax（SyntaxKind、SyntaxFacts、LexerBase、绿红树）/ Cocoa 前端（CocoaLexer、CocoaParser、CocoaBinder）/ Symbols / Bound / Compilation（`Compilation`/`SemanticModel` 具体类）/ Lowering / Serialization（CoaSerializer、SystemLibrary）/ Documentation / Authoring（Classifier）/ CFG / Monomorphizer |
-| `Cocoa.CodeGen.Managed.Structure` | 同名 | 同名 | IL 结构模型：IlOpCode / IlInstruction / IlMetadataModel / IlTypes |
-| `Cocoa.CodeGen.Managed.Reader` | 同名 | 同名 | IL 元数据读取：MetadataReader |
+| `Cocoa.Metadata` | `Cocoa.Metadata` | 同名 | **共享元数据层**（非后端）：IL 结构模型（IlOpCode / IlInstruction / IlMetadataModel / IlTypes）+ 外部程序集元数据读取（MetadataReader / AssemblyReader）。前端与 IL 后端共用；与 `CodeGen/*` 后端工程隔离 |
 | `Cocoa.CodeGen.Managed.Writer` | 同名 | 同名 | IL 后端：IlEmitter / MetadataBuilder / ManagedPEWriter / AppHostPatcher / CoaLibraryCompiler（`.coa`→DLL） |
 | `Cocoa.CodeGen.PE` | 同名 | 同名 | PE 基础设施：PE 表 / PeFileWriter |
 | `Cocoa.CodeGen.Native.Lir` | 同名 | 同名 | LIR：LirProgram / LirInstruction / LirPrinter |
@@ -33,17 +32,17 @@
 
 ```
 Cocoa.Cli ──→ Cocoa.Build, Cocoa.Cli.Repl, Cocoa.CodeAnalysis,
-              CodeGen.{PE, Managed.Writer, Native, Interpreter}, Cocoa.Targeting
+              CodeGen.{PE, Managed.Writer, Native, Interpreter}, Cocoa.Metadata, Cocoa.Targeting
 Cocoa.Build ──→ Cocoa.CodeAnalysis, CodeGen.Managed.Writer, Cocoa.Targeting
-CodeGen.Managed.Writer ──→ Cocoa.CodeAnalysis, CodeGen.{PE, Managed.Structure, Managed.Reader}
+CodeGen.Managed.Writer ──→ Cocoa.CodeAnalysis, CodeGen.{PE}, Cocoa.Metadata
 CodeGen.Native ──→ Cocoa.CodeAnalysis, CodeGen.{PE, Native.Lir}
 CodeGen.Interpreter ──→ Cocoa.CodeAnalysis
-Cocoa.CodeAnalysis ──→ CodeGen.{Managed.Structure, Managed.Reader}, Cocoa.Targeting
+Cocoa.CodeAnalysis ──→ Cocoa.Metadata, Cocoa.Targeting
 CodeGen.PE ──→ Cocoa.Targeting
-CodeGen.Managed.Reader ──→ CodeGen.Managed.Structure
+Cocoa.Metadata ──→ （无）共享元数据层（IL 结构模型 + 外部元数据读取），前后端共用
 ```
 
-- 后端（Managed.Writer / Native / Interpreter）**反向引用** `Cocoa.CodeAnalysis`，消费 `BoundProgram` 等绑定 IR；**Core 不引用任何后端**（见 §5）。
+- 后端（Managed.Writer / Native / Interpreter）**反向引用** `Cocoa.CodeAnalysis`，消费 `BoundProgram` 等绑定 IR；**Core 不引用任何后端工程**（共享元数据经独立层 `Cocoa.Metadata` 接入，见 §5）。
 - CLI/测试是唯一同时引用 Core 与全部后端的宿主。
 
 ## 4. 单语言前端
@@ -56,22 +55,27 @@ CodeGen.Managed.Reader ──→ CodeGen.Managed.Structure
 
 ## 5. 后端注册模式
 
-Core（`Cocoa.CodeAnalysis`）不引用任何后端工程，后端能力经**静态委托注册**注入：
+Core（`Cocoa.CodeAnalysis`）不引用任何后端工程，后端能力经**静态委托注册**注入（共享元数据经独立层 `Cocoa.Metadata` 接入，非后端）：
 
 ```csharp
 // Core 侧（Compilation 内）
-internal static volatile Func<...>? s_InterpreterEvaluator;   // 未注册时抛 InvalidOperationException / 报诊断
+private static volatile Func<...>? _interpreterEvaluator;   // 未注册时返回错误诊断（Emit/Evaluate 统一）
 // 后端工程侧（public static void Register()）
-// 宿主侧：Cocoa.Cli 启动时 Register()；测试用 [ModuleInitializer]（Cocoa.Tests/BackendRegistration.cs）
+// 宿主侧：Cocoa.Cli 启动时 Register()；测试用 [ModuleInitializer]（Cocoa.Tests/BackendRegistration.cs）；
+//         嵌入式引擎 C 构造内自注册。
 ManagedBackend.Register(); NativeBackend.Register(); InterpreterBackend.Register();
 ```
+
+- **幂等注册**：`Compilation.RegisterX` 经 `Interlocked.CompareExchange`（首次为准）；多宿主/多引擎实例共存不覆写全局委托。
+- **统一失败语义**：`Emit`/`EmitNative`/`Evaluate`/`EvaluateFunction` 在对应后端未注册时**一致返回错误诊断**（不再有「Emit 静默返回诊断 / Evaluate 抛异常」的差异）。
 
 新后端照此模式：独立工程 → `Register()` → 宿主注册 → Emit/Evaluate 经注册表取用。
 
 ## 6. Partial 拆分规则
 
 - 巨型文件（**>2,000 行**）按职责拆 `Type.Role.cs` partial：入口/核心留在主文件。
-- 现行范例：`CocoaParser`（主文件 + Types/Statements/Members）、`RuntimeEmitterLir`（.Strings/.System/.IO/.Arrays/.Numerics/.Int64）、`CoaSerializer`（8 个 partial）、`Compilation`（核心 + NamespaceResolver/AssemblyReferenceManager/EmitPipeline）。
+- 现行范例：`CocoaBinder`（主文件 + Statements/Expressions/Declarations/TypeResolution/Attributes）、`CocoaParser`（主文件 + Types/Statements/Members）、`RuntimeEmitterLir`（.Strings/.System/.IO/.Arrays/.Numerics/.Int64）、`MirToLir`/`IlEmitter`/`Evaluator`/`LirToAssembler`（按语句/表达式/转换分片）。
+- 已合并为单文件的范例（2026-10 结构优化）：`CocoaLexer`、`CocoaGreenNodeFactory`、`MetadataBuilder`、`AssemblyReader`、`X64Assembler`、`Compilation`——拆分理由薄弱的非必要分片回单文件。
 - 拆分纪律：**纯移动零逻辑**、独立 commit、`--no-incremental` 全量构建 + 测试。
 
 ## 7. NoWarn 棘轮与测试基线

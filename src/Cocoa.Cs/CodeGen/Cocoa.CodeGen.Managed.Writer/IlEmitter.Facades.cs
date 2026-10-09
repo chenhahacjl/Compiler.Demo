@@ -3,8 +3,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using Cocoa.CodeAnalysis.Binding;
-using Cocoa.CodeGen.Managed.Structure;
- using Cocoa.CodeGen.Managed.Reader;
+using Cocoa.Metadata;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 

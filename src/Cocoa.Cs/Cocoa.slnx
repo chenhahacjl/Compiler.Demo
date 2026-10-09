@@ -7,13 +7,14 @@
     <Project Path="Cocoa.CodeAnalysis/Cocoa.CodeAnalysis.csproj" />
   </Folder>
   <Folder Name="/CodeGen/">
-    <Project Path="CodeGen/Cocoa.CodeGen.Managed.Structure/Cocoa.CodeGen.Managed.Structure.csproj" />
-    <Project Path="CodeGen/Cocoa.CodeGen.Managed.Reader/Cocoa.CodeGen.Managed.Reader.csproj" />
     <Project Path="CodeGen/Cocoa.CodeGen.Managed.Writer/Cocoa.CodeGen.Managed.Writer.csproj" />
     <Project Path="CodeGen/Cocoa.CodeGen.PE/Cocoa.CodeGen.PE.csproj" />
     <Project Path="CodeGen/Cocoa.CodeGen.Native.Lir/Cocoa.CodeGen.Native.Lir.csproj" />
     <Project Path="CodeGen/Cocoa.CodeGen.Native/Cocoa.CodeGen.Native.csproj" />
     <Project Path="CodeGen/Cocoa.CodeGen.Interpreter/Cocoa.CodeGen.Interpreter.csproj" />
+  </Folder>
+  <Folder Name="/Metadata/">
+    <Project Path="Cocoa.Metadata/Cocoa.Metadata.csproj" />
   </Folder>
   <Folder Name="/Cli/">
     <Project Path="Cli/Cocoa.Cli/Cocoa.Cli.csproj" />

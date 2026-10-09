@@ -1,8 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
-using Cocoa.CodeGen.Managed.Structure;
+using Cocoa.Metadata;
 using Xunit;
 using Xunit.Abstractions;
 

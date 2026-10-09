@@ -1,7 +1,6 @@
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Binding;
-using Cocoa.CodeGen.Managed.Structure;
- using Cocoa.CodeGen.Managed.Reader;
+using Cocoa.Metadata;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.Targeting;

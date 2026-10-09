@@ -2,8 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-using Cocoa.CodeGen.Managed.Structure;
- using Cocoa.CodeGen.Managed.Reader;
+using Cocoa.Metadata;
 using Cocoa.CodeAnalysis;
 
 

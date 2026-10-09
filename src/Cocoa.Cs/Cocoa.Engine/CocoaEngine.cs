@@ -25,6 +25,8 @@ namespace Cocoa.Engine
         public CocoaEngine(EngineBackend backend = EngineBackend.Interpreter)
         {
             _backend = backend;
+            // 后端注册幂等（Compilation.RegisterX 经 Interlocked.CompareExchange，首次为准）：
+            // 引擎为独立宿主自带注册；重复构造/与前置宿主共存不覆写全局委托。
             InterpreterBackend.Register();
             ManagedBackend.Register(); // 回调经注册表统一（IlEmit 后端也需发射委托）
             if (backend != EngineBackend.IlEmit)

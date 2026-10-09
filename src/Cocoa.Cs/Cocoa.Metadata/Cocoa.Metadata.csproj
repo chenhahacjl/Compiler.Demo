@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>Cocoa.CodeGen.Managed.Structure</RootNamespace>
+    <RootNamespace>Cocoa.Metadata</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

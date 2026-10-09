@@ -40,39 +40,48 @@ namespace Cocoa.CodeAnalysis
         /// <summary>
         /// managed（dotnet/IL）后端发射委托（拆分后由 <c>Cocoa.CodeGen.Managed.Writer</c> 经 <see cref="RegisterManagedEmitter"/> 注入；
         /// Core 不引用后端，发射能力经此委托接入）。volatile：注册发生在宿主启动、读取在编译线程（重构阶段 1a/A7）。
+        /// 幂等：重复注册（同进程多宿主/多引擎实例）以首次为准，防全局覆写。
         /// </summary>
         private static volatile Func<BoundProgram, string, string[], string, IlTarget, bool, ImmutableDictionary<object, string>?, bool, ImmutableArray<Diagnostic>>? _managedEmitter;
 
-        /// <summary>native 后端发射委托（由 <c>Cocoa.CodeGen.Native</c> 经 <see cref="RegisterNativeEmitter"/> 注入，含后端专属校验）。</summary>
+        /// <summary>native 后端发射委托（由 <c>Cocoa.CodeGen.Native</c> 经 <see cref="RegisterNativeEmitter"/> 注入，含后端专属校验）。幂等同上。</summary>
         private static volatile Func<Compilation, string, string, TargetPlatform, ushort, ImmutableArray<Diagnostic>>? _nativeEmitter;
 
-        /// <summary>注册 managed（dotnet/IL）后端发射实现（后端/宿主启动时调用；Core 自身不引用后端）。</summary>
+        /// <summary>注册 managed（dotnet/IL）后端发射实现（后端/宿主启动时调用；Core 自身不引用后端）。幂等。</summary>
         public static void RegisterManagedEmitter(Func<BoundProgram, string, string[], string, IlTarget, bool, ImmutableDictionary<object, string>?, bool, ImmutableArray<Diagnostic>> emitter)
-            => _managedEmitter = emitter;
+        {
+            Interlocked.CompareExchange(ref _managedEmitter, emitter, null);
+        }
 
-        /// <summary>注册 native 后端发射实现（后端/宿主启动时调用；Core 自身不引用后端）。</summary>
+        /// <summary>注册 native 后端发射实现（后端/宿主启动时调用；Core 自身不引用后端）。幂等。</summary>
         public static void RegisterNativeEmitter(Func<Compilation, string, string, TargetPlatform, ushort, ImmutableArray<Diagnostic>> emitter)
-            => _nativeEmitter = emitter;
+        {
+            Interlocked.CompareExchange(ref _nativeEmitter, emitter, null);
+        }
 
         /// <summary>
         /// 解释器求值委托（4.1）：由 <c>Cocoa.CodeGen.Interpreter</c> 经 <see cref="RegisterInterpreterEvaluator"/> 注册；
-        /// Core 自身不引用后端。args 为 null 表示无参 REPL 求值，否则为 Main(string[]) 形态。
+        /// Core 自身不引用后端。args 为 null 表示无参 REPL 求值，否则为 Main(string[]) 形态。幂等。
         /// </summary>
         private static volatile Func<BoundProgram, string[]?, Dictionary<VariableSymbol, object>, object?>? _interpreterEvaluator;
 
-        /// <summary>注册解释器求值实现（后端/宿主启动时调用；Core 自身不引用后端）。</summary>
+        /// <summary>注册解释器求值实现（后端/宿主启动时调用；Core 自身不引用后端）。幂等。</summary>
         public static void RegisterInterpreterEvaluator(Func<BoundProgram, string[]?, Dictionary<VariableSymbol, object>, object?> evaluator)
-            => _interpreterEvaluator = evaluator;
+        {
+            Interlocked.CompareExchange(ref _interpreterEvaluator, evaluator, null);
+        }
 
         /// <summary>
         /// 解释器「按名调用顶层函数」委托（嵌入式引擎 Call 路径）：由 <c>Cocoa.CodeGen.Interpreter</c>
-        /// 经 <see cref="RegisterInterpreterFunctionEvaluator"/> 注册。Core 自身不引用后端。
+        /// 经 <see cref="RegisterInterpreterFunctionEvaluator"/> 注册。Core 自身不引用后端。幂等。
         /// </summary>
         private static volatile Func<BoundProgram, FunctionSymbol, object?[], Dictionary<VariableSymbol, object>, object?>? _interpreterFunctionEvaluator;
 
-        /// <summary>注册解释器「按名调用顶层函数」实现（后端/宿主启动时调用；Core 自身不引用后端）。</summary>
+        /// <summary>注册解释器「按名调用顶层函数」实现（后端/宿主启动时调用；Core 自身不引用后端）。幂等。</summary>
         public static void RegisterInterpreterFunctionEvaluator(Func<BoundProgram, FunctionSymbol, object?[], Dictionary<VariableSymbol, object>, object?> evaluator)
-            => _interpreterFunctionEvaluator = evaluator;
+        {
+            Interlocked.CompareExchange(ref _interpreterFunctionEvaluator, evaluator, null);
+        }
 
         /// <summary>绑定全局作用域（经 <see cref="CocoaBinder"/>.BindGlobalScope 静态编排）。</summary>
         public BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<SyntaxTree> syntaxTrees, string entryPointName, string[]? references, ImmutableArray<CoaProgram> codLibraries)
@@ -255,8 +264,11 @@ namespace Cocoa.CodeAnalysis
                 return new EvaluationResult(program.Diagnostics, null);
             }
 
-            var evaluator = _interpreterEvaluator
-                ?? throw new InvalidOperationException("解释器后端未注册（Cocoa.CodeGen.Interpreter 未初始化）");
+            var evaluator = _interpreterEvaluator;
+            if (evaluator == null)
+            {
+                return new EvaluationResult(ImmutableArray.Create(Diagnostic.Error(ZeroLocation, "解释器后端未注册（Cocoa.CodeGen.Interpreter 未初始化）")), null);
+            }
 
             var value = evaluator(program, null, variables);
 
@@ -277,8 +289,11 @@ namespace Cocoa.CodeAnalysis
                 return new EvaluationResult(program.Diagnostics, null);
             }
 
-            var evaluator = _interpreterEvaluator
-                ?? throw new InvalidOperationException("解释器后端未注册（Cocoa.CodeGen.Interpreter 未初始化）");
+            var evaluator = _interpreterEvaluator;
+            if (evaluator == null)
+            {
+                return new EvaluationResult(ImmutableArray.Create(Diagnostic.Error(ZeroLocation, "解释器后端未注册（Cocoa.CodeGen.Interpreter 未初始化）")), null);
+            }
 
             var value = evaluator(program, args, variables);
 
@@ -309,8 +324,11 @@ namespace Cocoa.CodeAnalysis
                 throw new ArgumentException($"未找到可调用的顶层函数 '{name}'", nameof(name));
             }
 
-            var evaluator = _interpreterFunctionEvaluator
-                ?? throw new InvalidOperationException("解释器按名调用后端未注册（Cocoa.CodeGen.Interpreter 未初始化）");
+            var evaluator = _interpreterFunctionEvaluator;
+            if (evaluator == null)
+            {
+                return new EvaluationResult(ImmutableArray.Create(Diagnostic.Error(ZeroLocation, "解释器按名调用后端未注册（Cocoa.CodeGen.Interpreter 未初始化）")), null);
+            }
 
             var value = evaluator(program, function, args, variables);
 

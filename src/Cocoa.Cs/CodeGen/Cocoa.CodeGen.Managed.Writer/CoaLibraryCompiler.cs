@@ -1,8 +1,7 @@
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.CodeAnalysis.Symbols;
-using Cocoa.CodeGen.Managed.Structure;
- using Cocoa.CodeGen.Managed.Reader;
+using Cocoa.Metadata;
 using Cocoa.CodeAnalysis.Lowering;
 using System.Collections.Immutable;
 using System.IO;

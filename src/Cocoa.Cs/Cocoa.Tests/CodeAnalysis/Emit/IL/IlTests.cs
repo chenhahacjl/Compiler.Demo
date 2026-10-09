@@ -4,8 +4,7 @@ using System.Linq;
 using Xunit;
 
 using Cocoa.CodeGen.Managed.Writer;
-using Cocoa.CodeGen.Managed.Structure;
- using Cocoa.CodeGen.Managed.Reader;
+using Cocoa.Metadata;
 namespace Cocoa.Tests.CodeAnalysis.Emit.IL
 {
     public class IlAssemblerTests

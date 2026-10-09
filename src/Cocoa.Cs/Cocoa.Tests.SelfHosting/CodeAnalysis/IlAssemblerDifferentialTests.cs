@@ -1,7 +1,7 @@
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
-using Cocoa.CodeGen.Managed.Structure;
+using Cocoa.Metadata;
 using Cocoa.CodeGen.Managed.Writer;
 using System;
 using System.Collections.Generic;

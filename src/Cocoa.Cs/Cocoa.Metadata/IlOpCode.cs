@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Cocoa.CodeGen.Managed.Structure
+namespace Cocoa.Metadata
 {
     /// <summary>
     /// ECMA-335 III.2 操作数类型（OperandType）。编码器按此分派，全集一次实现；

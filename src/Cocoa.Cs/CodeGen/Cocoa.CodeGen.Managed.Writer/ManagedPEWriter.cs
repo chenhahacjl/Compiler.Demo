@@ -5,8 +5,7 @@ using System.Text;
 using Cocoa.CodeGen.PE;
 using static Cocoa.CodeGen.PE.PeBinary;
 
-using Cocoa.CodeGen.Managed.Structure;
- using Cocoa.CodeGen.Managed.Reader;
+using Cocoa.Metadata;
 using Cocoa.CodeAnalysis;
 using Cocoa.Targeting;
 
