@@ -137,6 +137,20 @@ namespace Cocoa.CodeAnalysis.Binding
             ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Equals, TypeSymbol.NativeUInt32, TypeSymbol.Boolean));
             ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.NotEquals, TypeSymbol.NativeUInt32, TypeSymbol.Boolean));
 
+            // decimal（128 位高精度）：算术 + 比较（C# decimal 支持 + - * / % 与全部关系比较；
+            // 混合精度经 Binder 提升先归一到 decimal 再查表）
+            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Addition, TypeSymbol.Decimal));
+            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Subtraction, TypeSymbol.Decimal));
+            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Multiplication, TypeSymbol.Decimal));
+            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Division, TypeSymbol.Decimal));
+            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Modulo, TypeSymbol.Decimal));
+            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Equals, TypeSymbol.Decimal, TypeSymbol.Boolean));
+            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.NotEquals, TypeSymbol.Decimal, TypeSymbol.Boolean));
+            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Less, TypeSymbol.Decimal, TypeSymbol.Boolean));
+            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.LessOrEquals, TypeSymbol.Decimal, TypeSymbol.Boolean));
+            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Greater, TypeSymbol.Decimal, TypeSymbol.Boolean));
+            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.GreaterOrEquals, TypeSymbol.Decimal, TypeSymbol.Boolean));
+
             // any：相等（6e-M19 M5-c 修：结果类型此前误为 any，致 WriteLine(if 条件等) 无法消费）
             ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Equals, TypeSymbol.Any, TypeSymbol.Boolean));
             ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.NotEquals, TypeSymbol.Any, TypeSymbol.Boolean));

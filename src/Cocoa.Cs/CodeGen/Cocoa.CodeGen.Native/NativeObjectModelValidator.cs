@@ -64,6 +64,16 @@ namespace Cocoa.CodeGen.Native
 
         public override BoundExpression RewriteExpression(BoundExpression node)
         {
+            // decimal/half（第二批数值类型）：非 IL 基元，native 无 System.Decimal/System.Half 运行期——
+            // 任何该类型的表达式（字面量/转换/算术/变量引用）编译期明确拒绝，不静默错编。
+            if ((node.Type == TypeSymbol.Decimal || node.Type == TypeSymbol.Half) && node.Syntax != null)
+            {
+                // stdlib（System.Core.coa）自身含 decimal/half 转发函数体（Console.WriteLine(decimal)），其表达式无源码语法
+                // ——native 只拒用户源码的 decimal/half 使用，stdlib 函数体不发射（用户侧字面量/调用点已先行拒绝）。
+                var decimalLocation = node.Syntax?.Location ?? _fallbackLocation;
+                _diagnostics.ReportError(decimalLocation, "native 后端暂不支持 decimal/half 类型（128 位高精度/16 位半精度需 System.Decimal/System.Half 运行期支持）。");
+            }
+
             if (node.Kind == BoundNodeKind.MemberCallExpression &&
                 ((BoundMemberCallExpression)node).Method?.BuiltinKind != null &&
                 !((BoundMemberCallExpression)node).Method!.IsStatic)

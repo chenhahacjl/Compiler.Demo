@@ -172,9 +172,9 @@ namespace Cocoa.CodeGen.Managed.Writer
         /// <summary>检查引用程序集中的类型是否为接口（cod 库接口重定向到 BCL 前校验）。</summary>
         public bool IsInterfaceInReferences(string fullName) => _reader.FindTypeInfo(fullName)?.IsInterface == true;
 
-        public IlMethodRef RequireMethod(string typeFullName, string methodName, string[] parameterTypeNames)
+        public IlMethodRef RequireMethod(string typeFullName, string methodName, string[] parameterTypeNames, string? returnTypeName = null)
         {
-            var resolved = _reader.FindMethod(typeFullName, methodName, parameterTypeNames, _metadata)
+            var resolved = _reader.FindMethod(typeFullName, methodName, parameterTypeNames, _metadata, returnTypeName)
                            ?? throw new Exception($"Method '{typeFullName}.{methodName}' not found in references.");
             return ResolveMethodRef(resolved);
         }

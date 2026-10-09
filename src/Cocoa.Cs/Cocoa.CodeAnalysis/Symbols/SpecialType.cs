@@ -26,6 +26,8 @@ namespace Cocoa.CodeAnalysis.Symbols
         System_UInt128,
         System_IntPtr,   // nint（原生有符号整型）
         System_UIntPtr,  // nuint（原生无符号整型）
+        System_Decimal,  // decimal（128 位高精度小数，System.Decimal）
+        System_Half,     // half（IEEE 754 半精度浮点，System.Half）
         System_Void,
     }
 }

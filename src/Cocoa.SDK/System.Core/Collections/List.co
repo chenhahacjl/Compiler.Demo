@@ -193,15 +193,15 @@ namespace System.Collections.Generic
         // 内部
         // ------------------------------------------------------------------
 
-        private function EnsureCapacity(required: i32): void
+        private function EnsureCapacity(requiredLen: i32): void
         {
-            if required <= _items.Length
+            if requiredLen <= _items.Length
             {
                 return
             }
 
             var newLen = _items.Length * 2
-            while newLen < required
+            while newLen < requiredLen
             {
                 newLen = newLen * 2
             }

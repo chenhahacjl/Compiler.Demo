@@ -207,6 +207,8 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                 "i128" => TypeSymbol.Int128,
                 "u128" => TypeSymbol.UInt128,
                 "f128" => TypeSymbol.Float128,
+                "decimal" => TypeSymbol.Decimal,
+                "half" => TypeSymbol.Half,
                 "?" => TypeSymbol.Error,
                 _ => throw new InvalidDataException($"Unknown type '{name}'"),
             };

@@ -35,6 +35,11 @@ namespace Cocoa.CodeAnalysis.Binding
                 return TryFloat32Binary(kind, left!, right!, out result);
             }
 
+            if (type == TypeSymbol.Decimal)
+            {
+                return TryDecimalBinary(kind, left!, right!, out result);
+            }
+
             switch (kind)
             {
                 case BoundBinaryOperatorKind.Addition:
@@ -415,6 +420,36 @@ namespace Cocoa.CodeAnalysis.Binding
             return PrimitiveEvalStatus.Unsupported;
         }
 
+        /// <summary>decimal 二元：128 位高精度四则/模/比较（C# decimal 语义；除零按整数同构抛 DivideByZeroException）。</summary>
+        private static PrimitiveEvalStatus TryDecimalBinary(BoundBinaryOperatorKind kind, object left, object right, out object? result)
+        {
+            result = null;
+            var a = (decimal)left;
+            var b = (decimal)right;
+            switch (kind)
+            {
+                case BoundBinaryOperatorKind.Addition: result = a + b; return PrimitiveEvalStatus.Computed;
+                case BoundBinaryOperatorKind.Subtraction: result = a - b; return PrimitiveEvalStatus.Computed;
+                case BoundBinaryOperatorKind.Multiplication: result = a * b; return PrimitiveEvalStatus.Computed;
+                case BoundBinaryOperatorKind.Division:
+                    if (b == 0)
+                    {
+                        return PrimitiveEvalStatus.NotComputable;
+                    }
+
+                    result = a / b; return PrimitiveEvalStatus.Computed;
+                case BoundBinaryOperatorKind.Modulo: result = a % b; return PrimitiveEvalStatus.Computed;
+                case BoundBinaryOperatorKind.Equals: result = a == b; return PrimitiveEvalStatus.Computed;
+                case BoundBinaryOperatorKind.NotEquals: result = a != b; return PrimitiveEvalStatus.Computed;
+                case BoundBinaryOperatorKind.Less: result = a < b; return PrimitiveEvalStatus.Computed;
+                case BoundBinaryOperatorKind.LessOrEquals: result = a <= b; return PrimitiveEvalStatus.Computed;
+                case BoundBinaryOperatorKind.Greater: result = a > b; return PrimitiveEvalStatus.Computed;
+                case BoundBinaryOperatorKind.GreaterOrEquals: result = a >= b; return PrimitiveEvalStatus.Computed;
+            }
+
+            return PrimitiveEvalStatus.Unsupported;
+        }
+
         /// <summary>
         /// 一元求值。Identity 非整数域原值返回（避免误入整型归位）；Negation/OnesComplement
         /// 对非整数域保留解释器既有的 int/long 直取回退（不可达路径，仅作兜底）。
@@ -445,6 +480,11 @@ namespace Cocoa.CodeAnalysis.Binding
                     if (operandType == TypeSymbol.Double)
                     {
                         return -(double)operand!;
+                    }
+
+                    if (operandType == TypeSymbol.Decimal)
+                    {
+                        return -(decimal)operand!;
                     }
 
                     return -(int)operand!;

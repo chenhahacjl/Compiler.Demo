@@ -1117,6 +1117,12 @@ namespace Cocoa.CodeGen.Managed.Writer
                 return IlType.Double;
             }
 
+            if (type == TypeSymbol.Decimal || type == TypeSymbol.Half)
+            {
+                // decimal/half：非 IL 基元——BCL struct（16/2 字节），经 TypeRef 承载
+                return IlType.Class(_framework.RequireType(type == TypeSymbol.Decimal ? "System.Decimal" : "System.Half"), isValueType: true);
+            }
+
             if (type == TypeSymbol.NativeInt32)
             {
                 return IlType.NativeInt;

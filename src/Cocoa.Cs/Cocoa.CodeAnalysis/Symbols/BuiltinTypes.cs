@@ -24,6 +24,8 @@ namespace Cocoa.CodeAnalysis.Symbols
             "u64" => TypeSymbol.UInt64,
             "f32" => TypeSymbol.Float,
             "f64" => TypeSymbol.Double,
+            "decimal" => TypeSymbol.Decimal,
+            "half" => TypeSymbol.Half,
             "i128" => TypeSymbol.Int128,
             "u128" => TypeSymbol.UInt128,
             "f128" => TypeSymbol.Float128,

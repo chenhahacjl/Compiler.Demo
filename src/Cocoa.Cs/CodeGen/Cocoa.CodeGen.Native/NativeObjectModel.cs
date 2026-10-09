@@ -251,7 +251,7 @@ namespace Cocoa.CodeGen.Native
 
                         if (string.Equals(method.Name, root.Name, StringComparison.Ordinal) &&
                             method.Parameters.Length == root.Parameters.Length &&
-                            TypeNameEqual(method.ReturnType, root.ReturnType) &&
+                            ReturnsMatch(method.ReturnType, root.ReturnType) &&
                             method.Parameters.Select(p => TypeName(p.Type)).SequenceEqual(root.Parameters.Select(p => TypeName(p.Type))))
                         {
                             return method;
@@ -303,6 +303,45 @@ namespace Cocoa.CodeGen.Native
         }
 
         public static bool TypeNameEqual(TypeSymbol a, TypeSymbol b) => string.Equals(TypeName(a), TypeName(b), StringComparison.Ordinal);
+
+        /// <summary>
+        /// 接口实现返回类型匹配（C# 协变返回）：同名（等宽）或实现返回为接口返回的派生/实装类型
+        /// （如 List.GetEnumerator(): ListEnumerator &lt;T&gt; 实现 IEnumerable&lt;T&gt;.GetEnumerator(): IEnumerator &lt;T&gt;）。
+        /// 参数类型须精确匹配（接口实现无参数型变）。
+        /// </summary>
+        private static bool ReturnsMatch(TypeSymbol implReturn, TypeSymbol ifaceReturn)
+        {
+            if (TypeNameEqual(implReturn, ifaceReturn))
+            {
+                return true;
+            }
+
+            if (ifaceReturn == TypeSymbol.Void || implReturn == TypeSymbol.Void)
+            {
+                return false;
+            }
+
+            if (implReturn is NamedTypeSymbol { IsValueType: false } implClass &&
+                ifaceReturn is NamedTypeSymbol { IsValueType: false } ifaceClass)
+            {
+                if (implClass == ifaceClass)
+                {
+                    return true;
+                }
+
+                if (implClass.IsBaseOf(ifaceClass))
+                {
+                    return true;
+                }
+
+                if (implClass.GetAllInterfaces().Any(i => TypeNameEqual(i, ifaceReturn)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         /// <summary>vtable 数据项 key。</summary>
         public static string VTableKey(NamedTypeSymbol classType) => "$vt:" + classType.FullName;

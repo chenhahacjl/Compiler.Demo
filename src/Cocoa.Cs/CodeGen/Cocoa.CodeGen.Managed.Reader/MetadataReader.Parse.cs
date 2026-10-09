@@ -430,8 +430,8 @@ namespace Cocoa.CodeGen.Managed.Reader
             return false;
         }
 
-        /// <summary>在 TypeDef 的方法中按名 + 参数类型名匹配方法，解析签名。</summary>
-        internal ResolvedMethodSignature? FindMethod(string typeFullName, string methodName, string[] parameterTypeNames)
+        /// <summary>在 TypeDef 的方法中按名 + 参数类型名匹配方法，解析签名；<paramref name="returnTypeName"/> 非空时按返回类型消歧（如 op_Explicit 重载）。</summary>
+        internal ResolvedMethodSignature? FindMethod(string typeFullName, string methodName, string[] parameterTypeNames, string? returnTypeName = null)
         {
             if (_tableData == null)
             {
@@ -487,7 +487,8 @@ namespace Cocoa.CodeGen.Managed.Reader
                         continue; // 不支持的签名跳过该重载
                     }
 
-                    if (Matches(signature, parameterTypeNames))
+                    if (Matches(signature, parameterTypeNames) &&
+                        (returnTypeName == null || signature.ReturnType.FullName == returnTypeName))
                     {
                         return signature;
                     }

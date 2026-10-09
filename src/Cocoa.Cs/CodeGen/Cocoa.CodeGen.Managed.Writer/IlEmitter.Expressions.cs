@@ -344,6 +344,14 @@ namespace Cocoa.CodeGen.Managed.Writer
                 return;
             }
 
+            // decimal/half（非 IL 基元）：转换经 System.Convert（装箱 + To<X>），避免 op_Explicit 按返回类型重载歧义
+            if (node.Expression.Type == TypeSymbol.Decimal || node.Type == TypeSymbol.Decimal ||
+                node.Expression.Type == TypeSymbol.Half || node.Type == TypeSymbol.Half)
+            {
+                EmitDecimalHalfConversion(il, node.Expression.Type, node.Type);
+                return;
+            }
+
             // 6e-M21 Phase 4：数值↔数值系统化转换（含 char/enum 源），命中即返回
             if (TryEmitNumericConversion(il, node.Expression.Type, node.Type))
             {
@@ -656,6 +664,8 @@ namespace Cocoa.CodeGen.Managed.Writer
             if (type == TypeSymbol.UInt64) return "System.UInt64";
             if (type == TypeSymbol.Float) return "System.Single";
             if (type == TypeSymbol.Double) return "System.Double";
+            if (type == TypeSymbol.Decimal) return "System.Decimal";
+            if (type == TypeSymbol.Half) return "System.Half";
             if (type is NamedTypeSymbol { TypeKind: TypeKind.Enum }) return "System.Int32";
             return null;
         }

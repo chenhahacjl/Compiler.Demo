@@ -2096,6 +2096,23 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private static TypeSymbol? GetRawBinaryNumericResultType(TypeSymbol left, TypeSymbol right, CoreSyntax.SyntaxKind operatorKind)
         {
+            // decimal（128 位高精度）：双侧须经隐式转换归一到 decimal（整数/char→decimal 隐式）。
+            // float/double/half 与 decimal 混算 C# 编译错误（无隐式转换，返回 null 由调用方报未定义运算符）。
+            if (left == TypeSymbol.Decimal || right == TypeSymbol.Decimal)
+            {
+                if (left == TypeSymbol.Decimal && right == TypeSymbol.Decimal)
+                {
+                    return TypeSymbol.Decimal;
+                }
+
+                if (left == TypeSymbol.Decimal)
+                {
+                    return IsImplicitlyDecimalConvertible(right) ? TypeSymbol.Decimal : null;
+                }
+
+                return IsImplicitlyDecimalConvertible(left) ? TypeSymbol.Decimal : null;
+            }
+
             // nint/nuint（原生整型）：与同符号的 ≥位宽 整型混算归一到原生（int→nint 无损隐式，`nint == 0` 字面量判定）
             if ((left == TypeSymbol.NativeInt32 && right == TypeSymbol.Int32) ||
                 (right == TypeSymbol.NativeInt32 && left == TypeSymbol.Int32))
@@ -2185,6 +2202,10 @@ namespace Cocoa.CodeAnalysis.Binding
             64 => TypeSymbol.Int64,
             _ => null,
         };
+
+        /// <summary>能否经 C# 隐式转换归一到 decimal（整数/char→decimal 隐式；float/double/half 显式不可隐）。</summary>
+        private static bool IsImplicitlyDecimalConvertible(TypeSymbol type)
+            => (type.IsInteger && !type.IsPlaceholder128) || type == TypeSymbol.Char;
 
         private static TypeSymbol? UnsignedTypeOfWidth(int bits) => bits switch
         {
@@ -2719,6 +2740,9 @@ namespace Cocoa.CodeAnalysis.Binding
             if (type == TypeSymbol.UInt64) return 7;
             if (type == TypeSymbol.Float) return 8;
             if (type == TypeSymbol.Double) return 9;
+            // decimal：整数→decimal 隐式，故需有向 rank 落后于 double（>9），使更窄目标（int 等）经
+            // CompareOverloadTargets 支配它（int→decimal 隐式而 decimal→int 显式）。half 无隐式来源不入链。
+            if (type == TypeSymbol.Decimal) return 10;
             return -1;
         }
 

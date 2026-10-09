@@ -64,15 +64,15 @@ namespace System.Text
             return System.Syscall.StringSyscall.StringFromChars(chars)
         }
 
-        private function EnsureCapacity(required: i32): void
+        private function EnsureCapacity(requiredLen: i32): void
         {
-            if required <= _chars.Length
+            if requiredLen <= _chars.Length
             {
                 return
             }
 
             var newLen = _chars.Length * 2
-            while newLen < required
+            while newLen < requiredLen
             {
                 newLen = newLen * 2
             }

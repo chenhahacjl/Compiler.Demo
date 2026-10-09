@@ -12,7 +12,7 @@
 
 ### 1.1 数值 / 文本 facade
 
-基元类型带 `.co`/`.cs` 别名：`bool`(=Boolean)、`char`(=Char)、`i8`(=SByte)、`u8`(=Byte)、`i16`(=Int16)、`u16`(=UInt16)、`i32`(=Int32)、`u32`(=UInt32)、`i64`(=Int64)、`u64`(=UInt64)、`f32`(=Single)、`f64`(=Double)、`string`(=String)、`nint`(=NativeInt32)、`nuint`(=NativeUInt32)。
+基元类型带 `.co`/`.cs` 别名：`bool`(=Boolean)、`char`(=Char)、`i8`(=SByte)、`u8`(=Byte)、`i16`(=Int16)、`u16`(=UInt16)、`i32`(=Int32)、`u32`(=UInt32)、`i64`(=Int64)、`u64`(=UInt64)、`f32`(=Single)、`f64`(=Double)、`decimal`(=System.Decimal，`m`/`M` 字面量后缀)、`half`(=System.Half，经 `(half)` 转换产生)、`string`(=String)、`nint`(=NativeInt32)、`nuint`(=NativeUInt32)。
 
 数值 facade 公共成员形状一致（以 `Int32` 为例，各数值类型同构）：
 

@@ -783,6 +783,74 @@ namespace Cocoa.CodeGen.Managed.Writer
         }
 
         /// <summary>
+        /// decimal/half（非 IL 基元）转换：经 System.Decimal/System.Half 静态 op_* 调用（C# 语义：
+        /// decimal→整数 截断取整、decimal→浮点 保精度；op_Explicit 重载按返回类型消歧）。
+        /// </summary>
+        private void EmitDecimalHalfConversion(IlAssembler il, TypeSymbol from, TypeSymbol to)
+        {
+            if (to == TypeSymbol.Decimal)
+            {
+                // 整数/char → decimal：op_Implicit(源类型)；float/double → decimal：op_Explicit(源类型)
+                var sourceName = BoxedTypeName(from) ?? throw new System.Exception($"Unexpected decimal source '{from}'");
+                var opName = from.IsFloat ? "op_Explicit" : "op_Implicit";
+                il.Emit(IlOpCodeTable.Get("Call"), _framework.RequireMethod("System.Decimal", opName, new[] { sourceName }));
+                return;
+            }
+
+            if (from == TypeSymbol.Decimal)
+            {
+                if (to == TypeSymbol.String)
+                {
+                    il.Emit(IlOpCodeTable.Get("Box"), _framework.RequireType("System.Decimal"));
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToString);
+                    return;
+                }
+
+                il.Emit(IlOpCodeTable.Get("Call"), _framework.RequireMethod("System.Decimal", "op_Explicit", new[] { "System.Decimal" }, returnTypeName: BoxedTypeName(to)));
+                return;
+            }
+
+            // half：float/double → half = op_Explicit(源)；half → float/double = op_Explicit(Half) 按返回消歧；half → string = box + Convert.ToString
+            if (from == TypeSymbol.Half || to == TypeSymbol.Half)
+            {
+                EmitHalfConversion(il, from, to);
+                return;
+            }
+
+            throw new System.Exception($"Unexpected decimal/half conversion ({from} → {to})");
+        }
+
+        /// <summary>half 转换：System.Half::op_Explicit 双向（float/double→half 按源参数唯一；half→float/double 按返回类型消歧）。</summary>
+        private void EmitHalfConversion(IlAssembler il, TypeSymbol from, TypeSymbol to)
+        {
+            if (from == TypeSymbol.Half)
+            {
+                if (to == TypeSymbol.Float || to == TypeSymbol.Double)
+                {
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.RequireMethod("System.Half", "op_Explicit", new[] { "System.Half" }, returnTypeName: to == TypeSymbol.Float ? "System.Single" : "System.Double"));
+                    return;
+                }
+
+                if (to == TypeSymbol.String)
+                {
+                    il.Emit(IlOpCodeTable.Get("Box"), _framework.RequireType("System.Half"));
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToString);
+                    return;
+                }
+
+                throw new System.Exception($"Unexpected half conversion target '{to}'");
+            }
+
+            if (to == TypeSymbol.Half && (from == TypeSymbol.Float || from == TypeSymbol.Double))
+            {
+                il.Emit(IlOpCodeTable.Get("Call"), _framework.RequireMethod("System.Half", "op_Explicit", new[] { from == TypeSymbol.Float ? "System.Single" : "System.Double" }));
+                return;
+            }
+
+            throw new System.Exception($"Unexpected half conversion ({from} → {to})");
+        }
+
+        /// <summary>
         /// 6e-M21 Phase 4：数值↔数值转换的系统化 CIL 发射。
         /// 栈表示：≤32 位整数均为 int32 栈；i64/u64 为 int64 栈；f32/f64 为 F 栈。
         /// 无符号宽整型转浮点先归位（Conv_U4/Conv_U8）再转，保证大值正确。
@@ -970,6 +1038,17 @@ namespace Cocoa.CodeGen.Managed.Writer
             {
                 var value = (double)node.ConstantValue.Value;
                 il.Emit(IlOpCodeTable.Get("Ldc_R8"), value);
+            }
+            else if (node.Type == TypeSymbol.Decimal)
+            {
+                // decimal 无 IL 直接量：按 (lo, mid, hi, isNegative, scale) 五元组 newobj
+                var bits = decimal.GetBits((decimal)node.ConstantValue.Value);
+                il.Emit(IlOpCodeTable.Get("Ldc_I4"), bits[0]);
+                il.Emit(IlOpCodeTable.Get("Ldc_I4"), bits[1]);
+                il.Emit(IlOpCodeTable.Get("Ldc_I4"), bits[2]);
+                il.Emit(IlOpCodeTable.Get("Ldc_I4"), (bits[3] & int.MinValue) != 0 ? 1 : 0);
+                il.Emit(IlOpCodeTable.Get("Ldc_I4"), (bits[3] >> 16) & 0xFF);
+                il.Emit(IlOpCodeTable.Get("Newobj"), _framework.RequireMethod("System.Decimal", ".ctor", new[] { "System.Int32", "System.Int32", "System.Int32", "System.Boolean", "System.Byte" }));
             }
             else if (node.Type is NamedTypeSymbol { TypeKind: TypeKind.Enum })
             {
@@ -1307,6 +1386,14 @@ namespace Cocoa.CodeGen.Managed.Writer
                 }
             }
 
+            // decimal（128 位高精度）：运算/比较经 System.Decimal 静态 op_* 调用（IL 无 decimal 基元算术指令）
+            if (node.Left.Type == TypeSymbol.Decimal && node.Right.Type == TypeSymbol.Decimal)
+            {
+                var opName = DecimalOperatorName(node.Op.Kind);
+                il.Emit(IlOpCodeTable.Get("Call"), _framework.RequireMethod("System.Decimal", opName, new[] { "System.Decimal", "System.Decimal" }));
+                return;
+            }
+
             // 6e-M21 Phase 4：无符号整数走 _un 变体（浮点保持有符号比较指令）
             var isUnsigned = node.Type.IsInteger && !node.Type.IsSigned && !node.Type.IsPlaceholder128;
 
@@ -1387,6 +1474,23 @@ namespace Cocoa.CodeGen.Managed.Writer
                     throw new System.Exception($"Unexpected binary operator {BoundOperatorText.BinaryGlyph(node.Op.Kind)}({node.Left.Type}, {node.Right.Type})");
             }
         }
+
+        /// <summary>decimal 静态运算符方法名（System.Decimal::op_*，C# decimal 语义签名固定 (Decimal, Decimal)）。</summary>
+        private static string DecimalOperatorName(BoundBinaryOperatorKind kind) => kind switch
+        {
+            BoundBinaryOperatorKind.Addition => "op_Addition",
+            BoundBinaryOperatorKind.Subtraction => "op_Subtraction",
+            BoundBinaryOperatorKind.Multiplication => "op_Multiply",
+            BoundBinaryOperatorKind.Division => "op_Division",
+            BoundBinaryOperatorKind.Modulo => "op_Modulus",
+            BoundBinaryOperatorKind.Equals => "op_Equality",
+            BoundBinaryOperatorKind.NotEquals => "op_Inequality",
+            BoundBinaryOperatorKind.Less => "op_LessThan",
+            BoundBinaryOperatorKind.LessOrEquals => "op_LessThanOrEqual",
+            BoundBinaryOperatorKind.Greater => "op_GreaterThan",
+            BoundBinaryOperatorKind.GreaterOrEquals => "op_GreaterThanOrEqual",
+            _ => throw new System.Exception($"Unexpected decimal operator {kind}"),
+        };
 
         private void EmitConditionalExpression(IlAssembler il, BoundConditionalExpression node)
         {

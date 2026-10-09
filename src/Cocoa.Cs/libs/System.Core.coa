@@ -24,7 +24,7 @@
     (cls System.Boolean public iface:false ifaces:0 struct:false bclTarget:System.Boolean base:- methods:7 ToString[-@bool] Parse[-@string] Parse[-@string,-@bool] Equals[-@bool,-@bool] GetHashCode[-@bool] ToString[-@bool,-@string] TryParse[-@string,out:@bool] fields:0 events:0 props:0)
     (cls System.Byte public iface:false ifaces:0 struct:false bclTarget:System.Byte base:- methods:7 ToString[-@u8] CompareTo[-@u8,-@u8] Parse[-@string] Equals[-@u8,-@u8] GetHashCode[-@u8] ToString[-@u8,-@string] TryParse[-@string,out:@u8] fields:0 events:0 props:0)
     (cls System.Char public iface:false ifaces:0 struct:false bclTarget:System.Char base:- methods:17 ToString[-@char] Parse[-@string] CompareTo[-@char,-@char] IsDigit[-@char] IsLetter[-@char] IsWhiteSpace[-@char] ToUpper[-@char] ToLower[-@char] IsLetterOrDigit[-@char] IsControl[-@char] IsHexDigit[-@char] IsUpper[-@char] IsLower[-@char] Equals[-@char,-@char] GetHashCode[-@char] ToString[-@char,-@string] TryParse[-@string,out:@char] fields:0 events:0 props:0)
-    (cls System.Console internal iface:false ifaces:0 struct:false bclTarget:System.Console base:- methods:22 WriteLine WriteLine[-@string] WriteLine[-@i32] WriteLine[-@f64] WriteLine[-@bool] WriteLine[-@char] WriteLine[-@i64] WriteLine[-@u32] WriteLine[-@u64] WriteLine[-@f32] Write[-@string] Write[-@i32] Write[-@f64] Write[-@bool] Write[-@char] Write[-@i64] Write[-@u32] Write[-@u64] Write[-@f32] ReadLine ReadKey[-@bool] Beep[-@i32,-@i32] fields:0 events:0 props:0)
+    (cls System.Console internal iface:false ifaces:0 struct:false bclTarget:System.Console base:- methods:26 WriteLine WriteLine[-@string] WriteLine[-@i32] WriteLine[-@f64] WriteLine[-@bool] WriteLine[-@char] WriteLine[-@i64] WriteLine[-@u32] WriteLine[-@u64] WriteLine[-@f32] WriteLine[-@decimal] WriteLine[-@half] Write[-@string] Write[-@i32] Write[-@f64] Write[-@bool] Write[-@char] Write[-@i64] Write[-@u32] Write[-@u64] Write[-@f32] Write[-@decimal] Write[-@half] ReadLine ReadKey[-@bool] Beep[-@i32,-@i32] fields:0 events:0 props:0)
     (cls System.Convert public iface:false ifaces:0 struct:false bclTarget:System.Convert base:- methods:7 ToHexString[-@u8[]] FromHexString[-@string] HexValue[-@char] Base64Alphabet ToBase64String[-@u8[]] FromBase64String[-@string] Base64Value[-@char] fields:0 events:0 props:0)
     (cls System.Double public iface:false ifaces:0 struct:false bclTarget:System.Double base:- methods:10 ToString[-@f64] CompareTo[-@f64,-@f64] Equals[-@f64,-@f64] GetHashCode[-@f64] ToString[-@f64,-@string] TryParse[-@string,out:@f64] Parse[-@string] IsNaN[-@f64] IsInfinity[-@f64] IsFinite[-@f64] fields:0 events:0 props:0)
     (cls System.Environment internal iface:false ifaces:0 struct:false bclTarget:- base:- methods:4 GetEnvironmentVariable[-@string] GetCurrentDirectory SetCurrentDirectory[-@string] GetExecutablePath fields:0 events:0 props:0)
@@ -44,6 +44,12 @@
     (cls System.Math internal iface:false ifaces:0 struct:false bclTarget:System.Math base:- methods:21 Max[-@i32,-@i32] Max[-@f64,-@f64] Min[-@i32,-@i32] Min[-@f64,-@f64] Abs[-@i32] Abs[-@f64] Clamp[-@i32,-@i32,-@i32] Clamp[-@f64,-@f64,-@f64] Sign[-@i32] Sign[-@f64] IsEven[-@i32] IsOdd[-@i32] Pow[-@i32,-@i32] Factorial[-@i32] Gcd[-@i32,-@i32] Lcm[-@i32,-@i32] Sqrt[-@f64] Floor[-@f64] Ceiling[-@f64] Truncate[-@f64] Round[-@f64] fields:0 events:0 props:0)
     (cls System.NativeInt32 public iface:false ifaces:0 struct:false bclTarget:System.IntPtr base:- methods:5 ToString[-@nint] Equals[-@nint,-@nint] GetHashCode[-@nint] ToInt64[-@nint] ToInt32[-@nint] fields:0 events:0 props:0)
     (cls System.NativeUInt32 public iface:false ifaces:0 struct:false bclTarget:System.UIntPtr base:- methods:5 ToString[-@nuint] Equals[-@nuint,-@nuint] GetHashCode[-@nuint] ToUInt64[-@nuint] ToUInt32[-@nuint] fields:0 events:0 props:0)
+    (cls System.ObsoleteAttribute public iface:false ifaces:0 struct:false bclTarget:- base:System.Attribute methods:0 fields:2
+      (fld _message @string private false false)
+      (fld _error @bool private false false) events:0 props:2
+      (prop Message @string true false public false)
+      (prop IsError @bool true false public false)
+    )
     (cls System.Range public iface:false ifaces:0 struct:true bclTarget:System.Range base:- methods:3 get_All StartAt[-System.Index] EndAt[-System.Index] fields:2
       (fld _start System.Index public false false)
       (fld _end System.Index public false false) events:0 props:3
@@ -178,7 +184,7 @@
       (fld _value @string private false false) events:0 props:0
     )
     (gcls System.Collections.Generic.IEnumerable public iface:true ifaces:0 struct:false tparams:1
-      (tpar T 0 - v:- c:0) fields:0 methods:1 GetEnumerator:System.Collections.Generic.IEnumerator`1#!System.Collections.Generic.IEnumerable.T events:0 props:0
+      (tpar T 0 - v:- c:0) fields:0 methods:0 events:0 props:0
     )
     (gcls System.Collections.Generic.KeyValuePair public iface:false ifaces:0 struct:false tparams:2
       (tpar TKey 0 - v:- c:0)
@@ -202,7 +208,7 @@
       (prop Item !System.Collections.Generic.Dictionary.V true true public false)
     )
     (gcls System.Collections.Generic.IEnumerator public iface:true ifaces:0 struct:false tparams:1
-      (tpar T 0 - v:- c:0) fields:0 methods:2 MoveNext:@bool get_Current:!System.Collections.Generic.IEnumerator.T events:0 props:1
+      (tpar T 0 - v:- c:0) fields:0 methods:0 events:0 props:1
       (prop Current !System.Collections.Generic.IEnumerator.T true false public false)
     )
     (gcls System.Collections.Generic.DictionaryEnumerator public iface:false ifaces:1 System.Collections.Generic.IEnumerator`1#System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.DictionaryEnumerator.K$!System.Collections.Generic.DictionaryEnumerator.V struct:false tparams:2
@@ -215,7 +221,7 @@
       (prop Current System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.DictionaryEnumerator.K$!System.Collections.Generic.DictionaryEnumerator.V true false public false)
     )
     (gcls System.Collections.Generic.ICollection public iface:true ifaces:0 struct:false tparams:1
-      (tpar T 0 - v:- c:0) fields:0 methods:7 get_Count:@i32 get_IsReadOnly:@bool Add[-!System.Collections.Generic.ICollection.T]:@bool Clear:@void Contains[-!System.Collections.Generic.ICollection.T]:@bool CopyTo[-!System.Collections.Generic.ICollection.T[],-@i32]:@void Remove[-!System.Collections.Generic.ICollection.T]:@bool events:0 props:2
+      (tpar T 0 - v:- c:0) fields:0 methods:0 events:0 props:2
       (prop Count @i32 true false public false)
       (prop IsReadOnly @bool true false public false)
     )
@@ -234,15 +240,15 @@
       (prop Current !System.Collections.Generic.HashSetEnumerator.T true false public false)
     )
     (gcls System.Collections.Generic.IList public iface:true ifaces:0 struct:false tparams:1
-      (tpar T 0 - v:- c:0) fields:0 methods:5 get_Item[-@i32]:!System.Collections.Generic.IList.T set_Item[-@i32,-!System.Collections.Generic.IList.T]:@void IndexOf[-!System.Collections.Generic.IList.T]:@i32 Insert[-@i32,-!System.Collections.Generic.IList.T]:@void RemoveAt[-@i32]:@void events:0 props:1
+      (tpar T 0 - v:- c:0) fields:0 methods:0 events:0 props:1
       (prop Item !System.Collections.Generic.IList.T true true public false)
     )
     (gcls System.Collections.Generic.IReadOnlyList public iface:true ifaces:0 struct:false tparams:1
-      (tpar T 0 - v:- c:0) fields:0 methods:1 get_Item[-@i32]:!System.Collections.Generic.IReadOnlyList.T events:0 props:1
+      (tpar T 0 - v:- c:0) fields:0 methods:0 events:0 props:1
       (prop Item !System.Collections.Generic.IReadOnlyList.T true false public false)
     )
     (gcls System.Collections.Generic.IReadOnlyCollection public iface:true ifaces:0 struct:false tparams:1
-      (tpar T 0 - v:- c:0) fields:0 methods:1 get_Count:@i32 events:0 props:1
+      (tpar T 0 - v:- c:0) fields:0 methods:0 events:0 props:1
       (prop Count @i32 true false public false)
     )
     (gcls System.Collections.Generic.List public iface:false ifaces:5 System.Collections.Generic.IList`1#!System.Collections.Generic.List.T System.Collections.Generic.ICollection`1#!System.Collections.Generic.List.T System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.List.T System.Collections.Generic.IReadOnlyList`1#!System.Collections.Generic.List.T System.Collections.Generic.IReadOnlyCollection`1#!System.Collections.Generic.List.T struct:false tparams:1
@@ -309,11 +315,11 @@
     )
     (cls System.Threading.Monitor public iface:false ifaces:0 struct:false bclTarget:System.Threading.Monitor base:- methods:9 Enter[-System.Object] Exit[-System.Object] IsEntered[-System.Object] TryEnter[-System.Object] TryEnter[-System.Object,-@i32] Wait[-System.Object] Wait[-System.Object,-@i32] Pulse[-System.Object] PulseAll[-System.Object] fields:0 events:0 props:0)
     (gcls System.Collections.Generic.ISet public iface:true ifaces:0 struct:false tparams:1
-      (tpar T 0 - v:- c:0) fields:0 methods:10 UnionWith[-System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@void IntersectWith[-System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@void ExceptWith[-System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@void SymmetricExceptWith[-System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@void IsSubsetOf[-System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@bool IsSupersetOf[-System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@bool IsProperSubsetOf[-System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@bool IsProperSupersetOf[-System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@bool Overlaps[-System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@bool SetEquals[-System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@bool events:0 props:0
+      (tpar T 0 - v:- c:0) fields:0 methods:0 events:0 props:0
     )
     (gcls System.Collections.Generic.IDictionary public iface:true ifaces:0 struct:false tparams:2
       (tpar TKey 0 - v:- c:0)
-      (tpar TValue 1 - v:- c:0) fields:0 methods:13 get_Item[-!System.Collections.Generic.IDictionary.TKey]:!System.Collections.Generic.IDictionary.TValue set_Item[-!System.Collections.Generic.IDictionary.TKey,-!System.Collections.Generic.IDictionary.TValue]:@void get_Keys:System.Collections.Generic.ICollection`1#!System.Collections.Generic.IDictionary.TKey get_Values:System.Collections.Generic.ICollection`1#!System.Collections.Generic.IDictionary.TValue get_Count:@i32 get_IsReadOnly:@bool Add[-!System.Collections.Generic.IDictionary.TKey,-!System.Collections.Generic.IDictionary.TValue]:@void Clear:@void ContainsKey[-!System.Collections.Generic.IDictionary.TKey]:@bool Contains[-System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.IDictionary.TKey$!System.Collections.Generic.IDictionary.TValue]:@bool CopyTo[-System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.IDictionary.TKey$!System.Collections.Generic.IDictionary.TValue[],-@i32]:@void Remove[-!System.Collections.Generic.IDictionary.TKey]:@bool TryGetValue[-!System.Collections.Generic.IDictionary.TKey,out:!System.Collections.Generic.IDictionary.TValue]:@bool events:0 props:5
+      (tpar TValue 1 - v:- c:0) fields:0 methods:0 events:0 props:5
       (prop Item !System.Collections.Generic.IDictionary.TValue true true public false)
       (prop Keys System.Collections.Generic.ICollection`1#!System.Collections.Generic.IDictionary.TKey true false public false)
       (prop Values System.Collections.Generic.ICollection`1#!System.Collections.Generic.IDictionary.TValue true false public false)
@@ -608,6 +614,12 @@
     (fn System.Core!System.Console.WriteLine[-@f32] name:WriteLine tps:0 ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
       (par System.Core!System.Console.WriteLine[-@f32]/text text @f32 0 - -)
     )
+    (fn System.Core!System.Console.WriteLine[-@decimal] name:WriteLine tps:0 ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
+      (par System.Core!System.Console.WriteLine[-@decimal]/text text @decimal 0 - -)
+    )
+    (fn System.Core!System.Console.WriteLine[-@half] name:WriteLine tps:0 ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
+      (par System.Core!System.Console.WriteLine[-@half]/text text @half 0 - -)
+    )
     (fn System.Core!System.Console.Write[-@string] name:Write tps:0 ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
       (par System.Core!System.Console.Write[-@string]/text text @string 0 - -)
     )
@@ -634,6 +646,12 @@
     )
     (fn System.Core!System.Console.Write[-@f32] name:Write tps:0 ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
       (par System.Core!System.Console.Write[-@f32]/text text @f32 0 - -)
+    )
+    (fn System.Core!System.Console.Write[-@decimal] name:Write tps:0 ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
+      (par System.Core!System.Console.Write[-@decimal]/text text @decimal 0 - -)
+    )
+    (fn System.Core!System.Console.Write[-@half] name:Write tps:0 ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
+      (par System.Core!System.Console.Write[-@half]/text text @half 0 - -)
     )
     (fn System.Core!System.Console.ReadLine[] name:ReadLine tps:0 ret:@string ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:0)
     (fn System.Core!System.Console.ReadKey[-@bool] name:ReadKey tps:0 ret:@char ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
@@ -1537,7 +1555,7 @@
     )
     (fn System.Core!System.Collections.Generic.List.GetEnumerator[] name:GetEnumerator tps:0 ret:System.Collections.Generic.ListEnumerator`1#!System.Collections.Generic.List.T ns:- owner:System.Collections.Generic.List extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:false virt:false abs:false ovr:false seal:false params:0)
     (fn System.Core!System.Collections.Generic.List.EnsureCapacity[-@i32] name:EnsureCapacity tps:0 ret:@void ns:- owner:System.Collections.Generic.List extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
-      (par System.Core!System.Collections.Generic.List.EnsureCapacity[-@i32]/required required @i32 0 - -)
+      (par System.Core!System.Collections.Generic.List.EnsureCapacity[-@i32]/requiredLen requiredLen @i32 0 - -)
     )
     (fn System.Core!System.Collections.Generic.ListEnumerator.ListEnumerator[-!System.Collections.Generic.ListEnumerator.T[],-@i32] name:ListEnumerator tps:0 ret:@void ns:- owner:System.Collections.Generic.ListEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:true acc:false virt:false abs:false ovr:false seal:false params:2
       (par System.Core!System.Collections.Generic.ListEnumerator.ListEnumerator[-!System.Collections.Generic.ListEnumerator.T[],-@i32]/items items !System.Collections.Generic.ListEnumerator.T[] 0 - -)
@@ -1697,7 +1715,7 @@
     (fn System.Core!System.Text.StringBuilder.Clear[] name:Clear tps:0 ret:@void ns:- owner:System.Text.StringBuilder extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:false virt:false abs:false ovr:false seal:false params:0)
     (fn System.Core!System.Text.StringBuilder.ToString[] name:ToString tps:0 ret:@string ns:- owner:System.Text.StringBuilder extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:false virt:false abs:false ovr:false seal:false params:0)
     (fn System.Core!System.Text.StringBuilder.EnsureCapacity[-@i32] name:EnsureCapacity tps:0 ret:@void ns:- owner:System.Text.StringBuilder extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
-      (par System.Core!System.Text.StringBuilder.EnsureCapacity[-@i32]/required required @i32 0 - -)
+      (par System.Core!System.Text.StringBuilder.EnsureCapacity[-@i32]/requiredLen requiredLen @i32 0 - -)
     )
     (fn System.Core!System.Threading.Lock.Lock[] name:Lock tps:0 ret:@void ns:- owner:System.Threading.Lock extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:true acc:false virt:false abs:false ovr:false seal:false params:0)
     (fn System.Core!System.Threading.Lock.Enter[] name:Enter tps:0 ret:@void ns:- owner:System.Threading.Lock extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:false virt:false abs:false ovr:false seal:false params:0)
@@ -3888,6 +3906,30 @@
         )
       )
     )
+    (body System.Core!System.Console.WriteLine[-@decimal]
+      (block 1
+        (exprstmt
+          (membercall @void WriteLine System.Core!System.Syscall.ConsoleSyscall.WriteLine[-@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
+            (conv @any
+              (var System.Core!System.Console.WriteLine[-@decimal]/text)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.Console.WriteLine[-@half]
+      (block 1
+        (exprstmt
+          (membercall @void WriteLine System.Core!System.Syscall.ConsoleSyscall.WriteLine[-@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
+            (conv @any
+              (var System.Core!System.Console.WriteLine[-@half]/text)
+            )
+          )
+        )
+      )
+    )
     (body System.Core!System.Console.Write[-@string]
       (block 1
         (exprstmt
@@ -3991,6 +4033,30 @@
             (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.Write[-@f32]/text)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.Console.Write[-@decimal]
+      (block 1
+        (exprstmt
+          (membercall @void Write System.Core!System.Syscall.ConsoleSyscall.Write[-@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
+            (conv @any
+              (var System.Core!System.Console.Write[-@decimal]/text)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.Console.Write[-@half]
+      (block 1
+        (exprstmt
+          (membercall @void Write System.Core!System.Syscall.ConsoleSyscall.Write[-@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
+            (conv @any
+              (var System.Core!System.Console.Write[-@half]/text)
             )
           )
         )
@@ -14534,7 +14600,7 @@
         (if
           (binary
             (bop <= @i32 @i32)
-            (var System.Core!System.Text.StringBuilder.EnsureCapacity[-@i32]/required)
+            (var System.Core!System.Text.StringBuilder.EnsureCapacity[-@i32]/requiredLen)
             (memberacc @i32 Length
               (memberacc @char[] _chars owner:System.Text.StringBuilder
                 (this System.Text.StringBuilder)
@@ -14560,7 +14626,7 @@
           (binary
             (bop < @i32 @i32)
             (var System.Core!System.Text.StringBuilder.EnsureCapacity[-@i32]/newLen)
-            (var System.Core!System.Text.StringBuilder.EnsureCapacity[-@i32]/required)
+            (var System.Core!System.Text.StringBuilder.EnsureCapacity[-@i32]/requiredLen)
           )
           (block 1
             (exprstmt
@@ -16742,7 +16808,7 @@
         (if
           (binary
             (bop <= @i32 @i32)
-            (var System.Core!System.Collections.Generic.List.EnsureCapacity[-@i32]/required)
+            (var System.Core!System.Collections.Generic.List.EnsureCapacity[-@i32]/requiredLen)
             (memberacc @i32 Length
               (memberacc !System.Collections.Generic.List.T[] _items owner:System.Collections.Generic.List
                 (this System.Collections.Generic.List)
@@ -16768,7 +16834,7 @@
           (binary
             (bop < @i32 @i32)
             (var System.Core!System.Collections.Generic.List.EnsureCapacity[-@i32]/newLen)
-            (var System.Core!System.Collections.Generic.List.EnsureCapacity[-@i32]/required)
+            (var System.Core!System.Collections.Generic.List.EnsureCapacity[-@i32]/requiredLen)
           )
           (block 1
             (exprstmt
@@ -18111,6 +18177,8 @@
     (doc M:System.Console.Write\(System.String\) <summary>Writes\sa\sstring\sto\sthe\sstandard\soutput\swithout\sa\snewline.</summary>\n<param\sname="text">The\sstring\sto\swrite.</param>)
     (doc M:System.Console.Write\(System.UInt32\) <summary>Writes\san\sunsigned\s32-bit\sinteger\sto\sthe\sstandard\soutput\swithout\sa\snewline.</summary>\n<param\sname="text">The\sunsigned\sinteger\sto\swrite.</param>)
     (doc M:System.Console.Write\(System.UInt64\) <summary>Writes\san\sunsigned\s64-bit\sinteger\sto\sthe\sstandard\soutput\swithout\sa\snewline.</summary>\n<param\sname="text">The\sunsigned\s64-bit\sinteger\sto\swrite.</param>)
+    (doc M:System.Console.Write\(decimal\) <summary>Writes\sa\s128-bit\shigh-precision\sdecimal\sto\sthe\sstandard\soutput\swithout\sa\snewline.</summary>\n<param\sname="text">The\sdecimal\sto\swrite.</param>)
+    (doc M:System.Console.Write\(half\) <summary>Writes\sa\s16-bit\shalf-precision\sfloat\sto\sthe\sstandard\soutput\swithout\sa\snewline.</summary>\n<param\sname="text">The\shalf\sto\swrite.</param>)
     (doc M:System.Console.WriteLine <summary>Writes\san\sempty\sline\sto\sthe\sstandard\soutput.</summary>)
     (doc M:System.Console.WriteLine\(System.Boolean\) <summary>Writes\sa\sboolean\sfollowed\sby\sa\snewline\sto\sthe\sstandard\soutput.</summary>\n<param\sname="text">The\sboolean\sto\swrite.</param>)
     (doc M:System.Console.WriteLine\(System.Char\) <summary>Writes\sa\scharacter\sfollowed\sby\sa\snewline\sto\sthe\sstandard\soutput.</summary>\n<param\sname="text">The\scharacter\sto\swrite.</param>)
@@ -18121,6 +18189,8 @@
     (doc M:System.Console.WriteLine\(System.String\) <summary>Writes\sa\sstring\sfollowed\sby\sa\snewline\sto\sthe\sstandard\soutput.</summary>\n<param\sname="text">The\sstring\sto\swrite.</param>)
     (doc M:System.Console.WriteLine\(System.UInt32\) <summary>Writes\san\sunsigned\s32-bit\sinteger\sfollowed\sby\sa\snewline\sto\sthe\sstandard\soutput.</summary>\n<param\sname="text">The\sunsigned\sinteger\sto\swrite.</param>)
     (doc M:System.Console.WriteLine\(System.UInt64\) <summary>Writes\san\sunsigned\s64-bit\sinteger\sfollowed\sby\sa\snewline\sto\sthe\sstandard\soutput.</summary>\n<param\sname="text">The\sunsigned\s64-bit\sinteger\sto\swrite.</param>)
+    (doc M:System.Console.WriteLine\(decimal\) <summary>Writes\sa\s128-bit\shigh-precision\sdecimal\sfollowed\sby\sa\snewline\sto\sthe\sstandard\soutput.</summary>\n<param\sname="text">The\sdecimal\sto\swrite.</param>)
+    (doc M:System.Console.WriteLine\(half\) <summary>Writes\sa\s16-bit\shalf-precision\sfloat\sfollowed\sby\sa\snewline\sto\sthe\sstandard\soutput.</summary>\n<param\sname="text">The\shalf\sto\swrite.</param>)
     (doc M:System.Convert.FromBase64String\(System.String\) <summary>Base64\s瀛楃涓?鈫?瀛楄妭鏁扮粍锛涢潪娉曞瓧绗?闀垮害\s鈫?绌烘暟缁勩€?/summary>)
     (doc M:System.Convert.FromHexString\(System.String\) <summary>鍗佸叚杩涘埗瀛楃涓诧紙澶у啓/灏忓啓鍧囧彲锛夆啋\s瀛楄妭鏁扮粍锛涘鏁伴暱搴︽垨闈炴硶瀛楃\s鈫?绌烘暟缁勩€?/summary>)
     (doc M:System.Convert.ToBase64String\(System.Byte[]\) <summary>瀛楄妭鏁扮粍\s鈫?Base64\s瀛楃涓诧紙'='\s濉厖锛夈€?/summary>)
@@ -18182,6 +18252,7 @@
     (doc P:System.Collections.Generic.List.Capacity <summary>当前容量（含未使用槽位）。</summary>)
     (doc P:System.Collections.Generic.List.IsReadOnly <summary>BCL\sICollection&lt;T&gt;.IsReadOnly——List\s始终可变，返回\sfalse。</summary>)
     (doc P:System.Collections.Generic.ListEnumerator.Current <summary>当前元素（只读）。</summary>)
+    (doc P:System.ObsoleteAttribute.IsError <summary>true\s时使用该成员是**错误**而非警告。</summary>)
     (doc T:System.Collections.Generic.DictionaryEnumerator`2 <summary>Dictionary&lt;K,V&gt;\s的前向枚举器（支撑\sforeach），实现\sIEnumerator&lt;KeyValuePair&lt;K,V&gt;&gt;。</summary>)
     (doc T:System.Collections.Generic.ListEnumerator`1 <summary>List&lt;T&gt;\s的前向枚举器（支撑\sforeach），实现\sIEnumerator&lt;T&gt;。</summary>)
     (doc T:System.Console <summary>Provides\sstandard\sinput,\soutput,\sand\serror\sstream\saccess.</summary>)
@@ -18190,4 +18261,4 @@
     (doc T:System.String <summary>Represents\sa\ssequence\sof\scharacters.\sProvides\sstring\smanipulation\smethods.</summary>)
   )
 )
-(checksum sha256:11cc138bbcb90092b380267d83f55d2729ce2911f8857cbcf64233b73608972f)
+(checksum sha256:e31bff958755a71862452a02bb00eddd33793ca9d0d006fb6dc896575f50081a)

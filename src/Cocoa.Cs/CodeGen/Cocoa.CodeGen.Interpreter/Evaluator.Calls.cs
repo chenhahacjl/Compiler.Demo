@@ -936,6 +936,23 @@ namespace Cocoa.CodeGen.Interpreter
             {
                 return value;
             }
+            // decimal 显式转换（C# 语义：截断取整；浮点目标保精度）——须置于数值分支之前
+            else if (value is decimal decimalSource && node.Type != TypeSymbol.Decimal)
+            {
+                if (node.Type == TypeSymbol.Int32) return unchecked((int)decimalSource);
+                if (node.Type == TypeSymbol.Int64) return unchecked((long)decimalSource);
+                if (node.Type == TypeSymbol.UInt8) return unchecked((byte)(int)decimalSource);
+                if (node.Type == TypeSymbol.Int8) return unchecked((sbyte)(int)decimalSource);
+                if (node.Type == TypeSymbol.Int16) return unchecked((short)(int)decimalSource);
+                if (node.Type == TypeSymbol.UInt16) return unchecked((ushort)(int)decimalSource);
+                if (node.Type == TypeSymbol.UInt32) return unchecked((uint)decimalSource);
+                if (node.Type == TypeSymbol.UInt64) return unchecked((ulong)decimalSource);
+                if (node.Type == TypeSymbol.Char) return (char)(int)decimalSource;
+                if (node.Type == TypeSymbol.Float) return (float)decimalSource;
+                if (node.Type == TypeSymbol.Double) return (double)decimalSource;
+                if (node.Type == TypeSymbol.String) return decimalSource.ToString();
+                throw new System.Exception($"Unexpected decimal conversion target {node.Type}");
+            }
             else if (node.Type == TypeSymbol.Boolean)
             {
                 return Convert.ToBoolean(value);
@@ -1021,11 +1038,30 @@ namespace Cocoa.CodeGen.Interpreter
             }
             else if (node.Type == TypeSymbol.Float)
             {
-                return Convert.ToSingle(value);
+                return value is Half halfToFloat ? (float)halfToFloat : Convert.ToSingle(value);
             }
             else if (node.Type == TypeSymbol.Double)
             {
-                return Convert.ToDouble(value);
+                return value is Half halfToDouble ? (double)halfToDouble : Convert.ToDouble(value);
+            }
+            else if (node.Type == TypeSymbol.Decimal)
+            {
+                // 整数/char/float/double → decimal：Convert.ToDecimal(object) 保留数值精度（IConvertible 路径）
+                if (value is decimal decimalValue)
+                {
+                    return decimalValue;
+                }
+
+                return System.Convert.ToDecimal(value!);
+            }
+            else if (node.Type == TypeSymbol.Half)
+            {
+                if (value is Half halfValue)
+                {
+                    return halfValue;
+                }
+
+                return (Half)System.Convert.ToDouble(value!);
             }
             else if (node.Type == TypeSymbol.String)
             {

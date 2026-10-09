@@ -80,6 +80,10 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
+            // decimal：正号/负号（C# decimal 支持一元 +/-）
+            ops.Add(new BoundUnaryOperator(BoundUnaryOperatorKind.Identity, TypeSymbol.Decimal));
+            ops.Add(new BoundUnaryOperator(BoundUnaryOperatorKind.Negation, TypeSymbol.Decimal));
+
             return ops.ToArray();
         }
 

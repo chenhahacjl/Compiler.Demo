@@ -129,12 +129,12 @@ namespace Cocoa.CodeGen.Managed.Reader
             return false;
         }
 
-        /// <summary>按「类型 FullName + 方法名 + 参数类型 FullName 列表」查找方法。</summary>
-        public ResolvedMethodInfo? FindMethod(string typeFullName, string methodName, string[] parameterTypeNames, IIlRefIssuer builder)
+        /// <summary>按「类型 FullName + 方法名 + 参数类型 FullName 列表」查找方法；<paramref name="returnTypeName"/> 非空时按返回类型消歧。</summary>
+        public ResolvedMethodInfo? FindMethod(string typeFullName, string methodName, string[] parameterTypeNames, IIlRefIssuer builder, string? returnTypeName = null)
         {
             foreach (var assembly in _assemblies)
             {
-                var result = assembly.FindMethod(typeFullName, methodName, parameterTypeNames);
+                var result = assembly.FindMethod(typeFullName, methodName, parameterTypeNames, returnTypeName);
                 if (result != null)
                 {
                     var declaringType = FindType(typeFullName, builder);

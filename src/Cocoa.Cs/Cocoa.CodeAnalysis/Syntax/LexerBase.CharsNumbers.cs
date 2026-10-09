@@ -187,11 +187,11 @@ namespace Cocoa.CodeAnalysis.Syntax
                 }
             }
 
-            // 类型后缀（6e-M21）：`42L`/`0xFFL`、`1u`/`1U`、`1ul`/`1UL`/`1lu`/`1LU`、`1.0f`/`1e5f`。
+            // 类型后缀（6e-M21）：`42L`/`0xFFL`、`1u`/`1U`、`1ul`/`1UL`/`1lu`/`1LU`、`1.0f`/`1e5f`、`3.14m`/`3.14M`。
             // 仅当后缀后非标识符字符时生效，避免吞掉 let / long / ulong / using 等关键字/标识符
             // （如 `9696let` 应拆为 9696 + let，`1234long` 应拆为 1234 + long，`1ul` 不应拆成 `1`+`ul`）。
             // 双字母组合（ul/UL/lu/LU）按 Peek(2) 判定边界。
-            bool uSuffix = false, lSuffix = false, fSuffix = false;
+            bool uSuffix = false, lSuffix = false, fSuffix = false, mSuffix = false;
             {
                 var s = Current;
                 if (s == 'u' || s == 'U')
@@ -229,6 +229,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                 else if ((s == 'f' || s == 'F') && !char.IsLetterOrDigit(Peek(1)))
                 {
                     fSuffix = true;
+                    _position++;
+                    length++;
+                }
+                else if ((s == 'm' || s == 'M') && !char.IsLetterOrDigit(Peek(1)))
+                {
+                    mSuffix = true;
                     _position++;
                     length++;
                 }
@@ -280,6 +286,25 @@ namespace Cocoa.CodeAnalysis.Syntax
                 var location = new TextLocation(_text, span);
                 _diagnostics.ReportInvalidNumber(location, text, TypeSymbol.Float);
                 _value = 0.0f;
+                _kind = SyntaxKind.DoubleToken;
+                return;
+            }
+
+            // decimal 后缀 m/M（C# 同构：仅十进制实数/整数可加 m，拒绝 hex/bin 与 0b 前缀）
+            if (mSuffix)
+            {
+                var decimalText = text.Substring(0, text.Length - 1);
+                if (decimal.TryParse(decimalText, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var decimalValue))
+                {
+                    _value = decimalValue;
+                    _kind = SyntaxKind.DoubleToken;
+                    return;
+                }
+
+                var decimalSpan = new TextSpan(_start, length);
+                var decimalLocation = new TextLocation(_text, decimalSpan);
+                _diagnostics.ReportInvalidNumber(decimalLocation, text, TypeSymbol.Decimal);
+                _value = 0m;
                 _kind = SyntaxKind.DoubleToken;
                 return;
             }

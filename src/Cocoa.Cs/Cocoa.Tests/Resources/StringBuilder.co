@@ -70,9 +70,9 @@ namespace System.Text
             return Runtime.StringFromChars(chars)
         }
 
-        private function EnsureCapacity(required: i32): void
+        private function EnsureCapacity(requiredLen: i32): void
         {
-            if required <= _chars.Length
+            if requiredLen <= _chars.Length
             {
                 return
             }
@@ -83,7 +83,7 @@ namespace System.Text
                 newLen = 16
             }
 
-            while newLen < required
+            while newLen < requiredLen
             {
                 newLen = newLen * 2
             }

@@ -48,6 +48,10 @@ namespace Cocoa.CodeAnalysis.Binding
                 return TypeSymbol.Float;
             if (value is double)
                 return TypeSymbol.Double;
+            if (value is decimal)
+                return TypeSymbol.Decimal;
+            if (value is Half)
+                return TypeSymbol.Half;
             if (value is string)
                 return TypeSymbol.String;
             throw new Exception($"Unexpected literal '{value}' of type {value.GetType()}");

@@ -77,6 +77,20 @@ namespace System
             ConsoleSyscall.WriteLine(text)
         }
 
+        /// <summary>Writes a 128-bit high-precision decimal followed by a newline to the standard output.</summary>
+        /// <param name="text">The decimal to write.</param>
+        static function WriteLine(text: decimal): void
+        {
+            ConsoleSyscall.WriteLine(text)
+        }
+
+        /// <summary>Writes a 16-bit half-precision float followed by a newline to the standard output.</summary>
+        /// <param name="text">The half to write.</param>
+        static function WriteLine(text: half): void
+        {
+            ConsoleSyscall.WriteLine(text)
+        }
+
         /// <summary>Writes a string to the standard output without a newline.</summary>
         /// <param name="text">The string to write.</param>
         static function Write(text: string): void
@@ -136,6 +150,20 @@ namespace System
         /// <summary>Writes a single-precision float to the standard output without a newline.</summary>
         /// <param name="text">The float to write.</param>
         static function Write(text: f32): void
+        {
+            ConsoleSyscall.Write(text)
+        }
+
+        /// <summary>Writes a 128-bit high-precision decimal to the standard output without a newline.</summary>
+        /// <param name="text">The decimal to write.</param>
+        static function Write(text: decimal): void
+        {
+            ConsoleSyscall.Write(text)
+        }
+
+        /// <summary>Writes a 16-bit half-precision float to the standard output without a newline.</summary>
+        /// <param name="text">The half to write.</param>
+        static function Write(text: half): void
         {
             ConsoleSyscall.Write(text)
         }

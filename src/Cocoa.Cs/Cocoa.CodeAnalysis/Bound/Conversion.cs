@@ -218,6 +218,61 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
+            // decimal（128 位高精度）：C# 转换矩阵——整数（含 char）→ decimal 隐式（无损失）；
+            // decimal → 整数显式（窄化/取整）；decimal ↔ float/double 显式（双向）；decimal → string 显式。
+            if (to == TypeSymbol.Decimal)
+            {
+                if ((from.IsInteger && !from.IsPlaceholder128) || from == TypeSymbol.Char)
+                {
+                    return Conversion.Implicit;
+                }
+
+                if (from.IsFloat)
+                {
+                    return Conversion.Explicit;
+                }
+            }
+
+            if (from == TypeSymbol.Decimal)
+            {
+                if ((to.IsInteger && !to.IsPlaceholder128) || to == TypeSymbol.Char)
+                {
+                    return Conversion.Explicit;
+                }
+
+                if (to.IsFloat)
+                {
+                    return Conversion.Explicit;
+                }
+
+                if (to == TypeSymbol.String)
+                {
+                    return Conversion.Explicit;
+                }
+            }
+
+            // half（16 位半精度浮点）：与 f32/f64 双向显式（System.Half 无字面量后缀，经转换产生）
+            if (from == TypeSymbol.Half)
+            {
+                if (to == TypeSymbol.Float || to == TypeSymbol.Double)
+                {
+                    return Conversion.Explicit;
+                }
+
+                if (to == TypeSymbol.String)
+                {
+                    return Conversion.Explicit;
+                }
+            }
+
+            if (to == TypeSymbol.Half)
+            {
+                if (from == TypeSymbol.Float || from == TypeSymbol.Double)
+                {
+                    return Conversion.Explicit;
+                }
+            }
+
             // 6e-M21 Phase 1：数值类型系统化转换（按位宽/有无符号/是否浮点判定）
             // 隐式（拓宽）：同符号位宽不降；unsigned(n)→signed(>n)；任意数值→浮点（含 f32→f64）。
             // 显式（窄化）：其余数值↔数值组合（含 signed→unsigned、浮点→整数、f64→f32）。

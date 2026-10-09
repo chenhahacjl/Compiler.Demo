@@ -581,7 +581,9 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private static bool IsNumeric(TypeSymbol type)
         {
-            return type.IsNumeric && !type.IsPlaceholder128;
+            // decimal 纳入二元/三元公共类型提升（B3 后接 decimal/Half）：运算表按 decimal 单独注册，
+            // 不并入 TypeSymbol.IsNumeric（decimal 无位宽、非 IL 基元，进通用数值矩阵会误判）。
+            return (type.IsNumeric && !type.IsPlaceholder128) || type == TypeSymbol.Decimal;
         }
 
         /// <summary>原生整型（nint/nuint，平台自适应位宽）——二元提升/公共类型判定的专用门。</summary>
