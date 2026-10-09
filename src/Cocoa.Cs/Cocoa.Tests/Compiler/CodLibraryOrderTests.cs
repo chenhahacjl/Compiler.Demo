@@ -42,7 +42,7 @@ namespace Cocoa.Tests.Compiler
                 Library("Common.Model", "Common.Infrastructure"),
             };
 
-            var ordered = Compilation.TopologicalOrder(programs.ToImmutableArray());
+            var ordered = AssemblyReferenceManager.TopologicalOrder(programs.ToImmutableArray());
 
             int IndexOf(string programName) => ordered.IndexOf(programs.First(p => p.Name == programName));
 
@@ -61,7 +61,7 @@ namespace Cocoa.Tests.Compiler
             };
 
             var exception = Assert.Throws<InvalidOperationException>(() =>
-                Compilation.TopologicalOrder(programs.ToImmutableArray()));
+                AssemblyReferenceManager.TopologicalOrder(programs.ToImmutableArray()));
             Assert.Contains("循环引用", exception.Message);
         }
 
@@ -74,7 +74,7 @@ namespace Cocoa.Tests.Compiler
                 Library("Common"),
             };
 
-            var ordered = Compilation.TopologicalOrder(programs.ToImmutableArray());
+            var ordered = AssemblyReferenceManager.TopologicalOrder(programs.ToImmutableArray());
             Assert.Equal(2, ordered.Length);
         }
     }

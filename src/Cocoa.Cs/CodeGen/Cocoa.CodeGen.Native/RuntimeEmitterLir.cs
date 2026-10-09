@@ -17,6 +17,17 @@ namespace Cocoa.CodeGen.Native
     /// </summary>
     internal static partial class RuntimeEmitterLir
     {
+        public static void Append(LirProgram program, TargetPlatform platform)
+        {
+            var emitter = new RuntimeFunctionEmitter(program, platform);
+            emitter.Emit();
+        }
+    }
+
+    internal sealed partial class RuntimeFunctionEmitter
+    {
+        private const string Prefix = "rt:";
+
         private static readonly string[] Kernel32Imports =
         {
             "GetStdHandle", "WriteFile", "ReadFile", "ExitProcess", "VirtualAlloc", "VirtualFree",
@@ -39,16 +50,6 @@ namespace Cocoa.CodeGen.Native
             "BCryptFinishHash", "BCryptCloseAlgorithmProvider", "BCryptDestroyHash",
             "BCryptHash",
         };
-
-        public static void Append(LirProgram program, TargetPlatform platform)
-        {
-            var emitter = new RuntimeFunctionEmitter(program, platform);
-            emitter.Emit();
-        }
-
-        private sealed partial class RuntimeFunctionEmitter
-        {
-            private const string Prefix = "rt:";
 
             private readonly LirProgram _program;
             private readonly bool _isX64;
@@ -655,6 +656,5 @@ namespace Cocoa.CodeGen.Native
 
             private void FCvtSD(LirVirtualRegister dst, LirVirtualRegister src) => Add(LirOpCode.FCvtSD, dst, LirOperand.Reg(src));
 
-        }
     }
 }

@@ -9,637 +9,634 @@ using Cocoa.CodeGen.Native.Lir;
 
 namespace Cocoa.CodeGen.Native
 {
-    internal static partial class RuntimeEmitterLir
+    internal sealed partial class RuntimeFunctionEmitter
     {
-        private sealed partial class RuntimeFunctionEmitter
+        // ------------------------------------------------------------------
+
+        // ------------------------------------------------------------------
+        // NewArray(size:4, elementSize:4) → ptr:8
+        // 布局：[0..4) 长度；[8..) 元素区（8 字节对齐，内存零初始化）
+        // ------------------------------------------------------------------
+
+        private void EmitNewArray()
         {
-            // ------------------------------------------------------------------
+            var size = _args[0];
+            var elementSize = _args[1];
+            var oom = NewLabel();
+            var done = NewLabel();
 
-            // ------------------------------------------------------------------
-            // NewArray(size:4, elementSize:4) → ptr:8
-            // 布局：[0..4) 长度；[8..) 元素区（8 字节对齐，内存零初始化）
-            // ------------------------------------------------------------------
+            var total = NewReg(4);
+            Imul(total, size, elementSize);
+            AddI(total, total, 7);
+            Shr(total, total, 3);
+            Shl(total, total, 3);
+            AddI(total, total, 8);
 
-            private void EmitNewArray()
-            {
-                var size = _args[0];
-                var elementSize = _args[1];
-                var oom = NewLabel();
-                var done = NewLabel();
+            var obj = NewPtr();
+            CallRuntime(obj, "Alloc", total);
+            Cmp(obj, 0);
+            Jcc(LirCond.Equal, oom);
+            Store(obj, 0, size, 4);
+            StoreRet(obj);
+            Jmp(done);
 
-                var total = NewReg(4);
-                Imul(total, size, elementSize);
-                AddI(total, total, 7);
-                Shr(total, total, 3);
-                Shl(total, total, 3);
-                AddI(total, total, 8);
+            Mark(oom);
+            var zero = C(8, 0);
+            StoreRet(zero);
 
-                var obj = NewPtr();
-                CallRuntime(obj, "Alloc", total);
-                Cmp(obj, 0);
-                Jcc(LirCond.Equal, oom);
-                Store(obj, 0, size, 4);
-                StoreRet(obj);
-                Jmp(done);
+            Mark(done);
+            EndFunction(_currentFunction!, 8);
+        }
 
-                Mark(oom);
-                var zero = C(8, 0);
-                StoreRet(zero);
+        // ------------------------------------------------------------------
+        // SliceArray(src:8, start:4, count:4, elemSize:4) → ptr:8
+        // N1：CopyRange 原语——把源数组元素区 [start, start+count) 复制进新数组。
+        // Index/Range 切片（binder 降级路径）与无 SDK 回退共享；字节粒度拷贝适配全部元素宽度。
+        // ------------------------------------------------------------------
 
-                Mark(done);
-                EndFunction(_currentFunction!, 8);
-            }
+        private void EmitSliceArray()
+        {
+            var src = _args[0];
+            var start = _args[1];
+            var count = _args[2];
+            var elementSize = _args[3];
 
-            // ------------------------------------------------------------------
-            // SliceArray(src:8, start:4, count:4, elemSize:4) → ptr:8
-            // N1：CopyRange 原语——把源数组元素区 [start, start+count) 复制进新数组。
-            // Index/Range 切片（binder 降级路径）与无 SDK 回退共享；字节粒度拷贝适配全部元素宽度。
-            // ------------------------------------------------------------------
+            // dst = NewArray(count, elemSize)
+            var dst = NewPtr();
+            CallRuntime(dst, "NewArray", count, elementSize);
 
-            private void EmitSliceArray()
-            {
-                var src = _args[0];
-                var start = _args[1];
-                var count = _args[2];
-                var elementSize = _args[3];
+            // 越界即退出：start >= 0、count >= 0、start + count <= src.Length
+            var srcLength = NewReg(4);
+            Load(srcLength, src, 0, 4);
+            var error = NewLabel();
+            var exit = NewLabel();
+            Cmp(start, 0);
+            Jcc(LirCond.Less, error);
+            Cmp(count, 0);
+            Jcc(LirCond.Less, error);
+            var end = NewReg(4);
+            Add(end, start, count);
+            Cmp(end, srcLength);
+            Jcc(LirCond.Greater, error);
 
-                // dst = NewArray(count, elemSize)
-                var dst = NewPtr();
-                CallRuntime(dst, "NewArray", count, elementSize);
+            // 字节粒度逐字节拷贝：dst 字节区[i] = src 字节区[(start·elemSize) + i]
+            var totalBytes = NewReg(4);
+            Imul(totalBytes, count, elementSize);
+            var srcByteBase = NewReg(4);
+            Imul(srcByteBase, start, elementSize);
 
-                // 越界即退出：start >= 0、count >= 0、start + count <= src.Length
-                var srcLength = NewReg(4);
-                Load(srcLength, src, 0, 4);
-                var error = NewLabel();
-                var exit = NewLabel();
-                Cmp(start, 0);
-                Jcc(LirCond.Less, error);
-                Cmp(count, 0);
-                Jcc(LirCond.Less, error);
-                var end = NewReg(4);
-                Add(end, start, count);
-                Cmp(end, srcLength);
-                Jcc(LirCond.Greater, error);
+            var index = NewReg(4);
+            Mov(index, C(4, 0));
+            var loop = NewLabel();
+            var done = NewLabel();
 
-                // 字节粒度逐字节拷贝：dst 字节区[i] = src 字节区[(start·elemSize) + i]
-                var totalBytes = NewReg(4);
-                Imul(totalBytes, count, elementSize);
-                var srcByteBase = NewReg(4);
-                Imul(srcByteBase, start, elementSize);
+            Mark(loop);
+            Cmp(index, totalBytes);
+            Jcc(LirCond.GreaterOrEqual, done);
 
-                var index = NewReg(4);
-                Mov(index, C(4, 0));
-                var loop = NewLabel();
-                var done = NewLabel();
+            var srcAddr = NewPtr();
+            Lea(srcAddr, src, 8);
+            Add(srcAddr, srcAddr, srcByteBase);
+            Add(srcAddr, srcAddr, index);
 
-                Mark(loop);
-                Cmp(index, totalBytes);
-                Jcc(LirCond.GreaterOrEqual, done);
+            var byteValue = NewReg(4);
+            Load(byteValue, srcAddr, 0, 1);
 
-                var srcAddr = NewPtr();
-                Lea(srcAddr, src, 8);
-                Add(srcAddr, srcAddr, srcByteBase);
-                Add(srcAddr, srcAddr, index);
+            var dstAddr = NewPtr();
+            Lea(dstAddr, dst, 8);
+            Add(dstAddr, dstAddr, index);
+            Store(dstAddr, 0, byteValue, 1);
 
-                var byteValue = NewReg(4);
-                Load(byteValue, srcAddr, 0, 1);
+            AddI(index, index, 1);
+            Jmp(loop);
 
-                var dstAddr = NewPtr();
-                Lea(dstAddr, dst, 8);
-                Add(dstAddr, dstAddr, index);
-                Store(dstAddr, 0, byteValue, 1);
+            Mark(done);
+            StoreRet(dst);
+            Jmp(exit);
 
-                AddI(index, index, 1);
-                Jmp(loop);
+            Mark(error);
+            var message = NewPtr();
+            LeaData(message, _arrayBoundsMessage);
+            CallRuntime(null, "PrintString", message);
+            CallRuntime(null, "ExitProcess", C(4, 1));
 
-                Mark(done);
-                StoreRet(dst);
-                Jmp(exit);
+            Mark(exit);
+            EndFunction(_currentFunction!, 8);
+        }
 
-                Mark(error);
-                var message = NewPtr();
-                LeaData(message, _arrayBoundsMessage);
-                CallRuntime(null, "PrintString", message);
-                CallRuntime(null, "ExitProcess", C(4, 1));
+        // ------------------------------------------------------------------
+        // ArrayBoundsCheck(index:4, length:4) → 越界时报错退出
+        // ------------------------------------------------------------------
 
-                Mark(exit);
-                EndFunction(_currentFunction!, 8);
-            }
+        private void EmitArrayBoundsCheck()
+        {
+            var index = _args[0];
+            var length = _args[1];
+            var error = NewLabel();
 
-            // ------------------------------------------------------------------
-            // ArrayBoundsCheck(index:4, length:4) → 越界时报错退出
-            // ------------------------------------------------------------------
+            Cmp(index, 0);
+            Jcc(LirCond.Less, error);
+            Cmp(index, length);
+            Jcc(LirCond.GreaterOrEqual, error);
+            EndFunction(_currentFunction!, 0);
 
-            private void EmitArrayBoundsCheck()
-            {
-                var index = _args[0];
-                var length = _args[1];
-                var error = NewLabel();
+            Mark(error);
+            var message = NewPtr();
+            LeaData(message, _arrayBoundsMessage);
+            CallRuntime(null, "PrintString", message);
+            CallRuntime(null, "ExitProcess", C(4, 1));
+            EndFunction(_currentFunction!, 0);
+        }
 
-                Cmp(index, 0);
-                Jcc(LirCond.Less, error);
-                Cmp(index, length);
-                Jcc(LirCond.GreaterOrEqual, error);
-                EndFunction(_currentFunction!, 0);
+        private void EmitError(string messageKey)
+        {
+            var message = NewPtr();
+            LeaData(message, messageKey);
+            CallRuntime(null, "PrintString", message);
+            CallRuntime(null, "ExitProcess", C(4, 1));
+            EndFunction(_currentFunction!, 0);
+        }
 
-                Mark(error);
-                var message = NewPtr();
-                LeaData(message, _arrayBoundsMessage);
-                CallRuntime(null, "PrintString", message);
-                CallRuntime(null, "ExitProcess", C(4, 1));
-                EndFunction(_currentFunction!, 0);
-            }
+        // ------------------------------------------------------------------
+        // BuildArgs() → ptr（string[]）
+        // 经 GetCommandLineW 读取命令行（UTF-16），跳过程序名，按 MS 风格解析
+        // 剩余参数：空白（空格/制表符）分隔；引号包裹的空白不分割；引号本身在
+        // 参数内容中剥离。构造 string[]（布局同 NewArray），失败（OOM）返回 0。
+        // ------------------------------------------------------------------
 
-            private void EmitError(string messageKey)
-            {
-                var message = NewPtr();
-                LeaData(message, messageKey);
-                CallRuntime(null, "PrintString", message);
-                CallRuntime(null, "ExitProcess", C(4, 1));
-                EndFunction(_currentFunction!, 0);
-            }
+        private void EmitBuildArgs()
+        {
+            var elementSize = _isX64 ? 8 : 4;
 
-            // ------------------------------------------------------------------
-            // BuildArgs() → ptr（string[]）
-            // 经 GetCommandLineW 读取命令行（UTF-16），跳过程序名，按 MS 风格解析
-            // 剩余参数：空白（空格/制表符）分隔；引号包裹的空白不分割；引号本身在
-            // 参数内容中剥离。构造 string[]（布局同 NewArray），失败（OOM）返回 0。
-            // ------------------------------------------------------------------
+            var cmd = NewPtr();
+            SysCall(cmd, "GetCommandLineW", 0);
 
-            private void EmitBuildArgs()
-            {
-                var elementSize = _isX64 ? 8 : 4;
+            var p = NewPtr();
+            Mov(p, cmd);
+            var inQuotes = C(4, 0);
+            var ch = NewReg(4);
+            var count = C(4, 0);
 
-                var cmd = NewPtr();
-                SysCall(cmd, "GetCommandLineW", 0);
+            // ---- 定位程序名后的第一个参数位置（first）----
+            var skipProg = NewLabel();
+            var skipProgCheck = NewLabel();
+            var skipProgNext = NewLabel();
+            var skipProgFound = NewLabel();
 
-                var p = NewPtr();
-                Mov(p, cmd);
-                var inQuotes = C(4, 0);
-                var ch = NewReg(4);
-                var count = C(4, 0);
+            Mark(skipProg);
+            Load(ch, p, 0, 2);
+            Cmp(ch, 0);
+            Jcc(LirCond.Equal, skipProgFound);
+            Cmp(ch, 34);
+            Jcc(LirCond.NotEqual, skipProgCheck);
+            Xor(inQuotes, inQuotes, C(4, 1));
+            Jmp(skipProgNext);
+            Mark(skipProgCheck);
+            Cmp(inQuotes, 0);
+            Jcc(LirCond.NotEqual, skipProgNext);
+            Cmp(ch, 32);
+            Jcc(LirCond.Equal, skipProgFound);
+            Cmp(ch, 9);
+            Jcc(LirCond.Equal, skipProgFound);
+            Mark(skipProgNext);
+            Lea(p, p, 2);
+            Jmp(skipProg);
 
-                // ---- 定位程序名后的第一个参数位置（first）----
-                var skipProg = NewLabel();
-                var skipProgCheck = NewLabel();
-                var skipProgNext = NewLabel();
-                var skipProgFound = NewLabel();
+            Mark(skipProgFound);
+            var first = NewPtr();
+            Mov(first, p);
 
-                Mark(skipProg);
-                Load(ch, p, 0, 2);
-                Cmp(ch, 0);
-                Jcc(LirCond.Equal, skipProgFound);
-                Cmp(ch, 34);
-                Jcc(LirCond.NotEqual, skipProgCheck);
-                Xor(inQuotes, inQuotes, C(4, 1));
-                Jmp(skipProgNext);
-                Mark(skipProgCheck);
-                Cmp(inQuotes, 0);
-                Jcc(LirCond.NotEqual, skipProgNext);
-                Cmp(ch, 32);
-                Jcc(LirCond.Equal, skipProgFound);
-                Cmp(ch, 9);
-                Jcc(LirCond.Equal, skipProgFound);
-                Mark(skipProgNext);
-                Lea(p, p, 2);
-                Jmp(skipProg);
+            // ---- pass 1: 计数（count）----
+            var countWs = NewLabel();
+            var countWsNext = NewLabel();
+            var countDone = NewLabel();
+            var countTok = NewLabel();
+            var countTokNoQuote = NewLabel();
+            var countTokEnd = NewLabel();
+            var countTokNext = NewLabel();
 
-                Mark(skipProgFound);
-                var first = NewPtr();
-                Mov(first, p);
+            Mark(countWs);
+            Load(ch, p, 0, 2);
+            Cmp(ch, 32);
+            Jcc(LirCond.Equal, countWsNext);
+            Cmp(ch, 9);
+            Jcc(LirCond.Equal, countWsNext);
+            Cmp(ch, 0);
+            Jcc(LirCond.Equal, countDone);
+            Jmp(countTok);
+            Mark(countWsNext);
+            Lea(p, p, 2);
+            Jmp(countWs);
 
-                // ---- pass 1: 计数（count）----
-                var countWs = NewLabel();
-                var countWsNext = NewLabel();
-                var countDone = NewLabel();
-                var countTok = NewLabel();
-                var countTokNoQuote = NewLabel();
-                var countTokEnd = NewLabel();
-                var countTokNext = NewLabel();
+            Mark(countTok);
+            Load(ch, p, 0, 2);
+            Cmp(ch, 0);
+            Jcc(LirCond.Equal, countTokEnd);
+            Cmp(ch, 34);
+            Jcc(LirCond.NotEqual, countTokNoQuote);
+            Xor(inQuotes, inQuotes, C(4, 1));
+            Jmp(countTokNext);
+            Mark(countTokNoQuote);
+            Cmp(inQuotes, 0);
+            Jcc(LirCond.NotEqual, countTokNext);
+            Cmp(ch, 32);
+            Jcc(LirCond.Equal, countTokEnd);
+            Cmp(ch, 9);
+            Jcc(LirCond.Equal, countTokEnd);
+            Jmp(countTokNext);
+            Mark(countTokEnd);
+            AddI(count, count, 1);
+            Jmp(countWs);
+            Mark(countTokNext);
+            Lea(p, p, 2);
+            Jmp(countTok);
 
-                Mark(countWs);
-                Load(ch, p, 0, 2);
-                Cmp(ch, 32);
-                Jcc(LirCond.Equal, countWsNext);
-                Cmp(ch, 9);
-                Jcc(LirCond.Equal, countWsNext);
-                Cmp(ch, 0);
-                Jcc(LirCond.Equal, countDone);
-                Jmp(countTok);
-                Mark(countWsNext);
-                Lea(p, p, 2);
-                Jmp(countWs);
+            Mark(countDone);
 
-                Mark(countTok);
-                Load(ch, p, 0, 2);
-                Cmp(ch, 0);
-                Jcc(LirCond.Equal, countTokEnd);
-                Cmp(ch, 34);
-                Jcc(LirCond.NotEqual, countTokNoQuote);
-                Xor(inQuotes, inQuotes, C(4, 1));
-                Jmp(countTokNext);
-                Mark(countTokNoQuote);
-                Cmp(inQuotes, 0);
-                Jcc(LirCond.NotEqual, countTokNext);
-                Cmp(ch, 32);
-                Jcc(LirCond.Equal, countTokEnd);
-                Cmp(ch, 9);
-                Jcc(LirCond.Equal, countTokEnd);
-                Jmp(countTokNext);
-                Mark(countTokEnd);
-                AddI(count, count, 1);
-                Jmp(countWs);
-                Mark(countTokNext);
-                Lea(p, p, 2);
-                Jmp(countTok);
+            // ---- 分配数组 ----
+            var elementSizeReg = C(4, elementSize);
+            var arr = NewPtr();
+            SetArg(0, count);
+            SetArg(1, elementSizeReg);
+            Add(LirOpCode.Call, arr, LirOperand.Runtime("NewArray"), LirOperand.Constant(0));
 
-                Mark(countDone);
+            var oom = NewLabel();
+            var finish = NewLabel();
+            var done = NewLabel();
+            Cmp(arr, 0);
+            Jcc(LirCond.Equal, oom);
 
-                // ---- 分配数组 ----
-                var elementSizeReg = C(4, elementSize);
-                var arr = NewPtr();
-                SetArg(0, count);
-                SetArg(1, elementSizeReg);
-                Add(LirOpCode.Call, arr, LirOperand.Runtime("NewArray"), LirOperand.Constant(0));
+            // ---- pass 2: 逐个参数构造 string 并写入数组 ----
+            Mov(p, first);
+            var slot = NewPtr();
+            var slotBase = NewPtr();
+            Lea(slotBase, arr, 8);
+            Mov(slot, slotBase);
 
-                var oom = NewLabel();
-                var finish = NewLabel();
-                var done = NewLabel();
-                Cmp(arr, 0);
-                Jcc(LirCond.Equal, oom);
+            var buildWs = NewLabel();
+            var buildWsNext = NewLabel();
+            var buildTok = NewLabel();
+            var buildTokNoQuote = NewLabel();
+            var buildTokChar = NewLabel();
+            var buildTokScan = NewLabel();
+            var buildStr = NewLabel();
+            var buildTokNext = NewLabel();
+            var buildStrNext = NewLabel();
+            var copyLoop = NewLabel();
+            var copySkip = NewLabel();
+            var copyDone = NewLabel();
 
-                // ---- pass 2: 逐个参数构造 string 并写入数组 ----
-                Mov(p, first);
-                var slot = NewPtr();
-                var slotBase = NewPtr();
-                Lea(slotBase, arr, 8);
-                Mov(slot, slotBase);
+            Mark(buildWs);
+            Load(ch, p, 0, 2);
+            Cmp(ch, 32);
+            Jcc(LirCond.Equal, buildWsNext);
+            Cmp(ch, 9);
+            Jcc(LirCond.Equal, buildWsNext);
+            Cmp(ch, 0);
+            Jcc(LirCond.Equal, finish);
+            Jmp(buildTok);
+            Mark(buildWsNext);
+            Lea(p, p, 2);
+            Jmp(buildWs);
 
-                var buildWs = NewLabel();
-                var buildWsNext = NewLabel();
-                var buildTok = NewLabel();
-                var buildTokNoQuote = NewLabel();
-                var buildTokChar = NewLabel();
-                var buildTokScan = NewLabel();
-                var buildStr = NewLabel();
-                var buildTokNext = NewLabel();
-                var buildStrNext = NewLabel();
-                var copyLoop = NewLabel();
-                var copySkip = NewLabel();
-                var copyDone = NewLabel();
+            Mark(buildTok);
+            var start = NewPtr();
+            Mov(start, p);
+            var lenChars = C(4, 0);
+            Jmp(buildTokScan);
 
-                Mark(buildWs);
-                Load(ch, p, 0, 2);
-                Cmp(ch, 32);
-                Jcc(LirCond.Equal, buildWsNext);
-                Cmp(ch, 9);
-                Jcc(LirCond.Equal, buildWsNext);
-                Cmp(ch, 0);
-                Jcc(LirCond.Equal, finish);
-                Jmp(buildTok);
-                Mark(buildWsNext);
-                Lea(p, p, 2);
-                Jmp(buildWs);
+            Mark(buildTokNext);
+            Lea(p, p, 2);
 
-                Mark(buildTok);
-                var start = NewPtr();
-                Mov(start, p);
-                var lenChars = C(4, 0);
-                Jmp(buildTokScan);
+            Mark(buildTokScan);
+            Load(ch, p, 0, 2);
+            Cmp(ch, 0);
+            Jcc(LirCond.Equal, buildStr);
+            Cmp(ch, 34);
+            Jcc(LirCond.NotEqual, buildTokNoQuote);
+            Xor(inQuotes, inQuotes, C(4, 1));
+            Jmp(buildTokNext);
+            Mark(buildTokNoQuote);
+            Cmp(inQuotes, 0);
+            Jcc(LirCond.NotEqual, buildTokChar);
+            Cmp(ch, 32);
+            Jcc(LirCond.Equal, buildStr);
+            Cmp(ch, 9);
+            Jcc(LirCond.Equal, buildStr);
+            Mark(buildTokChar);
+            AddI(lenChars, lenChars, 1);
+            Jmp(buildTokNext);
 
-                Mark(buildTokNext);
-                Lea(p, p, 2);
-
-                Mark(buildTokScan);
-                Load(ch, p, 0, 2);
-                Cmp(ch, 0);
-                Jcc(LirCond.Equal, buildStr);
-                Cmp(ch, 34);
-                Jcc(LirCond.NotEqual, buildTokNoQuote);
-                Xor(inQuotes, inQuotes, C(4, 1));
-                Jmp(buildTokNext);
-                Mark(buildTokNoQuote);
-                Cmp(inQuotes, 0);
-                Jcc(LirCond.NotEqual, buildTokChar);
-                Cmp(ch, 32);
-                Jcc(LirCond.Equal, buildStr);
-                Cmp(ch, 9);
-                Jcc(LirCond.Equal, buildStr);
-                Mark(buildTokChar);
-                AddI(lenChars, lenChars, 1);
-                Jmp(buildTokNext);
-
-                // ---- 构造字符串：Alloc(lenChars*2+4 对齐 4)，剥离引号拷贝 ----
-                Mark(buildStr);
-                var bytes = NewReg(4);
-                Mov(bytes, lenChars);
-                Shl(bytes, bytes, 1);
-                AddI(bytes, bytes, 4);
-                AddI(bytes, bytes, 3);
-                And(bytes, bytes, C(4, 0xFFFFFFFC));
-                var obj = NewPtr();
-                CallRuntime(obj, "Alloc", bytes);
-                Cmp(obj, 0);
-                Jcc(LirCond.Equal, buildStrNext);
+            // ---- 构造字符串：Alloc(lenChars*2+4 对齐 4)，剥离引号拷贝 ----
+            Mark(buildStr);
+            var bytes = NewReg(4);
+            Mov(bytes, lenChars);
+            Shl(bytes, bytes, 1);
+            AddI(bytes, bytes, 4);
+            AddI(bytes, bytes, 3);
+            And(bytes, bytes, C(4, 0xFFFFFFFC));
+            var obj = NewPtr();
+            CallRuntime(obj, "Alloc", bytes);
+            Cmp(obj, 0);
+            Jcc(LirCond.Equal, buildStrNext);
 
 Store(obj, 0, lenChars, 4);
-                var dst = NewPtr();
-                Lea(dst, obj, 4);
-                var src = NewPtr();
-                Mov(src, start);
-                var remaining = NewReg(4);
-                Mov(remaining, lenChars);
+            var dst = NewPtr();
+            Lea(dst, obj, 4);
+            var src = NewPtr();
+            Mov(src, start);
+            var remaining = NewReg(4);
+            Mov(remaining, lenChars);
 
-                Mark(copyLoop);
-                Cmp(remaining, 0);
-                Jcc(LirCond.Equal, copyDone);
-                Load(ch, src, 0, 2);
-                Cmp(ch, 34);
-                Jcc(LirCond.Equal, copySkip);
-                Store(dst, 0, ch, 2);
-                Lea(dst, dst, 2);
-                AddI(remaining, remaining, -1);
-                Mark(copySkip);
-                Lea(src, src, 2);
-                Jmp(copyLoop);
+            Mark(copyLoop);
+            Cmp(remaining, 0);
+            Jcc(LirCond.Equal, copyDone);
+            Load(ch, src, 0, 2);
+            Cmp(ch, 34);
+            Jcc(LirCond.Equal, copySkip);
+            Store(dst, 0, ch, 2);
+            Lea(dst, dst, 2);
+            AddI(remaining, remaining, -1);
+            Mark(copySkip);
+            Lea(src, src, 2);
+            Jmp(copyLoop);
 
-                Mark(copyDone);
-                Store(slot, 0, obj, elementSize);
+            Mark(copyDone);
+            Store(slot, 0, obj, elementSize);
 
-                Mark(buildStrNext);
-                Lea(slot, slot, elementSize);
-                Jmp(buildWs);
+            Mark(buildStrNext);
+            Lea(slot, slot, elementSize);
+            Jmp(buildWs);
 
-                Mark(finish);
-                StoreRet(arr);
-                Jmp(done);
+            Mark(finish);
+            StoreRet(arr);
+            Jmp(done);
 
-                Mark(oom);
-                var zero = C(8, 0);
-                StoreRet(zero);
-                Jmp(done);
+            Mark(oom);
+            var zero = C(8, 0);
+            StoreRet(zero);
+            Jmp(done);
 
-                Mark(done);
-                EndFunction(_currentFunction!, 8);
-            }
-
-            // ------------------------------------------------------------------
-            // Sha256Hash(data:8) → u8[] (32 bytes)
-            // Uses one-shot BCryptHash (Win10 1803+): BCryptHash(alg, NULL, 0, pbData, cbData, pbOutput, cbOutput)
-            // Array layout: [0..4) length; [8..) element data (8-byte aligned)
-            // ------------------------------------------------------------------
-
-            private void EmitSha256Hash()
-            {
-                var data = _args[0];
-                var errLabel = NewLabel();
-                var doneLabel = NewLabel();
-                var zero32 = C(4, 0);
-
-                // ---- BCryptOpenAlgorithmProvider (using LeaSlot for output param) ----
-                var algoStrData = _program.AddData(LirDataItem.ByteArray(Prefix + "Sha256Algo", new byte[] {
-                    0x53, 0x00, 0x48, 0x00, 0x41, 0x00, 0x32, 0x00, 0x35, 0x00, 0x36, 0x00, 0x00, 0x00 }));
-                var algoStr = NewPtr();
-                LeaData(algoStr, algoStrData);
-
-                var algCache = NewPtr();
-                LeaData(algCache, _bcryptAlg);
-                var cachedAlg = NewReg(_isX64 ? 8 : 4);
-                Load(cachedAlg, algCache, 0, _isX64 ? 8 : 4);
-                var algCached = NewLabel();
-                Cmp(cachedAlg, 0);
-                Jcc(LirCond.NotEqual, algCached);
-
-                // Use LeaSlot buffer for output param (same pattern as ReadConsoleW's writtenAddr)
-                var algSlot = NewReg(_isX64 ? 8 : 4);
-                var algAddr = NewPtr();
-                LeaSlot(algAddr, algSlot);
-                var nullPtr = NewReg(_isX64 ? 8 : 4);
-                Const(nullPtr, 0);
-                SysCallDll(null, "bcrypt.dll", "BCryptOpenAlgorithmProvider",
-                    4, false, algAddr, algoStr, nullPtr, zero32);
-                Load(cachedAlg, algAddr, 0, _isX64 ? 8 : 4);
-                Store(algCache, 0, cachedAlg, _isX64 ? 8 : 4);
-
-                Mark(algCached);
-
-                // ---- BCryptCreateHash ----
-                var hashSlot = NewReg(_isX64 ? 8 : 4);
-                var hashAddr = NewPtr();
-                LeaSlot(hashAddr, hashSlot);
-                var nullPtr2 = NewReg(_isX64 ? 8 : 4);
-                Const(nullPtr2, 0);
-                SysCallDll(null, "bcrypt.dll", "BCryptCreateHash",
-                    6, false, cachedAlg, hashAddr, nullPtr2, zero32, nullPtr2, zero32);
-
-                var hashVal = NewReg(_isX64 ? 8 : 4);
-                Load(hashVal, hashAddr, 0, _isX64 ? 8 : 4);
-                Cmp(hashVal, 0);
-                Jcc(LirCond.Equal, errLabel);
-
-                // ---- BCryptHashData ----
-                var dataLen = NewReg(4);
-                Load(dataLen, data, 0, 4);
-                var dataPtr = NewPtr();
-                Lea(dataPtr, data, 8);
-                SysCallDll(null, "bcrypt.dll", "BCryptHashData",
-                    4, false, hashVal, dataPtr, dataLen, zero32);
-
-                // ---- VirtualAlloc 32 bytes ----
-                var buf32 = NewPtr();
-                SysCall(buf32, "VirtualAlloc", 4, C(4, 0), C(4, 32), C(4, 0x3000), C(4, 0x04));
-                Cmp(buf32, 0);
-                Jcc(LirCond.Equal, errLabel);
-
-                // ---- BCryptFinishHash ----
-                SysCallDll(null, "bcrypt.dll", "BCryptFinishHash",
-                    4, false, hashVal, buf32, C(4, 32), zero32);
-
-                // ---- BCryptDestroyHash ----
-                SysCallDll(null, "bcrypt.dll", "BCryptDestroyHash",
-                    1, false, hashVal);
-
-                // ---- Copy hash to u8[32] array ----
-                var arr = NewPtr();
-                CallRuntime(arr, "NewArray", C(4, 32), C(4, 1));
-                Cmp(arr, 0);
-                Jcc(LirCond.Equal, errLabel);
-
-                var ci = NewReg(4);
-                Const(ci, 0);
-                var copyLoop = NewLabel();
-                var copyDone = NewLabel();
-                Mark(copyLoop);
-                Cmp(ci, C(4, 32));
-                Jcc(LirCond.GreaterOrEqual, copyDone);
-                var tb = NewReg(4);
-                Load(tb, buf32, 0, 1);
-                var arrDst = NewPtr();
-                Lea(arrDst, arr, 8);
-                var arrOff = NewPtr();
-                Mov(arrOff, ci);
-                Add(arrDst, arrDst, arrOff);
-                Store(arrDst, 0, tb, 1);
-                AddI(buf32, buf32, 1);
-                AddI(ci, ci, 1);
-                Jmp(copyLoop);
-
-                Mark(copyDone);
-
-                // Free temp buffer
-                SysCallDll(null, "kernel32.dll", "VirtualFree", 3, false, buf32, zero32, C(4, 0x8000));
-
-                StoreRet(arr);
-                Jmp(doneLabel);
-
-                Mark(errLabel);
-                var zero = C(8, 0);
-                StoreRet(zero);
-
-                Mark(doneLabel);
-                EndFunction(_currentFunction!, 8);
-            }
-
-            // LaunchProcess(path:8, args:8, workdir:8) → i32 exit code
-            // CreateProcessW（kernel32，10 参）+ WaitForSingleObject + GetExitCodeProcess；workdir 经 lpCurrentDirectory。
-            private void EmitLaunchProcess()
-            {
-                var errLabel = NewLabel();
-                var doneLabel = NewLabel();
-
-                var path = _args[0];
-                var args = _args[1];
-                var workdir = _args[2];
-
-                // Build command line: path + " " + args
-                var space = NewPtr();
-                LeaData(space, _spaceString);
-                var cmdConcat1 = NewPtr();
-                CallRuntime(cmdConcat1, "Concat", path, space);
-                var cmdLine = NewPtr();
-                CallRuntime(cmdLine, "Concat", cmdConcat1, args);
-
-                // Copy CO string chars to wchar buffer with null termination
-                // CO string layout: [len:4][chars:2*len]
-                var cmdWbuf = NewPtr();
-                LeaData(cmdWbuf, _fileBuffer2);
-                var strLen = NewReg(4);
-                Load(strLen, cmdLine, 0, 4);
-                var di = NewReg(4);
-                Const(di, 0);
-                var copyLoop = NewLabel();
-                var copyDone = NewLabel();
-                Mark(copyLoop);
-                Cmp(di, strLen);
-                Jcc(LirCond.GreaterOrEqual, copyDone);
-                // src = cmdLine + 4 + di*2
-                var ch = NewReg(4);
-                var srcOff = NewPtr();
-                Mov(srcOff, di);
-                Shl(srcOff, srcOff, 1);
-                var srcAddr = NewPtr();
-                Lea(srcAddr, cmdLine, 4);
-                Add(srcAddr, srcAddr, srcOff);
-                Load(ch, srcAddr, 0, 2);
-                // dst = cmdWbuf + di*2
-                var dstAddr = NewPtr();
-                Lea(dstAddr, cmdWbuf, 0);
-                var diBytes = NewPtr();
-                Mov(diBytes, di);
-                Shl(diBytes, diBytes, 1);
-                Add(dstAddr, dstAddr, diBytes);
-                Store(dstAddr, 0, ch, 2);
-                AddI(di, di, 1);
-                Jmp(copyLoop);
-                Mark(copyDone);
-                // null-terminate
-                var nullCh = C(4, 0);
-                var termAddr = NewPtr();
-                Lea(termAddr, cmdWbuf, 0);
-                var termBytes = NewPtr();
-                Mov(termBytes, di);
-                Add(termAddr, termAddr, termBytes);
-                Add(termAddr, termAddr, termBytes);
-                Store(termAddr, 0, nullCh, 2);
-
-                // CreateProcessW：lpCurrentDirectory 直接给 workdir（非空→WidePtrZ；空→NULL）
-                var wdWide = NewPtr();
-                var wdLen = NewReg(4);
-                Load(wdLen, workdir, 0, 4);
-                var wdNull = NewLabel();
-                var wdReady = NewLabel();
-                Cmp(wdLen, 0);
-                Jcc(LirCond.Equal, wdNull);
-                Mov(wdWide, WidePtrZ(workdir));
-                Jmp(wdReady);
-                Mark(wdNull);
-                Mov(wdWide, NullPtr());
-                Mark(wdReady);
-
-                // STARTUPINFOW（_fileBuffer3 基址）：清零再设 dwcbSize（x64=0x68、x86=0x44；缓冲零初始化不作假设）
-                var siPtr = NewPtr();
-                LeaData(siPtr, _fileBuffer3);
-                var siDwords = _isX64 ? 26 : 17;
-                var clearI = NewReg(4);
-                Const(clearI, 0);
-                var clearLoop = NewLabel();
-                var clearDone = NewLabel();
-                Mark(clearLoop);
-                Cmp(clearI, siDwords);
-                Jcc(LirCond.GreaterOrEqual, clearDone);
-                var clearOff = NewReg(4);
-                Mov(clearOff, clearI);
-                Shl(clearOff, clearOff, 2);
-                var siDst = NewPtr();
-                Mov(siDst, siPtr);
-                Add(siDst, siDst, clearOff);
-                Store(siDst, 0, C(4, 0), 4);
-                AddI(clearI, clearI, 1);
-                Jmp(clearLoop);
-                Mark(clearDone);
-                Store(siPtr, 0, C(4, _isX64 ? 0x68 : 0x44), 4);
-                // PROCESS_INFORMATION（紧随 si；退出码槽再 + 0x10）
-                var piPtr = NewPtr();
-                LeaData(piPtr, _fileBuffer3);
-                AddI(piPtr, piPtr, _isX64 ? 0x68 : 0x44);
-
-                // CreateProcessW(NULL, cmdWbuf, NULL, NULL, FALSE, 0, NULL, wdWide, &si, &pi) → 同步等待 + 取退出码
-                var ok = NewReg(4);
-                SysCallDll(ok, "kernel32.dll", "CreateProcessW", 10, false,
-                    NullPtr(), cmdWbuf, NullPtr(), NullPtr(), C(4, 0), C(4, 0), NullPtr(), wdWide, siPtr, piPtr);
-
-                Cmp(ok, 0);
-                Jcc(LirCond.Equal, errLabel);
-
-                var ps = _isX64 ? 8 : 4;
-                var hThread = NewPtr();
-                Load(hThread, piPtr, ps, ps);
-                SysCallDll(null, "kernel32.dll", "CloseHandle", 1, false, hThread);
-
-                var hProcess = NewPtr();
-                Load(hProcess, piPtr, 0, ps);
-                SysCallDll(null, "kernel32.dll", "WaitForSingleObject", 2, false, hProcess, C(4, 0xFFFFFFFF));
-
-                var exitPtr = NewPtr();
-                LeaData(exitPtr, _fileBuffer3);
-                AddI(exitPtr, exitPtr, _isX64 ? 0x78 : 0x54);
-                SysCallDll(null, "kernel32.dll", "GetExitCodeProcess", 2, false, hProcess, exitPtr);
-                var exitCode = NewReg(4);
-                Load(exitCode, exitPtr, 0, 4);
-                SysCallDll(null, "kernel32.dll", "CloseHandle", 1, false, hProcess);
-
-                StoreRet(exitCode);
-                Jmp(doneLabel);
-
-                Mark(errLabel);
-                var lastError = NewReg(4);
-                SysCallDll(lastError, "kernel32.dll", "GetLastError", 0, false);
-                StoreRet(lastError);
-
-                Mark(doneLabel);
-                EndFunction(_currentFunction!, 4);
-            }
-
+            Mark(done);
+            EndFunction(_currentFunction!, 8);
         }
+
+        // ------------------------------------------------------------------
+        // Sha256Hash(data:8) → u8[] (32 bytes)
+        // Uses one-shot BCryptHash (Win10 1803+): BCryptHash(alg, NULL, 0, pbData, cbData, pbOutput, cbOutput)
+        // Array layout: [0..4) length; [8..) element data (8-byte aligned)
+        // ------------------------------------------------------------------
+
+        private void EmitSha256Hash()
+        {
+            var data = _args[0];
+            var errLabel = NewLabel();
+            var doneLabel = NewLabel();
+            var zero32 = C(4, 0);
+
+            // ---- BCryptOpenAlgorithmProvider (using LeaSlot for output param) ----
+            var algoStrData = _program.AddData(LirDataItem.ByteArray(Prefix + "Sha256Algo", new byte[] {
+                0x53, 0x00, 0x48, 0x00, 0x41, 0x00, 0x32, 0x00, 0x35, 0x00, 0x36, 0x00, 0x00, 0x00 }));
+            var algoStr = NewPtr();
+            LeaData(algoStr, algoStrData);
+
+            var algCache = NewPtr();
+            LeaData(algCache, _bcryptAlg);
+            var cachedAlg = NewReg(_isX64 ? 8 : 4);
+            Load(cachedAlg, algCache, 0, _isX64 ? 8 : 4);
+            var algCached = NewLabel();
+            Cmp(cachedAlg, 0);
+            Jcc(LirCond.NotEqual, algCached);
+
+            // Use LeaSlot buffer for output param (same pattern as ReadConsoleW's writtenAddr)
+            var algSlot = NewReg(_isX64 ? 8 : 4);
+            var algAddr = NewPtr();
+            LeaSlot(algAddr, algSlot);
+            var nullPtr = NewReg(_isX64 ? 8 : 4);
+            Const(nullPtr, 0);
+            SysCallDll(null, "bcrypt.dll", "BCryptOpenAlgorithmProvider",
+                4, false, algAddr, algoStr, nullPtr, zero32);
+            Load(cachedAlg, algAddr, 0, _isX64 ? 8 : 4);
+            Store(algCache, 0, cachedAlg, _isX64 ? 8 : 4);
+
+            Mark(algCached);
+
+            // ---- BCryptCreateHash ----
+            var hashSlot = NewReg(_isX64 ? 8 : 4);
+            var hashAddr = NewPtr();
+            LeaSlot(hashAddr, hashSlot);
+            var nullPtr2 = NewReg(_isX64 ? 8 : 4);
+            Const(nullPtr2, 0);
+            SysCallDll(null, "bcrypt.dll", "BCryptCreateHash",
+                6, false, cachedAlg, hashAddr, nullPtr2, zero32, nullPtr2, zero32);
+
+            var hashVal = NewReg(_isX64 ? 8 : 4);
+            Load(hashVal, hashAddr, 0, _isX64 ? 8 : 4);
+            Cmp(hashVal, 0);
+            Jcc(LirCond.Equal, errLabel);
+
+            // ---- BCryptHashData ----
+            var dataLen = NewReg(4);
+            Load(dataLen, data, 0, 4);
+            var dataPtr = NewPtr();
+            Lea(dataPtr, data, 8);
+            SysCallDll(null, "bcrypt.dll", "BCryptHashData",
+                4, false, hashVal, dataPtr, dataLen, zero32);
+
+            // ---- VirtualAlloc 32 bytes ----
+            var buf32 = NewPtr();
+            SysCall(buf32, "VirtualAlloc", 4, C(4, 0), C(4, 32), C(4, 0x3000), C(4, 0x04));
+            Cmp(buf32, 0);
+            Jcc(LirCond.Equal, errLabel);
+
+            // ---- BCryptFinishHash ----
+            SysCallDll(null, "bcrypt.dll", "BCryptFinishHash",
+                4, false, hashVal, buf32, C(4, 32), zero32);
+
+            // ---- BCryptDestroyHash ----
+            SysCallDll(null, "bcrypt.dll", "BCryptDestroyHash",
+                1, false, hashVal);
+
+            // ---- Copy hash to u8[32] array ----
+            var arr = NewPtr();
+            CallRuntime(arr, "NewArray", C(4, 32), C(4, 1));
+            Cmp(arr, 0);
+            Jcc(LirCond.Equal, errLabel);
+
+            var ci = NewReg(4);
+            Const(ci, 0);
+            var copyLoop = NewLabel();
+            var copyDone = NewLabel();
+            Mark(copyLoop);
+            Cmp(ci, C(4, 32));
+            Jcc(LirCond.GreaterOrEqual, copyDone);
+            var tb = NewReg(4);
+            Load(tb, buf32, 0, 1);
+            var arrDst = NewPtr();
+            Lea(arrDst, arr, 8);
+            var arrOff = NewPtr();
+            Mov(arrOff, ci);
+            Add(arrDst, arrDst, arrOff);
+            Store(arrDst, 0, tb, 1);
+            AddI(buf32, buf32, 1);
+            AddI(ci, ci, 1);
+            Jmp(copyLoop);
+
+            Mark(copyDone);
+
+            // Free temp buffer
+            SysCallDll(null, "kernel32.dll", "VirtualFree", 3, false, buf32, zero32, C(4, 0x8000));
+
+            StoreRet(arr);
+            Jmp(doneLabel);
+
+            Mark(errLabel);
+            var zero = C(8, 0);
+            StoreRet(zero);
+
+            Mark(doneLabel);
+            EndFunction(_currentFunction!, 8);
+        }
+
+        // LaunchProcess(path:8, args:8, workdir:8) → i32 exit code
+        // CreateProcessW（kernel32，10 参）+ WaitForSingleObject + GetExitCodeProcess；workdir 经 lpCurrentDirectory。
+        private void EmitLaunchProcess()
+        {
+            var errLabel = NewLabel();
+            var doneLabel = NewLabel();
+
+            var path = _args[0];
+            var args = _args[1];
+            var workdir = _args[2];
+
+            // Build command line: path + " " + args
+            var space = NewPtr();
+            LeaData(space, _spaceString);
+            var cmdConcat1 = NewPtr();
+            CallRuntime(cmdConcat1, "Concat", path, space);
+            var cmdLine = NewPtr();
+            CallRuntime(cmdLine, "Concat", cmdConcat1, args);
+
+            // Copy CO string chars to wchar buffer with null termination
+            // CO string layout: [len:4][chars:2*len]
+            var cmdWbuf = NewPtr();
+            LeaData(cmdWbuf, _fileBuffer2);
+            var strLen = NewReg(4);
+            Load(strLen, cmdLine, 0, 4);
+            var di = NewReg(4);
+            Const(di, 0);
+            var copyLoop = NewLabel();
+            var copyDone = NewLabel();
+            Mark(copyLoop);
+            Cmp(di, strLen);
+            Jcc(LirCond.GreaterOrEqual, copyDone);
+            // src = cmdLine + 4 + di*2
+            var ch = NewReg(4);
+            var srcOff = NewPtr();
+            Mov(srcOff, di);
+            Shl(srcOff, srcOff, 1);
+            var srcAddr = NewPtr();
+            Lea(srcAddr, cmdLine, 4);
+            Add(srcAddr, srcAddr, srcOff);
+            Load(ch, srcAddr, 0, 2);
+            // dst = cmdWbuf + di*2
+            var dstAddr = NewPtr();
+            Lea(dstAddr, cmdWbuf, 0);
+            var diBytes = NewPtr();
+            Mov(diBytes, di);
+            Shl(diBytes, diBytes, 1);
+            Add(dstAddr, dstAddr, diBytes);
+            Store(dstAddr, 0, ch, 2);
+            AddI(di, di, 1);
+            Jmp(copyLoop);
+            Mark(copyDone);
+            // null-terminate
+            var nullCh = C(4, 0);
+            var termAddr = NewPtr();
+            Lea(termAddr, cmdWbuf, 0);
+            var termBytes = NewPtr();
+            Mov(termBytes, di);
+            Add(termAddr, termAddr, termBytes);
+            Add(termAddr, termAddr, termBytes);
+            Store(termAddr, 0, nullCh, 2);
+
+            // CreateProcessW：lpCurrentDirectory 直接给 workdir（非空→WidePtrZ；空→NULL）
+            var wdWide = NewPtr();
+            var wdLen = NewReg(4);
+            Load(wdLen, workdir, 0, 4);
+            var wdNull = NewLabel();
+            var wdReady = NewLabel();
+            Cmp(wdLen, 0);
+            Jcc(LirCond.Equal, wdNull);
+            Mov(wdWide, WidePtrZ(workdir));
+            Jmp(wdReady);
+            Mark(wdNull);
+            Mov(wdWide, NullPtr());
+            Mark(wdReady);
+
+            // STARTUPINFOW（_fileBuffer3 基址）：清零再设 dwcbSize（x64=0x68、x86=0x44；缓冲零初始化不作假设）
+            var siPtr = NewPtr();
+            LeaData(siPtr, _fileBuffer3);
+            var siDwords = _isX64 ? 26 : 17;
+            var clearI = NewReg(4);
+            Const(clearI, 0);
+            var clearLoop = NewLabel();
+            var clearDone = NewLabel();
+            Mark(clearLoop);
+            Cmp(clearI, siDwords);
+            Jcc(LirCond.GreaterOrEqual, clearDone);
+            var clearOff = NewReg(4);
+            Mov(clearOff, clearI);
+            Shl(clearOff, clearOff, 2);
+            var siDst = NewPtr();
+            Mov(siDst, siPtr);
+            Add(siDst, siDst, clearOff);
+            Store(siDst, 0, C(4, 0), 4);
+            AddI(clearI, clearI, 1);
+            Jmp(clearLoop);
+            Mark(clearDone);
+            Store(siPtr, 0, C(4, _isX64 ? 0x68 : 0x44), 4);
+            // PROCESS_INFORMATION（紧随 si；退出码槽再 + 0x10）
+            var piPtr = NewPtr();
+            LeaData(piPtr, _fileBuffer3);
+            AddI(piPtr, piPtr, _isX64 ? 0x68 : 0x44);
+
+            // CreateProcessW(NULL, cmdWbuf, NULL, NULL, FALSE, 0, NULL, wdWide, &si, &pi) → 同步等待 + 取退出码
+            var ok = NewReg(4);
+            SysCallDll(ok, "kernel32.dll", "CreateProcessW", 10, false,
+                NullPtr(), cmdWbuf, NullPtr(), NullPtr(), C(4, 0), C(4, 0), NullPtr(), wdWide, siPtr, piPtr);
+
+            Cmp(ok, 0);
+            Jcc(LirCond.Equal, errLabel);
+
+            var ps = _isX64 ? 8 : 4;
+            var hThread = NewPtr();
+            Load(hThread, piPtr, ps, ps);
+            SysCallDll(null, "kernel32.dll", "CloseHandle", 1, false, hThread);
+
+            var hProcess = NewPtr();
+            Load(hProcess, piPtr, 0, ps);
+            SysCallDll(null, "kernel32.dll", "WaitForSingleObject", 2, false, hProcess, C(4, 0xFFFFFFFF));
+
+            var exitPtr = NewPtr();
+            LeaData(exitPtr, _fileBuffer3);
+            AddI(exitPtr, exitPtr, _isX64 ? 0x78 : 0x54);
+            SysCallDll(null, "kernel32.dll", "GetExitCodeProcess", 2, false, hProcess, exitPtr);
+            var exitCode = NewReg(4);
+            Load(exitCode, exitPtr, 0, 4);
+            SysCallDll(null, "kernel32.dll", "CloseHandle", 1, false, hProcess);
+
+            StoreRet(exitCode);
+            Jmp(doneLabel);
+
+            Mark(errLabel);
+            var lastError = NewReg(4);
+            SysCallDll(lastError, "kernel32.dll", "GetLastError", 0, false);
+            StoreRet(lastError);
+
+            Mark(doneLabel);
+            EndFunction(_currentFunction!, 4);
+        }
+
     }
 }

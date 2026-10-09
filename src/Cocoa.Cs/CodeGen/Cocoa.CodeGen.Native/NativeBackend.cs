@@ -83,7 +83,7 @@ namespace Cocoa.CodeGen.Native
 
             if (program.Classes.Length > 0)
             {
-                var staticInitClass = program.Classes.FirstOrDefault(Compilation.HasStaticInitializer);
+                var staticInitClass = program.Classes.FirstOrDefault(AssemblyReferenceManager.HasStaticInitializer);
                 if (staticInitClass != null)
                 {
                     var location = staticInitClass.Declaration?.GetDeclarationNameLocation()

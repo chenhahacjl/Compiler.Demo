@@ -159,7 +159,7 @@ namespace Cocoa.CodeAnalysis
             // 6e-M33 起放行同库可序列化基类的继承链（Handle 族）——仅剩真不可序列化类（接口/多继承基类等）报错）
             if (program.Classes.Length > 0)
             {
-                var offendingClass = program.Classes.FirstOrDefault(c => !IsCodSerializableClass(c));
+                var offendingClass = program.Classes.FirstOrDefault(c => !AssemblyReferenceManager.IsCodSerializableClass(c));
                 if (offendingClass != null)
                 {
                     var location = offendingClass.Declaration?.GetDeclarationNameLocation() ?? ZeroLocation;
@@ -209,7 +209,7 @@ var globals = GlobalScope.Variables.OfType<GlobalVariableSymbol>().ToImmutableAr
                 .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
                 .ToImmutableArray();
 
-            var containerClasses = program.Classes.Where(IsCodSerializableClass).ToImmutableArray();
+            var containerClasses = program.Classes.Where(AssemblyReferenceManager.IsCodSerializableClass).ToImmutableArray();
 
             // 6e-M24：文档化符号全集 = 顶层函数/类型/全局 + 类（含泛型定义）成员 + 枚举。
             // 类成员文档（方法含构造/属性/字段/事件）是 stdlib 文档主体，必须纳入。

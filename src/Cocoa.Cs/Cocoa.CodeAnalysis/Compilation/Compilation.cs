@@ -82,7 +82,7 @@ namespace Cocoa.CodeAnalysis
             _metadataReferences = (references ?? Array.Empty<string>())
                 .Select(r => new MetadataReference(r))
                 .ToImmutableArray();
-            var loadedLibraries = LoadCodLibraries(references);
+            var loadedLibraries = AssemblyReferenceManager.LoadCodLibraries(references);
             _codLibraries = loadedLibraries.Libraries;
             _ambiguousCodTypeNames = loadedLibraries.AmbiguousTypeNames;
             SyntaxTrees = syntaxTrees.ToImmutableArray();
