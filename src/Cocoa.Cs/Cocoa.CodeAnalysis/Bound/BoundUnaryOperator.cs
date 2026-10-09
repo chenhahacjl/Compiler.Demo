@@ -48,43 +48,15 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundUnaryOperator(kind, operandType, resultType) { UserDefinedMethod = method };
         }
 
-        private static readonly BoundUnaryOperator[] _operators = BuildOperators();
-
-        /// <summary>
-        /// 6e-M21 Phase 1：程序化生成一元运算符表——整数类型支持 +x / -x / ~x，浮点支持 +x / -x。
-        /// </summary>
-        private static BoundUnaryOperator[] BuildOperators()
+        private static BoundUnaryOperator? LookupBuiltIn(BoundUnaryOperatorKind kind, TypeSymbol operandType)
         {
-            var ops = new List<BoundUnaryOperator>
+            var signature = Binding.BuiltInOperators.GetSignature(kind, operandType);
+            if (signature == null)
             {
-                new BoundUnaryOperator(BoundUnaryOperatorKind.LogicalNegation, TypeSymbol.Boolean),
-            };
-
-            var numericTypes = new[]
-            {
-                TypeSymbol.Int8, TypeSymbol.Int16, TypeSymbol.Int32, TypeSymbol.Int64,
-                TypeSymbol.UInt8, TypeSymbol.UInt16, TypeSymbol.UInt32, TypeSymbol.UInt64,
-                TypeSymbol.Float, TypeSymbol.Double,
-            };
-
-            foreach (var t in numericTypes)
-            {
-                // 6e-M21 Phase 7：<32 位整数一元 +/-/~ 结果升 Int32（C# 同构：-(byte)5 / ~(byte)5 均为 int）
-                var result = t.IsInteger && t.BitWidth < 32 ? TypeSymbol.Int32 : t;
-                ops.Add(new BoundUnaryOperator(BoundUnaryOperatorKind.Identity, t, result));
-                ops.Add(new BoundUnaryOperator(BoundUnaryOperatorKind.Negation, t, result));
-
-                if (t.IsInteger)
-                {
-                    ops.Add(new BoundUnaryOperator(BoundUnaryOperatorKind.OnesComplement, t, result));
-                }
+                return null;
             }
 
-            // decimal：正号/负号（C# decimal 支持一元 +/-）
-            ops.Add(new BoundUnaryOperator(BoundUnaryOperatorKind.Identity, TypeSymbol.Decimal));
-            ops.Add(new BoundUnaryOperator(BoundUnaryOperatorKind.Negation, TypeSymbol.Decimal));
-
-            return ops.ToArray();
+            return new BoundUnaryOperator(signature.Value.Kind, signature.Value.OperandType, signature.Value.ResultType);
         }
 
         /// <summary>兼容词法门（HIR 净化）：token → 语义 kind 翻译后委托语义入口。</summary>
@@ -96,15 +68,7 @@ namespace Cocoa.CodeAnalysis.Binding
         /// <summary>语义主入口：按 <see cref="BoundUnaryOperatorKind"/> 绑定。</summary>
         public static BoundUnaryOperator? Bind(BoundUnaryOperatorKind kind, TypeSymbol operandType)
         {
-            foreach (var op in _operators)
-            {
-                if (op.Kind == kind && op.OperandType == operandType)
-                {
-                    return op;
-                }
-            }
-
-            return null;
+            return LookupBuiltIn(kind, operandType);
         }
 
         /// <summary>词法 token → 语义一元 kind（HIR 净化翻译门，供 <see cref="Bind(SyntaxKind, TypeSymbol)"/>；

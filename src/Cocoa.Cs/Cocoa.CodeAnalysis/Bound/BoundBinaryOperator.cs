@@ -56,117 +56,16 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundBinaryOperator(kind, leftType, rightType, resultType) { UserDefinedMethod = method };
         }
 
-        private static readonly BoundBinaryOperator[] _operators = BuildOperators();
-
-        /// <summary>
-        /// 6e-M21 Phase 1：程序化生成运算符表——10 个数值类型（i8/i16/i32/i64/u8/u16/u32/u64/f32/f64）
-        /// 各一份完整集合；混合精度由 Binder 的二元提升先归一到公共类型再查表。
-        /// </summary>
-        private static BoundBinaryOperator[] BuildOperators()
+        /// <summary>查询内建二元签名（委托 <see cref="BuiltInOperators"/> 规则表），命中构造对应对象返回。</summary>
+        private static BoundBinaryOperator? LookupBuiltIn(BoundBinaryOperatorKind kind, TypeSymbol leftType, TypeSymbol rightType)
         {
-            var ops = new List<BoundBinaryOperator>
+            var signature = Binding.BuiltInOperators.GetSignature(kind, leftType, rightType);
+            if (signature == null)
             {
-                // bool：逻辑/位/相等
-                new BoundBinaryOperator(BoundBinaryOperatorKind.BitwiseAnd, TypeSymbol.Boolean),
-                new BoundBinaryOperator(BoundBinaryOperatorKind.LogicalAnd, TypeSymbol.Boolean),
-                new BoundBinaryOperator(BoundBinaryOperatorKind.BitwiseOr, TypeSymbol.Boolean),
-                new BoundBinaryOperator(BoundBinaryOperatorKind.LogicalOr, TypeSymbol.Boolean),
-                new BoundBinaryOperator(BoundBinaryOperatorKind.BitwiseXor, TypeSymbol.Boolean),
-                new BoundBinaryOperator(BoundBinaryOperatorKind.Equals, TypeSymbol.Boolean, TypeSymbol.Boolean),
-                new BoundBinaryOperator(BoundBinaryOperatorKind.NotEquals, TypeSymbol.Boolean, TypeSymbol.Boolean),
-
-                // string：拼接与相等
-                new BoundBinaryOperator(BoundBinaryOperatorKind.Addition, TypeSymbol.String),
-                new BoundBinaryOperator(BoundBinaryOperatorKind.Addition, TypeSymbol.String, TypeSymbol.Double, TypeSymbol.String),
-                new BoundBinaryOperator(BoundBinaryOperatorKind.Equals, TypeSymbol.String, TypeSymbol.Boolean),
-                new BoundBinaryOperator(BoundBinaryOperatorKind.NotEquals, TypeSymbol.String, TypeSymbol.Boolean),
-
-                // char：相等
-                new BoundBinaryOperator(BoundBinaryOperatorKind.Equals, TypeSymbol.Char, TypeSymbol.Boolean),
-                new BoundBinaryOperator(BoundBinaryOperatorKind.NotEquals, TypeSymbol.Char, TypeSymbol.Boolean),
-            };
-
-            var numericTypes = new[]
-            {
-                TypeSymbol.Int8, TypeSymbol.Int16, TypeSymbol.Int32, TypeSymbol.Int64,
-                TypeSymbol.UInt8, TypeSymbol.UInt16, TypeSymbol.UInt32, TypeSymbol.UInt64,
-                TypeSymbol.Float, TypeSymbol.Double,
-            };
-
-            foreach (var t in numericTypes)
-            {
-                if (t.IsInteger)
-                {
-                    // 6e-M21 Phase 6：<32 位窄整型不注册算术/移位/位运算条目——
-                    // 二元运算先经 GetBinaryNumericResultType 升到 32/64 位域再查表（C# 先升后算同构），
-                    // 否则 i16*i16 等会在窄域静默截断（如 (i16)300*(i16)300=24464 假象）。
-                    if (t.BitWidth >= 32)
-                    {
-                        ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Addition, t));
-                        ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Subtraction, t));
-                        ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Multiplication, t));
-                        ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Division, t));
-                        ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Modulo, t));
-                        ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.ShiftLeft, t));
-                        ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.ShiftRight, t));
-                        ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.BitwiseAnd, t));
-                        ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.BitwiseOr, t));
-                        ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.BitwiseXor, t));
-                    }
-                }
-                else
-                {
-                    ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Addition, t));
-                    ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Subtraction, t));
-                    ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Multiplication, t));
-                    ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Division, t));
-                }
-
-                ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Equals, t, TypeSymbol.Boolean));
-                ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.NotEquals, t, TypeSymbol.Boolean));
-                ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Less, t, TypeSymbol.Boolean));
-                ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.LessOrEquals, t, TypeSymbol.Boolean));
-                ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Greater, t, TypeSymbol.Boolean));
-                ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.GreaterOrEquals, t, TypeSymbol.Boolean));
+                return null;
             }
 
-            // nint/nuint（原生整型，平台自适应）：相等比较（`Raw == 0` / `Raw == other.Raw` 句柄判定语义；
-            // 算术/关系运算留待指针运算扩展，MVP 仅等值）
-            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Equals, TypeSymbol.NativeInt32, TypeSymbol.Boolean));
-            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.NotEquals, TypeSymbol.NativeInt32, TypeSymbol.Boolean));
-            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Equals, TypeSymbol.NativeUInt32, TypeSymbol.Boolean));
-            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.NotEquals, TypeSymbol.NativeUInt32, TypeSymbol.Boolean));
-
-            // decimal（128 位高精度）：算术 + 比较（C# decimal 支持 + - * / % 与全部关系比较；
-            // 混合精度经 Binder 提升先归一到 decimal 再查表）
-            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Addition, TypeSymbol.Decimal));
-            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Subtraction, TypeSymbol.Decimal));
-            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Multiplication, TypeSymbol.Decimal));
-            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Division, TypeSymbol.Decimal));
-            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Modulo, TypeSymbol.Decimal));
-            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Equals, TypeSymbol.Decimal, TypeSymbol.Boolean));
-            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.NotEquals, TypeSymbol.Decimal, TypeSymbol.Boolean));
-            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Less, TypeSymbol.Decimal, TypeSymbol.Boolean));
-            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.LessOrEquals, TypeSymbol.Decimal, TypeSymbol.Boolean));
-            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Greater, TypeSymbol.Decimal, TypeSymbol.Boolean));
-            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.GreaterOrEquals, TypeSymbol.Decimal, TypeSymbol.Boolean));
-
-            // any：相等（6e-M19 M5-c 修：结果类型此前误为 any，致 WriteLine(if 条件等) 无法消费）
-            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Equals, TypeSymbol.Any, TypeSymbol.Boolean));
-            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.NotEquals, TypeSymbol.Any, TypeSymbol.Boolean));
-
-            // 6e-M19 M5-a：null == null / null != null（恒 true/false，运行时平凡成立）
-            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Equals, TypeSymbol.Null, TypeSymbol.Boolean));
-            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.NotEquals, TypeSymbol.Null, TypeSymbol.Boolean));
-
-            // ?? null 合并：引用类型 x ?? y → x 非 null 则 x，否则 y；结果类型 = x 的类型
-            var referenceTypes = new[] { TypeSymbol.Any, TypeSymbol.String };
-            foreach (var t in referenceTypes)
-            {
-                ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.NullCoalescing, t, t, t));
-            }
-
-            return ops.ToArray();
+            return new BoundBinaryOperator(signature.Value.Kind, signature.Value.LeftType, signature.Value.RightType, signature.Value.ResultType);
         }
 
         /// <summary>6e-M19 M5-a：可空引用型（类/接口/string/数组/any）——null 比较与引用转换的合法目标。
@@ -276,15 +175,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            foreach (var op in _operators)
-            {
-                if (op.Kind == kind && op.LeftType == leftType && op.RightType == rightType)
-                {
-                    return op;
-                }
-            }
-
-            return null;
+            return LookupBuiltIn(kind, leftType, rightType);
         }
 
         /// <summary>词法 token → 语义二元 kind（HIR 净化翻译门，供 <see cref="Bind(SyntaxKind, TypeSymbol, TypeSymbol)"/>；
