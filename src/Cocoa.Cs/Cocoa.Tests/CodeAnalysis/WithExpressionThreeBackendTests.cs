@@ -1,5 +1,6 @@
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Bound;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.Targeting;
 using Cocoa.CodeGen.Native;
@@ -112,7 +113,7 @@ function Main(): i32
             var sawObjectCreation = false;
             Visit(mainBody, n =>
             {
-                if (n.Kind == Cocoa.CodeAnalysis.Binding.BoundNodeKind.ObjectCreationExpression)
+                if (n.Kind == Cocoa.CodeAnalysis.Bound.BoundNodeKind.ObjectCreationExpression)
                     sawObjectCreation = true;
             });
             Assert.True(sawObjectCreation);

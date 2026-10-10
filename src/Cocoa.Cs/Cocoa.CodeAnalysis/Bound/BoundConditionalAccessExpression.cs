@@ -1,7 +1,7 @@
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     /// <summary>
     /// 空条件成员访问：expr?.Member / expr?.Method(args)

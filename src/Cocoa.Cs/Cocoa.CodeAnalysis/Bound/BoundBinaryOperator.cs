@@ -1,9 +1,10 @@
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Binding;
 using System;
 using System.Collections.Generic;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     /// <summary>
     /// 绑定二元操作符（HIR 净化）：运算符对象只携带语义 <see cref="BoundBinaryOperatorKind"/>，

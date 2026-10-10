@@ -1,7 +1,7 @@
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     /// <summary>
     /// base 表达式：`base.Method()`（非虚调用基类成员）。

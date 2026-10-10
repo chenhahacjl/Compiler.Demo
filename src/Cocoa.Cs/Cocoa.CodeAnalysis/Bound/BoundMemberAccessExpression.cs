@@ -1,7 +1,7 @@
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     /// <summary>
     /// 成员访问表达式：`arr.Length`、`point._x`。

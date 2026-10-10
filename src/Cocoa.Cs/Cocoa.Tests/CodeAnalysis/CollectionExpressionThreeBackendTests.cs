@@ -1,5 +1,6 @@
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Bound;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.Targeting;
 using Cocoa.CodeGen.Native;

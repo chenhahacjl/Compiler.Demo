@@ -1,10 +1,11 @@
-﻿using Cocoa.CodeAnalysis.Lowering;
+using Cocoa.CodeAnalysis.Lowering;
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using CoreSyntax = Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
+using Cocoa.CodeAnalysis.Bound;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;

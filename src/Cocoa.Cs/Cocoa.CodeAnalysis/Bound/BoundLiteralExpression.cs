@@ -1,7 +1,7 @@
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     /// <summary>
     /// 绑定文字表达式

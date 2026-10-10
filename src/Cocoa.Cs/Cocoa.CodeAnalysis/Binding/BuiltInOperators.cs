@@ -1,5 +1,6 @@
 using Cocoa.CodeAnalysis.Symbols;
 using System.Collections.Generic;
+using Cocoa.CodeAnalysis.Bound;
 using System.Collections.Immutable;
 using System.Linq;
 

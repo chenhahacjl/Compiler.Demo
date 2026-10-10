@@ -1,12 +1,13 @@
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.CodeAnalysis.Lowering;
+using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
 using System.Linq;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {    /// <summary>
     /// 单态化展开器（6e-M20 G2）：
     /// <list type="number">

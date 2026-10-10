@@ -1,6 +1,6 @@
 using Cocoa.CodeAnalysis.Symbols;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     /// <summary>
     /// 数值装箱/取值工具（6e-M21 Phase 3）：常量折叠与求值器共用，保证编译期与运行期表示一致。

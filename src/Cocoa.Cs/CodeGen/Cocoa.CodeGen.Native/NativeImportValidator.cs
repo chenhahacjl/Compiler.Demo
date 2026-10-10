@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Runtime.InteropServices;
 using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Bound;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Text;
 using CharSet = Cocoa.CodeAnalysis.Symbols.CharSet;

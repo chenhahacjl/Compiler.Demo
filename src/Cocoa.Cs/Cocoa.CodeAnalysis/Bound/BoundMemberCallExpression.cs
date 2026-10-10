@@ -2,7 +2,7 @@ using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     /// <summary>
     /// 成员调用表达式：`string.substring(...)`、`point.Distance()`。

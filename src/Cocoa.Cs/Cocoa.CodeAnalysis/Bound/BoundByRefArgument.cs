@@ -1,7 +1,7 @@
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     /// <summary>
     /// byref 实参（6e-M23 R3）：`out x` / `ref arr[i]` 的绑定产物——包裹可赋值 lvalue，

@@ -1,4 +1,4 @@
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     public sealed class BoundLabel
     {

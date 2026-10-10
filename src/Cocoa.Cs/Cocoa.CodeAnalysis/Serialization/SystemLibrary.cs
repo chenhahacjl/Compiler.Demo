@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 
-namespace Cocoa.CodeAnalysis
+namespace Cocoa.CodeAnalysis.Serialization
 {
     /// <summary>
     /// 系统标准库加载器（标准库设计 §8）：目录内 `System*.coa` 自动发现加载（核心程序集

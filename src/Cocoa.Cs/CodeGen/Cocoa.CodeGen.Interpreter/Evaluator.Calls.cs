@@ -1,4 +1,5 @@
 using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Bound;
 using Binding = Cocoa.CodeAnalysis.Binding;
 using Symbols = Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Symbols;
@@ -965,7 +966,7 @@ namespace Cocoa.CodeGen.Interpreter
                 }
 
                 // 无符号大值按位模式截断（与 C# unchecked 窄化一致）
-                return unchecked((int)Binding.NumericBox.ToSigned64(value!));
+                return unchecked((int)NumericBox.ToSigned64(value!));
             }
             else if (node.Type == TypeSymbol.Int64)
             {
@@ -990,7 +991,7 @@ namespace Cocoa.CodeGen.Interpreter
                     return unchecked((long)longUlong);
                 }
 
-                return Binding.NumericBox.ToSigned64(value!);
+                return NumericBox.ToSigned64(value!);
             }
             else if (node.Type == TypeSymbol.Char)
             {
@@ -1004,37 +1005,37 @@ namespace Cocoa.CodeGen.Interpreter
                 }
 
                 // 无符号字节截断，与 (byte)300 == 44 语义一致
-                return unchecked((byte)Binding.NumericBox.ToUnsigned64(value!));
+                return unchecked((byte)NumericBox.ToUnsigned64(value!));
             }
             else if (node.Type == TypeSymbol.Int8)
             {
                 if (value is double sbyteDouble)
                     return unchecked((sbyte)(int)sbyteDouble);
-                return unchecked((sbyte)Binding.NumericBox.ToSigned64(value!));
+                return unchecked((sbyte)NumericBox.ToSigned64(value!));
             }
             else if (node.Type == TypeSymbol.Int16)
             {
                 if (value is double shortDouble)
                     return unchecked((short)(int)shortDouble);
-                return unchecked((short)Binding.NumericBox.ToSigned64(value!));
+                return unchecked((short)NumericBox.ToSigned64(value!));
             }
             else if (node.Type == TypeSymbol.UInt16)
             {
                 if (value is double ushortDouble)
                     return unchecked((ushort)(int)ushortDouble);
-                return unchecked((ushort)Binding.NumericBox.ToUnsigned64(value!));
+                return unchecked((ushort)NumericBox.ToUnsigned64(value!));
             }
             else if (node.Type == TypeSymbol.UInt32)
             {
                 if (value is double uintDouble)
                     return unchecked((uint)(long)uintDouble);
-                return unchecked((uint)Binding.NumericBox.ToUnsigned64(value!));
+                return unchecked((uint)NumericBox.ToUnsigned64(value!));
             }
             else if (node.Type == TypeSymbol.UInt64)
             {
                 if (value is double ulongDouble)
                     return unchecked((ulong)(long)ulongDouble);
-                return Binding.NumericBox.ToUnsigned64(value!);
+                return NumericBox.ToUnsigned64(value!);
             }
             else if (node.Type == TypeSymbol.Float)
             {
@@ -1075,11 +1076,11 @@ namespace Cocoa.CodeGen.Interpreter
             else if (node.Type == TypeSymbol.NativeInt32)
             {
                 // 原生整型：宿主 64 位表示
-                return Binding.NumericBox.ToSigned64(value!);
+                return NumericBox.ToSigned64(value!);
             }
             else if (node.Type == TypeSymbol.NativeUInt32)
             {
-                return Binding.NumericBox.ToUnsigned64(value!);
+                return NumericBox.ToUnsigned64(value!);
             }
             else if (node.Type is Symbols.NamedTypeSymbol { TypeKind: TypeKind.Delegate })
             {

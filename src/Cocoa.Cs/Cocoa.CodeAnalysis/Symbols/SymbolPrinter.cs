@@ -1,5 +1,5 @@
 using Cocoa.CodeAnalysis.Syntax;
-using Cocoa.IO;
+using Cocoa.CodeAnalysis.Text;
 
 namespace Cocoa.CodeAnalysis.Symbols
 {

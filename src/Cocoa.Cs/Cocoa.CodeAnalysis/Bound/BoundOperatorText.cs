@@ -1,7 +1,7 @@
 using Cocoa.CodeAnalysis.Syntax;
 using System;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     /// <summary>
     /// 语义运算符文本助手（HIR 净化 T0.4）：由 <see cref="BoundBinaryOperatorKind"/> / <see cref="BoundUnaryOperatorKind"/>

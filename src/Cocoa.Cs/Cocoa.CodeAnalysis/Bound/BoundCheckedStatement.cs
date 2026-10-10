@@ -1,6 +1,6 @@
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     /// <summary>
     /// <c>checked { … }</c> / <c>unchecked { … }</c> 块。

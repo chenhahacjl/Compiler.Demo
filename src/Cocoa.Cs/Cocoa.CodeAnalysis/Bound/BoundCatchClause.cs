@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using Cocoa.CodeAnalysis.Symbols;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     /// <summary>
     /// try/catch 中的 catch 子句（非独立语句，仅作为 BoundTryStatement 的数据载体）。

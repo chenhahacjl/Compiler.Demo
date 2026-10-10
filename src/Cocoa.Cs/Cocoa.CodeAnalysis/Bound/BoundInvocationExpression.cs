@@ -2,7 +2,7 @@ using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     /// <summary>
     /// 函数值间接调用（6e-M22 C4）：`f(x)` / `obj.handler(x)` —— 被调者为函数类型表达式。

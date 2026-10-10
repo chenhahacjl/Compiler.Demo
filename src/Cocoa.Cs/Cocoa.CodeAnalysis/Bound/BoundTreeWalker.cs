@@ -1,6 +1,6 @@
 using System;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     /// <summary>
     /// 只读绑定树遍历器（B-3，对齐 Roslyn <c>BoundTreeWalker</c>）：经 <see cref="BoundTreeRewriter"/>

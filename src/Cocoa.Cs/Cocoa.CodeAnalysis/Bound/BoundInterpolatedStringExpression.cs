@@ -2,7 +2,7 @@ using System.Collections.Immutable;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     /// <summary>
     /// 插值字符串的高 Bound（Y A2-F1）：保留文本段与"已绑定洞"结构，由共享规范化 pass

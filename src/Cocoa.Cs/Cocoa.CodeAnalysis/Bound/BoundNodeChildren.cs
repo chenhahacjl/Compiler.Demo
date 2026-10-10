@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     /// <summary>
     /// 绑定树直接子节点收集（重构阶段 1a/A1）：经 <see cref="BoundTreeRewriter"/> 的两级分派实现，

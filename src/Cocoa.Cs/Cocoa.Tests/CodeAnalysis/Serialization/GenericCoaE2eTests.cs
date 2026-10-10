@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Bound;
 using Cocoa.CodeGen.Native;
 using Cocoa.Targeting;
 using Cocoa.CodeAnalysis.Symbols;
@@ -115,14 +116,14 @@ function Main(): void
             System.Console.WriteLine($"[G7-AUDIT] subRefs=[{string.Join(",", referenced)}] openRefs=[{string.Join(",", originalRefs.Select(r => r + "#" + r.GetHashCode()))}] params=[{string.Join(",", paramNames)}]");
         }
 
-        private static void CollectVariables(Cocoa.CodeAnalysis.Binding.BoundNode node, List<string> into)
+        private static void CollectVariables(Cocoa.CodeAnalysis.Bound.BoundNode node, List<string> into)
         {
             switch (node)
             {
-                case Cocoa.CodeAnalysis.Binding.BoundVariableExpression v:
+                case Cocoa.CodeAnalysis.Bound.BoundVariableExpression v:
                     into.Add(v.Variable.Name + ":" + v.Variable.Type.Name + "#" + v.Variable.GetHashCode().ToString("X"));
                     break;
-                case Cocoa.CodeAnalysis.Binding.BoundAssignmentExpression a:
+                case Cocoa.CodeAnalysis.Bound.BoundAssignmentExpression a:
                     into.Add("assign->" + a.Variable.Name + "#" + a.Variable.GetHashCode().ToString("X"));
                     break;
             }

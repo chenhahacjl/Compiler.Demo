@@ -2,7 +2,7 @@ using Cocoa.CodeAnalysis.Symbols;
 using System.Collections.Immutable;
 using System.Linq;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     public sealed class BoundScope
     {

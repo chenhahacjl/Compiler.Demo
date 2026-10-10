@@ -1,6 +1,7 @@
 using Cocoa.CodeAnalysis.Symbols;
+using Cocoa.CodeAnalysis.Binding;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     /// <summary>
     /// 常量折叠（6e-M21 Phase 2）：运算语义已统一收口到 <see cref="PrimitiveEval"/>（5.4b 单一求值核），

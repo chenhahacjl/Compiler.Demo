@@ -3,7 +3,7 @@ using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Linq;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Documentation
 {
     /// <summary>
     /// 6e-M24：符号文档回填辅助器。

@@ -2,7 +2,7 @@ using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     /// <summary>
     /// 构造函数链调用：`base(...)` / `this(...)`（子类构造先调基类/本类构造）。

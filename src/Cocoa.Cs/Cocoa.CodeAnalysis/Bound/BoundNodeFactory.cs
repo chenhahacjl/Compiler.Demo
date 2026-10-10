@@ -3,7 +3,7 @@ using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
 using System.Diagnostics;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     public static class BoundNodeFactory
     {

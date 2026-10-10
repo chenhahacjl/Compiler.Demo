@@ -1,4 +1,5 @@
 using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Bound;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.CodeAnalysis.Symbols;
 using System.CodeDom.Compiler;
@@ -6,8 +7,8 @@ using System.CodeDom.Compiler;
 namespace Cocoa.Cli
 {
     /// <summary>
-    /// `cocoa dump &lt;file.coa&gt;` —— 把 `.coa` 程序集渲染成可读大纲：依赖清单、枚举/类/全局符号表、
-    /// 函数签名清单与函数体伪码（复用 <see cref="Cocoa.CodeAnalysis.Binding.BoundNodePrinter"/>）。
+    /// `cocoa dump &lt;file.coa&gt;` —�?�?`.coa` 程序集渲染成可读大纲：依赖清单、枚�?�?全局符号表�?
+    /// 函数签名清单与函数体伪码（复�?<see cref="Cocoa.CodeAnalysis.Bound.BoundNodePrinter"/>）�?
     /// </summary>
     internal static class DumpCommand
     {

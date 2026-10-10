@@ -1,5 +1,6 @@
-﻿using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Serialization;
+using Cocoa.CodeAnalysis.Bound;
 using Cocoa.CodeGen.Native;
 using Cocoa.Targeting;
 using Cocoa.CodeAnalysis.Symbols;
@@ -401,9 +402,9 @@ namespace MyLib
             Assert.Equal(Cocoa.CodeAnalysis.Symbols.BuiltinKind.WriteLine, call!.Method!.BuiltinKind);
         }
 
-        private static Cocoa.CodeAnalysis.Binding.BoundMemberCallExpression? FindCallToPrint(Cocoa.CodeAnalysis.Binding.BoundNode node)
+        private static Cocoa.CodeAnalysis.Bound.BoundMemberCallExpression? FindCallToPrint(Cocoa.CodeAnalysis.Bound.BoundNode node)
         {
-            if (node is Cocoa.CodeAnalysis.Binding.BoundMemberCallExpression call &&
+            if (node is Cocoa.CodeAnalysis.Bound.BoundMemberCallExpression call &&
                 call.Method?.BuiltinKind == Cocoa.CodeAnalysis.Symbols.BuiltinKind.WriteLine)
             {
                 return call;
@@ -421,22 +422,22 @@ namespace MyLib
             return null;
         }
 
-        private static System.Collections.Generic.IEnumerable<Cocoa.CodeAnalysis.Binding.BoundNode> EnumerateChildren(Cocoa.CodeAnalysis.Binding.BoundNode node)
+        private static System.Collections.Generic.IEnumerable<Cocoa.CodeAnalysis.Bound.BoundNode> EnumerateChildren(Cocoa.CodeAnalysis.Bound.BoundNode node)
         {
             switch (node.Kind)
             {
-                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.BlockStatement:
-                    foreach (var s in ((Cocoa.CodeAnalysis.Binding.BoundBlockStatement)node).Statements)
+                case Cocoa.CodeAnalysis.Bound.BoundNodeKind.BlockStatement:
+                    foreach (var s in ((Cocoa.CodeAnalysis.Bound.BoundBlockStatement)node).Statements)
                     {
                         yield return s;
                     }
                     break;
-                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.ExpressionStatement:
-                    yield return ((Cocoa.CodeAnalysis.Binding.BoundExpressionStatement)node).Expression;
+                case Cocoa.CodeAnalysis.Bound.BoundNodeKind.ExpressionStatement:
+                    yield return ((Cocoa.CodeAnalysis.Bound.BoundExpressionStatement)node).Expression;
                     break;
-                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.MemberCallExpression:
-                    yield return ((Cocoa.CodeAnalysis.Binding.BoundMemberCallExpression)node).Expression;
-                    foreach (var a in ((Cocoa.CodeAnalysis.Binding.BoundMemberCallExpression)node).Arguments)
+                case Cocoa.CodeAnalysis.Bound.BoundNodeKind.MemberCallExpression:
+                    yield return ((Cocoa.CodeAnalysis.Bound.BoundMemberCallExpression)node).Expression;
+                    foreach (var a in ((Cocoa.CodeAnalysis.Bound.BoundMemberCallExpression)node).Arguments)
                     {
                         yield return a;
                     }

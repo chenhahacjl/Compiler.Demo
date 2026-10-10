@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Bound;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Xunit;

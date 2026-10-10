@@ -1,11 +1,10 @@
-﻿using Cocoa.CodeAnalysis.Symbols;
+using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
-using Cocoa.IO;
 using System.CodeDom.Compiler;
 using System.Globalization;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     public static class BoundNodePrinter
     {

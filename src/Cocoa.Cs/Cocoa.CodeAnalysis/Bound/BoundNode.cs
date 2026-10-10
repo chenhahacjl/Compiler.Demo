@@ -1,6 +1,6 @@
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     /// <summary>
     /// 绑定节点（A-4 公开化：供 SemanticModel.GetOperation 等对外暴露绑定树；具体节点类仍 internal）。

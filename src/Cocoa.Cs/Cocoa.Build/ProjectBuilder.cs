@@ -3,7 +3,7 @@ using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.Targeting;
 using Cocoa.CodeGen.Managed.Writer;
 using Cocoa.CodeAnalysis.Syntax;
-using Cocoa.IO;
+using Cocoa.CodeAnalysis.Text;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;

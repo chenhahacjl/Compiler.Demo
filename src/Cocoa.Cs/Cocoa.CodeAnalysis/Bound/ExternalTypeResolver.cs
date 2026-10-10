@@ -3,7 +3,7 @@ using Cocoa.CodeAnalysis.Symbols;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     /// <summary>
     /// 从引用程序集解析外部类型（消费 -r 库）。

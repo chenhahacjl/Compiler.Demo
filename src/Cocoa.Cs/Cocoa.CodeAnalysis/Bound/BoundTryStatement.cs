@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     public sealed class BoundTryStatement : BoundStatement
     {

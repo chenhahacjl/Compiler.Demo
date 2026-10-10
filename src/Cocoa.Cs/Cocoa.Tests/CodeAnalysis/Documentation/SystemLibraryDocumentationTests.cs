@@ -1,5 +1,7 @@
 using System.Linq;
 using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis.Bound;
+using Cocoa.CodeAnalysis.Serialization;
 using Xunit;
 
 namespace Cocoa.Tests.CodeAnalysis.Documentation

@@ -1,7 +1,7 @@
 using Cocoa.CodeAnalysis.Symbols;
 using System.Collections.Immutable;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     /// <summary>
     /// 绑定树单态化替换器（6e-G7 S5）：把 `.coa` 携带的<b>开放绑定体</b>（引用泛型定义的

@@ -5,6 +5,7 @@ using Cocoa.CodeAnalysis.Evaluation;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
+using Cocoa.CodeAnalysis.Bound;
 using System.Collections.Immutable;
 using Cocoa.CodeAnalysis.Documentation;
 using System.IO;

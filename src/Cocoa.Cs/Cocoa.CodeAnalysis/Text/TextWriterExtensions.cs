@@ -4,7 +4,7 @@ using Cocoa.CodeAnalysis.Text;
 using System.CodeDom.Compiler;
 using System.Diagnostics;
 
-namespace Cocoa.IO
+namespace Cocoa.CodeAnalysis.Text
 {
     public static class TextWriterExtensions
     {

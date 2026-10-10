@@ -1,4 +1,5 @@
 using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis.Bound;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System;
@@ -55,15 +56,15 @@ namespace Cocoa.Tests.CodeAnalysis
             return sb.ToString();
         }
 
-        private static List<(string Name, string Type)> CollectLocals(Cocoa.CodeAnalysis.Binding.BoundNode node)
+        private static List<(string Name, string Type)> CollectLocals(Cocoa.CodeAnalysis.Bound.BoundNode node)
         {
             var acc = new List<(string, string)>();
             Collect(node, acc);
             return acc;
 
-            static void Collect(Cocoa.CodeAnalysis.Binding.BoundNode current, List<(string, string)> sink)
+            static void Collect(Cocoa.CodeAnalysis.Bound.BoundNode current, List<(string, string)> sink)
             {
-                if (current is Cocoa.CodeAnalysis.Binding.BoundVariableDeclaration declaration)
+                if (current is Cocoa.CodeAnalysis.Bound.BoundVariableDeclaration declaration)
                 {
                     sink.Add((declaration.Variable.Name, declaration.Variable.Type.Name));
                 }
@@ -236,25 +237,25 @@ namespace Cocoa.Tests.CodeAnalysis
         }
 
         /// <summary>绑定树规范化 dump（首片）：(Kind ...) 单行空格分隔；载荷内嵌；无优先级括号。</summary>
-        private static string BoundTreeDump(Cocoa.CodeAnalysis.Binding.BoundNode node)
+        private static string BoundTreeDump(Cocoa.CodeAnalysis.Bound.BoundNode node)
         {
             var sb = new StringBuilder();
             DumpBound(node, sb);
             return sb.ToString();
         }
 
-        private static void DumpBound(Cocoa.CodeAnalysis.Binding.BoundNode node, StringBuilder sb)
+        private static void DumpBound(Cocoa.CodeAnalysis.Bound.BoundNode node, StringBuilder sb)
         {
             switch (node.Kind)
             {
-                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.SequencePointStatement:
+                case Cocoa.CodeAnalysis.Bound.BoundNodeKind.SequencePointStatement:
                     // 调试序列点为绑定器实现细节（语句+源位置包装），不属语义树形 → 透传
-                    DumpBound(((Cocoa.CodeAnalysis.Binding.BoundSequencePointStatement)node).Statement, sb);
+                    DumpBound(((Cocoa.CodeAnalysis.Bound.BoundSequencePointStatement)node).Statement, sb);
                     break;
-                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.BlockStatement:
+                case Cocoa.CodeAnalysis.Bound.BoundNodeKind.BlockStatement:
                 {
                     sb.Append("(BlockStatement");
-                    foreach (var statement in ((Cocoa.CodeAnalysis.Binding.BoundBlockStatement)node).Statements)
+                    foreach (var statement in ((Cocoa.CodeAnalysis.Bound.BoundBlockStatement)node).Statements)
                     {
                         sb.Append(' ');
                         DumpBound(statement, sb);
@@ -263,9 +264,9 @@ namespace Cocoa.Tests.CodeAnalysis
                     sb.Append(')');
                     break;
                 }
-                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.ReturnStatement:
+                case Cocoa.CodeAnalysis.Bound.BoundNodeKind.ReturnStatement:
                 {
-                    var r = (Cocoa.CodeAnalysis.Binding.BoundReturnStatement)node;
+                    var r = (Cocoa.CodeAnalysis.Bound.BoundReturnStatement)node;
                     sb.Append("(ReturnStatement");
                     if (r.Expression != null)
                     {
@@ -276,24 +277,24 @@ namespace Cocoa.Tests.CodeAnalysis
                     sb.Append(')');
                     break;
                 }
-                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.ExpressionStatement:
+                case Cocoa.CodeAnalysis.Bound.BoundNodeKind.ExpressionStatement:
                 {
                     sb.Append("(ExpressionStatement ");
-                    DumpBound(((Cocoa.CodeAnalysis.Binding.BoundExpressionStatement)node).Expression, sb);
+                    DumpBound(((Cocoa.CodeAnalysis.Bound.BoundExpressionStatement)node).Expression, sb);
                     sb.Append(')');
                     break;
                 }
-                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.VariableDeclaration:
+                case Cocoa.CodeAnalysis.Bound.BoundNodeKind.VariableDeclaration:
                 {
-                    var d = (Cocoa.CodeAnalysis.Binding.BoundVariableDeclaration)node;
+                    var d = (Cocoa.CodeAnalysis.Bound.BoundVariableDeclaration)node;
                     sb.Append("(VariableDeclaration ").Append(d.Variable.IsReadOnly ? "let" : "var").Append(' ').Append(d.Variable.Name).Append(' ');
                     DumpBound(d.Initializer, sb);
                     sb.Append(')');
                     break;
                 }
-                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.IfStatement:
+                case Cocoa.CodeAnalysis.Bound.BoundNodeKind.IfStatement:
                 {
-                    var i = (Cocoa.CodeAnalysis.Binding.BoundIfStatement)node;
+                    var i = (Cocoa.CodeAnalysis.Bound.BoundIfStatement)node;
                     sb.Append("(IfStatement ");
                     DumpBound(i.Condition, sb);
                     sb.Append(' ');
@@ -307,9 +308,9 @@ namespace Cocoa.Tests.CodeAnalysis
                     sb.Append(')');
                     break;
                 }
-                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.WhileStatement:
+                case Cocoa.CodeAnalysis.Bound.BoundNodeKind.WhileStatement:
                 {
-                    var w = (Cocoa.CodeAnalysis.Binding.BoundWhileStatement)node;
+                    var w = (Cocoa.CodeAnalysis.Bound.BoundWhileStatement)node;
                     sb.Append("(WhileStatement ");
                     DumpBound(w.Condition, sb);
                     sb.Append(' ');
@@ -317,46 +318,46 @@ namespace Cocoa.Tests.CodeAnalysis
                     sb.Append(')');
                     break;
                 }
-                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.LiteralExpression:
+                case Cocoa.CodeAnalysis.Bound.BoundNodeKind.LiteralExpression:
                 {
-                    var l = (Cocoa.CodeAnalysis.Binding.BoundLiteralExpression)node;
+                    var l = (Cocoa.CodeAnalysis.Bound.BoundLiteralExpression)node;
                     sb.Append("(LiteralExpression ").Append(FormatLiteral(l)).Append(')');
                     break;
                 }
-                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.VariableExpression:
+                case Cocoa.CodeAnalysis.Bound.BoundNodeKind.VariableExpression:
                 {
-                    sb.Append("(VariableExpression ").Append(((Cocoa.CodeAnalysis.Binding.BoundVariableExpression)node).Variable.Name).Append(')');
+                    sb.Append("(VariableExpression ").Append(((Cocoa.CodeAnalysis.Bound.BoundVariableExpression)node).Variable.Name).Append(')');
                     break;
                 }
-                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.AssignmentExpression:
+                case Cocoa.CodeAnalysis.Bound.BoundNodeKind.AssignmentExpression:
                 {
-                    var a = (Cocoa.CodeAnalysis.Binding.BoundAssignmentExpression)node;
+                    var a = (Cocoa.CodeAnalysis.Bound.BoundAssignmentExpression)node;
                     sb.Append("(AssignmentExpression ").Append(a.Variable.Name).Append(' ');
                     DumpBound(a.Expression, sb);
                     sb.Append(')');
                     break;
                 }
-                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.UnaryExpression:
+                case Cocoa.CodeAnalysis.Bound.BoundNodeKind.UnaryExpression:
                 {
-                    var u = (Cocoa.CodeAnalysis.Binding.BoundUnaryExpression)node;
-                    sb.Append("(UnaryExpression ").Append(Cocoa.CodeAnalysis.Binding.BoundOperatorText.UnaryGlyph(u.Op.Kind)).Append(' ');
+                    var u = (Cocoa.CodeAnalysis.Bound.BoundUnaryExpression)node;
+                    sb.Append("(UnaryExpression ").Append(Cocoa.CodeAnalysis.Bound.BoundOperatorText.UnaryGlyph(u.Op.Kind)).Append(' ');
                     DumpBound(u.Operand, sb);
                     sb.Append(')');
                     break;
                 }
-                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.BinaryExpression:
+                case Cocoa.CodeAnalysis.Bound.BoundNodeKind.BinaryExpression:
                 {
-                    var b = (Cocoa.CodeAnalysis.Binding.BoundBinaryExpression)node;
-                    sb.Append("(BinaryExpression ").Append(Cocoa.CodeAnalysis.Binding.BoundOperatorText.BinaryGlyph(b.Op.Kind)).Append(' ');
+                    var b = (Cocoa.CodeAnalysis.Bound.BoundBinaryExpression)node;
+                    sb.Append("(BinaryExpression ").Append(Cocoa.CodeAnalysis.Bound.BoundOperatorText.BinaryGlyph(b.Op.Kind)).Append(' ');
                     DumpBound(b.Left, sb);
                     sb.Append(' ');
                     DumpBound(b.Right, sb);
                     sb.Append(')');
                     break;
                 }
-                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.CallExpression:
+                case Cocoa.CodeAnalysis.Bound.BoundNodeKind.CallExpression:
                 {
-                    var c = (Cocoa.CodeAnalysis.Binding.BoundCallExpression)node;
+                    var c = (Cocoa.CodeAnalysis.Bound.BoundCallExpression)node;
                     sb.Append("(CallExpression ").Append(c.Function.Name);
                     foreach (var argument in c.Arguments)
                     {
@@ -367,19 +368,19 @@ namespace Cocoa.Tests.CodeAnalysis
                     sb.Append(')');
                     break;
                 }
-                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.LabelStatement:
+                case Cocoa.CodeAnalysis.Bound.BoundNodeKind.LabelStatement:
                 {
-                    sb.Append("(LabelStatement ").Append(((Cocoa.CodeAnalysis.Binding.BoundLabelStatement)node).Label.Name).Append(')');
+                    sb.Append("(LabelStatement ").Append(((Cocoa.CodeAnalysis.Bound.BoundLabelStatement)node).Label.Name).Append(')');
                     break;
                 }
-                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.GotoStatement:
+                case Cocoa.CodeAnalysis.Bound.BoundNodeKind.GotoStatement:
                 {
-                    sb.Append("(GotoStatement ").Append(((Cocoa.CodeAnalysis.Binding.BoundGotoStatement)node).Label.Name).Append(')');
+                    sb.Append("(GotoStatement ").Append(((Cocoa.CodeAnalysis.Bound.BoundGotoStatement)node).Label.Name).Append(')');
                     break;
                 }
-                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.ConditionalGotoStatement:
+                case Cocoa.CodeAnalysis.Bound.BoundNodeKind.ConditionalGotoStatement:
                 {
-                    var cg = (Cocoa.CodeAnalysis.Binding.BoundConditionalGotoStatement)node;
+                    var cg = (Cocoa.CodeAnalysis.Bound.BoundConditionalGotoStatement)node;
                     sb.Append("(ConditionalGotoStatement ").Append(cg.Label.Name).Append(' ').Append(cg.JumpIfTrue ? "True" : "False").Append(' ');
                     DumpBound(cg.Condition, sb);
                     sb.Append(')');
@@ -390,7 +391,7 @@ namespace Cocoa.Tests.CodeAnalysis
             }
         }
 
-        private static string FormatLiteral(Cocoa.CodeAnalysis.Binding.BoundLiteralExpression node)
+        private static string FormatLiteral(Cocoa.CodeAnalysis.Bound.BoundLiteralExpression node)
         {
             if (node.Value == null)
             {

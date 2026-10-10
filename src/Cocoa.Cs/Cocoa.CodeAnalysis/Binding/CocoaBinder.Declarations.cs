@@ -5,6 +5,8 @@ using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using CoreSyntax = Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
+using Cocoa.CodeAnalysis.Bound;
+using Cocoa.CodeAnalysis.Documentation;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;

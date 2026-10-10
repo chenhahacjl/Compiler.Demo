@@ -1,5 +1,6 @@
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Bound;
 using Cocoa.CodeAnalysis.Symbols;
 
 namespace Cocoa.CodeGen.Interpreter

@@ -1,7 +1,7 @@
 using Cocoa.CodeAnalysis.Symbols;
 using System.Collections.Immutable;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     /// <summary>
     /// 明确赋值分析（6e-M23 R4，对齐 C#）：跟踪当前函数 out 形参的赋值状态。

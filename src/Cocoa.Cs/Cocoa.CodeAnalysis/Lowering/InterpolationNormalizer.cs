@@ -1,3 +1,4 @@
+using Cocoa.CodeAnalysis.Bound;
 using System.Collections.Immutable;
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;

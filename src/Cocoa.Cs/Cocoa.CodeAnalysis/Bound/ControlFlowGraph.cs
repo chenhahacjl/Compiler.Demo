@@ -1,6 +1,6 @@
-﻿using System.CodeDom.Compiler;
+using System.CodeDom.Compiler;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     public sealed class ControlFlowGraph
     {

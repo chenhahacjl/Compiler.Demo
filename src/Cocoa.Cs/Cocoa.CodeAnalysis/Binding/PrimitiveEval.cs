@@ -1,4 +1,5 @@
 using Cocoa.CodeAnalysis.Symbols;
+using Cocoa.CodeAnalysis.Bound;
 
 namespace Cocoa.CodeAnalysis.Binding
 {

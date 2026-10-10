@@ -1,8 +1,9 @@
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
+using Cocoa.CodeAnalysis.Bound;
 using System.Collections.Immutable;
 
-using static Cocoa.CodeAnalysis.Binding.BoundNodeFactory;
+using static Cocoa.CodeAnalysis.Bound.BoundNodeFactory;
 
 namespace Cocoa.CodeAnalysis.Lowering
 {

@@ -1,5 +1,6 @@
 using System;
 using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Bound;
 using Cocoa.CodeGen.Native.Lir;
 using Cocoa.CodeGen.Native.Assembler;
 using Cocoa.CodeGen.Native.Assembler.X64;

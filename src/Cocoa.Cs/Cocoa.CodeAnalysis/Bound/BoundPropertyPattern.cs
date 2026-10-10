@@ -2,7 +2,7 @@ using System.Collections.Immutable;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Bound
 {
     /// <summary>
     /// 属性模式绑定：expr is { Length: > 0 }
