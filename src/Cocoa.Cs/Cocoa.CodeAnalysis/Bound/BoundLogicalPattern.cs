@@ -38,14 +38,4 @@ namespace Cocoa.CodeAnalysis.Bound
 
         public bool IsUnary => Operand != null;
     }
-
-    /// <summary>
-    /// 逻辑模式操作符类型
-    /// </summary>
-    public enum BoundLogicalPatternKind
-    {
-        And,
-        Or,
-        Not
-    }
 }

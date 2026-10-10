@@ -30,10 +30,4 @@ namespace Cocoa.CodeAnalysis.Bound
 
         public ImmutableArray<BoundExpression> Arguments { get; }
     }
-
-    public enum ConstructorInitializerKind
-    {
-        Base,
-        This,
-    }
 }

@@ -4,18 +4,6 @@ using System.Linq;
 
 namespace Cocoa.CodeAnalysis.Symbols
 {
-    [Flags]
-    public enum BuiltinBackend
-    {
-        None = 0,
-        Evaluator = 1 << 0,
-        Il = 1 << 1,
-        Native = 1 << 2,
-        All = Evaluator | Il | Native,
-    }
-
-    public sealed record BuiltinCoverageRow(BuiltinKind Kind, BuiltinBackend Backends, string? GapReason);
-
     /// <summary>
     /// 内建原语的三后端覆盖表——新增一个 <see cref="BuiltinKind"/> 必须同时在此加一行，
     /// 否则 <c>BuiltinCoverageTests</c> 报"枚举值未声明覆盖"。

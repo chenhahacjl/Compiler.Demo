@@ -3,16 +3,6 @@ using Cocoa.CodeAnalysis.Bound;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
-    public enum PrimitiveEvalStatus
-    {
-        /// <summary>result 有效。</summary>
-        Computed,
-        /// <summary>整数模零：折叠层跳过折叠、运行时层抛 DivideByZeroException。</summary>
-        NotComputable,
-        /// <summary>本核不含（string+double 定点拼接、引用相等）：调用方自行处理。</summary>
-        Unsupported,
-    }
-
     /// <summary>
     /// 单一求值核（5.4b）：ConstantFolding（编译期折叠）与 Interpreter（运行时求值）共用的
     /// 原生值运算语义唯一来源，消除双表人肉同步。

@@ -2,25 +2,9 @@ using Cocoa.CodeAnalysis.Symbols;
 using System.Collections.Generic;
 using Cocoa.CodeAnalysis.Bound;
 using System.Collections.Immutable;
-using System.Linq;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
-    /// <summary>二元运算符签名（规则表条目）：语义 kind + 操作数/返回类型 + 发射键（阶段 2 符号化预留）。</summary>
-    public readonly record struct BinaryOperatorSignature(
-        BoundBinaryOperatorKind Kind,
-        TypeSymbol LeftType,
-        TypeSymbol RightType,
-        TypeSymbol ResultType,
-        Cocoa.CodeAnalysis.Symbols.BuiltinKind? EmitKind = null);
-
-    /// <summary>一元运算符签名（规则表条目）。</summary>
-    public readonly record struct UnaryOperatorSignature(
-        BoundUnaryOperatorKind Kind,
-        TypeSymbol OperandType,
-        TypeSymbol ResultType,
-        Cocoa.CodeAnalysis.Symbols.BuiltinKind? EmitKind = null);
-
     /// <summary>
     /// 内置运算符规则表（对齐 Roslyn <c>BuiltInOperators</c> 形态，职责 1-4）：静态签名表 + 按 kind 查询 +
     /// 「组合运算符」候选合成（enum/delegate/string/null/引用相等/??）。合成结果用于重载解析的候选集枚举

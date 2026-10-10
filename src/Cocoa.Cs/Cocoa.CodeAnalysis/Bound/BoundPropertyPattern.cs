@@ -23,19 +23,4 @@ namespace Cocoa.CodeAnalysis.Bound
         public BoundExpression Expression { get; }
         public ImmutableArray<BoundPropertySubpattern> Subpatterns { get; }
     }
-
-    /// <summary>
-    /// 属性子模式绑定：NameToken: pattern
-    /// </summary>
-    public sealed class BoundPropertySubpattern
-    {
-        public BoundPropertySubpattern(string propertyName, BoundExpression pattern)
-        {
-            PropertyName = propertyName;
-            Pattern = pattern;
-        }
-
-        public string PropertyName { get; }
-        public BoundExpression Pattern { get; }
-    }
 }
