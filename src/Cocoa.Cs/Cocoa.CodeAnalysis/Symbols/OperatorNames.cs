@@ -48,7 +48,9 @@ namespace Cocoa.CodeAnalysis.Symbols
         private static readonly Dictionary<SyntaxKind, OperatorKind> _byToken = new()
         {
             [SyntaxKind.PlusToken] = OperatorKind.Addition,
+            [SyntaxKind.PlusEqualsToken] = OperatorKind.Addition,     // `operator +=` = Addition 声明形态变体（复合赋值，C# 元数据仍 op_Addition）
             [SyntaxKind.MinusToken] = OperatorKind.Subtraction,
+            [SyntaxKind.MinusEqualsToken] = OperatorKind.Subtraction, // `operator -=` 同理
             [SyntaxKind.StarToken] = OperatorKind.Multiplication,
             [SyntaxKind.SlashToken] = OperatorKind.Division,
             [SyntaxKind.PercentToken] = OperatorKind.Modulo,

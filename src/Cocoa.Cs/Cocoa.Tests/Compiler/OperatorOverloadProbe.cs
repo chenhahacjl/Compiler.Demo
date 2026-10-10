@@ -448,6 +448,32 @@ namespace Cocoa.Tests.Compiler
         }
 
         [Fact]
+        public void DeclaredCompoundAssignmentOperator_BindsToUserDefined()
+        {
+            // C# 复合赋值：显式声明 `operator +=`（映射 Addition）→ `x += y` 命中用户重载而非内建/脱糖
+            var result = RunMain(
+                "class Vec {" + Nl +
+                "    public field X: i32" + Nl +
+                "    public static function operator +=(a: Vec, b: Vec): Vec {" + Nl +
+                "        var r = new Vec()" + Nl +
+                "        r.X = a.X * 2 + b.X" + Nl +
+                "        return r" + Nl +
+                "    }" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var a = new Vec()" + Nl +
+                "    a.X = 1" + Nl +
+                "    var b = new Vec()" + Nl +
+                "    b.X = 3" + Nl +
+                "    a += b" + Nl +
+                "    return a.X" + Nl +
+                "}", "OpDeclaredCompound");
+
+            // a.X*2+b.X = 1*2+3 = 5 —— 命中用户 op_+=（区别于 op_+ 脱糖的 1+3=4）
+            Assert.Equal(5, result);
+        }
+
+        [Fact]
         public void ComparisonOperator_EndToEnd_Executes()
         {
             // a.X == b.X → 走 op_Equality，返回 42 表明确实进了用户运算符

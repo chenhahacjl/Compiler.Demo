@@ -862,6 +862,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.GreaterOrEqualsToken:
                 case SyntaxKind.BangToken:
                 case SyntaxKind.TildeToken:
+                case SyntaxKind.PlusPlusToken:
+                case SyntaxKind.MinusMinusToken:
+                case SyntaxKind.PlusEqualsToken:
+                case SyntaxKind.MinusEqualsToken:
                     return true;
                 default:
                     return false;
