@@ -4,43 +4,6 @@ using System.Collections.Generic;
 
 namespace Cocoa.CodeGen.PE
 {
-    /// <summary>IMAGE_BASE_RELOCATION — 基址重定位块（8 字节头 + TypeOffset 数组）。</summary>
-    public readonly record struct ImageBaseRelocation(uint VirtualAddress, uint SizeOfBlock)
-    {
-        public static int SizeOfEntry => 8;
-
-        public int RelocationCount => (int)((SizeOfBlock - SizeOfEntry) / 2);
-
-        public static ImageBaseRelocation Read(ReadOnlySpan<byte> s)
-        {
-            return new ImageBaseRelocation(
-                BinaryPrimitives.ReadUInt32LittleEndian(s),
-                BinaryPrimitives.ReadUInt32LittleEndian(s.Slice(4)));
-        }
-
-        public void Write(Span<byte> d)
-        {
-            BinaryPrimitives.WriteUInt32LittleEndian(d, VirtualAddress);
-            BinaryPrimitives.WriteUInt32LittleEndian(d.Slice(4), SizeOfBlock);
-        }
-    }
-
-    /// <summary>TypeOffset 解码：类型与偏移以 WORD 位域存储。</summary>
-    public readonly record struct PeRelocationEntry(PeRelocType Type, int Offset)
-    {
-        public static PeRelocationEntry FromWord(ushort value)
-        {
-            return new PeRelocationEntry((PeRelocType)(value >> 12), value & 0x0FFF);
-        }
-
-        public ushort ToWord()
-        {
-            return (ushort)(((int)Type << 12) | (Offset & 0x0FFF));
-        }
-    }
-
-    public sealed record PeRelocationBlock(uint PageRva, IReadOnlyList<PeRelocationEntry> Entries);
-
     /// <summary>重定位块序列解析。</summary>
     public static class PeRelocTable
     {

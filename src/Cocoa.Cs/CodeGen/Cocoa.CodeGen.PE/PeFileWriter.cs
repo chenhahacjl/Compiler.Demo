@@ -7,9 +7,6 @@ using static Cocoa.CodeGen.PE.PeBinary;
 
 namespace Cocoa.CodeGen.PE
 {
-    /// <summary>导入规格：DLL 名 + 函数名 + IAT 槽在 .idata blob 内的偏移。</summary>
-    public readonly record struct PefileImport(string DllName, string Name, int IatOffset);
-
     /// <summary>PE 写出器：组装头结构层 + 导入表结构层，产出 PE32+ / PE32 镜像文件。</summary>
     public static class PeFileWriter
     {

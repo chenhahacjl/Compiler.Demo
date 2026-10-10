@@ -3,30 +3,6 @@ using System.Buffers.Binary;
 
 namespace Cocoa.CodeGen.PE
 {
-    /// <summary>IMAGE_LOAD_CONFIG_CODE_INTEGRITY — 代码完整性（8 字节）。</summary>
-    public readonly record struct ImageLoadConfigCodeIntegrity(
-        ushort Flags,
-        ushort Catalog,
-        uint CatalogOffset)
-    {
-        public static int SizeOfEntry => 8;
-
-        public static ImageLoadConfigCodeIntegrity Read(ReadOnlySpan<byte> s)
-        {
-            return new ImageLoadConfigCodeIntegrity(
-                BinaryPrimitives.ReadUInt16LittleEndian(s),
-                BinaryPrimitives.ReadUInt16LittleEndian(s.Slice(2)),
-                BinaryPrimitives.ReadUInt32LittleEndian(s.Slice(4)));
-        }
-
-        public void Write(Span<byte> d)
-        {
-            BinaryPrimitives.WriteUInt16LittleEndian(d, Flags);
-            BinaryPrimitives.WriteUInt16LittleEndian(d.Slice(2), Catalog);
-            BinaryPrimitives.WriteUInt32LittleEndian(d.Slice(4), CatalogOffset);
-        }
-    }
-
     /// <summary>IMAGE_LOAD_CONFIG_DIRECTORY64 — 加载配置目录（winnt.h 全字段，324 字节）。</summary>
     public readonly record struct ImageLoadConfigDirectory64(
         uint Size,
