@@ -20,18 +20,4 @@ namespace Cocoa.Build
         /// <summary>6e-M24：XML documentation 文件输出路径（null = 不生成）。</summary>
         public string? DocOutput { get; set; }
     }
-
-    public sealed class ProjectBuildResult
-    {
-        public ProjectBuildResult(bool success, bool upToDate)
-        {
-            Success = success;
-            UpToDate = upToDate;
-        }
-
-        public static ProjectBuildResult Failed { get; } = new(success: false, upToDate: false);
-
-        public bool Success { get; }
-        public bool UpToDate { get; }
-    }
 }

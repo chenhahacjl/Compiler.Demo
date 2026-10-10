@@ -7,31 +7,6 @@ using Cocoa.CodeAnalysis.Text;
 
 namespace Cocoa.CodeGen.Interpreter
 {
-    /// <summary>调试会话执行状态。</summary>
-    public enum DebugExecutionState
-    {
-        NotStarted,
-        Running,
-        Paused,
-        Completed,
-    }
-
-    /// <summary>暂停原因。</summary>
-    public enum DebugPauseReason
-    {
-        Entry,
-        Breakpoint,
-        Step,
-        Paused,
-        Exception,
-    }
-
-    /// <summary>一个局部变量快照。</summary>
-    public sealed record LocalVariable(string Name, string? Type, object? Value);
-
-    /// <summary>一个调用栈帧快照（顶帧在列表首位）。</summary>
-    public sealed record StackFrame(string Function, string? FilePath, int Line, IReadOnlyList<LocalVariable> Locals);
-
     /// <summary>M7 解释器调试会话：复用 <see cref="Evaluator"/>，经语句边界钩子实现断点/单步；
     /// 与 <see cref="Evaluator"/> 同程序集，无需扩 <c>InternalsVisibleTo</c>。</summary>
     public sealed class DebuggerSession

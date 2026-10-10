@@ -2,28 +2,6 @@ using System;
 
 namespace Cocoa.Targeting
 {
-    /// <summary>目标操作系统：决定 PE/ELF/Mach-O 文件格式与运行时导入机制。</summary>
-    public enum TargetOS
-    {
-        Windows,
-        Linux,
-        MacOS,
-    }
-
-    /// <summary>CPU 架构：决定指令集、寄存器宽度与指针大小。</summary>
-    public enum Architecture
-    {
-        X64,
-        X86,
-    }
-
-    /// <summary>代码生成后端：决定产物的类型。</summary>
-    public enum CodeBackend
-    {
-        DotNet,
-        Native,
-    }
-
     /// <summary>原生编译目标平台（仅 Native 后端使用）。</summary>
     public readonly record struct TargetPlatform(TargetOS OS, Architecture Arch)
     {

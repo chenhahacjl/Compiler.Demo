@@ -1,58 +1,10 @@
 using System;
 using System.Collections.Immutable;
 using System.IO;
-using System.Linq;
 using Cocoa.Targeting;
 
 namespace Cocoa.Build
 {
-    public enum ProjectOutputFormat
-    {
-        Exe,
-        Dll,
-        Cod,
-    }
-
-    /// <summary>构建配置（替代旧版 `debug` bool）。</summary>
-    public enum ProjectConfiguration
-    {
-        Debug,
-        Release,
-    }
-
-    /// <summary>目标操作系统。</summary>
-    public enum CocoaTargetOs
-    {
-        Windows,
-        Linux,
-    }
-
-    /// <summary>Windows 管理员运行级别（对齐 manifest requestedExecutionLevel）。</summary>
-    public enum RequestedExecutionLevel
-    {
-        AsInvoker,
-        HighestAvailable,
-        RequireAdministrator,
-    }
-
-    /// <summary>部署项（`Content`）：非源码文件，CopyToOutput 语义。</summary>
-    public readonly record struct ContentEntry(string Include, bool CopyToOutput);
-
-    /// <summary>程序集元数据（`Label="Assembly"` 等，发射预留）。</summary>
-    public sealed class CocoaProjectMetadata
-    {
-        public string? RootNamespace { get; init; }
-        public string? Title { get; init; }
-        public string? Description { get; init; }
-        public string? Company { get; init; }
-        public string? Product { get; init; }
-        public string? Authors { get; init; }
-        public string? Copyright { get; init; }
-        public string? AssemblyVersion { get; init; }
-        public string? FileVersion { get; init; }
-        public string? ProjectGuid { get; init; }
-    }
-
     /// <summary>求解构后的终态项目模型（Condition 已求值）。</summary>
     public sealed class CocoaProjectFile
     {
@@ -111,7 +63,8 @@ namespace Cocoa.Build
         public string Directory { get; }
         public string Name { get; }
         public string AssemblyName { get; }
-public ProjectOutputFormat Output { get; }
+        public ProjectOutputFormat Output { get; }
+
         /// <summary>代码生成后端（null = 用构建默认，即托管 DotNet）。</summary>
         public CodeBackend? Backend { get; }
 
@@ -172,34 +125,5 @@ public ProjectOutputFormat Output { get; }
 
             return AssemblyName + extension;
         }
-    }
-
-    public readonly record struct PropertyValue(string Key, string Value);
-
-    /// <summary>声明的属性组（含 Label 与 Condition 文本）。</summary>
-    public readonly record struct PropertyGroupDecl(string Label, string? Condition, ImmutableArray<PropertyValue> Values);
-
-    /// <summary>单个声明项（`Source`/`Reference`/`Import`/`Content`）。</summary>
-    public readonly record struct ItemDecl(string Name, string Include, ImmutableArray<(string Key, string Value)> Attributes);
-
-    /// <summary>声明的项组（组级 Condition + 项列表）。</summary>
-    public readonly record struct ItemGroupDecl(string? Condition, ImmutableArray<ItemDecl> Items);
-
-    /// <summary>解析产物：保留分组/Label/Condition/顺序的条件化项目模型。</summary>
-    public sealed class CocoaProjectSpec
-    {
-        public CocoaProjectSpec(
-            string filePath,
-            ImmutableArray<PropertyGroupDecl> propertyGroups,
-            ImmutableArray<ItemGroupDecl> itemGroups)
-        {
-            FilePath = Path.GetFullPath(filePath);
-            PropertyGroups = propertyGroups;
-            ItemGroups = itemGroups;
-        }
-
-        public string FilePath { get; }
-        public ImmutableArray<PropertyGroupDecl> PropertyGroups { get; }
-        public ImmutableArray<ItemGroupDecl> ItemGroups { get; }
     }
 }
