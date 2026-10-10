@@ -543,6 +543,15 @@ namespace Cocoa.CodeAnalysis.Binding
 
                     if (boundOperator == null)
                     {
+                        // C# 复合赋值语义：无显式 `op_+=` 时用对应二元运算符脱糖（`x += y` → `x = x + y`）。
+                        // 内建 miss 后回落用户定义 op_+/op_-（`Vec += Vec` 命中用户 `operator +`）。
+                        var userDefined = TryBindUserDefinedCompoundFallback(equivalentOperatorTokenKind, variableTarget, boundExpression);
+                        if (userDefined != null)
+                        {
+                            var assigned = BindConversion(syntax.Expression.Location, userDefined, variable.Type);
+                            return new BoundAssignmentExpression(syntax, variable, assigned);
+                        }
+
                         _diagnostics.ReportUndefinedBinaryOperator(syntax.AssignmentToken.Location, syntax.AssignmentToken.Text, variable.Type, boundExpression.Type);
                         return new BoundErrorExpression(syntax);
                     }
@@ -2068,6 +2077,47 @@ namespace Cocoa.CodeAnalysis.Binding
 
             result = new BoundBinaryExpression(syntax, left, op, right);
             return true;
+        }
+
+        /// <summary>
+        /// 复合赋值脱糖的用户定义二元回落（C# §12.21.2：`x += y` 无显式复合赋值运算符时按 `x = x op y`
+        /// 脱糖）：查 <see cref="OperatorRegistry"/> 的对应 `op_+`/`op_-` 且接收者类型作左操作数。
+        /// 命中构造 <c>x op y</c>（用户定义）供外层套赋值；未命中返回 null（由调用方报未定义运算符）。
+        /// </summary>
+        private BoundExpression? TryBindUserDefinedCompoundFallback(
+            CoreSyntax.SyntaxKind equivalentOperatorTokenKind,
+            BoundExpression left,
+            BoundExpression right)
+        {
+            if (left.Type == TypeSymbol.Error || right.Type == TypeSymbol.Error)
+            {
+                return null;
+            }
+
+            var declaredKind = OperatorNames.FromToken(equivalentOperatorTokenKind);
+            if (!declaredKind.HasValue)
+            {
+                return null;
+            }
+
+            var method = _operators.ResolveBinary(declaredKind.Value, left.Type, right.Type);
+            if (method == null)
+            {
+                return null;
+            }
+
+            var resultType = OperatorNames.IsComparison(declaredKind.Value)
+                ? TypeSymbol.Boolean
+                : method.ReturnType;
+
+            var op = BoundBinaryOperator.ForUserDefined(
+                BoundBinaryOperator.Translate(equivalentOperatorTokenKind),
+                left.Type,
+                right.Type,
+                resultType,
+                method);
+
+            return new BoundBinaryExpression(left.Syntax!, left, op, right);
         }
 
         /// <summary>

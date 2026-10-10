@@ -388,11 +388,63 @@ namespace Cocoa.Tests.Compiler
                 "function Main(args: string[]): i32 {" + Nl +
                 "    var a = new Vec()" + Nl +
                 "    a.X = 7" + Nl +
-                "    var b = -a" + Nl +
-                "    return b.X" + Nl +
+                "    var c = -a" + Nl +
+                "    return c.X" + Nl +
                 "}", "OpUnary");
 
             Assert.Equal(-7, result);
+        }
+
+        [Fact]
+        public void CompoundAssignment_FallsBackToUserDefinedAddition_EndToEnd()
+        {
+            // `c += b` 无显式 op_+= → 脱糖 `c = c + b` 回落用户 op_+（C# §12.21.2 语义）
+            var result = RunMain(
+                "class Vec {" + Nl +
+                "    public field X: i32" + Nl +
+                "    public static function operator +(a: Vec, b: Vec): Vec {" + Nl +
+                "        var r = new Vec()" + Nl +
+                "        r.X = a.X + b.X" + Nl +
+                "        return r" + Nl +
+                "    }" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var a = new Vec()" + Nl +
+                "    a.X = 1" + Nl +
+                "    var b = new Vec()" + Nl +
+                "    b.X = 2" + Nl +
+                "    var c = new Vec()" + Nl +
+                "    c.X = 4" + Nl +
+                "    c += b" + Nl +
+                "    return c.X" + Nl +
+                "}", "OpCompoundAdd");
+
+            Assert.Equal(6, result);
+        }
+
+        [Fact]
+        public void CompoundAssignment_FallsBackToUserDefinedSubtraction_EndToEnd()
+        {
+            // `c -= b` → 脱糖 `c = c - b` 回落用户 op_
+            var result = RunMain(
+                "class Vec {" + Nl +
+                "    public field X: i32" + Nl +
+                "    public static function operator -(a: Vec, b: Vec): Vec {" + Nl +
+                "        var r = new Vec()" + Nl +
+                "        r.X = a.X - b.X" + Nl +
+                "        return r" + Nl +
+                "    }" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var a = new Vec()" + Nl +
+                "    a.X = 10" + Nl +
+                "    var b = new Vec()" + Nl +
+                "    b.X = 3" + Nl +
+                "    a -= b" + Nl +
+                "    return a.X" + Nl +
+                "}", "OpCompoundSub");
+
+            Assert.Equal(7, result);
         }
 
         [Fact]
