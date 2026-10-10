@@ -845,36 +845,4 @@ namespace Cocoa.Metadata
             return dot < 0 ? fullName : fullName.Substring(dot + 1);
         }
     }
-
-    public sealed class AssemblyScope
-    {
-        public AssemblyScope(string assemblyName, Version version, byte[] publicKeyOrToken, string culture, uint flags)
-        {
-            AssemblyName = assemblyName;
-            Version = version;
-            PublicKeyOrToken = publicKeyOrToken;
-            Culture = culture;
-            Flags = flags;
-        }
-
-        public string AssemblyName { get; }
-        public Version Version { get; }
-        public byte[] PublicKeyOrToken { get; }
-        public string Culture { get; }
-        public uint Flags { get; }
-    }
-
-    public sealed class ResolvedMethodSignature
-    {
-        public ResolvedMethodSignature(IlType returnType, IReadOnlyList<IlType> parameterTypes, bool isStatic)
-        {
-            ReturnType = returnType;
-            ParameterTypes = parameterTypes;
-            IsStatic = isStatic;
-        }
-
-        public IlType ReturnType { get; }
-        public IReadOnlyList<IlType> ParameterTypes { get; }
-        public bool IsStatic { get; }
-    }
 }

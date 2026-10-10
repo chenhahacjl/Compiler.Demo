@@ -1,64 +1,8 @@
-using Cocoa.Metadata;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
-
-namespace Cocoa.Metadata
-{
-    /// <summary>从引用程序集解析出的方法信息（供 IlEmitter 构造 MemberRef）。</summary>
-    public sealed class ResolvedMethodInfo
-    {
-        public ResolvedMethodInfo(IlTypeRef declaringType, string name, IlType returnType, IReadOnlyList<IlType> parameterTypes, bool isStatic)
-        {
-            DeclaringType = declaringType;
-            Name = name;
-            ReturnType = returnType;
-            ParameterTypes = parameterTypes;
-            IsStatic = isStatic;
-        }
-
-        public IlTypeRef DeclaringType { get; }
-        public string Name { get; }
-        public IlType ReturnType { get; }
-        public IReadOnlyList<IlType> ParameterTypes { get; }
-        public bool IsStatic { get; }
-    }
-
-    /// <summary>外部类型的成员描述（字段/方法签名）。</summary>
-    public sealed class ResolvedTypeInfo
-    {
-        public ResolvedTypeInfo(string fullName, bool isInterface, List<ResolvedFieldInfo> fields, List<ResolvedMethodInfo> methods)
-        {
-            FullName = fullName;
-            IsInterface = isInterface;
-            Fields = fields;
-            Methods = methods;
-        }
-
-        public string FullName { get; }
-        public bool IsInterface { get; }
-        public List<ResolvedFieldInfo> Fields { get; }
-        public List<ResolvedMethodInfo> Methods { get; }
-    }
-
-    public sealed class ResolvedFieldInfo
-    {
-        public ResolvedFieldInfo(IlTypeRef declaringType, string name, IlType type, bool isPublic)
-        {
-            DeclaringType = declaringType;
-            Name = name;
-            Type = type;
-            IsPublic = isPublic;
-        }
-
-        public IlTypeRef DeclaringType { get; }
-        public string Name { get; }
-        public IlType Type { get; }
-        public bool IsPublic { get; }
-    }
-
-    /// <summary>
+using Cocoa.Metadata; using System; using System.Collections.Generic; using System.IO; using System.Text;  
+ 
+ namespace Cocoa.Metadata 
+ { 
+     /// <summary>
     /// ECMA-335 元数据读取器（最小子集）：解析 references 程序集，
     /// 按「类型 FullName + 方法名 + 参数类型名」查找方法，产出 IL 引用（IlTypeRef/IlAssemblyRef/签名类型）。
     /// </summary>
@@ -194,5 +138,5 @@ namespace Cocoa.Metadata
 
             return null;
         }
-    }
-}
+    } 
+ } 
