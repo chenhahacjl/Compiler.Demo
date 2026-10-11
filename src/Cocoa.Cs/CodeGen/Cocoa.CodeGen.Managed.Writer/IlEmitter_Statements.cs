@@ -680,7 +680,10 @@ namespace Cocoa.CodeGen.Managed.Writer
                     return;
 
                 default:
-                    throw new System.Exception($"Unexpected by-ref argument target {node.Expression.Kind}");
+                    // 契约（3.1）：目标分类（ByRefContract.ClassifyTarget）不在合法 lvalue 内 → 后端拒绝
+                    throw new System.Exception(
+                        $"Unexpected by-ref argument target {node.Expression.Kind} " +
+                        $"[contract={Cocoa.CodeAnalysis.Contracts.ByRefContract.ClassifyTarget(node.Expression)}]");
             }
         }
 

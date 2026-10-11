@@ -89,7 +89,7 @@ namespace Cocoa.CodeAnalysis.Binding
         private BoundStatement BindBlockStatement(BlockStatementSyntax syntax)
         {
             var statements = ImmutableArray.CreateBuilder<BoundStatement>();
-            _scope = new BoundScope(_scope);
+            _scopeStack.Push();
 
             var usingVariables = new List<(VariableSymbol variable, BoundExpression initializer)>();
 
@@ -108,7 +108,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            _scope = _scope.Parent!;
+            _scopeStack.Pop();
 
             var block = new BoundBlockStatement(syntax, statements.ToImmutable());
 
@@ -208,7 +208,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundStatement BindUsingStatement(UsingStatementSyntax syntax)
         {
-            _scope = new BoundScope(_scope);
+            _scopeStack.Push();
 
             // Bind resource declaration
             var resource = BindStatement(syntax.Resource);
@@ -223,7 +223,7 @@ namespace Cocoa.CodeAnalysis.Binding
             // Bind body
             var bodyBlock = BindBlockStatement(syntax.Body);
 
-            _scope = _scope.Parent!;
+            _scopeStack.Pop();
 
             // Collect using variable for try/finally lowering
             var usingVariables = new List<(VariableSymbol variable, BoundExpression initializer)>();
@@ -342,22 +342,10 @@ namespace Cocoa.CodeAnalysis.Binding
         private BoundStatement BindCheckedStatement(CheckedStatementSyntax syntax)
         {
             // 算术溢出语义在发射期决定（IL 选 add.ovf 等），绑定期只把上下文标记随树带下去。
-            // 栈式记录嵌套：内层 checked/unchecked 覆盖外层（C# 同）。
             var isChecked = syntax.Keyword.Kind == CoreSyntax.SyntaxKind.CheckedKeyword;
-            _checkedStack.Push(isChecked);
-            try
-            {
-                var body = BindStatement(syntax.Body);
-                return new BoundCheckedStatement(syntax, body, isChecked);
-            }
-            finally
-            {
-                _checkedStack.Pop();
-            }
+            var body = BindStatement(syntax.Body);
+            return new BoundCheckedStatement(syntax, body, isChecked);
         }
-
-        /// <summary>当前是否处于 checked 溢出检查上下文（最近的 checked/unchecked 声明为 checked 时）。</summary>
-        private bool IsCheckedContext => _checkedStack.Count > 0 && _checkedStack.Peek();
 
         private BoundStatement BindYieldReturnStatement(YieldReturnStatementSyntax syntax)
         {
@@ -578,7 +566,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundStatement BindForStatement(ForStatementSyntax syntax)
         {
-            _scope = new BoundScope(_scope);
+            _scopeStack.Push();
 
             var initStatements = ImmutableArray.CreateBuilder<BoundStatement>();
             if (syntax.InitDeclaration != null)
@@ -600,7 +588,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 incrementorExpressions.Add(BindExpression(incrementor));
             }
 
-            _scope = _scope.Parent!;
+            _scopeStack.Pop();
 
             // C 风格 for 在绑定期脱糖为既有的纯循环节点：
             // {
@@ -682,7 +670,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 step = new BoundLiteralExpression(syntax.LowerBound, -1);
             }
 
-            _scope = new BoundScope(_scope);
+            _scopeStack.Push();
 
             VariableSymbol variable;
 
@@ -721,7 +709,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             var body = BindLoopBody(syntax.Body, out var breakLabel, out var continueLabel);
 
-            _scope = _scope.Parent!;
+            _scopeStack.Pop();
 
             return new BoundForRangeStatement(syntax, variable, lowerBound, upperBound, step, body, breakLabel, continueLabel);
         }
@@ -767,7 +755,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 _diagnostics.ReportError(syntax.Collection.Location, $"foreach 只能遍历数组、字符串或实现 IEnumerable<T> 的集合，不能遍历 '{collection.Type}'。");
             }
 
-            _scope = new BoundScope(_scope);
+            _scopeStack.Push();
 
             // 隐藏计数器 __i（唯一名，用户不可见）
             _labelCounter++;
@@ -789,16 +777,16 @@ namespace Cocoa.CodeAnalysis.Binding
             var loopBody = ImmutableArray.CreateBuilder<BoundStatement>();
 
             // 内层作用域：循环变量 x（只读，每迭代新建，C# 语义）
-            _scope = new BoundScope(_scope);
+            _scopeStack.Push();
             var loopVar = BindVariableDeclaration(syntax.Identifier, isReadOnly: true, elementType);
             var elementAccess = new BoundElementAccessExpression(syntax, elementType, collectionVar, BoundNodeFactory.Variable(syntax, counter));
             loopBody.Add(BoundNodeFactory.VariableDeclaration(syntax, loopVar, elementAccess));
 
-            _loopStack.Push((breakLabel, continueLabel));
+            _loopNestingStack.Push((breakLabel, continueLabel));
             loopBody.Add(BindStatement(syntax.Body));
-            _loopStack.Pop();
+            _loopNestingStack.Pop();
 
-            _scope = _scope.Parent!;
+            _scopeStack.Pop();
 
             loopBody.Add(BoundNodeFactory.Label(syntax, continueLabel));
             loopBody.Add(BoundNodeFactory.Increment(syntax, BoundNodeFactory.Variable(syntax, counter)));
@@ -815,7 +803,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var collectionInit = BoundNodeFactory.VariableDeclaration(syntax, collectionDecl, collection);
             var counterInit = BoundNodeFactory.VariableDeclaration(syntax, counter, BoundNodeFactory.Literal(syntax, 0));
 
-            _scope = _scope.Parent!;
+            _scopeStack.Pop();
 
             return BoundNodeFactory.Block(syntax, collectionInit, counterInit, whileStatement);
         }
@@ -885,7 +873,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             var elementType = currentProperty.Type;
 
-            _scope = new BoundScope(_scope);
+            _scopeStack.Push();
 
             // 隐藏枚举器变量 __enum
             var enumToken = new CoreSyntax.SyntaxToken(syntax.SyntaxTree, CoreSyntax.SyntaxKind.IdentifierToken, syntax.Keyword.Span.Start, $"__foreach_e{counter}", $"__foreach_e{counter}", ImmutableArray<CoreSyntax.SyntaxTrivia>.Empty, ImmutableArray<CoreSyntax.SyntaxTrivia>.Empty);
@@ -903,18 +891,18 @@ namespace Cocoa.CodeAnalysis.Binding
             var enumeratorInit = BoundNodeFactory.VariableDeclaration(syntax, enumeratorDecl, getEnumeratorCall);
 
             // 内层作用域：循环变量 x（只读，每迭代新建，C# 语义）
-            _scope = new BoundScope(_scope);
+            _scopeStack.Push();
             var loopVar = BindVariableDeclaration(syntax.Identifier, isReadOnly: true, elementType);
 
             var loopBody = ImmutableArray.CreateBuilder<BoundStatement>();
             var currentRead = new BoundMemberCallExpression(syntax, enumVariable, "Current", ImmutableArray<BoundExpression>.Empty, elementType, currentProperty.Getter);
             loopBody.Add(BoundNodeFactory.VariableDeclaration(syntax, loopVar, currentRead));
 
-            _loopStack.Push((breakLabel, continueLabel));
+            _loopNestingStack.Push((breakLabel, continueLabel));
             loopBody.Add(BindStatement(syntax.Body));
-            _loopStack.Pop();
+            _loopNestingStack.Pop();
 
-            _scope = _scope.Parent!;
+            _scopeStack.Pop();
 
             // 条件：__enum.MoveNext()
             var condition = new BoundMemberCallExpression(syntax, enumVariable, "MoveNext", ImmutableArray<BoundExpression>.Empty, TypeSymbol.Boolean, moveNextMethod);
@@ -922,7 +910,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var whileStatement = BoundNodeFactory.While(syntax, condition,
                 new BoundBlockStatement(syntax, loopBody.ToImmutable()), breakLabel, whileContinueLabel);
 
-            _scope = _scope.Parent!;
+            _scopeStack.Pop();
 
             return BoundNodeFactory.Block(syntax, enumeratorInit, whileStatement);
         }
@@ -974,9 +962,9 @@ namespace Cocoa.CodeAnalysis.Binding
                     var defaultBodySyntax = defaultClause.Body;
                     ReportSwitchFallThrough(defaultBodySyntax);
 
-                    _loopStack.Push((switchEndLabel, null));
+                    _loopNestingStack.Push((switchEndLabel, null));
                     var defaultBody = BindStatement(defaultBodySyntax);
-                    _loopStack.Pop();
+                    _loopNestingStack.Pop();
 
                     conditions.Add(null);
                     bodies.Add(defaultBody);
@@ -1027,9 +1015,9 @@ namespace Cocoa.CodeAnalysis.Binding
                 var bodySyntax = caseClause.Body;
                 ReportSwitchFallThrough(bodySyntax);
 
-                _loopStack.Push((switchEndLabel, null));
+                _loopNestingStack.Push((switchEndLabel, null));
                 var body = BindStatement(bodySyntax);
-                _loopStack.Pop();
+                _loopNestingStack.Pop();
 
                 conditions.Add(condition);
                 bodies.Add(body);
@@ -1099,28 +1087,28 @@ namespace Cocoa.CodeAnalysis.Binding
             breakLabel = new BoundLabel($"break{_labelCounter}");
             continueLabel = new BoundLabel($"continue{_labelCounter}");
 
-            _loopStack.Push((breakLabel, continueLabel));
+            _loopNestingStack.Push((breakLabel, continueLabel));
             var boundBody = BindStatement(body);
-            _loopStack.Pop();
+            _loopNestingStack.Pop();
 
             return boundBody;
         }
 
         private BoundStatement BindBreakStatement(BreakStatementSyntax syntax)
         {
-            if (_loopStack.Count == 0)
+            if (_loopNestingStack.Count == 0)
             {
                 _diagnostics.ReportInvalidBreakOrContinue(syntax.Keyword.Location, syntax.Keyword.Text);
                 return BindErrorStatement(syntax);
             }
 
-            var breakLabel = _loopStack.Peek().BreakLabel;
+            var breakLabel = _loopNestingStack.Peek().BreakLabel;
             return new BoundGotoStatement(syntax, breakLabel);
         }
 
         private BoundStatement BindContinueStatement(ContinueStatementSyntax syntax)
         {
-            if (_loopStack.Count == 0)
+            if (_loopNestingStack.Count == 0)
             {
                 _diagnostics.ReportInvalidBreakOrContinue(syntax.Keyword.Location, syntax.Keyword.Text);
                 return BindErrorStatement(syntax);
@@ -1128,7 +1116,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             // switch 节压入 (switchEnd, null)：continue 需穿透 switch 到最近的循环（C# 语义）
             BoundLabel? continueLabel = null;
-            foreach (var entry in _loopStack)
+            foreach (var entry in _loopNestingStack)
             {
                 if (entry.ContinueLabel != null)
                 {
@@ -1239,10 +1227,10 @@ namespace Cocoa.CodeAnalysis.Binding
                     _diagnostics.ReportCatchTypeNotException(catchClause.Type!.Location, catchType);
                 }
 
-                _scope = new BoundScope(_scope);
+                _scopeStack.Push();
                 var variable = BindVariableDeclaration(catchClause.Identifier, isReadOnly: false, catchType);
                 var body = BindStatement(catchClause.Body);
-                _scope = _scope.Parent!;
+                _scopeStack.Pop();
 
                 catches.Add(new BoundCatchClause(variable, catchType, body));
             }

@@ -51,8 +51,12 @@ namespace Cocoa.CodeGen.Interpreter
                         EnsureStaticInit(entry.Function.ContainingClass);
                     }
 
-                    var environment = entry.Function.IsLambdaWithEnvironment ? entry.Receiver as ClosureEnvironment : null;
-                    result = InvokeFunction(entry.Function, entry.Function.IsLambdaWithEnvironment ? null : entry.Receiver, argumentValues, environment);
+                    // 契约（3.1）：lambda 环境函数的接收者即环境对象，调用时不作实例目标传参
+                    var environment = Cocoa.CodeAnalysis.Contracts.FunctionValueContract.ReceiverIsEnvironment(entry.Function)
+                        ? entry.Receiver as ClosureEnvironment : null;
+                    result = InvokeFunction(entry.Function,
+                        Cocoa.CodeAnalysis.Contracts.FunctionValueContract.ReceiverIsEnvironment(entry.Function) ? null : entry.Receiver,
+                        argumentValues, environment);
                 }
 
                 return result;
@@ -69,9 +73,12 @@ namespace Cocoa.CodeGen.Interpreter
             }
 
             var argumentValuesSingle = node.Arguments.Select(EvaluateExpression).ToArray();
-            var environmentSingle = functionValue.Function.IsLambdaWithEnvironment ? functionValue.Receiver as ClosureEnvironment : null;
+            var environmentSingle = Cocoa.CodeAnalysis.Contracts.FunctionValueContract.ReceiverIsEnvironment(functionValue.Function)
+                ? functionValue.Receiver as ClosureEnvironment : null;
 
-            return InvokeFunction(functionValue.Function, functionValue.Function.IsLambdaWithEnvironment ? null : functionValue.Receiver, argumentValuesSingle, environmentSingle);
+            return InvokeFunction(functionValue.Function,
+                Cocoa.CodeAnalysis.Contracts.FunctionValueContract.ReceiverIsEnvironment(functionValue.Function) ? null : functionValue.Receiver,
+                argumentValuesSingle, environmentSingle);
         }
 
         private object? EvaluateVariableExpression(BoundVariableExpression variable)

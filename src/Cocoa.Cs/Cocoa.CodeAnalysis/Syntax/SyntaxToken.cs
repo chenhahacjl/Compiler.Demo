@@ -56,9 +56,15 @@ namespace Cocoa.CodeAnalysis.Syntax
         /// <summary>红→绿：转为不可变 <see cref="GreenToken"/>，保留文本/值/前后 trivia。</summary>
         public override GreenNode ToGreen()
         {
-            var leading = LeadingTrivia.Select(t => new GreenTrivia(t.Kind, t.Text)).ToImmutableArray();
-            var trailing = TrailingTrivia.Select(t => new GreenTrivia(t.Kind, t.Text)).ToImmutableArray();
-            return new GreenToken(Kind, Text, Value, leading, trailing);
+            return ToGreen(new GreenNodeInterner());
+        }
+
+        /// <summary>红→绿（2.1 DAG 规范化）：token 经 intern 池去重（值相等 + trivia 结构引用相等）。</summary>
+        internal override GreenNode ToGreen(GreenNodeInterner interner)
+        {
+            var leading = interner.InternTriviaRange(LeadingTrivia.Select(t => new GreenTrivia(t.Kind, t.Text)));
+            var trailing = interner.InternTriviaRange(TrailingTrivia.Select(t => new GreenTrivia(t.Kind, t.Text)));
+            return interner.InternToken(Kind, Text, Value, leading, trailing);
         }
     }
 }

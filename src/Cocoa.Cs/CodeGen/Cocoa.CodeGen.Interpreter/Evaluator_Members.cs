@@ -504,7 +504,8 @@ namespace Cocoa.CodeGen.Interpreter
             _locals.Push(locals);
 
             // 6e-M22 C5：环境对象入栈——lambda 用调用方传递的实例；宿主函数新建（捕获参数随入参播种）
-            var usesEnvironment = existingEnvironment != null || function.CapturedVariables is { Count: > 0 };
+            // 契约（3.1）：捕获集非空 → 需环境对象（ClosureContract.RequiresEnvironment）。
+            var usesEnvironment = existingEnvironment != null || Cocoa.CodeAnalysis.Contracts.ClosureContract.RequiresEnvironment(function);
             if (usesEnvironment)
             {
                 _closureEnvironments.Push(existingEnvironment ?? CreateEnvironment(function, argumentValues));

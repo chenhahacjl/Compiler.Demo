@@ -24,66 +24,75 @@ namespace Cocoa.CodeAnalysis.Binding
         /// </summary>
         public static Func<string, bool>? SyscallCallbackResolver;
 
-        private readonly DiagnosticBag _diagnostics = new DiagnosticBag();
-        private readonly bool _isScript;
-        private readonly FunctionSymbol? _function;
-        private readonly NamedTypeSymbol? _currentClass;
-        private readonly string[] _references;
-        private readonly Func<string, TypeSymbol?> _builtinTypeResolver;
+        /// <summary>P5 步骤 1：绑定期只读上下文聚合（诊断/引用/using/内建解析/运算符/扩展方法/全局命名空间/cod 库/环境元组缓存）。</summary>
+        private readonly BindingContext _context;
 
-        private readonly List<string> _usingNamespaces = new List<string>();
-        private readonly List<string> _usingStatics = new List<string>();
-        private readonly Dictionary<string, string> _usingAliases = new Dictionary<string, string>();
-        private readonly ImmutableArray<CoaProgram> _codLibraries;
+        private DiagnosticBag _diagnostics => _context.Diagnostics;
+        private bool _isScript => _context.IsScript;
+        private string[] _references => _context.References;
+        private Func<string, TypeSymbol?> _builtinTypeResolver => _context.BuiltinTypeResolver;
+        private List<string> _usingNamespaces => _context.UsingNamespaces;
+        private List<string> _usingStatics => _context.UsingStatics;
+        private Dictionary<string, string> _usingAliases => _context.UsingAliases;
+        private ImmutableArray<CoaProgram> _codLibraries => _context.CodLibraries;
+        private ImmutableHashSet<string> _ambiguousCodTypeNames => _context.AmbiguousCodTypeNames;
+        private NamespaceSymbol? _globalNamespace => _context.GlobalNamespace;
+        internal OperatorRegistry _operators => _context.Operators;
+        private Dictionary<FunctionSymbol, NamedTypeSymbol> _environmentClasses => _context.EnvironmentClasses;
+        private Dictionary<string, NamedTypeSymbol> _tupleTypes => _context.TupleTypes;
+        private Dictionary<FunctionSymbol, BoundBlockStatement> _tupleCtorBodies => _context.TupleCtorBodies;
+        private HashSet<FunctionSymbol> _extensionMethods => _context.ExtensionMethods;
 
-        /// <summary>扩展方法索引：首参带 this 修饰的静态方法——绑定在 BindFunctionDeclaration 登记，成员调用失败时回退查找。</summary>
-        private readonly HashSet<FunctionSymbol> _extensionMethods = new HashSet<FunctionSymbol>();
+        /// <summary>P5 步骤 2：绑定主体上下文（当前函数/类/声明类/泛型参数/环境宿主/lambda 深度）。</summary>
+        private readonly BindingSubject _subject = new();
 
-        /// <summary>运算符重载索引：类方法签名绑定阶段登记，表达式体绑定阶段查询（内建运算符表未命中时回落）。
-        /// 实例由 <see cref="BoundGlobalScope.Operators"/> 持有并跨 binder 实例共享（声明遍与体绑遍不共用实例）。</summary>
-        internal readonly OperatorRegistry _operators;
+        private FunctionSymbol? _function => _subject.Function;
+        private NamedTypeSymbol? _currentClass => _subject.CurrentClass;
+        private NamedTypeSymbol? _bindingClass
+        {
+            get => _subject.BindingClass;
+            set => _subject.BindingClass = value;
+        }
 
-        /// <summary>checked/unchecked 嵌套栈（最近声明在栈顶）。绑定期仅供诊断，溢出语义由发射层读树上的
-        /// <see cref="BoundCheckedStatement"/> 决定。</summary>
-        private readonly Stack<bool> _checkedStack = new();
+        private ImmutableArray<TypeParameterSymbol> _declaringMethodTypeParameters
+        {
+            get => _subject.DeclaringMethodTypeParameters;
+            set => _subject.DeclaringMethodTypeParameters = value;
+        }
 
-        /// <summary>6f-3：跨用户库同名类型全名集（绑定侧缓存；非限定使用拒绝解析）。</summary>
-        private readonly ImmutableHashSet<string> _ambiguousCodTypeNames;
+        private FunctionSymbol? _environmentOwner
+        {
+            get => _subject.EnvironmentOwner;
+            set => _subject.EnvironmentOwner = value;
+        }
 
-        /// <summary>全局命名空间树（Phase 1-5：声明阶段后才可用——树由已完成的全局作用域构建）。
-        /// 仅在函数体绑定阶段注入；`FindDeclaredClassByFullName/Enum` 优先用它做全名/using 定位，
-        /// 未命中回退作用域链（树只索引全局静态声明，动态/单态化/委托类型等以回退兜底）。</summary>
-        private readonly NamespaceSymbol? _globalNamespace;
+        private int _lambdaBodyDepth
+        {
+            get => _subject.LambdaBodyDepth;
+            set => _subject.LambdaBodyDepth = value;
+        }
 
-        private Stack<(BoundLabel BreakLabel, BoundLabel? ContinueLabel)> _loopStack = new Stack<(BoundLabel BreakLabel, BoundLabel? ContinueLabel)>();
+        /// <summary>P5 步骤 2：作用域栈（当前作用域 + 推弹）。</summary>
+        private ScopeStack _scopeStack = null!;
+        private BoundScope _scope => _scopeStack.Current;
+
+        /// <summary>P5 步骤 2：泛型绑定上下文（Monomorphizer 类型实参名映射）。</summary>
+        private readonly GenericBindingContext _generic = new GenericBindingContext();
+        private Dictionary<string, TypeSymbol> _typeArgumentsByName => _generic.TypeArgumentsByName;
+
+        /// <summary>循环嵌套上下文栈（绑定期专用）：break/continue 合法性校验（空栈即非法）与目标标签解析。
+        /// 元素为绑定期脱糖（foreach→while / switch→if 链）生成的跳转目标：<see cref="BoundLoopStatement"/> 的
+        /// Break/Continue 标签在体绑定前即由 <see cref="_labelCounter"/> 生成并压栈；switch 压 (switchEnd, null)
+        /// 使 break 落到节末、continue 穿透到外层循环（C# 语义）。标签只在此处消费，不参与发射期分配。</summary>
+        private Stack<(BoundLabel BreakLabel, BoundLabel? ContinueLabel)> _loopNestingStack = new Stack<(BoundLabel BreakLabel, BoundLabel? ContinueLabel)>();
+
+        /// <summary>绑定期脱糖合成名序号：为 foreach/switch/事件脱糖生成的隐藏局部（__foreach_*/__switch_v/__evt*）
+        /// 与循环/节标签（break/continue/switchend）提供唯一后缀。属绑定语义状态（标签在绑定期间即解析为
+        /// BoundGotoStatement，且合成局部名在树内被多处引用），非纯降级期状态，故不迁 Lowerer。</summary>
         private int _labelCounter;
-        private BoundScope _scope;
-
-        /// <summary>
-        /// 类型实参名映射（6e-M20 单态化）：Monomorphizer 以实例化方法为容器重绑泛型定义语法时，
-        /// 把类型参数名（T/U…）解析到具体实参。
-        /// </summary>
-        private readonly Dictionary<string, TypeSymbol> _typeArgumentsByName = new Dictionary<string, TypeSymbol>();
-
-        /// <summary>类/接口声明绑定上下文（6e-M20）：成员签名/基类/约束解析期间的类型参数来源。</summary>
-        private NamedTypeSymbol? _bindingClass;
-
-        /// <summary>泛型方法签名绑定上下文（6e-M20）：BindFunctionDeclaration / 类方法 / 接口成员签名期间的 T 解析。</summary>
-        private ImmutableArray<TypeParameterSymbol> _declaringMethodTypeParameters = ImmutableArray<TypeParameterSymbol>.Empty;
 
         /// <summary>lambda 提升全局序号（6e-M22 C4）：进程内单调，保证合成名 `__Lambda$N` 唯一。</summary>
         private static int _lambdaGlobalSequence;
-
-        /// <summary>环境对象宿主函数（6e-M22 C5）：当前绑定上下文的捕获变量承载者；lambda 继承最外层非 lambda 函数。</summary>
-        private FunctionSymbol? _environmentOwner;
-
-        /// <summary>环境类缓存（6e-M22 C5）：每宿主函数一个合成 `__Env_&lt;fn&gt;` 类。</summary>
-        private readonly Dictionary<FunctionSymbol, NamedTypeSymbol> _environmentClasses = new();
-        private readonly Dictionary<string, NamedTypeSymbol> _tupleTypes = new();
-        private readonly Dictionary<FunctionSymbol, BoundBlockStatement> _tupleCtorBodies = new();
-
-        /// <summary>lambda 体绑定深度（6e-M22 C5）：>0 时返回语句按推断语义处理（不套外层签名转换）。</summary>
-        private int _lambdaBodyDepth;
 
         private bool IsBindingLambdaBody() => _lambdaBodyDepth > 0;
 
@@ -92,28 +101,20 @@ namespace Cocoa.CodeAnalysis.Binding
 
         internal CocoaBinder(bool isScript, BoundScope? parent, FunctionSymbol? function, ImmutableArray<string> references, ImmutableArray<string> usingNamespaces, Func<string, TypeSymbol?> builtinTypeResolver, ImmutableArray<string> usingStatics = default, ImmutableDictionary<string, string> usingAliases = null!, ImmutableArray<CoaProgram> codLibraries = default, NamespaceSymbol? globalNamespace = null, OperatorRegistry? operators = null)
         {
-            _scope = new BoundScope(parent);
-            _isScript = isScript;
-            _function = function;
-            _currentClass = function?.ContainingClass;
-            _references = references.ToArray();
-            _builtinTypeResolver = builtinTypeResolver;
-            _codLibraries = codLibraries.IsDefault ? ImmutableArray<CoaProgram>.Empty : codLibraries;
-            _ambiguousCodTypeNames = ComputeAmbiguousCodTypeNames(_codLibraries);
-            _globalNamespace = globalNamespace;
-            _operators = operators ?? new OperatorRegistry();
-            _usingNamespaces.AddRange(usingNamespaces);
-            if (!usingStatics.IsDefaultOrEmpty)
-            {
-                _usingStatics.AddRange(usingStatics);
-            }
-            if (usingAliases != null)
-            {
-                foreach (var (alias, target) in usingAliases)
-                {
-                    _usingAliases[alias] = target;
-                }
-            }
+            _scopeStack = ScopeStack.Create(parent);
+            _subject.Function = function;
+            _subject.CurrentClass = function?.ContainingClass;
+            _context = new BindingContext(
+                isScript,
+                references.ToArray(),
+                builtinTypeResolver,
+                usingNamespaces,
+                usingStatics,
+                usingAliases,
+                codLibraries,
+                globalNamespace,
+                operators ?? new OperatorRegistry(),
+                new DiagnosticBag());
 
             if (function != null)
             {
@@ -803,11 +804,12 @@ namespace Cocoa.CodeAnalysis.Binding
 
             var loweredBody = LoweringPipeline.Lower(function, rawBody, binder._diagnostics, returnCheckLocation);
 
-            // 明确赋值分析（6e-M23 R4）：跟踪本函数 out 形参
-            DefiniteAssignmentAnalysis.Analyze(
+            // 明确赋值分析（6e-M23 R4）：跟踪本函数 out 形参——独立 Flow Analysis pass（3.3），
+            // 输入 MIR、输出诊断数组，不持有 Binder 状态。
+            var flowDiagnostics = Cocoa.CodeAnalysis.FlowAnalysis.FlowAnalysis.Run(
                 loweredBody,
-                function.Parameters.Where(p => p.IsOut).ToImmutableArray(),
-                binder._diagnostics);
+                function.Parameters.Where(p => p.IsOut).ToImmutableArray());
+            binder._diagnostics.AddRange(flowDiagnostics);
 
             return (rawBody, loweredBody, binder.Diagnostics.ToImmutableArray(), binder._tupleCtorBodies.ToImmutableDictionary());
         }

@@ -16,14 +16,15 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
 {
     /// <summary>
     /// .coa 读端协调器（源 <c>CoaSerializer</c> 的读侧收敛为实例类）：
-    /// 持有 token 读取器 + 读上下文 + 类型解析器（<see cref="CoaTextReader"/>/<see cref="CoaReadContext"/>/<see cref="CoaTypeResolver"/>），
-    /// 所有 Read* 为实例方法，递归不再显式传上下文。
+    /// 持有 token 读取器 + 读上下文 + 类型编解码 + 符号解析（<see cref="CoaTextReader"/>/<see cref="CoaReadContext"/>/
+    /// <see cref="CoaTypeCodec"/>/<see cref="CoaSymbolResolver"/>），所有 Read* 为实例方法，递归不再显式传上下文。
     /// </summary>
     internal sealed partial class CoaFormatReader
     {
         private readonly CoaTextReader _tokens;
         private readonly CoaReadContext _context;
-        private readonly CoaTypeResolver _resolver;
+        private readonly CoaTypeCodec _typeCodec;
+        private readonly CoaSymbolResolver _symbolResolver;
 
         /// <summary>.coa 反序列化不携带语法节点（设计如此，见类头注释）；nullable 单点豁免。</summary>
         private static SyntaxNode NoSyntax => null!;
@@ -32,7 +33,8 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
         {
             _tokens = new CoaTextReader(tokens);
             _context = new CoaReadContext(moduleName, external);
-            _resolver = new CoaTypeResolver(_context);
+            _typeCodec = new CoaTypeCodec(_context);
+            _symbolResolver = new CoaSymbolResolver(_context);
         }
 
         /// <summary>读 `.coa` 文本（兼容入口：无库名/无 external，跨库符号解析留空）。</summary>
@@ -289,7 +291,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
         {
             _tokens.Expect("uop");
             var unaryKind = CoaText.ParseUnaryOpText(_tokens.ExpectString());
-            var operandType = _resolver.ResolveTypeRef(_tokens.ExpectString());
+            var operandType = _typeCodec.ResolveTypeRef(_tokens.ExpectString());
             var op = BoundUnaryOperator.Bind(unaryKind, operandType);
             _tokens.End();
             return op ?? throw new InvalidDataException($"Cannot bind unary operator {unaryKind} on {operandType}");
@@ -299,8 +301,8 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
         {
             _tokens.Expect("bop");
             var binaryKind = CoaText.ParseBinaryOpText(_tokens.ExpectString());
-            var leftType = _resolver.ResolveTypeRef(_tokens.ExpectString());
-            var rightType = _resolver.ResolveTypeRef(_tokens.ExpectString());
+            var leftType = _typeCodec.ResolveTypeRef(_tokens.ExpectString());
+            var rightType = _typeCodec.ResolveTypeRef(_tokens.ExpectString());
             var op = BoundBinaryOperator.Bind(binaryKind, leftType, rightType);
             _tokens.End();
             return op ?? throw new InvalidDataException($"Cannot bind binary operator {binaryKind} on {leftType} and {rightType}");

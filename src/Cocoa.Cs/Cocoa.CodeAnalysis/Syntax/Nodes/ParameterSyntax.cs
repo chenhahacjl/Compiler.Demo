@@ -39,26 +39,32 @@ namespace Cocoa.CodeAnalysis.Syntax
         /// <summary>红→绿源序化（P0）：`[out|ref] 名称: 类型` 的源码顺序，保证 `GreenRoot.ToString() == 源码`。</summary>
         public override GreenNode ToGreen()
         {
+            return ToGreen(new GreenNodeInterner());
+        }
+
+        /// <summary>红→绿（2.1 DAG 规范化）：参数槽序与 <see cref="ToGreen()"/> 一致，经 intern 池规范化。</summary>
+        internal override GreenNode ToGreen(GreenNodeInterner interner)
+        {
             var slots = ImmutableArray.CreateBuilder<GreenNode?>();
 
             if (Modifier != null)
             {
-                slots.Add(Modifier.ToGreen());
+                slots.Add(Modifier.ToGreen(interner));
             }
 
-            slots.Add(Identifier.ToGreen());
-            slots.Add(Type.ToGreen());
+            slots.Add(Identifier.ToGreen(interner));
+            slots.Add(Type.ToGreen(interner));
 
             if (EqualsToken != null)
             {
-                slots.Add(EqualsToken.ToGreen());
+                slots.Add(EqualsToken.ToGreen(interner));
                 if (DefaultValue != null)
                 {
-                    slots.Add(DefaultValue.ToGreen());
+                    slots.Add(DefaultValue.ToGreen(interner));
                 }
             }
 
-            return new GreenNodeWithChildren((SyntaxKind)Kind, slots.ToImmutable());
+            return interner.InternNode((SyntaxKind)Kind, slots.ToImmutable());
         }
 
         public override IEnumerable<SyntaxNode> GetChildren()

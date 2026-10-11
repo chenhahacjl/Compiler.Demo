@@ -89,7 +89,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
             var constraints = ImmutableArray.CreateBuilder<TypeSymbol>(constraintCount);
             for (var c = 0; c < constraintCount; c++)
             {
-                constraints.Add(_resolver.ResolveTypeRef(_tokens.ExpectString()));
+                constraints.Add(_typeCodec.ResolveTypeRef(_tokens.ExpectString()));
             }
 
             parameter.ConstraintTypes = constraints.ToImmutable();
@@ -182,7 +182,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                     paramsText = "";
                 }
 
-                var returnType = _resolver.ResolveTypeRef(retText);
+                var returnType = _typeCodec.ResolveTypeRef(retText);
                 var parameters = ImmutableArray.CreateBuilder<ParameterSymbol>();
                 if (paramsText.Length > 0)
                 {
@@ -193,7 +193,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                         var isRef = raw.StartsWith("ref:", StringComparison.Ordinal);
                         var isNone = raw.StartsWith("-", StringComparison.Ordinal);
                         var typeText = isOut ? raw.Substring(4) : isRef ? raw.Substring(4) : isNone ? raw.Substring(1) : raw;
-                        parameters.Add(new ParameterSymbol("p" + ordinal, _resolver.ResolveTypeRef(typeText), ordinal, isOut, isRef, isThis: false));
+                        parameters.Add(new ParameterSymbol("p" + ordinal, _typeCodec.ResolveTypeRef(typeText), ordinal, isOut, isRef, isThis: false));
                         ordinal++;
                     }
                 }
@@ -266,7 +266,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                     return new BoundNopStatement(NoSyntax);
                 case "vardecl":
                     {
-                        var variable = _resolver.ResolveVariable(_tokens.ExpectString());
+                        var variable = _symbolResolver.ResolveVariable(_tokens.ExpectString());
                         var initializer = ReadExpression(labels);
                         return new BoundVariableDeclaration(NoSyntax, variable, initializer);
                     }
@@ -295,7 +295,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                     }
                 case "for":
                     {
-                        var variable = _resolver.ResolveVariable(_tokens.ExpectString());
+                        var variable = _symbolResolver.ResolveVariable(_tokens.ExpectString());
                         var lowerBound = ReadExpression(labels);
                         var upperBound = ReadExpression(labels);
                         var step = ReadNullableExpression(labels);
@@ -368,25 +368,25 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
             {
                 case "lit":
                     {
-                        var type = _resolver.ResolveTypeRef(_tokens.ExpectString());
+                        var type = _typeCodec.ResolveTypeRef(_tokens.ExpectString());
                         var encoded = _tokens.ExpectString();
                         var value = CoaText.DecodeValue(encoded);
                         return new BoundLiteralExpression(NoSyntax, value, type);
                     }
                 case "var":
                     {
-                        var variable = _resolver.ResolveVariable(_tokens.ExpectString());
+                        var variable = _symbolResolver.ResolveVariable(_tokens.ExpectString());
                         return new BoundVariableExpression(NoSyntax, variable);
                     }
                 case "assign":
                     {
-                        var variable = _resolver.ResolveVariable(_tokens.ExpectString());
+                        var variable = _symbolResolver.ResolveVariable(_tokens.ExpectString());
                         var expression = ReadExpression(labels);
                         return new BoundAssignmentExpression(NoSyntax, variable, expression);
                     }
                 case "cassign":
                     {
-                        var variable = _resolver.ResolveVariable(_tokens.ExpectString());
+                        var variable = _symbolResolver.ResolveVariable(_tokens.ExpectString());
                         var op = ReadBinaryOperator();
                         var expression = ReadExpression(labels);
                         return new BoundCompoundAssignmentExpression(NoSyntax, variable, op, expression);
@@ -413,7 +413,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                     }
                 case "call":
                     {
-                        var function = _resolver.ResolveFunction(_tokens.ExpectString());
+                        var function = _symbolResolver.ResolveFunction(_tokens.ExpectString());
                         var count = _tokens.ExpectInt();
                         var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
                         for (var i = 0; i < count; i++)
@@ -432,25 +432,25 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                     }
                 case "conv":
                     {
-                        var type = _resolver.ResolveTypeRef(_tokens.ExpectString());
+                        var type = _typeCodec.ResolveTypeRef(_tokens.ExpectString());
                         var expression = ReadExpression(labels);
                         return new BoundConversionExpression(NoSyntax, type, expression);
                     }
                 case "istype":
                     {
-                        var targetType = _resolver.ResolveTypeRef(_tokens.ExpectString());
+                        var targetType = _typeCodec.ResolveTypeRef(_tokens.ExpectString());
                         var expression = ReadExpression(labels);
                         return new BoundIsExpression(NoSyntax, expression, targetType);
                     }
                 case "astype":
                     {
-                        var targetType = _resolver.ResolveTypeRef(_tokens.ExpectString());
+                        var targetType = _typeCodec.ResolveTypeRef(_tokens.ExpectString());
                         var expression = ReadExpression(labels);
                         return new BoundAsExpression(NoSyntax, expression, targetType);
                     }
                 case "arrnew":
                     {
-                        var type = _resolver.ResolveTypeRef(_tokens.ExpectString());
+                        var type = _typeCodec.ResolveTypeRef(_tokens.ExpectString());
                         var length = ReadExpression(labels);
                         var count = _tokens.ExpectInt();
                         var initializers = ImmutableArray.CreateBuilder<BoundExpression>();
@@ -463,7 +463,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                     }
                 case "objnew":
                     {
-                        var type = (NamedTypeSymbol)_resolver.ResolveTypeRef(_tokens.ExpectString());
+                        var type = (NamedTypeSymbol)_typeCodec.ResolveTypeRef(_tokens.ExpectString());
                         var argCount = _tokens.ExpectInt();
                         var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
                         for (var i = 0; i < argCount; i++)
@@ -475,21 +475,21 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                     }
                 case "elem":
                     {
-                        var type = _resolver.ResolveTypeRef(_tokens.ExpectString());
+                        var type = _typeCodec.ResolveTypeRef(_tokens.ExpectString());
                         var target = ReadExpression(labels);
                         var index = ReadExpression(labels);
                         return new BoundElementAccessExpression(NoSyntax, type, target, index);
                     }
                 case "elemassign":
                     {
-                        var type = _resolver.ResolveTypeRef(_tokens.ExpectString());
+                        var type = _typeCodec.ResolveTypeRef(_tokens.ExpectString());
                         var target = (BoundElementAccessExpression)ReadExpression(labels);
                         var expression = ReadExpression(labels);
                         return new BoundElementAssignmentExpression(NoSyntax, type, target, expression);
                     }
                 case "memberacc":
                     {
-                        var type = _resolver.ResolveTypeRef(_tokens.ExpectString());
+                        var type = _typeCodec.ResolveTypeRef(_tokens.ExpectString());
                         var identifier = CoaText.Unescape(_tokens.ExpectString());
 
                         // 6e-G7 S2：owner 字段可选携带——回填 FieldSymbol（实例化类型的 Fields 经物化钩子可达）
@@ -498,7 +498,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                         if (hasOwner)
                         {
                             var ownerFullName = _tokens.ReadLabeledField("owner:");
-                            if (_resolver.ResolveNamedType(ownerFullName) is NamedTypeSymbol ownerClass)
+                            if (_typeCodec.ResolveNamedType(ownerFullName) is NamedTypeSymbol ownerClass)
                             {
                                 field = ownerClass.Fields.FirstOrDefault(f => f.Name == identifier);
                             }
@@ -512,7 +512,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                         // 6e-G7 S2：字段赋值读回——Field 按 target 形态 + 名字解析
                         var target = ReadExpression(labels);
                         var fieldName = CoaText.Unescape(_tokens.ReadLabeledField("name:"));
-                        _ = _resolver.ResolveTypeRef(_tokens.ExpectString());
+                        _ = _typeCodec.ResolveTypeRef(_tokens.ExpectString());
                         _ = _tokens.ParseBoolWord(_tokens.ExpectString());
                         var value = ReadExpression(labels);
 
@@ -536,10 +536,10 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                     }
                 case "membercall":
                     {
-                        var type = _resolver.ResolveTypeRef(_tokens.ExpectString());
+                        var type = _typeCodec.ResolveTypeRef(_tokens.ExpectString());
                         var identifier = CoaText.Unescape(_tokens.ExpectString());
                         var methodToken = _tokens.ExpectString();
-                        var method = methodToken == "-" ? null : _resolver.ResolveFunction(methodToken);
+                        var method = methodToken == "-" ? null : _symbolResolver.ResolveFunction(methodToken);
                         var count = _tokens.ExpectInt();
                         var target = ReadExpression(labels);
                         var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
@@ -552,14 +552,14 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                     }
                 case "statictype":
                     {
-                        var type = (NamedTypeSymbol)_resolver.ResolveTypeRef(_tokens.ExpectString());
+                        var type = (NamedTypeSymbol)_typeCodec.ResolveTypeRef(_tokens.ExpectString());
                         return new BoundStaticTypeExpression(NoSyntax, type);
                     }
                 case "ctorchain":
                     {
                         var kindText = _tokens.ExpectString();
                         var constructorKey = _tokens.ExpectString();
-                        FunctionSymbol? constructor = constructorKey == "-" ? null : _resolver.ResolveFunction(constructorKey);
+                        FunctionSymbol? constructor = constructorKey == "-" ? null : _symbolResolver.ResolveFunction(constructorKey);
                         var count = _tokens.ExpectInt();
                         var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
                         for (var i = 0; i < count; i++)
@@ -572,25 +572,25 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                     }
                 case "this":
                     {
-                        var type = (NamedTypeSymbol)_resolver.ResolveTypeRef(_tokens.ExpectString());
+                        var type = (NamedTypeSymbol)_typeCodec.ResolveTypeRef(_tokens.ExpectString());
                         return new BoundThisExpression(NoSyntax, type);
                     }
                 case "fnval":
                     {
                         // Step D-a：函数值/捕获闭包入口——类型 + FnKey + 可选接收者 + 可选闭包环境类
-                        var fnType = (FunctionTypeSymbol)_resolver.ResolveTypeRef(_tokens.ExpectString());
-                        var function = _resolver.ResolveFunction(_tokens.ExpectString());
+                        var fnType = (FunctionTypeSymbol)_typeCodec.ResolveTypeRef(_tokens.ExpectString());
+                        var function = _symbolResolver.ResolveFunction(_tokens.ExpectString());
                         var receiver = ReadNullableExpression(labels);
                         var envToken = _tokens.ExpectString();
                         var environmentClass = envToken == "-"
                             ? null
-                            : _resolver.ResolveNamedType(envToken) as NamedTypeSymbol;
+                            : _typeCodec.ResolveNamedType(envToken) as NamedTypeSymbol;
 
                         return new BoundFunctionValueExpression(NoSyntax, function, receiver, body: null, fnType, environmentClass);
                     }
                 case "invoc":
                     {
-                        var ivType = _resolver.ResolveTypeRef(_tokens.ExpectString());
+                        var ivType = _typeCodec.ResolveTypeRef(_tokens.ExpectString());
                         var count = _tokens.ExpectInt();
                         var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
                         var callee = ReadExpression(labels);

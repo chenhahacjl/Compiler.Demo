@@ -77,10 +77,11 @@ namespace Cocoa.CodeGen.Native
 
             // 声明模式（`expr is T var`）值类型 / string 目标：native `any` 无装箱运行时类型信息（值类型裸传、string 非 vtable 类），
             // 走 EmitTypeChainCompare 会误读内存——编译期明确拒绝（Evaluator/IL 已支持）。
+            // 契约（3.1）：需装箱运行时类型信息的目标（PatternMatchContract.NeedsRuntimeTypeInfo）native 不支持声明模式。
             if (node.Kind == BoundNodeKind.DeclarationPattern && node.Syntax != null)
             {
                 var patternType = ((BoundDeclarationPattern)node).TargetType;
-                if (patternType == TypeSymbol.String || patternType.IsValueType)
+                if (Cocoa.CodeAnalysis.Contracts.PatternMatchContract.NeedsRuntimeTypeInfo(patternType))
                 {
                     var patternLocation = node.Syntax?.Location ?? _fallbackLocation;
                     _diagnostics.ReportError(patternLocation, "native 后端暂不支持 string/值类型的声明模式（`expr is T var`，需装箱运行时类型信息）；请改用类/接口目标。");

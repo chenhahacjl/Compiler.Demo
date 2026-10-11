@@ -7,11 +7,12 @@ using Cocoa.CodeAnalysis.Text;
 
 namespace Cocoa.CodeGen.Interpreter
 {
-    /// <summary>M7 解释器调试会话：复用 <see cref="Evaluator"/>，经语句边界钩子实现断点/单步；
-    /// 与 <see cref="Evaluator"/> 同程序集，无需扩 <c>InternalsVisibleTo</c>。</summary>
-    public sealed class DebuggerSession
+    /// <summary>M7 解释器调试会话：实现 <see cref="IExecutionHook"/> 经语句边界钩子实现断点/单步。
+    /// 3.5 解耦：仅经 <see cref="IExecutionHost"/>（求值器只读视图）与 <see cref="ExecutionSnapshot"/> 访问状态，
+    /// 不引用 <see cref="Evaluator"/> 任何 internal 成员。</summary>
+    public sealed class DebuggerSession : IExecutionHook
     {
-        private readonly Evaluator _evaluator;
+        private readonly IExecutionHost _evaluator;
         private readonly string[]? _args;
         private readonly HashSet<BreakpointKey> _breakpoints = new();
 
@@ -36,7 +37,7 @@ namespace Cocoa.CodeGen.Interpreter
         {
             _evaluator = new Evaluator(program, new Dictionary<VariableSymbol, object>());
             _args = args;
-            _evaluator.StatementBoundaryHook = OnStatementBoundary;
+            _evaluator.ExecutionHook = this;
         }
 
         /// <summary>用已绑定的编译创建调试会话（编译错误时抛出）。</summary>
@@ -98,7 +99,7 @@ namespace Cocoa.CodeGen.Interpreter
         public void StepOver()
         {
             _stepMode = StepMode.Over;
-            _stepStartDepth = _evaluator.Frames.Count;
+            _stepStartDepth = _evaluator.BuildSnapshot().FrameCount;
             Resume();
         }
 
@@ -111,7 +112,7 @@ namespace Cocoa.CodeGen.Interpreter
         public void StepOut()
         {
             _stepMode = StepMode.Out;
-            _stepStartDepth = _evaluator.Frames.Count;
+            _stepStartDepth = _evaluator.BuildSnapshot().FrameCount;
             Resume();
         }
 
@@ -127,22 +128,21 @@ namespace Cocoa.CodeGen.Interpreter
         {
             get
             {
-                var frames = _evaluator.Frames;
+                var frames = _evaluator.BuildSnapshot().CallStack;
                 var list = new List<StackFrame>(frames.Count);
                 for (var i = 0; i < frames.Count; i++)
                 {
                     var frame = frames[i];
-                    string? file = frame.Function.Declaration?.Location.FileName;
-                    var line = frame.Function.Declaration is { } d ? d.Location.StartLine + 1 : 0;
-
                     if (i == 0 && _lastPause is { } last)
                     {
-                        file = last.File;
-                        line = last.Line;
+                        list.Add(new StackFrame(frame.Function, last.File, last.Line, frame.Locals));
                     }
-
-                    list.Add(new StackFrame(frame.Function.Name, file, line, SnapshotLocals(frame, includeGlobals: i == 0)));
+                    else
+                    {
+                        list.Add(frame);
+                    }
                 }
+
                 return list;
             }
         }
@@ -152,8 +152,8 @@ namespace Cocoa.CodeGen.Interpreter
         {
             get
             {
-                var frames = _evaluator.Frames;
-                return frames.Count > 0 ? SnapshotLocals(frames[0], includeGlobals: true) : null;
+                var snapshot = _evaluator.BuildSnapshot();
+                return snapshot.CallStack.Count > 0 ? snapshot.TopLocals : null;
             }
         }
 
@@ -174,7 +174,7 @@ namespace Cocoa.CodeGen.Interpreter
         {
             try
             {
-                ReturnValue = _args == null ? _evaluator.Evaluate() : _evaluator.Evaluate(_args);
+                ReturnValue = _args == null ? _evaluator.Evaluate(null) : _evaluator.Evaluate(_args);
             }
             catch (DebuggerStopException)
             {
@@ -192,7 +192,13 @@ namespace Cocoa.CodeGen.Interpreter
             }
         }
 
-        private void OnStatementBoundary(BoundStatement statement, TextLocation? location, bool isSequencePoint)
+        /// <summary>IExecutionHook（3.5）：函数进入（当前实现无额外动作，供未来探查/采样）。</summary>
+        public void OnFunctionEnter(FunctionSymbol function)
+        {
+        }
+
+        /// <summary>IExecutionHook（3.5）：语句边界——断点/单步裁决。</summary>
+        public void OnStatementBoundary(BoundStatement statement, TextLocation? location, bool isSequencePoint, int frameCount, Func<ExecutionSnapshot> snapshotFactory)
         {
             if (_stopRequested)
                 throw new DebuggerStopException();
@@ -227,7 +233,7 @@ namespace Cocoa.CodeGen.Interpreter
 
             if (!shouldPause)
             {
-                var depth = _evaluator.Frames.Count;
+                var depth = frameCount;
                 switch (_stepMode)
                 {
                     case StepMode.Into when !IsSameAsLastPause(file, line):
@@ -248,6 +254,11 @@ namespace Cocoa.CodeGen.Interpreter
             if (!shouldPause) return;
 
             Pause(reason, file, line);
+        }
+
+        /// <summary>IExecutionHook（3.5）：函数退出（当前实现无额外动作）。</summary>
+        public void OnFunctionExit(FunctionSymbol function)
+        {
         }
 
         private void Pause(DebugPauseReason reason, string file, int line)
@@ -273,23 +284,6 @@ namespace Cocoa.CodeGen.Interpreter
             => _lastPause is { } last
                && last.Line == line
                && string.Equals(last.File, file, StringComparison.OrdinalIgnoreCase);
-
-        private IReadOnlyList<LocalVariable> SnapshotLocals(DebugFrame frame, bool includeGlobals)
-        {
-            var list = new List<LocalVariable>();
-            if (includeGlobals) AddLocals(list, _evaluator.Globals);
-            AddLocals(list, frame.Locals);
-            return list;
-        }
-
-        private static void AddLocals(List<LocalVariable> list, IReadOnlyDictionary<VariableSymbol, object> locals)
-        {
-            foreach (var kv in locals)
-            {
-                if (kv.Key.Name.StartsWith('<')) continue; // 编译器生成变量
-                list.Add(new LocalVariable(kv.Key.Name, kv.Value?.GetType().Name, kv.Value));
-            }
-        }
 
         private static string Normalize(string path) => path.Replace('\\', '/');
 

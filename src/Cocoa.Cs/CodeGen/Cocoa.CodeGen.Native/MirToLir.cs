@@ -32,16 +32,13 @@ namespace Cocoa.CodeGen.Native
         private readonly LirProgram _irProgram;
 
         private readonly Dictionary<FunctionSymbol, LirFunction> _functionMap = new();
-        private readonly Dictionary<VariableSymbol, LirVirtualRegister> _variables = new();
-        private readonly Dictionary<BoundLabel, int> _labels = new();
+
+        /// <summary>4.2 试点：方法体构建状态协作对象（当前函数/变量槽/标签/this/闭包寄存器）。</summary>
+        private readonly LirFunctionBuilder _builder = new();
 
         /// <summary>6e-M22 C4-c：env-first 形态的提升 lambda 集合（参数区前置 8 字节环境槽）。</summary>
         private readonly Dictionary<FunctionSymbol, LirFunction> _staticThunks = new();
         private readonly HashSet<FunctionSymbol> _environmentFirstFunctions = new();
-
-        /// <summary>6e-M22 C5：当前函数的环境对象寄存器与布局类（无捕获 = null）。</summary>
-        private LirVirtualRegister? _closureRegister;
-        private NamedTypeSymbol? _closureClass;
 
         /// <summary>M4：存活类集合（new 可达 → 类 + 基类链），vtable 发射与可达成员入队的依据。</summary>
         private readonly HashSet<NamedTypeSymbol> _liveClasses = new();
@@ -58,9 +55,6 @@ namespace Cocoa.CodeGen.Native
         /// <summary>M4：已发射的伪 vtable（System.Type 对象）key 集合。</summary>
         private readonly HashSet<string> _pseudoVTableKeys = new();
 
-        private LirFunction _currentFunction = null!;
-        private LirVirtualRegister? _thisRegister;
-        private int _nextLabelId;
         private readonly HashSet<string> _topLevelOverloadKeys = new(StringComparer.Ordinal);
 
         private static readonly FunctionSymbol[] ObjectBuiltinVirtualRoots =
@@ -630,31 +624,27 @@ namespace Cocoa.CodeGen.Native
 
         private void EmitFunction(LirFunction irFunction, FunctionSymbol function, BoundBlockStatement body)
         {
-            _currentFunction = irFunction;
-            _variables.Clear();
-            _labels.Clear();
-            _nextLabelId = 0;
-            _thisRegister = null;
+            // 4.2 试点：方法体构建状态收进 LirFunctionBuilder（当前函数/变量槽/标签/this/闭包）
+            _builder.Reset(irFunction);
 
             irFunction.EndLabelId = AllocLabel();
             Add(irFunction.Instructions, new LirInstruction(LirOpCode.StackCheck));
 
             // 6e-M22 C5：闭包环境接线
-            _closureRegister = null;
-            _closureClass = function.EnvironmentClass;
+            _builder.ClosureClass = function.EnvironmentClass;
 
-            if (_closureClass != null && function.IsLambda)
+            if (_builder.ClosureClass != null && function.IsLambda)
             {
                 // lambda：隐藏 __env 首参（LirParameter 已在创建时前置）即环境对象
-                _closureRegister = AllocateRegister(LirType.Addr);
-                Add(irFunction.Instructions, new LirInstruction(LirOpCode.InitParam, _closureRegister, LirOperand.Constant(0)));
+                _builder.ClosureRegister = AllocateRegister(LirType.Addr);
+                Add(irFunction.Instructions, new LirInstruction(LirOpCode.InitParam, _builder.ClosureRegister, LirOperand.Constant(0)));
             }
 
             if (HasThisParameter(function))
             {
                 // M4：隐藏 this = 参数区偏移 0（BoundThisExpression/BaseExpression 映射该寄存器）
-                _thisRegister = AllocateRegister(LirType.Addr);
-                Add(irFunction.Instructions, new LirInstruction(LirOpCode.InitParam, _thisRegister, LirOperand.Constant(0)));
+                _builder.ThisRegister = AllocateRegister(LirType.Addr);
+                Add(irFunction.Instructions, new LirInstruction(LirOpCode.InitParam, _builder.ThisRegister, LirOperand.Constant(0)));
             }
 
             foreach (var parameter in function.Parameters)
@@ -682,9 +672,9 @@ namespace Cocoa.CodeGen.Native
             }
 
             // 宿主函数：入口处创建环境对象（清零 + 捕获参数播种）
-            if (_closureClass != null && !function.IsLambda)
+            if (_builder.ClosureClass != null && !function.IsLambda)
             {
-                var (envOffsets, envSize) = NativeObjectModel.BuildLayout(_closureClass);
+                var (envOffsets, envSize) = NativeObjectModel.BuildLayout(_builder.ClosureClass);
                 var pointerSize = _isX64 ? 8 : 4;
 
                 var sizeRegister = EmitConst(envSize + pointerSize);
@@ -698,7 +688,7 @@ namespace Cocoa.CodeGen.Native
                 Add(irFunction.Instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(envObject), LirOperand.Reg(zero), 0, 4));
 
                 // 字段清零
-                foreach (var field in NativeObjectModel.CollectInstanceFields(_closureClass))
+                foreach (var field in NativeObjectModel.CollectInstanceFields(_builder.ClosureClass))
                 {
                     var fieldSize = NativeObjectModel.FieldSize(field.Type);
                     var zeroField = AllocateRegister(fieldSize == 8 ? 8 : 4);
@@ -713,14 +703,14 @@ namespace Cocoa.CodeGen.Native
                     {
                         if (captured is ParameterSymbol parameter)
                         {
-                            var field = _closureClass.GetField(captured.Name)!;
+                            var field = _builder.ClosureClass.GetField(captured.Name)!;
                             var value = GetVariable(parameter);
                             Add(irFunction.Instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(envObject), LirOperand.Reg(value), envOffsets[field], NativeObjectModel.FieldSize(captured.Type)));
                         }
                     }
                 }
 
-                _closureRegister = envObject;
+                _builder.ClosureRegister = envObject;
             }
 
             EmitStatement(body);
@@ -731,10 +721,10 @@ namespace Cocoa.CodeGen.Native
         private LirVirtualRegister AllocateRegister(VariableSymbol? symbol, int size)
         {
             var register = _allocator.Allocate(size == 8 ? LirType.I64 : LirType.I32);
-            _currentFunction.Register(register);
+            _builder.CurrentFunction.Register(register);
             if (symbol != null)
             {
-                _variables.Add(symbol, register);
+                _builder.Variables.Add(symbol, register);
             }
 
             return register;
@@ -743,24 +733,24 @@ namespace Cocoa.CodeGen.Native
         private LirVirtualRegister AllocateRegister(int size)
         {
             var register = _allocator.Allocate(size == 8 ? LirType.I64 : LirType.I32);
-            _currentFunction.Register(register);
+            _builder.CurrentFunction.Register(register);
             return register;
         }
 
         private LirVirtualRegister AllocateRegister(LirType type)
         {
             var register = _allocator.Allocate(type);
-            _currentFunction.Register(register);
+            _builder.CurrentFunction.Register(register);
             return register;
         }
 
         private LirVirtualRegister AllocateRegister(VariableSymbol? symbol, LirType type)
         {
             var register = _allocator.Allocate(type);
-            _currentFunction.Register(register);
+            _builder.CurrentFunction.Register(register);
             if (symbol != null)
             {
-                _variables.Add(symbol, register);
+                _builder.Variables.Add(symbol, register);
             }
 
             return register;

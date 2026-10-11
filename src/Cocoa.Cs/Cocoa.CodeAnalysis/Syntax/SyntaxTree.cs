@@ -31,9 +31,25 @@ namespace Cocoa.CodeAnalysis.Syntax
         public SyntaxNode Root { get; }
 
         private GreenNode? _greenRoot;
+        private GreenNodeInterner? _greenInterner;
 
-        /// <summary>红树的不可变绿形式（Phase 4 桥接：经 <see cref="SyntaxNode.ToGreen"/> 惰性转换，可跨树共享）。</summary>
-        public GreenNode GreenRoot => _greenRoot ??= Root.ToGreen();
+        /// <summary>红树的不可变绿形式（Phase 4 桥接：经 <see cref="SyntaxNode.ToGreen"/> 惰性转换，可跨树共享）。
+        /// 2.1 DAG 规范化：本树会话级 intern 池（空参数列表/空块/重复运算符共享实例，树内引用复用；随树生命周期清理）。</summary>
+        public GreenNode GreenRoot
+        {
+            get
+            {
+                if (_greenRoot != null)
+                {
+                    return _greenRoot;
+                }
+
+                var interner = new GreenNodeInterner();
+                _greenInterner = interner;
+                _greenRoot = Root.ToGreen(interner);
+                return _greenRoot;
+            }
+        }
 
         /// <summary>根成员集合（去 Language 门面后归属语法树）。</summary>
         public ImmutableArray<SyntaxNode> GetRootMembers()

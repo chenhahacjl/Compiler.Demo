@@ -14,7 +14,7 @@ namespace Cocoa.CodeGen.Interpreter
     /// <summary>
     /// 求值器
     /// </summary>
-    internal sealed partial class Evaluator
+    internal sealed partial class Evaluator : IExecutionHost
     {
         private readonly BoundProgram _program;
         private readonly Dictionary<VariableSymbol, object> _globals;
@@ -39,9 +39,57 @@ namespace Cocoa.CodeGen.Interpreter
         // yield 迭代器收集器
         private List<object?>? _yieldedValues;
 
-        // M7 调试器：调用帧栈（顶在最前）+ 语句边界钩子（调试会话注入；生产路径为 null）
+        // M7 调试器：调用帧栈（顶在最前）+ 执行钩子（调试会话注入；生产路径为 null）——3.5 解耦：经 IExecutionHook 接口注入
         internal readonly Stack<DebugFrame> _frames = new Stack<DebugFrame>();
-        internal Action<BoundStatement, TextLocation?, bool>? StatementBoundaryHook;
+        private IExecutionHook? _executionHook;
+
+        /// <summary>IExecutionHost（3.5）：DebuggerSession 经接口注入钩子，不再直接赋值 internal Action。</summary>
+        public IExecutionHook? ExecutionHook
+        {
+            get => _executionHook;
+            set => _executionHook = value;
+        }
+
+        public ExecutionSnapshot BuildSnapshot()
+        {
+            var frames = _frames.ToArray();
+            var callStack = new List<StackFrame>(frames.Length);
+            for (var i = 0; i < frames.Length; i++)
+            {
+                var frame = frames[i];
+                string? file = frame.Function.Declaration?.Location.FileName;
+                var line = frame.Function.Declaration is { } d ? d.Location.StartLine + 1 : 0;
+                callStack.Add(new StackFrame(frame.Function.Name, file, line, SnapshotLocals(frame, includeGlobals: i == 0)));
+            }
+
+            var topLocals = callStack.Count > 0 ? callStack[0].Locals : AnnotatedLocals(_globals);
+            return new ExecutionSnapshot(callStack, topLocals);
+        }
+
+        /// <summary>帧局部快照：全局变量（可选）+ 帧局部（跳过编译器生成名 `&lt;...`）。</summary>
+        private IReadOnlyList<LocalVariable> SnapshotLocals(DebugFrame frame, bool includeGlobals)
+        {
+            var list = new List<LocalVariable>();
+            if (includeGlobals)
+            {
+                list.AddRange(AnnotatedLocals(_globals));
+            }
+
+            list.AddRange(AnnotatedLocals(frame.Locals));
+            return list;
+        }
+
+        private static IReadOnlyList<LocalVariable> AnnotatedLocals(IReadOnlyDictionary<VariableSymbol, object> locals)
+        {
+            var list = new List<LocalVariable>(locals.Count);
+            foreach (var kv in locals)
+            {
+                if (kv.Key.Name.StartsWith('<')) continue;
+                list.Add(new LocalVariable(kv.Key.Name, kv.Value?.GetType().Name, kv.Value));
+            }
+
+            return list;
+        }
 
         /// <summary>
         /// 进程级输出拦截器（CocoaEngine Output 事件底座，嵌入式引擎场景）：WriteLine/Write 先调用此委托
@@ -68,15 +116,6 @@ namespace Cocoa.CodeGen.Interpreter
                 }
             }
         }
-
-        /// <summary>调用帧（顶帧在前）。</summary>
-        internal IReadOnlyList<DebugFrame> Frames => _frames.ToArray();
-
-        /// <summary>最近一次表达式求值结果（调试器读取返回值用）。</summary>
-        internal object? LastValue => _lastValue;
-
-        /// <summary>全局变量槽（脚本顶层变量；调试器读取局部变量时合并）。</summary>
-        internal IReadOnlyDictionary<VariableSymbol, object> Globals => _globals;
 
         public Evaluator(BoundProgram program, Dictionary<VariableSymbol, object> variables)
         {
@@ -123,8 +162,9 @@ namespace Cocoa.CodeGen.Interpreter
             }
 
             // 6e-M22 C5：入口函数自身带捕获变量时（顶层 lambda 捕获入口局部——当前限定非顶层，占位防御）
+            // 契约（3.1）：捕获集非空 → 需环境对象（ClosureContract.RequiresEnvironment）。
             var pushedEnvironment = false;
-            if (function.CapturedVariables is { Count: > 0 })
+            if (Cocoa.CodeAnalysis.Contracts.ClosureContract.RequiresEnvironment(function))
             {
                 _closureEnvironments.Push(CreateEnvironment(function, null));
                 pushedEnvironment = true;
@@ -134,12 +174,14 @@ namespace Cocoa.CodeGen.Interpreter
             {
                 var body = _functions[function];
                 _frames.Push(new DebugFrame(function, _locals.Peek()));
+                _executionHook?.OnFunctionEnter(function);
                 try
                 {
                     return EvaluateStatement(body);
                 }
                 finally
                 {
+                    _executionHook?.OnFunctionExit(function);
                     _frames.Pop();
                 }
             }
@@ -183,7 +225,8 @@ namespace Cocoa.CodeGen.Interpreter
 
             _locals.Push(locals);
 
-            var usesEnvironment = function.CapturedVariables is { Count: > 0 };
+            // 契约（3.1）：捕获集非空 → 需环境对象（ClosureContract.RequiresEnvironment）。
+            var usesEnvironment = Cocoa.CodeAnalysis.Contracts.ClosureContract.RequiresEnvironment(function);
             if (usesEnvironment)
             {
                 _closureEnvironments.Push(CreateEnvironment(function, argumentValues));
@@ -192,12 +235,14 @@ namespace Cocoa.CodeGen.Interpreter
             try
             {
                 _frames.Push(new DebugFrame(function, locals));
+                _executionHook?.OnFunctionEnter(function);
                 try
                 {
                     return EvaluateStatement(body);
                 }
                 finally
                 {
+                    _executionHook?.OnFunctionExit(function);
                     _frames.Pop();
                 }
             }

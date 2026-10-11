@@ -106,13 +106,19 @@ namespace Cocoa.CodeAnalysis.Syntax
         /// <see cref="SyntaxToken.ToGreen"/>（保留文本/值/trivia）；复合节点经 <see cref="GetChildren"/> 递归。</summary>
         public virtual GreenNode ToGreen()
         {
+            return ToGreen(new GreenNodeInterner());
+        }
+
+        /// <summary>红→绿（2.1 DAG 规范化）：经会话级 intern 池自底向上规范化子节点，重复子树共享同一绿实例。</summary>
+        internal virtual GreenNode ToGreen(GreenNodeInterner interner)
+        {
             var slots = ImmutableArray.CreateBuilder<GreenNode?>();
             foreach (var child in GetChildren())
             {
-                slots.Add(child.ToGreen());
+                slots.Add(child.ToGreen(interner));
             }
 
-            return new GreenNodeWithChildren((SyntaxKind)RawKind, slots.ToImmutable());
+            return interner.InternNode((SyntaxKind)RawKind, slots.ToImmutable());
         }
 
         public SyntaxToken GetLastToken()

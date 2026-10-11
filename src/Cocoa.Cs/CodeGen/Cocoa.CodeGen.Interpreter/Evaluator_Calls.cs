@@ -38,31 +38,12 @@ namespace Cocoa.CodeGen.Interpreter
             result = null;
             return false;
         }
-        /// <summary>求值调用实参（byref 实参取值），供引擎回调分派传参。</summary>
-        private object?[] EvaluateArguments(BoundCallExpression node)
-        {
-            var result = new object?[node.Arguments.Length];
-            for (var i = 0; i < node.Arguments.Length; i++)
-            {
-                result[i] = node.Arguments[i] is BoundByRefArgument byRef
-                    ? ByRefBox.Deref(EvaluateByRefSlot(byRef))
-                    : EvaluateExpression(node.Arguments[i]);
-            }
-
-            return result;
-        }
 
         private object? EvaluateCallExpression(BoundCallExpression node)
         {
             if (node.Function.BuiltinKind != null)
             {
                 return EvaluateBuiltinCall(node.Function, node.Arguments);
-            }
-
-            // 嵌入式引擎回调（M3）：函数名在引擎回调表 → 调 C# Delegate（显式注册名优先于空 body 的 syscall 声明）。
-            if (TryInvokeCallback(node.Function.Name, EvaluateArguments(node), out var callbackResult))
-            {
-                return callbackResult;
             }
 
             var locals = new Dictionary<VariableSymbol, object>();
@@ -92,6 +73,22 @@ namespace Cocoa.CodeGen.Interpreter
                 argumentValues[i] = value;
             }
 
+            // 嵌入式引擎回调（M3）：函数名在引擎回调表 → 调 C# Delegate（显式注册名优先于空 body 的 syscall 声明）。
+            // 实参已在上面求值一次（argumentValues，byref 为包装盒），回调探测直接复用，避免带副作用实参
+            // （函数调用 / 复合赋值）被重复求值两次。配合下方 RunByRefWriteBacks 治理 copy-out。
+            var callbackArgumentValues = new object?[argumentValues.Length];
+            for (var i = 0; i < argumentValues.Length; i++)
+            {
+                callbackArgumentValues[i] = argumentValues[i] is ByRefBox box ? box.Value : argumentValues[i];
+            }
+
+            if (TryInvokeCallback(node.Function.Name, callbackArgumentValues, out var callbackResult))
+            {
+                _byRefSlotScope = savedSlots;
+                RunByRefWriteBacks(byRefMarker);
+                return callbackResult;
+            }
+
             // 类静态方法直呼（using static 等）：首次触碰触发 .cctor（M3-c）
             if (node.Function.ContainingClass != null && node.Function.IsStatic)
             {
@@ -100,10 +97,12 @@ namespace Cocoa.CodeGen.Interpreter
 
             _locals.Push(locals);
             _frames.Push(new DebugFrame(node.Function, locals));
+            _executionHook?.OnFunctionEnter(node.Function);
 
             // 6e-M22 C5：宿主函数直呼路径同样需要环境对象。
+            // 契约（3.1）：捕获集非空 → 需环境对象（ClosureContract.RequiresEnvironment）。
             ClosureEnvironment? pushedEnvironment = null;
-            if (node.Function.CapturedVariables is { Count: > 0 })
+            if (Cocoa.CodeAnalysis.Contracts.ClosureContract.RequiresEnvironment(node.Function))
             {
                 pushedEnvironment = CreateEnvironment(node.Function, argumentValues);
                 _closureEnvironments.Push(pushedEnvironment);
@@ -144,6 +143,7 @@ namespace Cocoa.CodeGen.Interpreter
             {
                 // byref 写回须在弹出被调者帧之后执行，否则 Assign 落进将丢弃的帧（6e-M23 R5 隐性缺陷修复）
                 _locals.Pop();
+                _executionHook?.OnFunctionExit(node.Function);
                 _frames.Pop();
 
                 if (pushedEnvironment != null)
@@ -199,7 +199,7 @@ namespace Cocoa.CodeGen.Interpreter
                     var locals = _locals.Peek();
                     if (!locals.TryGetValue(variable.Variable, out var current))
                     {
-                        current = variable.Variable.Type.IsValueType ? (object)0 : null;
+                        current = Cocoa.CodeAnalysis.Contracts.ByRefContract.CopyInDefaultValue(variable.Variable.Type);
                         locals[variable.Variable] = current!;
                     }
 
@@ -268,7 +268,10 @@ namespace Cocoa.CodeGen.Interpreter
                 }
 
                 default:
-                    throw new Exception($"Unexpected by-ref argument target {node.Expression.Kind}");
+                    // 契约（3.1）：目标分类（ByRefContract.ClassifyTarget）不在合法 lvalue 内 → 后端拒绝
+                    throw new Exception(
+                        $"Unexpected by-ref argument target {node.Expression.Kind} " +
+                        $"[contract={Cocoa.CodeAnalysis.Contracts.ByRefContract.ClassifyTarget(node.Expression)}]");
             }
         }
 

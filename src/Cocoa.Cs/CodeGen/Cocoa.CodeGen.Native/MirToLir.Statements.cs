@@ -31,7 +31,7 @@ namespace Cocoa.CodeGen.Native
 
         private void EmitStatement(BoundStatement node)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
 
             switch (node.Kind)
             {
@@ -55,12 +55,12 @@ namespace Cocoa.CodeGen.Native
                         var value = EmitExpression(declaration.Initializer);
 
                         // 6e-M22 C5：捕获变量声明 → 初始化值写入环境对象字段
-                        if (declaration.Variable.IsCaptured && _closureRegister != null)
+                        if (declaration.Variable.IsCaptured && _builder.ClosureRegister != null)
                         {
-                            var field = _closureClass!.GetField(declaration.Variable.Name)!;
-                            var offset = NativeObjectModel.BuildLayout(_closureClass).Offsets[field];
+                            var field = _builder.ClosureClass!.GetField(declaration.Variable.Name)!;
+                            var offset = NativeObjectModel.BuildLayout(_builder.ClosureClass).Offsets[field];
                             var size = NativeObjectModel.FieldSize(field.Type);
-                            Add(instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(_closureRegister), LirOperand.Reg(value), offset, size));
+                            Add(instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(_builder.ClosureRegister), LirOperand.Reg(value), offset, size));
                             break;
                         }
 
@@ -224,7 +224,7 @@ namespace Cocoa.CodeGen.Native
 
                         // N1：return 离开全部活动 try → 先执行所有 finally（内→外），再跳函数尾
                         EmitAllFinallys();
-                        Add(instructions, new LirInstruction(LirOpCode.Jmp, LirOperand.Label(_currentFunction.EndLabelId)));
+                        Add(instructions, new LirInstruction(LirOpCode.Jmp, LirOperand.Label(_builder.CurrentFunction.EndLabelId)));
                         break;
                     }
 
@@ -377,13 +377,13 @@ namespace Cocoa.CodeGen.Native
                         var variable = ((BoundVariableExpression)node).Variable;
 
                         // 6e-M22 C5：捕获变量读环境对象字段
-                        if (variable.IsCaptured && _closureRegister != null)
+                        if (variable.IsCaptured && _builder.ClosureRegister != null)
                         {
-                            var field = _closureClass!.GetField(variable.Name)!;
-                            var offset = NativeObjectModel.BuildLayout(_closureClass).Offsets[field];
+                            var field = _builder.ClosureClass!.GetField(variable.Name)!;
+                            var offset = NativeObjectModel.BuildLayout(_builder.ClosureClass).Offsets[field];
                             var size = NativeObjectModel.FieldSize(field.Type);
                             var result = AllocateRegister(TypeOf(field.Type));
-                            Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Load, result, LirOperand.Reg(_closureRegister), LirOperand.None, offset, size));
+                            Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.Load, result, LirOperand.Reg(_builder.ClosureRegister), LirOperand.None, offset, size));
                             return result;
                         }
 
@@ -393,7 +393,7 @@ namespace Cocoa.CodeGen.Native
                         if (variable is ParameterSymbol { IsByRef: true } byRefParameter)
                         {
                             var loaded = AllocateRegister(TypeOf(byRefParameter.Type));
-                            Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Load, loaded, LirOperand.Reg(value), LirOperand.None, 0, ReturnSize(byRefParameter.Type)));
+                            Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.Load, loaded, LirOperand.Reg(value), LirOperand.None, 0, ReturnSize(byRefParameter.Type)));
                             return loaded;
                         }
 
@@ -406,12 +406,12 @@ namespace Cocoa.CodeGen.Native
                         var value = EmitExpression(assignment.Expression);
 
                         // 6e-M22 C5：捕获变量写环境对象字段
-                        if (assignment.Variable.IsCaptured && _closureRegister != null)
+                        if (assignment.Variable.IsCaptured && _builder.ClosureRegister != null)
                         {
-                            var field = _closureClass!.GetField(assignment.Variable.Name)!;
-                            var offset = NativeObjectModel.BuildLayout(_closureClass).Offsets[field];
+                            var field = _builder.ClosureClass!.GetField(assignment.Variable.Name)!;
+                            var offset = NativeObjectModel.BuildLayout(_builder.ClosureClass).Offsets[field];
                             var size = NativeObjectModel.FieldSize(field.Type);
-                            Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(_closureRegister), LirOperand.Reg(value), offset, size));
+                            Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(_builder.ClosureRegister), LirOperand.Reg(value), offset, size));
                             return value;
                         }
 
@@ -419,7 +419,7 @@ namespace Cocoa.CodeGen.Native
                         if (assignment.Variable is ParameterSymbol { IsByRef: true })
                         {
                             var pointer = GetVariable(assignment.Variable);
-                            Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(pointer), LirOperand.Reg(value), 0, ReturnSize(assignment.Variable.Type)));
+                            Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(pointer), LirOperand.Reg(value), 0, ReturnSize(assignment.Variable.Type)));
                             return value;
                         }
 
@@ -431,7 +431,7 @@ namespace Cocoa.CodeGen.Native
                             value = EmitCloneStructValue(assignedStructValue, (NamedTypeSymbol)assignment.Variable.Type);
                         }
 
-                        Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Mov, variable, LirOperand.Reg(value)));
+                        Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.Mov, variable, LirOperand.Reg(value)));
                         return variable;
                     }
 
@@ -466,11 +466,11 @@ namespace Cocoa.CodeGen.Native
                     return EmitMemberCallExpression((BoundMemberCallExpression)node);
 
                 case BoundNodeKind.ThisExpression:
-                    return _thisRegister ?? throw new Exception("'this' used outside instance context");
+                    return _builder.ThisRegister ?? throw new Exception("'this' used outside instance context");
 
                 case BoundNodeKind.BaseExpression:
                     // base 与 this 同一对象表示（字段布局含基类区、直调基类实现由调用端处理）
-                    return _thisRegister ?? throw new Exception("'base' used outside instance context");
+                    return _builder.ThisRegister ?? throw new Exception("'base' used outside instance context");
 
                 case BoundNodeKind.ObjectCreationExpression:
                     return EmitObjectCreationExpression((BoundObjectCreationExpression)node);
@@ -526,7 +526,7 @@ namespace Cocoa.CodeGen.Native
             if (value == null)
             {
                 var register = AllocateRegister(LirType.Addr);
-                Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Const, register, LirOperand.Constant(0)));
+                Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.Const, register, LirOperand.Constant(0)));
                 return register;
             }
 
@@ -586,7 +586,7 @@ namespace Cocoa.CodeGen.Native
             if (value == null)
             {
                 var register = AllocateRegister(LirType.Addr);
-                Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Const, register, LirOperand.Constant(0)));
+                Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.Const, register, LirOperand.Constant(0)));
                 return register;
             }
 
@@ -637,7 +637,7 @@ namespace Cocoa.CodeGen.Native
         private LirVirtualRegister EmitConst(int value)
         {
             var register = AllocateRegister(4);
-            Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Const, register, LirOperand.Constant(value)));
+            Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.Const, register, LirOperand.Constant(value)));
             return register;
         }
 
@@ -645,7 +645,7 @@ namespace Cocoa.CodeGen.Native
         private LirVirtualRegister EmitLongConst(long value)
         {
             var register = AllocateRegister(LirType.I64);
-            Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Const, register, LirOperand.Constant(value)));
+            Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.Const, register, LirOperand.Constant(value)));
             return register;
         }
 
@@ -653,7 +653,7 @@ namespace Cocoa.CodeGen.Native
         {
             var key = _irProgram.InternString(text);
             var register = AllocateRegister(LirType.Addr);
-            Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.LeaData, register, LirOperand.Data(key)));
+            Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.LeaData, register, LirOperand.Data(key)));
             return register;
         }
 
@@ -667,7 +667,7 @@ namespace Cocoa.CodeGen.Native
                 (byte)(bits >> 32), (byte)(bits >> 40), (byte)(bits >> 48), (byte)(bits >> 56),
             }));
             var register = AllocateRegister(LirType.F64);
-            Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.FConst, register, LirOperand.Data(key)));
+            Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.FConst, register, LirOperand.Data(key)));
             return register;
         }
 
@@ -681,7 +681,7 @@ namespace Cocoa.CodeGen.Native
                 (byte)bits, (byte)(bits >> 8), (byte)(bits >> 16), (byte)(bits >> 24),
             }));
             var register = AllocateRegister(4);
-            Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.FConst, register, LirOperand.Data(key), LirOperand.None, 0, 0, true));
+            Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.FConst, register, LirOperand.Data(key), LirOperand.None, 0, 0, true));
             return register;
         }
 

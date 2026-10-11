@@ -69,8 +69,8 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             // 体绑定：子作用域声明参数（沿用当前 CocoaBinder 上下文——类/静态/别名等语义一致）
-            var lambdaOuterScope = _scope;
-            _scope = new BoundScope(lambdaOuterScope);
+            var lambdaOuterScope = _scopeStack.Save();
+            _scopeStack.Push();
             foreach (var parameter in parameterSymbols)
             {
                 _scope.TryDeclareVariable(parameter);
@@ -112,7 +112,7 @@ namespace Cocoa.CodeAnalysis.Binding
             finally
             {
                 _lambdaBodyDepth--;
-                _scope = lambdaOuterScope;
+                _scopeStack.Restore(lambdaOuterScope);
             }
 
             if (expectedType != null && returnType != expectedType.ReturnType &&
@@ -251,8 +251,8 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundNopStatement(syntax);
             }
 
-            var outerScope = _scope;
-            _scope = new BoundScope(outerScope);
+            var outerScope = _scopeStack.Save();
+            _scopeStack.Push();
             foreach (var parameter in parameterSymbols)
             {
                 _scope.TryDeclareVariable(parameter);
@@ -268,7 +268,7 @@ namespace Cocoa.CodeAnalysis.Binding
             finally
             {
                 _lambdaBodyDepth--;
-                _scope = outerScope;
+                _scopeStack.Restore(outerScope);
             }
 
             // 捕获分析（同 lambda）：外层局部/参数 = 捕获；递归引用本名 → 未声明诊断（非递归支持）

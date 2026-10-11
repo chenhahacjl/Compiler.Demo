@@ -22,7 +22,9 @@ namespace Cocoa.CodeGen.Managed.Writer
                     $"声明模式变量 '{node.Variable.Name}' 未登记局部槽位（CollectPatternLocals 未覆盖该表达式位置）。");
             }
 
-            if (node.TargetType.IsValueType)
+            // 值类型目标：`o is int n` 不能走 isinst+castclass（castclass 对值类型非法）。
+            // 契约（3.1）：值类型目标须经装箱形态判定（PatternMatchContract.RequiresBoxedForm）。
+            if (Cocoa.CodeAnalysis.Contracts.PatternMatchContract.RequiresBoxedForm(node.TargetType))
             {
                 // 值类型目标：`o is int n` 不能走 isinst+castclass（castclass 对值类型非法）。
                 // 正确形态（与 Roslyn 一致，isinst 对值类型**是**合法的，返回装箱实例或 null）：

@@ -24,7 +24,7 @@ namespace Cocoa.CodeGen.Native
     {
         private LirVirtualRegister EmitArrayCreationExpression(BoundArrayCreationExpression node)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var elementType = node.Type.ElementType!;
             var elementSize = ElementSize(elementType);
 
@@ -104,7 +104,7 @@ namespace Cocoa.CodeGen.Native
         /// </summary>
         private LirVirtualRegister EmitByRefArgument(BoundByRefArgument node)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var pointerSize = _isX64 ? 8 : 4;
 
             switch (node.Expression)
@@ -144,7 +144,7 @@ namespace Cocoa.CodeGen.Native
 
         private LirVirtualRegister EmitElementAccessExpression(BoundElementAccessExpression node)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var elementType = node.Type;
             var elementSize = ElementSize(elementType);
 
@@ -180,7 +180,7 @@ namespace Cocoa.CodeGen.Native
 
         private LirVirtualRegister EmitElementAssignmentExpression(BoundElementAssignmentExpression node)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var elementType = node.Target.Type;
             var elementSize = ElementSize(elementType);
 
@@ -194,7 +194,7 @@ namespace Cocoa.CodeGen.Native
 
         private LirVirtualRegister EmitMemberAccessExpression(BoundMemberAccessExpression node)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
 
             // M4：类字段读（含静态字段存储槽）
             if (node.Field != null)
@@ -230,14 +230,14 @@ namespace Cocoa.CodeGen.Native
             var key = NativeObjectModel.StaticFieldKey(field);
             _irProgram.AddData(LirDataItem.ByteArray(key, new byte[NativeObjectModel.FieldSize(field.Type)]));
             var slot = AllocateRegister(LirType.Addr);
-            Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.LeaData, slot, LirOperand.Data(key)));
+            Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.LeaData, slot, LirOperand.Data(key)));
             return slot;
         }
 
         /// <summary>M4：类字段写（求值顺序对齐 IL：target 先于 value）。</summary>
         private LirVirtualRegister EmitMemberAssignmentExpression(BoundMemberAssignmentExpression node)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var field = node.Field;
 
             if (field.IsStatic)
@@ -260,7 +260,7 @@ namespace Cocoa.CodeGen.Native
         /// </summary>
         private LirVirtualRegister EmitObjectCreationExpression(BoundObjectCreationExpression node)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var classType = (NamedTypeSymbol)node.Type;
 
             // N1：`new object()`（System.Object 无用户布局）——分配仅含 vtable 头的最小对象，
@@ -309,7 +309,7 @@ namespace Cocoa.CodeGen.Native
         /// <summary>阶段 2b：struct 值语义——深拷贝（alloc + vtable + 逐字段拷贝），防赋值引用残留。</summary>
         private LirVirtualRegister EmitCloneStructValue(LirVirtualRegister source, NamedTypeSymbol structType)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var (offsets, instanceSize) = GetLayout(structType);
             var pointerSize = _isX64 ? 8 : 4;
 
@@ -341,12 +341,12 @@ namespace Cocoa.CodeGen.Native
                 return VoidResult();
             }
 
-            if (_thisRegister == null)
+            if (_builder.ThisRegister == null)
             {
                 throw new Exception("constructor chain outside constructor context");
             }
 
-            EmitInvoke(node.Constructor, _thisRegister, node.Arguments);
+            EmitInvoke(node.Constructor, _builder.ThisRegister, node.Arguments);
             return VoidResult();
         }
 
@@ -416,7 +416,7 @@ namespace Cocoa.CodeGen.Native
         /// </summary>
         private LirVirtualRegister EmitFunctionValueExpression(BoundFunctionValueExpression node)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var pointerSize = _isX64 ? 8 : 4;
             var function = node.Function;
 
@@ -453,7 +453,7 @@ namespace Cocoa.CodeGen.Native
             if (node.Receiver != null)
             {
                 environment = EmitExpression(node.Receiver);
-                if (_currentFunction.RegisterSize(environment) < 8)
+                if (_builder.CurrentFunction.RegisterSize(environment) < 8)
                 {
                     environment = WidenTo8(environment);
                 }
@@ -461,7 +461,7 @@ namespace Cocoa.CodeGen.Native
             else if (node.EnvironmentClass != null)
             {
                 // 6e-M22 C5：捕获闭包——环境槽 = 当前函数的环境对象
-                environment = _closureRegister ?? throw new Exception("closure lambda created outside environment scope");
+                environment = _builder.ClosureRegister ?? throw new Exception("closure lambda created outside environment scope");
             }
             else
             {
@@ -491,8 +491,8 @@ namespace Cocoa.CodeGen.Native
             };
             thunk.EndLabelId = AllocLabel();
 
-            var savedCurrent = _currentFunction;
-            _currentFunction = thunk;
+            var savedCurrent = _builder.CurrentFunction;
+            _builder.CurrentFunction = thunk;
             var instr = thunk.Instructions;
 
             // 从自身帧加载原参数：env@0，p_i @ 8 + (x64 ? 8i : Σ 前序尺寸)
@@ -538,7 +538,7 @@ namespace Cocoa.CodeGen.Native
 
             Add(instr, new LirInstruction(LirOpCode.Ret, LirOperand.Label(thunk.EndLabelId)));
 
-            _currentFunction = savedCurrent;
+            _builder.CurrentFunction = savedCurrent;
 
             _irProgram.Functions.Add(thunk);
             _staticThunks[function] = thunk;
@@ -553,7 +553,7 @@ namespace Cocoa.CodeGen.Native
                 return EmitDelegateInvocation(node);
             }
 
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var pointerSize = _isX64 ? 8 : 4;
             var functionType = node.Callee.Type switch
             {
@@ -599,7 +599,7 @@ namespace Cocoa.CodeGen.Native
         /// <summary>6e-M22 M5：委托对象调用 = 快照遍历 list 数组逐个调用（非 void 取最后返回；空列表 → 0）。</summary>
         private LirVirtualRegister EmitDelegateInvocation(BoundInvocationExpression node)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var pointerSize = _isX64 ? 8 : 4;
             var functionType = ((NamedTypeSymbol)node.Callee.Type).DelegateSignature()!;
 
@@ -701,7 +701,7 @@ namespace Cocoa.CodeGen.Native
             // 特殊内建：string.substring（Method 为 null 的历史形状，先于实例分派）
             if (node.Method == null)
             {
-                var instructions = _currentFunction.Instructions;
+                var instructions = _builder.CurrentFunction.Instructions;
                 var target = EmitExpression(node.Expression);
                 var start = EmitExpression(node.Arguments[0]);
                 var count = EmitExpression(node.Arguments[1]);
@@ -736,7 +736,7 @@ namespace Cocoa.CodeGen.Native
         /// <summary>M4：加载 receiver 具体类的 vtable 槽函数指针（mov vt=[obj] → mov fn=[vt+8+ps·(slot+1)]）。</summary>
         private LirVirtualRegister EmitLoadVirtualFunctionPointer(LirVirtualRegister receiver, FunctionSymbol method)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var root = NativeObjectModel.VirtualRoot(method);
             var slot = _virtualSlots[root];
             var pointerSize = _isX64 ? 8 : 4;
@@ -775,8 +775,8 @@ namespace Cocoa.CodeGen.Native
                     var typeValue = EmitExpression(node.Expression);
                     var fullName = EmitLoadPointerField(typeValue, 8);
                     var simple = AllocateRegister(LirType.Addr);
-                    Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(fullName)));
-                    Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Call, simple, LirOperand.Runtime("TypeSimpleName"), LirOperand.Constant(0)));
+                    Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(fullName)));
+                    Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.Call, simple, LirOperand.Runtime("TypeSimpleName"), LirOperand.Constant(0)));
                     return simple;
                 }
 
@@ -875,12 +875,12 @@ namespace Cocoa.CodeGen.Native
 
                     var widenedReceiver = receiver;
                     var otherValue = node.Arguments.Length > 0 ? EmitExpression(node.Arguments[0]) : EmitConst(0);
-                    if (_currentFunction.RegisterSize(widenedReceiver) < 8)
+                    if (_builder.CurrentFunction.RegisterSize(widenedReceiver) < 8)
                     {
                         widenedReceiver = WidenTo8(widenedReceiver);
                     }
 
-                    if (_currentFunction.RegisterSize(otherValue) < 8)
+                    if (_builder.CurrentFunction.RegisterSize(otherValue) < 8)
                     {
                         otherValue = WidenTo8(otherValue);
                     }
@@ -896,7 +896,7 @@ namespace Cocoa.CodeGen.Native
         /// <summary>用户类 receiver 的固定槽分派（ToString/GetHashCode/Equals）。extraArguments 为 Equals 的实参。</summary>
         private LirVirtualRegister InvokeVirtualSlot(NamedTypeSymbol classType, int slotIndex, LirVirtualRegister receiver, ImmutableArray<BoundExpression> extraArguments)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var pointerSize = _isX64 ? 8 : 4;
 
             var vtable = AllocateRegister(LirType.Addr);
@@ -933,7 +933,7 @@ namespace Cocoa.CodeGen.Native
         private LirVirtualRegister EmitLoadPointerField(LirVirtualRegister baseRegister, int offset)
         {
             var result = AllocateRegister(LirType.Addr);
-            Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Load, result, LirOperand.Reg(baseRegister), LirOperand.None, offset, _isX64 ? 8 : 4));
+            Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.Load, result, LirOperand.Reg(baseRegister), LirOperand.None, offset, _isX64 ? 8 : 4));
             return result;
         }
 
@@ -942,7 +942,7 @@ namespace Cocoa.CodeGen.Native
         {
             EnsurePseudoVTable(fullName);
             var vtable = AllocateRegister(LirType.Addr);
-            Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.LeaData, vtable, LirOperand.Data(NativeObjectModel.PseudoVTableKey(fullName))));
+            Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.LeaData, vtable, LirOperand.Data(NativeObjectModel.PseudoVTableKey(fullName))));
             return vtable;
         }
 
@@ -1002,7 +1002,7 @@ namespace Cocoa.CodeGen.Native
         /// <summary>基元 ToString 分发（facade 未覆盖时的回退路径）。</summary>
         private LirVirtualRegister EmitPrimitiveToString(TypeSymbol type, LirVirtualRegister value)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
 
             if (type == TypeSymbol.Boolean)
             {
@@ -1061,13 +1061,13 @@ namespace Cocoa.CodeGen.Native
         private LirVirtualRegister EmitWidenedArgument(BoundExpression expression)
         {
             var value = EmitExpression(expression);
-            return _currentFunction.RegisterSize(value) < 8 ? WidenTo8(value) : value;
+            return _builder.CurrentFunction.RegisterSize(value) < 8 ? WidenTo8(value) : value;
         }
 
         private LirVirtualRegister WidenTo8(LirVirtualRegister value)
         {
             var widened = AllocateRegister(LirType.I64);
-            Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Movzx64, widened, LirOperand.Reg(value)));
+            Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.Movzx64, widened, LirOperand.Reg(value)));
             return widened;
         }
 
@@ -1081,14 +1081,14 @@ namespace Cocoa.CodeGen.Native
             }
             else
             {
-                Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(left)));
-                Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(right)));
-                Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime(runtimeName), LirOperand.Constant(0)));
+                Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(left)));
+                Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(right)));
+                Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime(runtimeName), LirOperand.Constant(0)));
             }
 
             if (invert)
             {
-                Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Xor, result, LirOperand.Reg(result), LirOperand.Constant(1)));
+                Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.Xor, result, LirOperand.Reg(result), LirOperand.Constant(1)));
             }
 
             return result;

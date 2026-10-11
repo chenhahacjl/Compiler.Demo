@@ -199,7 +199,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
         private string ComputeFnKey(FunctionSymbol fn)
         {
             var paramTypes = string.Join(",", fn.Parameters.Select(p =>
-                (p.IsOut ? "out:" : p.IsRef ? "ref:" : "-") + CoaTypeText.TypeRef(p.Type)));
+                (p.IsOut ? "out:" : p.IsRef ? "ref:" : "-") + CoaTypeCodec.TypeRef(p.Type)));
             var head = fn.ContainingClass != null
                 ? fn.ContainingClass.FullName + "." + fn.Name
                 : fn.Namespace.Length > 0 ? fn.Namespace + "." + fn.Name : fn.Name;

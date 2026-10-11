@@ -54,47 +54,53 @@ namespace Cocoa.CodeAnalysis.Syntax
         /// （delegate 名（参数）[: 返回类型]；或返回类型 名（参数）;）。</summary>
         public override GreenNode ToGreen()
         {
+            return ToGreen(new GreenNodeInterner());
+        }
+
+        /// <summary>红→绿（2.1 DAG 规范化）：delegate 槽序与 <see cref="ToGreen()"/> 一致，经 intern 池规范化。</summary>
+        internal override GreenNode ToGreen(GreenNodeInterner interner)
+        {
             var slots = ImmutableArray.CreateBuilder<GreenNode?>();
 
             foreach (var modifier in Modifiers)
             {
-                slots.Add(modifier.ToGreen());
+                slots.Add(modifier.ToGreen(interner));
             }
 
-            slots.Add(DelegateKeyword.ToGreen());
+            slots.Add(DelegateKeyword.ToGreen(interner));
 
             if (IsCStyle)
             {
-                slots.Add(ReturnType!.ToGreen());
+                slots.Add(ReturnType!.ToGreen(interner));
             }
 
-            slots.Add(Identifier.ToGreen());
+            slots.Add(Identifier.ToGreen(interner));
 
             if (TypeParameters != null)
             {
-                slots.Add(TypeParameters.ToGreen());
+                slots.Add(TypeParameters.ToGreen(interner));
             }
 
-            slots.Add(OpenParenToken.ToGreen());
+            slots.Add(OpenParenToken.ToGreen(interner));
 
             foreach (var node in Parameters.GetWithSeparators())
             {
-                slots.Add(node.ToGreen());
+                slots.Add(node.ToGreen(interner));
             }
 
-            slots.Add(CloseParenToken.ToGreen());
+            slots.Add(CloseParenToken.ToGreen(interner));
 
             if (!IsCStyle && ReturnType != null)
             {
-                slots.Add(ReturnType.ToGreen());
+                slots.Add(ReturnType.ToGreen(interner));
             }
 
             if (SemicolonToken != null)
             {
-                slots.Add(SemicolonToken.ToGreen());
+                slots.Add(SemicolonToken.ToGreen(interner));
             }
 
-            return new GreenNodeWithChildren((SyntaxKind)Kind, slots.ToImmutable());
+            return interner.InternNode((SyntaxKind)Kind, slots.ToImmutable());
         }
 
         public override IEnumerable<SyntaxNode> GetChildren()

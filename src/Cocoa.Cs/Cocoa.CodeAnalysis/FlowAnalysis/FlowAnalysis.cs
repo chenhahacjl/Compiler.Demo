@@ -1,25 +1,31 @@
+using Cocoa.CodeAnalysis.Bound;
 using Cocoa.CodeAnalysis.Symbols;
+using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 
-namespace Cocoa.CodeAnalysis.Bound
+namespace Cocoa.CodeAnalysis.FlowAnalysis
 {
     /// <summary>
-    /// 明确赋值分析（6e-M23 R4，对齐 C#）：跟踪当前函数 out 形参的赋值状态。
+    /// 独立 Flow Analysis（3.3）：输入 = 降级后的 MIR（<see cref="BoundBlockStatement"/>），输出 = 诊断数组。
+    /// 不依赖 Binder 实例、不与 Binder 生命周期耦合、无共享可变状态——可在无 Binder 下独立测试。
+    /// 当前承载明确赋值分析（6e-M23 R4，对齐 C#）：跟踪当前函数 out 形参的赋值状态。
     /// 普通局部经默认值合成永远视为已初始化——唯一"未赋值"实体是 out 形参（入口契约性未赋值），
     /// 故跟踪集仅为当前函数的 out 形参集合。
     /// 规则：①出口前必须已赋值；②未赋值禁读；③作 ref 实参传递要求已赋值；
     /// ④作 out 实参传递后视为已赋值（被调方契约）。
     /// 数据流：前向 must——IN[B] = AND(OUT[pred])；转移仅 gen 无 kill；Start 块出口 = 全 false（入口契约）。
     /// 降级后函数体为扁平语句序列（标签/goto/条件 goto），CFG 与扫描均按扁平模型处理；
-    /// lambda 体不在表达式子树内（BoundChildren 只含 Receiver），无需跳过。
+    /// lambda 体不在表达式子树内（BoundNodeChildren 只含 Receiver），无需跳过。
+    /// 输入必须为 LoweringPipeline 输出的 MIR（结构化语句会使 <see cref="ControlFlowGraph"/> 抛异常）。
     /// </summary>
-    public static class DefiniteAssignmentAnalysis
+    public static class FlowAnalysis
     {
-        public static void Analyze(BoundBlockStatement loweredBody, ImmutableArray<ParameterSymbol> outParameters, DiagnosticBag diagnostics)
+        public static ImmutableArray<Diagnostic> Run(BoundBlockStatement loweredBody, ImmutableArray<ParameterSymbol> outParameters)
         {
             if (outParameters.IsEmpty)
             {
-                return;
+                return ImmutableArray<Diagnostic>.Empty;
             }
 
             var graph = ControlFlowGraph.Create(loweredBody);
@@ -75,6 +81,7 @@ namespace Cocoa.CodeAnalysis.Bound
             }
 
             // 第二遍：带诊断的语义扫描（每块从其 IN 状态出发）
+            var diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
             var reportingScanner = new Scanner(indexOf, diagnostics);
             for (var i = 0; i < blocks.Count; i++)
             {
@@ -99,7 +106,9 @@ namespace Cocoa.CodeAnalysis.Bound
                         {
                             if (!state[indexOf[parameter]])
                             {
-                                diagnostics.ReportOutParameterNotAssignedOnReturn(statement.Syntax.Location, parameter.Name);
+                                diagnostics.Add(Diagnostic.Error(
+                                    returnStatement.Syntax.Location,
+                                    $"out 参数 '{parameter.Name}' 必须在返回前赋值。"));
                             }
                         }
                     }
@@ -117,6 +126,8 @@ namespace Cocoa.CodeAnalysis.Bound
                     }
                 }
             }
+
+            return diagnostics.ToImmutable();
         }
 
         private static bool[] Repeat(bool value, int count)
@@ -184,15 +195,15 @@ namespace Cocoa.CodeAnalysis.Bound
 
         /// <summary>
         /// 语句/表达式扫描器。diagnostics 为 null 时仅做状态转移（不动点计算用），
-        /// 非 null 时同时报读取类诊断。Assignment 目标不算读（BoundChildren 本就只给 RHS），
+        /// 非 null 时同时报读取类诊断。Assignment 目标不算读（BoundNodeChildren 本就只给 RHS），
         /// CompoundAssignment 显式先读后写，ByRefArgument 按 out/ref 分派。
         /// </summary>
         private sealed class Scanner
         {
             private readonly Dictionary<VariableSymbol, int> _indexOf;
-            private readonly DiagnosticBag? _diagnostics;
+            private readonly ImmutableArray<Diagnostic>.Builder? _diagnostics;
 
-            public Scanner(Dictionary<VariableSymbol, int> indexOf, DiagnosticBag? diagnostics)
+            public Scanner(Dictionary<VariableSymbol, int> indexOf, ImmutableArray<Diagnostic>.Builder? diagnostics)
             {
                 _indexOf = indexOf;
                 _diagnostics = diagnostics;
@@ -213,7 +224,7 @@ namespace Cocoa.CodeAnalysis.Bound
                     }
 
                     default:
-                        foreach (var child in Compilation.BoundChildren(statement))
+                        foreach (var child in BoundNodeChildren.Of(statement))
                         {
                             ScanNode(child, state);
                         }
@@ -229,7 +240,7 @@ namespace Cocoa.CodeAnalysis.Bound
                     return;
                 }
 
-                foreach (var child in Compilation.BoundChildren(node))
+                foreach (var child in BoundNodeChildren.Of(node))
                 {
                     ScanNode(child, state);
                 }
@@ -244,7 +255,9 @@ namespace Cocoa.CodeAnalysis.Bound
                         var variable = ((BoundVariableExpression)expression).Variable;
                         if (_diagnostics != null && IsTrackedAndUnassigned(variable, state, out var name))
                         {
-                            _diagnostics.ReportUseOfUnassignedOutParameter(expression.Syntax.Location, name);
+                            _diagnostics.Add(Diagnostic.Error(
+                                expression.Syntax.Location,
+                                $"使用了未赋值的 out 参数 '{name}'。"));
                         }
                         break;
                     }
@@ -262,7 +275,9 @@ namespace Cocoa.CodeAnalysis.Bound
                         var compound = (BoundCompoundAssignmentExpression)expression;
                         if (_diagnostics != null && IsTrackedAndUnassigned(compound.Variable, state, out var compoundName))
                         {
-                            _diagnostics.ReportUseOfUnassignedOutParameter(compound.Syntax.Location, compoundName);
+                            _diagnostics.Add(Diagnostic.Error(
+                                compound.Syntax.Location,
+                                $"使用了未赋值的 out 参数 '{compoundName}'。"));
                         }
                         ScanExpression(compound.Expression, state);
                         MarkAssigned(compound.Variable, state);
@@ -295,7 +310,9 @@ namespace Cocoa.CodeAnalysis.Bound
                                 // ref 实参：读语义，要求已赋值
                                 if (_diagnostics != null && IsTrackedAndUnassigned(variable.Variable, state, out var refName))
                                 {
-                                    _diagnostics.ReportRefArgumentNotAssigned(variable.Syntax.Location, refName);
+                                    _diagnostics.Add(Diagnostic.Error(
+                                        variable.Syntax.Location,
+                                        $"out 参数 '{refName}' 未赋值，不能作为 'ref' 实参传递。"));
                                 }
                             }
                             else
@@ -313,7 +330,7 @@ namespace Cocoa.CodeAnalysis.Bound
                     }
 
                     default:
-                        foreach (var child in Compilation.BoundChildren(expression))
+                        foreach (var child in BoundNodeChildren.Of(expression))
                         {
                             ScanNode(child, state);
                         }

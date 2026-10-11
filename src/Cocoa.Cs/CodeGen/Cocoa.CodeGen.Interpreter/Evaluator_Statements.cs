@@ -53,7 +53,7 @@ namespace Cocoa.CodeGen.Interpreter
             {
                 var statement = statements[index];
 
-                StatementBoundaryHook?.Invoke(statement, locations[index], sequencePoints[index]);
+                _executionHook?.OnStatementBoundary(statement, locations[index], sequencePoints[index], _frames.Count, BuildSnapshot);
 
                 switch (statement.Kind)
                 {
@@ -164,7 +164,7 @@ namespace Cocoa.CodeGen.Interpreter
 
         private void EvaluateSingleStatement(BoundStatement statement, Dictionary<BoundLabel, int> labelToIndex)
         {
-            StatementBoundaryHook?.Invoke(statement, statement.Syntax?.Location, statement is BoundSequencePointStatement);
+            _executionHook?.OnStatementBoundary(statement, statement.Syntax?.Location, statement is BoundSequencePointStatement, _frames.Count, BuildSnapshot);
 
             switch (statement.Kind)
             {

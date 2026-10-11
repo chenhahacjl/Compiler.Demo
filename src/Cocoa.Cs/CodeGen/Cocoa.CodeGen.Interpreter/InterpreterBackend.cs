@@ -43,6 +43,17 @@ namespace Cocoa.CodeGen.Interpreter
         public static bool HasCallback(string name)
             => Evaluator._callbacks.ContainsKey(name);
 
+        /// <summary>
+        /// 3.5：创建可注入执行钩子的求值宿主（IExecutionHost 公开只读视图）。钩子为 null 时 = 常规求值零开销路径。
+        /// DebuggerSession/嵌入宿主经此创建并注入 <see cref="IExecutionHook"/>。
+        /// </summary>
+        public static IExecutionHost CreateExecutionHost(BoundProgram program, Dictionary<VariableSymbol, object> variables, IExecutionHook? hook = null)
+        {
+            var evaluator = new Evaluator(program, variables);
+            evaluator.ExecutionHook = hook;
+            return evaluator;
+        }
+
         private static object? Evaluate(BoundProgram program, string[]? args, Dictionary<VariableSymbol, object> variables)
         {
             var evaluator = new Evaluator(program, variables);

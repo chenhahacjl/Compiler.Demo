@@ -63,7 +63,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                 FunctionSymbol? getter = hasGet ? classType.GetDeclaredMethod("get_" + name) : null;
                 FunctionSymbol? setter = hasSet ? classType.GetDeclaredMethod("set_" + name) : null;
                 // 6e-M25：类型延后解析（可能指向文件中后声明的类）
-                var type = _resolver.ResolveTypeRef(typeRef);
+                var type = _typeCodec.ResolveTypeRef(typeRef);
                 // 6e 跨库里程碑：索引器属性（绑定侧统一命名 `Item`）重建时须带 isIndexer 位，
                 // 否则实例化类型 GetIndexer() 命不中 → 元素访问回落数组判定报错。
                 classType.AddProperty(new PropertySymbol(name, type, classType, getter, setter, visibility, isStatic, isIndexer: name == "Item"));
@@ -77,7 +77,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
         {
             foreach (var (classType, name, typeRef, visibility, isReadonly, isStatic) in _context.PendingFields)
             {
-                var fieldType = _resolver.ResolveTypeRef(typeRef);
+                var fieldType = _typeCodec.ResolveTypeRef(typeRef);
                 classType.AddField(new FieldSymbol(name, fieldType, visibility, classType, isReadonly, isStatic));
             }
 
@@ -118,7 +118,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
         {
             foreach (var (classType, baseRef) in _context.PendingBaseTypes)
             {
-                if (_resolver.ResolveTypeRef(baseRef) is NamedTypeSymbol baseClass)
+                if (_typeCodec.ResolveTypeRef(baseRef) is NamedTypeSymbol baseClass)
                 {
                     classType.BaseType = baseClass;
                 }
@@ -269,7 +269,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
 
             foreach (var interfaceRef in interfaceRefs)
             {
-                classType.AddInterface((NamedTypeSymbol)_resolver.ResolveTypeRef(interfaceRef));
+                classType.AddInterface((NamedTypeSymbol)_typeCodec.ResolveTypeRef(interfaceRef));
             }
 
             _context.Classes.Add(classType);
@@ -324,7 +324,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                 {
                     _tokens.Expect("evt");
                     var eventName = CoaText.Unescape(_tokens.ExpectString());
-                    var handlerType = (FunctionTypeSymbol)_resolver.ResolveTypeRef(_tokens.ExpectString());
+                    var handlerType = (FunctionTypeSymbol)_typeCodec.ResolveTypeRef(_tokens.ExpectString());
                     var eventVisibilityText = _tokens.ExpectString();
                     if (!Enum.TryParse<Visibility>(eventVisibilityText, ignoreCase: true, out var eventVisibility))
                     {
@@ -466,7 +466,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                 var (parameter, constraintRefs) = pendingConstraints[i];
                 if (constraintRefs.Length > 0)
                 {
-                    parameter.ConstraintTypes = constraintRefs.Select(r => _resolver.ResolveTypeRef(r)).ToImmutableArray();
+                    parameter.ConstraintTypes = constraintRefs.Select(r => _typeCodec.ResolveTypeRef(r)).ToImmutableArray();
                 }
             }
 
@@ -509,7 +509,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
 
             foreach (var interfaceRef in interfaceRefs)
             {
-                classType.AddInterface((NamedTypeSymbol)_resolver.ResolveTypeRef(interfaceRef));
+                classType.AddInterface((NamedTypeSymbol)_typeCodec.ResolveTypeRef(interfaceRef));
             }
 
             // N1：接口成员符号重建（泛型接口如 System.Collections.Generic.IEnumerable<T>）
@@ -541,7 +541,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                 {
                     _tokens.Expect("evt");
                     var eventName = CoaText.Unescape(_tokens.ExpectString());
-                    var handlerType = (FunctionTypeSymbol)_resolver.ResolveTypeRef(_tokens.ExpectString());
+                    var handlerType = (FunctionTypeSymbol)_typeCodec.ResolveTypeRef(_tokens.ExpectString());
                     var eventVisibilityText = _tokens.ExpectString();
                     if (!Enum.TryParse<Visibility>(eventVisibilityText, ignoreCase: true, out var eventVisibility))
                     {
@@ -610,7 +610,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                 typeParameters = builder.ToImmutable();
             }
 
-            var returnType = _resolver.ResolveTypeRef(_tokens.ReadLabeledField("ret:"));
+            var returnType = _typeCodec.ResolveTypeRef(_tokens.ReadLabeledField("ret:"));
             var nsText = _tokens.ReadLabeledField("ns:");
             var ownerText = _tokens.ReadLabeledField("owner:");
             var isExtern = _tokens.ParseBoolWord(_tokens.ReadLabeledField("extern:"));
@@ -665,7 +665,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                 isLambdaWithEnvironment = _tokens.ParseBoolWord(_tokens.ReadLabeledField("envn:"));
                 isLambda = _tokens.ParseBoolWord(_tokens.ReadLabeledField("envl:"));
                 var envcText = _tokens.ReadLabeledField("envc:");
-                environmentClass = envcText == "-" ? null : (NamedTypeSymbol)_resolver.ResolveTypeRef(envcText);
+                environmentClass = envcText == "-" ? null : (NamedTypeSymbol)_typeCodec.ResolveTypeRef(envcText);
                 var envcapCount = _tokens.ReadCountField("envcap:");
                 for (var i = 0; i < envcapCount; i++)
                 {
@@ -707,7 +707,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                 throw new InvalidDataException($"Unknown calling convention '{ccText}' on function '{key}'");
             }
 
-            var containingClass = ownerText == "-" ? null : _resolver.ResolveOwnerClass(ownerText);
+            var containingClass = ownerText == "-" ? null : _symbolResolver.ResolveOwnerClass(ownerText);
 
             var paramCount = _tokens.ReadCountField("params:");
             var parameters = ImmutableArray.CreateBuilder<ParameterSymbol>();
@@ -716,7 +716,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                 _tokens.Expect("par");
                 var pKey = _tokens.ExpectString();
                 var pName = CoaText.Unescape(_tokens.ExpectString());
-                var pType = _resolver.ResolveTypeRef(_tokens.ExpectString());
+                var pType = _typeCodec.ResolveTypeRef(_tokens.ExpectString());
                 var ordinal = _tokens.ExpectInt();
 
                 // 6e-M23 R8：第 5 个 token = out:/ref:/-（兼容旧文件裸 out/ref 与缺省 "-"）。
@@ -791,7 +791,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
 
             // 6e 跨库里程碑：库名回填（优先从 fn 键前缀提取——兼容入口无 moduleName 时仍能恢复库名，
             // 保证 round-trip 稳定；回退 context.ModuleName）。
-            function.ContainingLibrary = _resolver.ExtractLibraryFromKey(key);
+            function.ContainingLibrary = _symbolResolver.ExtractLibraryFromKey(key);
 
             // 6e-M32 Tier-2：恢复函数级 attribute（轻量占位 AttributeSymbol：仅名，实参留空）
             if (attributeNames.Count > 0)
@@ -849,7 +849,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
         {
             var key = _tokens.ExpectString();
             var isReadOnly = _tokens.ParseBoolWord(_tokens.ExpectString());
-            var type = _resolver.ResolveTypeRef(_tokens.ExpectString());
+            var type = _typeCodec.ResolveTypeRef(_tokens.ExpectString());
             BoundConstant? constant = null;
 
             if (_tokens.PeekRaw() == "(")
@@ -861,7 +861,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                 _tokens.End();
             }
 
-            var name = _resolver.KeyToName(key);
+            var name = _symbolResolver.KeyToName(key);
             VariableSymbol variable = isGlobal
                 ? new GlobalVariableSymbol(name, isReadOnly, type, constant)
                 : new LocalVariableSymbol(name, isReadOnly, type, constant);

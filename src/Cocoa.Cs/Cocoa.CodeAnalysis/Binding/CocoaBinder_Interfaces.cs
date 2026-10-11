@@ -1382,7 +1382,7 @@ namespace Cocoa.CodeAnalysis.Binding
         /// <summary>把 `.coa` 库的公共符号注入作用域（v1 无命名空间 → 裸注册；非空命名空间留扩展位，.coa v2 时启用）。</summary>
         /// <summary>6f-3：跨用户库同名类型全名集（类/枚举/泛型定义）——同一全名被 ≥2 个不同用户库声明即歧义。
         /// 系统库（System*）权威内置、允许覆盖/补充，不参与判定（与装载侧 DetectAmbiguousTypes 一致）。</summary>
-        private static ImmutableHashSet<string> ComputeAmbiguousCodTypeNames(ImmutableArray<CoaProgram> codLibraries)
+        internal static ImmutableHashSet<string> ComputeAmbiguousCodTypeNames(ImmutableArray<CoaProgram> codLibraries)
         {
             var byFullName = new Dictionary<string, CoaProgram>(StringComparer.Ordinal);
             var ambiguous = new HashSet<string>(StringComparer.Ordinal);

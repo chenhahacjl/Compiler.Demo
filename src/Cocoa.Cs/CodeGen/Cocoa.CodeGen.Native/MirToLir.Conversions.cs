@@ -24,7 +24,7 @@ namespace Cocoa.CodeGen.Native
     {
         private LirVirtualRegister EmitConditionalExpression(BoundConditionalExpression node)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var result = AllocateRegister(TypeOf(node.Type));
             var elseLabel = AllocLabel();
             var endLabel = AllocLabel();
@@ -52,7 +52,7 @@ namespace Cocoa.CodeGen.Native
             var obj = EmitExpression(node.Expression);
             EmitTypeChainCompare(obj, node.TargetType, out var found, out var notFound, out var done);
 
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(found)));
             var one = AllocateRegister(4);
             Add(instructions, new LirInstruction(LirOpCode.Const, one, LirOperand.Constant(1)));
@@ -74,7 +74,7 @@ namespace Cocoa.CodeGen.Native
             var obj = EmitExpression(node.Expression);
             EmitTypeChainCompare(obj, node.TargetType, out var found, out var notFound, out var done);
 
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(found)));
             Add(instructions, new LirInstruction(LirOpCode.Mov, result, LirOperand.Reg(obj)));
             Add(instructions, new LirInstruction(LirOpCode.Jmp, LirOperand.Label(done)));
@@ -90,7 +90,7 @@ namespace Cocoa.CodeGen.Native
         /// <summary>声明模式（`expr is T var`）：类型链比对命中 → 绑定模式变量（值类型拆箱，引用直通）并得 true；否则 false。</summary>
         private LirVirtualRegister EmitDeclarationPattern(BoundDeclarationPattern node)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var value = EmitExpression(node.Expression);
             var targetType = node.TargetType;
             var patternVar = GetVariable(node.Variable);
@@ -129,7 +129,7 @@ namespace Cocoa.CodeGen.Native
         /// <summary>发射 obj（可空）对目标类的类型链比较：null 短路未命中；命中/未命中，汇合三标签交调用方回填结果。</summary>
         private void EmitTypeChainCompare(LirVirtualRegister obj, TypeSymbol targetType, out int found, out int notFound, out int done)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var ps = _isX64 ? 8 : 4;
             found = AllocLabel();
             notFound = AllocLabel();
@@ -178,7 +178,7 @@ namespace Cocoa.CodeGen.Native
 
         private LirVirtualRegister EmitRuntimeBinary(BoundBinaryExpression node, string runtimeName, int resultSize, bool invert = false)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var left = EmitExpression(node.Left);
             var right = EmitExpression(node.Right);
 
@@ -211,7 +211,7 @@ namespace Cocoa.CodeGen.Native
         /// </summary>
         private LirVirtualRegister EmitStackRuntimeCall(string name, int resultSize, params LirVirtualRegister[] args)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var totalBytes = 8 * args.Length;
 
             Add(instructions, new LirInstruction(LirOpCode.ReserveArgs, LirOperand.Constant(totalBytes)));
@@ -266,7 +266,7 @@ namespace Cocoa.CodeGen.Native
 
         private LirVirtualRegister EmitExternCall(FunctionSymbol function, ImmutableArray<BoundExpression> arguments)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var count = arguments.Length;
 
         // 函数调用：先求值并编组全部实参（可能触发运行时调用），再统一 SetArg，
@@ -316,7 +316,7 @@ namespace Cocoa.CodeGen.Native
         /// <summary>extern string 参数编组：复制为 null 结尾宽串（按序号取用独立缓冲）并返回 LPCWSTR。</summary>
         private LirVirtualRegister EmitExternStringArg(LirVirtualRegister value, int slot)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(value)));
             var ptr = AllocateRegister(LirType.Addr);
             Add(instructions, new LirInstruction(LirOpCode.Call, ptr, LirOperand.Runtime("ExternWidePtr" + slot), LirOperand.Constant(0)));
@@ -354,7 +354,7 @@ namespace Cocoa.CodeGen.Native
         /// <summary>输出参数（newline=false 为 Write* 运行时函数不换行，true 为 Print* 带换行）。</summary>
         private void EmitWriteArguments(BoundExpression argument, bool newline)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var type = argument.Type;
 
             if (type == TypeSymbol.Any && argument is BoundConversionExpression conversion)
@@ -447,7 +447,7 @@ Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0),
 
         private LirVirtualRegister EmitSelectString(string trueText, string falseText, LirVirtualRegister condition)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var falseLabel = AllocLabel();
             var doneLabel = AllocLabel();
             var result = AllocateRegister(LirType.Addr);
@@ -484,7 +484,7 @@ Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0),
             ImmutableArray<BoundExpression> arguments,
             LirVirtualRegister? indirectFunction = null)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var hasThis = receiver != null;
             var count = arguments.Length;
 
@@ -548,7 +548,7 @@ Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0),
                 return false;
             }
 
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var v = value;
             var fromIs64 = from == TypeSymbol.Int64 || from == TypeSymbol.UInt64;
 
@@ -669,7 +669,7 @@ Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0),
         // 函数调用
             }
 
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
 
             // 6e-M21 Phase 5b：float 转整数（cvttss2si 截断；宽整型经 double 中转的 64 位路径）
             if (from == TypeSymbol.Float)
@@ -833,7 +833,7 @@ var wide = AllocateRegister(LirType.I64);
 
         private LirVirtualRegister EmitConversionExpression(BoundConversionExpression node)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var value = EmitExpression(node.Expression);
             var from = node.Expression.Type;
             var to = node.Type;
@@ -1127,7 +1127,7 @@ var wide = AllocateRegister(LirType.I64);
         /// <summary>值类型 → object 装箱：分配 头+值 对象（8 对齐，native 对象模型假设），写 box vtable 头 + 值字段。</summary>
         private LirVirtualRegister EmitBoxValue(LirVirtualRegister value, TypeSymbol type)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var pointerSize = _isX64 ? 8 : 4;
             var valueSize = NativeObjectModel.FieldSize(type);
             var total = (NativeObjectModel.HeaderBytes + valueSize + 7) / 8 * 8;
@@ -1145,7 +1145,7 @@ var wide = AllocateRegister(LirType.I64);
         /// <summary>object → 值类型 拆箱：读偏移 HeaderBytes 的值字段。</summary>
         private LirVirtualRegister EmitUnboxValue(LirVirtualRegister obj, TypeSymbol type)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var valueSize = NativeObjectModel.FieldSize(type);
             var result = AllocateRegister(TypeOf(type));
             Add(instructions, new LirInstruction(LirOpCode.Load, result, LirOperand.Reg(obj), LirOperand.None, NativeObjectModel.HeaderBytes, valueSize));
@@ -1156,7 +1156,7 @@ var wide = AllocateRegister(LirType.I64);
         /// native→i64/u64 同宽直通；native→i32/u32 走 Trunc64（x86 下低 4 字节即句柄值）。</summary>
         private LirVirtualRegister EmitNativeIntConversion(LirVirtualRegister value, TypeSymbol from, TypeSymbol to)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
 
             if (to == TypeSymbol.NativeInt32 || to == TypeSymbol.NativeUInt32)
             {
@@ -1196,7 +1196,7 @@ var wide = AllocateRegister(LirType.I64);
 
         private LirVirtualRegister GetVariable(VariableSymbol variable)
         {
-            if (_variables.TryGetValue(variable, out var register))
+            if (_builder.Variables.TryGetValue(variable, out var register))
             {
                 return register;
             }
@@ -1206,15 +1206,15 @@ var wide = AllocateRegister(LirType.I64);
 
         private int GetLabel(BoundLabel label)
         {
-            if (!_labels.TryGetValue(label, out var result))
+            if (!_builder.Labels.TryGetValue(label, out var result))
             {
                 result = AllocLabel();
-                _labels.Add(label, result);
+                _builder.Labels.Add(label, result);
             }
 
             return result;
         }
 
-        private int AllocLabel() => _nextLabelId++;
+        private int AllocLabel() => _builder.NextLabelId++;
     }
 }

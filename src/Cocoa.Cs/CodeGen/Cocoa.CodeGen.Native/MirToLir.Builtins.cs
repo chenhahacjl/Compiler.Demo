@@ -24,7 +24,7 @@ namespace Cocoa.CodeGen.Native
     {
         private LirVirtualRegister EmitBuiltinCall(FunctionSymbol function, ImmutableArray<BoundExpression> arguments)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
 
             switch (function.BuiltinKind)
             {
@@ -377,7 +377,7 @@ namespace Cocoa.CodeGen.Native
             var width = node.Width ?? 0;
 
             var value = EmitExpression(node.Value);
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
 
             // 新类型预转字符串（复用既有 ToString 原语），统一走 string 通道
             if (type == TypeSymbol.Float)
@@ -428,7 +428,7 @@ namespace Cocoa.CodeGen.Native
 
         private LirVirtualRegister EmitStringFormatCall(LirVirtualRegister value, LirVirtualRegister fmtPtr, int width, int typeKind)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var packed = ((width & 0xFFFF) << 4) | (typeKind & 0xF);
             var result = AllocateRegister(LirType.Addr);
             var is64 = typeKind == 1 || typeKind == 5; // double / long：值按 64 位传参（x86 拆 low/high）
@@ -496,7 +496,7 @@ namespace Cocoa.CodeGen.Native
             }
 
             var operand = EmitExpression(node.Operand);
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
 
             switch (node.Op.Kind)
             {
@@ -574,7 +574,7 @@ namespace Cocoa.CodeGen.Native
             }
 
             var op = node.Op.Kind;
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
 
             // 6e-M22 委托真实类型化 M5：具名 delegate 多播对象语义（Combine/Remove/调用列表相等）
             if ((node.Left.Type is NamedTypeSymbol { TypeKind: TypeKind.Delegate } ||
@@ -733,7 +733,7 @@ namespace Cocoa.CodeGen.Native
         /// <summary>6e-M22 M5：具名 delegate 多播对象二元运算（Combine/Remove → 新委托对象；相等 → 调用列表相等）。null 操作数不读 list 槽。</summary>
         private LirVirtualRegister EmitDelegateBinary(BoundBinaryExpression node)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var pointerSize = _isX64 ? 8 : 4;
             var leftNull = node.Left.Type == TypeSymbol.Null;
             var rightNull = node.Right.Type == TypeSymbol.Null;
@@ -832,7 +832,7 @@ namespace Cocoa.CodeGen.Native
         /// <summary>读委托对象 list 槽的调用列表数组指针（对象头 8B 后）。</summary>
         private LirVirtualRegister EmitLoadDelegateList(LirVirtualRegister delegateObject)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var pointerSize = _isX64 ? 8 : 4;
             var list = AllocateRegister(LirType.Addr);
             Add(instructions, new LirInstruction(LirOpCode.Load, list, LirOperand.Reg(delegateObject), LirOperand.None, NativeObjectModel.HeaderBytes, pointerSize));
@@ -842,7 +842,7 @@ namespace Cocoa.CodeGen.Native
         /// <summary>委托对象 = Alloc(实例布局 + list 槽) + vtable + list 数组指针（GetType/is 走对象头 vtable）。</summary>
         private LirVirtualRegister EmitDelegateObjectFromList(NamedTypeSymbol delegateClass, LirVirtualRegister listArray)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var pointerSize = _isX64 ? 8 : 4;
             var (_, instanceSize) = GetLayout(delegateClass);
             var objSize = instanceSize + pointerSize;
@@ -862,7 +862,7 @@ namespace Cocoa.CodeGen.Native
         /// <summary>单播委托对象：list = [函数值对象指针]，对象头 = 具体 delegate 类。</summary>
         private LirVirtualRegister EmitDelegateWrap(NamedTypeSymbol delegateClass, LirVirtualRegister fnValue)
         {
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var pointerSize = _isX64 ? 8 : 4;
 
             var array = AllocateRegister(LirType.Addr);
@@ -880,7 +880,7 @@ namespace Cocoa.CodeGen.Native
         private LirVirtualRegister EmitLongBinary(BoundBinaryExpression node)
         {
             var op = node.Op.Kind;
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var left = EmitExpression(node.Left);
             var right = EmitExpression(node.Right);
             var result = AllocateRegister(LirType.I64);
@@ -968,7 +968,7 @@ namespace Cocoa.CodeGen.Native
         private LirVirtualRegister EmitFloatBinary(BoundBinaryExpression node)
         {
             var op = node.Op.Kind;
-            var instructions = _currentFunction.Instructions;
+            var instructions = _builder.CurrentFunction.Instructions;
             var left = EmitExpression(node.Left);
             var right = EmitExpression(node.Right);
 

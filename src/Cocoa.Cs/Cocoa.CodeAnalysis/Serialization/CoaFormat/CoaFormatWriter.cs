@@ -74,7 +74,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
             }
 
             // 全部符号收集完毕后再定名（变量键需要函数键，且要跨符号消重）。
-            foreach (var pair in program.GenericOpenBodies.OrderBy(kv => CoaTypeText.GenericOpenSortKey(kv.Key), StringComparer.Ordinal))
+            foreach (var pair in program.GenericOpenBodies.OrderBy(kv => CoaTypeCodec.GenericOpenSortKey(kv.Key), StringComparer.Ordinal))
             {
                 var labels = new Dictionary<string, BoundLabel>(StringComparer.Ordinal);
                 CollectBody(pair.Key, pair.Value, labels);
@@ -129,7 +129,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                 WriteBodyEntry(labelsByFunction, fn, body);
             }
             // 6e-G7 S2：开放绑定体（泛型定义方法）——显式遍历，避免卷入 stdlib 注入序列。
-            foreach (var pair in program.GenericOpenBodies.OrderBy(kv => CoaTypeText.GenericOpenSortKey(kv.Key), StringComparer.Ordinal))
+            foreach (var pair in program.GenericOpenBodies.OrderBy(kv => CoaTypeCodec.GenericOpenSortKey(kv.Key), StringComparer.Ordinal))
             {
                 WriteBodyEntry(labelsByFunction, pair.Key, pair.Value);
             }
@@ -483,14 +483,14 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
             _output.Field("ifaces:" + interfaces.Length.ToString(CultureInfo.InvariantCulture));
             foreach (var iface in interfaces)
             {
-                _output.Field(CoaTypeText.TypeRef(iface));
+                _output.Field(CoaTypeCodec.TypeRef(iface));
             }
             // N1：值类型位（struct 重建须还原 TypeKind.Struct——否则消费侧按引用类型签名发射，BCL 同名 struct 直联处 value-type mismatch）
             _output.Field("struct:" + CoaText.BoolWord(classType.TypeKind == TypeKind.Struct));
             // 6e-M32：`[Facade("X")]` 显式 BCL 目标（如 System.NativeInt32 → System.IntPtr）——跨库消费端恢复 IL 重定向必需
             _output.Field("bclTarget:" + (classType.FacadeBclTargetName != null ? classType.FacadeBclTargetName : "-"));
             // 6e-M33：显式基类（非 Object）——消费端恢复继承链（Handle 族 FileHandle extends Handle 硬前置）；无/Object → `-`
-            _output.Field("base:" + (classType.BaseType != null && !classType.BaseType.IsSystemObjectRoot ? CoaTypeText.LibraryQualify(classType.BaseType) : "-"));
+            _output.Field("base:" + (classType.BaseType != null && !classType.BaseType.IsSystemObjectRoot ? CoaTypeCodec.LibraryQualify(classType.BaseType) : "-"));
             // 序列化全部静态方法签名（6e-M18：容器类允许带体静态方法，如 Console.WriteLine/Math.Max；syscall/extern 亦为静态）。
             // 方法本体由各自 fn 条目携带（owner 字段回填类归属），这里列 Name[参数类型] 供阅读（无参省略方括号）。
             // N1：接口的实例（抽象）方法签名也须随库携带——否则库侧空壳接口（如 System.IDisposable methods:0）
@@ -509,7 +509,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
             {
                 _output.Open("fld");
                 _output.Field(CoaText.Str(field.Name));
-                _output.Field(CoaTypeText.TypeRef(field.Type));
+                _output.Field(CoaTypeCodec.TypeRef(field.Type));
                 _output.Field(field.Visibility.ToString().ToLowerInvariant());
                 _output.Field(CoaText.BoolWord(field.IsStatic));
                 _output.Field(CoaText.BoolWord(field.IsReadonly));
@@ -522,7 +522,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
             {
                 _output.Open("evt");
                 _output.Field(CoaText.Str(eventSymbol.Name));
-                _output.Field(CoaTypeText.TypeRef(eventSymbol.HandlerType));
+                _output.Field(CoaTypeCodec.TypeRef(eventSymbol.HandlerType));
                 _output.Field(eventSymbol.Visibility.ToString().ToLowerInvariant());
                 _output.End();
             }
@@ -533,7 +533,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
             {
                 _output.Open("prop");
                 _output.Field(CoaText.Str(property.Name));
-                _output.Field(CoaTypeText.TypeRef(property.Type));
+                _output.Field(CoaTypeCodec.TypeRef(property.Type));
                 _output.Field(CoaText.BoolWord(property.Getter != null));
                 _output.Field(CoaText.BoolWord(property.Setter != null));
                 _output.Field(property.Visibility.ToString().ToLowerInvariant());
@@ -550,7 +550,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
             return method.Parameters.Length == 0
                 ? method.Name
                 : method.Name + "[" + string.Join(",", method.Parameters.Select(p =>
-                    (p.IsOut ? "out:" : p.IsRef ? "ref:" : "-") + CoaTypeText.TypeRef(p.Type))) + "]";
+                    (p.IsOut ? "out:" : p.IsRef ? "ref:" : "-") + CoaTypeCodec.TypeRef(p.Type))) + "]";
         }
 
         /// <summary>接口方法完整签名：Name[params]:Return（返回类型必须携带——接口无 fn 条目承载方法体签名）。</summary>
@@ -559,8 +559,8 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
             var parameters = method.Parameters.Length == 0
                 ? ""
                 : "[" + string.Join(",", method.Parameters.Select(p =>
-                    (p.IsOut ? "out:" : p.IsRef ? "ref:" : "-") + CoaTypeText.TypeRef(p.Type))) + "]";
-            return method.Name + parameters + ":" + CoaTypeText.TypeRef(method.ReturnType);
+                    (p.IsOut ? "out:" : p.IsRef ? "ref:" : "-") + CoaTypeCodec.TypeRef(p.Type))) + "]";
+            return method.Name + parameters + ":" + CoaTypeCodec.TypeRef(method.ReturnType);
         }
 
         /// <summary>
@@ -578,7 +578,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
             _output.Field("ifaces:" + interfaces.Length.ToString(CultureInfo.InvariantCulture));
             foreach (var iface in interfaces)
             {
-                _output.Field(CoaTypeText.TypeRef(iface));
+                _output.Field(CoaTypeCodec.TypeRef(iface));
             }
             // N1：值类型位（gcls 同样携带——ValueTuple 等泛型 struct 重建须还原 TypeKind.Struct）
             _output.Field("struct:" + CoaText.BoolWord(classType.TypeKind == TypeKind.Struct));
@@ -596,7 +596,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
             {
                 _output.Open("fld");
                 _output.Field(CoaText.Str(field.Name));
-                _output.Field(CoaTypeText.TypeRef(field.Type));
+                _output.Field(CoaTypeCodec.TypeRef(field.Type));
                 _output.Field(field.Visibility.ToString().ToLowerInvariant());
                 _output.Field(CoaText.BoolWord(field.IsStatic));
                 _output.Field(CoaText.BoolWord(field.IsReadonly));
@@ -617,7 +617,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
             {
                 _output.Open("evt");
                 _output.Field(CoaText.Str(eventSymbol.Name));
-                _output.Field(CoaTypeText.TypeRef(eventSymbol.HandlerType));
+                _output.Field(CoaTypeCodec.TypeRef(eventSymbol.HandlerType));
                 _output.Field(eventSymbol.Visibility.ToString().ToLowerInvariant());
                 _output.End();
             }
@@ -628,7 +628,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
             {
                 _output.Open("prop");
                 _output.Field(CoaText.Str(property.Name));
-                _output.Field(CoaTypeText.TypeRef(property.Type));
+                _output.Field(CoaTypeCodec.TypeRef(property.Type));
                 _output.Field(CoaText.BoolWord(property.Getter != null));
                 _output.Field(CoaText.BoolWord(property.Setter != null));
                 _output.Field(property.Visibility.ToString().ToLowerInvariant());
@@ -668,7 +668,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
             _output.Field("c:" + typeParameter.ConstraintTypes.Length.ToString(CultureInfo.InvariantCulture));
             foreach (var constraint in typeParameter.ConstraintTypes)
             {
-                _output.Field(CoaTypeText.TypeRef(constraint));
+                _output.Field(CoaTypeCodec.TypeRef(constraint));
             }
 
             _output.End();
@@ -697,7 +697,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                 WriteTypeParameter(typeParameter);
             }
 
-            _output.Field("ret:" + CoaTypeText.TypeRef(fn.ReturnType));
+            _output.Field("ret:" + CoaTypeCodec.TypeRef(fn.ReturnType));
             _output.Field("ns:" + (fn.Namespace.Length > 0 ? CoaText.Str(fn.Namespace) : "-"));
             _output.Field("owner:" + (fn.ContainingClass != null ? fn.ContainingClass.FullName : "-"));
             _output.Field("extern:" + CoaText.BoolWord(fn.IsExtern));
@@ -748,7 +748,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                 _output.Open("par");
                 _output.Field(_registry.VarKey(p));
                 _output.Field(CoaText.Str(p.Name));
-                _output.Field(CoaTypeText.TypeRef(p.Type));
+                _output.Field(CoaTypeCodec.TypeRef(p.Type));
                 _output.Field(p.Ordinal);
                 _output.Field(p.IsOut ? "out:" : p.IsRef ? "ref:" : "-");
                 _output.Field(p.IsThisParameter ? "this" : "-");
@@ -762,7 +762,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
             _output.Open(v is GlobalVariableSymbol ? "glb" : "loc");
             _output.Field(_registry.VarKey(v));
             _output.Field(CoaText.BoolWord(v.IsReadOnly));
-            _output.Field(CoaTypeText.TypeRef(v.Type));
+            _output.Field(CoaTypeCodec.TypeRef(v.Type));
             if (v.Constant != null)
             {
                 _output.Open("const");
@@ -945,7 +945,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                     {
                         var n = (BoundLiteralExpression)expression;
                         _output.Open("lit");
-                        _output.Field(CoaTypeText.TypeRef(n.Type));
+                        _output.Field(CoaTypeCodec.TypeRef(n.Type));
                         _output.Field(CoaText.EncodeValue(n.Value));
                         _output.End();
                         break;
@@ -1032,7 +1032,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                     {
                         var n = (BoundConversionExpression)expression;
                         _output.Open("conv");
-                        _output.Field(CoaTypeText.TypeRef(n.Type));
+                        _output.Field(CoaTypeCodec.TypeRef(n.Type));
                         WriteExpression(labels, n.Expression);
                         _output.End();
                         break;
@@ -1041,7 +1041,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                     {
                         var n = (BoundIsExpression)expression;
                         _output.Open("istype");
-                        _output.Field(CoaTypeText.TypeRef(n.TargetType));
+                        _output.Field(CoaTypeCodec.TypeRef(n.TargetType));
                         WriteExpression(labels, n.Expression);
                         _output.End();
                         break;
@@ -1050,7 +1050,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                     {
                         var n = (BoundAsExpression)expression;
                         _output.Open("astype");
-                        _output.Field(CoaTypeText.TypeRef(n.TargetType));
+                        _output.Field(CoaTypeCodec.TypeRef(n.TargetType));
                         WriteExpression(labels, n.Expression);
                         _output.End();
                         break;
@@ -1059,7 +1059,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                     {
                         var n = (BoundArrayCreationExpression)expression;
                         _output.Open("arrnew");
-                        _output.Field(CoaTypeText.TypeRef(n.Type));
+                        _output.Field(CoaTypeCodec.TypeRef(n.Type));
                         WriteExpression(labels, n.Length);
                         _output.Field(n.Initializers.Length);
                         foreach (var i in n.Initializers)
@@ -1074,7 +1074,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                         // M0-1c：对象创建 `new Foo(args)`——构造器由类型+元数重解析，仅需类型 + 实参
                         var n = (BoundObjectCreationExpression)expression;
                         _output.Open("objnew");
-                        _output.Field(CoaTypeText.TypeRef(n.Type));
+                        _output.Field(CoaTypeCodec.TypeRef(n.Type));
                         _output.Field(n.Arguments.Length);
                         foreach (var arg in n.Arguments)
                         {
@@ -1087,7 +1087,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                     {
                         var n = (BoundElementAccessExpression)expression;
                         _output.Open("elem");
-                        _output.Field(CoaTypeText.TypeRef(n.Type));
+                        _output.Field(CoaTypeCodec.TypeRef(n.Type));
                         WriteExpression(labels, n.Target);
                         WriteExpression(labels, n.Index);
                         _output.End();
@@ -1097,7 +1097,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                     {
                         var n = (BoundElementAssignmentExpression)expression;
                         _output.Open("elemassign");
-                        _output.Field(CoaTypeText.TypeRef(n.Type));
+                        _output.Field(CoaTypeCodec.TypeRef(n.Type));
                         WriteExpression(labels, n.Target);
                         WriteExpression(labels, n.Expression);
                         _output.End();
@@ -1108,7 +1108,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                         // 6e-G7：字段访问随 gcls/fld 携带（Field 经 FnKey 式名字回填）；仅数组/字符串 `.Length` 时 Field == null
                         var n = (BoundMemberAccessExpression)expression;
                         _output.Open("memberacc");
-                        _output.Field(CoaTypeText.TypeRef(n.Type));
+                        _output.Field(CoaTypeCodec.TypeRef(n.Type));
                         _output.Field(CoaText.Str(n.Identifier));
                         if (n.Field != null)
                         {
@@ -1123,7 +1123,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                     {
                         var n = (BoundMemberCallExpression)expression;
                         _output.Open("membercall");
-                        _output.Field(CoaTypeText.TypeRef(n.Type));
+                        _output.Field(CoaTypeCodec.TypeRef(n.Type));
                         _output.Field(CoaText.Str(n.Identifier));
                         _output.Field(n.Method != null ? _registry.FnKey(n.Method) : "-");
                         _output.Field(n.Arguments.Length);
@@ -1139,7 +1139,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                     {
                         var n = (BoundStaticTypeExpression)expression;
                         _output.Open("statictype");
-                        _output.Field(CoaTypeText.TypeRef(n.Type));
+                        _output.Field(CoaTypeCodec.TypeRef(n.Type));
                         _output.End();
                         break;
                     }
@@ -1162,7 +1162,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                     {
                         var n = (BoundThisExpression)expression;
                         _output.Open("this");
-                        _output.Field(CoaTypeText.TypeRef(n.Type));
+                        _output.Field(CoaTypeCodec.TypeRef(n.Type));
                         _output.End();
                         break;
                     }
@@ -1173,7 +1173,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                         _output.Open("memberassign");
                         WriteExpression(labels, n.Target);
                         _output.Field("name:" + CoaText.Str(n.Field.Name));
-                        _output.Field(CoaTypeText.TypeRef(n.Field.Type));
+                        _output.Field(CoaTypeCodec.TypeRef(n.Field.Type));
                         _output.Field(CoaText.BoolWord(n.Field.IsStatic));
                         WriteExpression(labels, n.Expression);
                         _output.End();
@@ -1184,10 +1184,10 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                         // Step D-a：函数值/捕获闭包——FnKey（lambda 合成方法或方法组）+ 可选接收者 + 可选闭包环境类
                         var fd = (BoundFunctionValueExpression)expression;
                         _output.Open("fnval");
-                        _output.Field(CoaTypeText.TypeRef(fd.Type));
+                        _output.Field(CoaTypeCodec.TypeRef(fd.Type));
                         _output.Field(_registry.FnKey(fd.Function));
                         WriteNullableExpression(labels, fd.Receiver);
-                        _output.Field(fd.EnvironmentClass != null ? CoaTypeText.TypeRef(fd.EnvironmentClass) : "-");
+                        _output.Field(fd.EnvironmentClass != null ? CoaTypeCodec.TypeRef(fd.EnvironmentClass) : "-");
                         _output.End();
                         break;
                     }
@@ -1196,7 +1196,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                         // Step D-a：函数值间接调用 `f(x)` / `obj.handler(a, b)`
                         var iv = (BoundInvocationExpression)expression;
                         _output.Open("invoc");
-                        _output.Field(CoaTypeText.TypeRef(iv.Type));
+                        _output.Field(CoaTypeCodec.TypeRef(iv.Type));
                         _output.Field(iv.Arguments.Length);
                         WriteExpression(labels, iv.Callee);
                         foreach (var a in iv.Arguments)
@@ -1215,7 +1215,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
         {
             _output.Open("uop");
             _output.Field(CoaText.UnaryOpText(op.Kind));
-            _output.Field(CoaTypeText.TypeRef(op.OperandType));
+            _output.Field(CoaTypeCodec.TypeRef(op.OperandType));
             _output.End();
         }
 
@@ -1223,8 +1223,8 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
         {
             _output.Open("bop");
             _output.Field(CoaText.BinaryOpText(op.Kind));
-            _output.Field(CoaTypeText.TypeRef(op.LeftType));
-            _output.Field(CoaTypeText.TypeRef(op.RightType));
+            _output.Field(CoaTypeCodec.TypeRef(op.LeftType));
+            _output.Field(CoaTypeCodec.TypeRef(op.RightType));
             _output.End();
         }
     }

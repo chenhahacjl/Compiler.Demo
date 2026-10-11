@@ -30,23 +30,31 @@ namespace Cocoa.CodeGen.Managed.Writer
         /// <summary>cod 顶层函数重载组（同库内同 (ns,name) 的函数 >1）：方法名追加参数类型后缀，与库侧发射规则一致。</summary>
         private readonly HashSet<(string asm, string ns, string name)> _codOverloadedGroups = new();
         private readonly Dictionary<FunctionSymbol, IlMethodDef> _methods = new Dictionary<FunctionSymbol, IlMethodDef>();
-        private readonly Dictionary<VariableSymbol, int> _locals = new Dictionary<VariableSymbol, int>();
-        private readonly Dictionary<BoundExpression, int> _temporaryLocalIndices = new Dictionary<BoundExpression, int>();
-        // N1：非 BoundExpression 键的合成临时槽（builtin 发射内部用，如 CopyRange 的 count/dst），键需调用点唯一
-        private readonly Dictionary<object, int> _syntheticTemporaryLocalIndices = new Dictionary<object, int>();
-        private List<IlType>? _currentFunctionLocals;
+
+        /// <summary>4.1：当前方法体发射状态（局部槽/标签/异常保护区/return 出口/闭包局部），经转发访问。</summary>
+        private MethodBodyBuilder _bodyBuilder = null!;
+
+        private Dictionary<VariableSymbol, int> _locals => _bodyBuilder.Locals;
+        private Dictionary<BoundExpression, int> _temporaryLocalIndices => _bodyBuilder.TemporaryLocalIndices;
+        private Dictionary<object, int> _syntheticTemporaryLocalIndices => _bodyBuilder.SyntheticTemporaryLocalIndices;
+        private List<IlType>? _currentFunctionLocals
+        {
+            get => _bodyBuilder.CurrentFunctionLocals;
+            set => _bodyBuilder.CurrentFunctionLocals = value ?? new List<IlType>();
+        }
 
         /// <summary>保护区内 return 的出口块（leave 目标）——CLR 要求离开保护区域须 leave，且 finally 须先执行。</summary>
-        private IlInstruction? _returnExitTarget;
-        private bool _returnExitHasValue;
+        private IlInstruction? _returnExitTarget { get => _bodyBuilder.ReturnExitTarget; set => _bodyBuilder.ReturnExitTarget = value; }
+        private bool _returnExitHasValue { get => _bodyBuilder.ReturnExitHasValue; set => _bodyBuilder.ReturnExitHasValue = value; }
         /// <summary>当前是否在 checked 块内（整数算术发 add.ovf/sub.ovf/mul.ovf，溢出抛 OverflowException）。</summary>
-        private bool _checkedArithmetic;        private int _returnExitTemp = -1;
-        private int _protectedBlockDepth;
-        private readonly Dictionary<BoundLabel, IlInstruction> _labelTargets = new Dictionary<BoundLabel, IlInstruction>();
+        private bool _checkedArithmetic { get => _bodyBuilder.CheckedArithmetic; set => _bodyBuilder.CheckedArithmetic = value; }
+        private int _returnExitTemp { get => _bodyBuilder.ReturnExitTemp; set => _bodyBuilder.ReturnExitTemp = value; }
+        private int _protectedBlockDepth { get => _bodyBuilder.ProtectedBlockDepth; set => _bodyBuilder.ProtectedBlockDepth = value; }
+        private Dictionary<BoundLabel, IlInstruction> _labelTargets => _bodyBuilder.LabelTargets;
 
         private FunctionSymbol? _entryFunction;
-        private bool _entryVoidMain;
-        private TypeSymbol _currentMethodReturnType = TypeSymbol.Void;
+        private bool _entryVoidMain { get => _bodyBuilder.EntryVoidMain; set => _bodyBuilder.EntryVoidMain = value; }
+        private TypeSymbol _currentMethodReturnType { get => _bodyBuilder.CurrentMethodReturnType; set => _bodyBuilder.CurrentMethodReturnType = value; }
 
         private readonly IlTypeDef _typeDefinition;
         /// <summary>库产物（emitLibrary）：类型/方法统一按 public 发布（分发面即公共契约）。</summary>
@@ -59,12 +67,12 @@ namespace Cocoa.CodeGen.Managed.Writer
         private readonly Dictionary<VariableSymbol, IlFieldDef> _globalVariableFields = new Dictionary<VariableSymbol, IlFieldDef>();
     private readonly DelegateShapeCache _delegateShapes;
         private HashSet<(string Namespace, string Name)>? _overloadedGroups;
-        private bool _currentMethodIsInstance;
+        private bool _currentMethodIsInstance { get => _bodyBuilder.CurrentMethodIsInstance; set => _bodyBuilder.CurrentMethodIsInstance = value; }
 
         /// <summary>6e-M22 C5-c：当前方法的环境对象局部槽索引与布局类（无捕获 = null）。</summary>
-        private int? _closureEnvLocalIndex;
-        private NamedTypeSymbol? _closureClass;
-        private Dictionary<string, IlFieldDef>? _closureFieldDefs;
+        private int? _closureEnvLocalIndex { get => _bodyBuilder.ClosureEnvLocalIndex; set => _bodyBuilder.ClosureEnvLocalIndex = value; }
+        private NamedTypeSymbol? _closureClass { get => _bodyBuilder.ClosureClass; set => _bodyBuilder.ClosureClass = value; }
+        private Dictionary<string, IlFieldDef>? _closureFieldDefs { get => _bodyBuilder.ClosureFieldDefs; set => _bodyBuilder.ClosureFieldDefs = value; }
         private readonly Dictionary<NamedTypeSymbol, IlMethodDef> environmentCtorDefs = new();
 
         /// <summary>6e-M22 委托真实类型化：delegate 类合成 `.ctor(object, IntPtr)` MethodDef（newobj 目标）。</summary>
@@ -72,9 +80,9 @@ namespace Cocoa.CodeGen.Managed.Writer
         /// <summary>6e-M22 委托真实类型化：delegate 类合成 `Invoke` MethodDef（callvirt 目标）。</summary>
         private readonly Dictionary<NamedTypeSymbol, IlMethodDef> _delegateInvokes = new();
 
-        /// <summary>闭包环境类判定：Binder 合成的 `__Env_<fn>` 命名约定。</summary>
+        /// <summary>闭包环境类判定：Binder 合成的 `__Env_<fn>` 命名约定（契约单一事实源，3.1）。</summary>
         private static bool IsClosureEnvironmentClass(NamedTypeSymbol classType)
-            => classType.Name.StartsWith("__Env_", StringComparison.Ordinal);
+            => Cocoa.CodeAnalysis.Contracts.ClosureContract.IsEnvironmentClass(classType);
 
         private IlEmitter(string moduleName, string[] references, ImmutableDictionary<object, string>? codAssemblies = null)
         {
@@ -330,8 +338,7 @@ namespace Cocoa.CodeGen.Managed.Writer
 
                 var method = _methods[function];
                 methods.Add(method);
-                _entryVoidMain = _entryFunction == function && function.ReturnType == TypeSymbol.Void;
-                var (code, localSigToken, maxStack, exceptionTable) = EmitFunctionBody(method, function, allFunctions[function]);
+                var (code, localSigToken, maxStack, exceptionTable) = EmitFunctionBody(method, function, allFunctions[function], _entryFunction == function && function.ReturnType == TypeSymbol.Void);
                 bodies.Add(new ManagedPEWriter.MethodBodyBlob(code, localSigToken, (ushort)maxStack, exceptionTable));
             }
 
@@ -693,24 +700,24 @@ namespace Cocoa.CodeGen.Managed.Writer
             }
         }
 
-        private (byte[] Code, uint LocalSigToken, int MaxStack, byte[]? ExceptionTable) EmitFunctionBody(IlMethodDef method, FunctionSymbol function, BoundBlockStatement body)
+        private (byte[] Code, uint LocalSigToken, int MaxStack, byte[]? ExceptionTable) EmitFunctionBody(IlMethodDef method, FunctionSymbol function, BoundBlockStatement body, bool entryVoidMain)
         {
-            _locals.Clear();
-            _labelTargets.Clear();
-            _temporaryLocalIndices.Clear();
-            _syntheticTemporaryLocalIndices.Clear();
-            _currentMethodIsInstance = !method.IsStatic;
-            _currentMethodReturnType = function.ReturnType;
-            _returnExitTarget = null;
-            _returnExitHasValue = false;
-            _returnExitTemp = -1;
-            _protectedBlockDepth = 0;
+            // 4.1：方法体发射状态收进 MethodBodyBuilder（随方法体创建，结束时由调用方丢弃）
+            _bodyBuilder = new MethodBodyBuilder
+            {
+                CurrentMethodIsInstance = !method.IsStatic,
+                CurrentMethodReturnType = function.ReturnType,
+                ReturnExitTarget = null,
+                ReturnExitHasValue = false,
+                ReturnExitTemp = -1,
+                ProtectedBlockDepth = 0,
+                EntryVoidMain = entryVoidMain,
+            };
 
             var assembler = new IlAssembler();
 
             // 预收集局部变量（按声明顺序分配索引）
-            var localTypes = new List<IlType>();
-            _currentFunctionLocals = localTypes;
+            var localTypes = _bodyBuilder.CurrentFunctionLocals;
 
             // 6e-M22 C5-c：环境对象局部槽预留 + 前奏 IL
             _closureClass = function.EnvironmentClass;

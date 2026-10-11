@@ -9,6 +9,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Cocoa.CodeAnalysis.Text\Cocoa.CodeAnalysis.Text.csproj" />
     <ProjectReference Include="..\..\Cocoa.CodeAnalysis\Cocoa.CodeAnalysis.csproj" />
   </ItemGroup>
 
