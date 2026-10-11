@@ -133,10 +133,13 @@ function Main(): i32
             Assert.Equal(ExpectedOutput, stdout.Replace("\r\n", "\n"));
         }
 
-        [Fact]
-        public void NativeX64_Indexer_CountProperty()
+        [Theory]
+        [InlineData(Architecture.X64)]
+        [InlineData(Architecture.X86)]
+        public void Native_Indexer_CountProperty(Architecture arch)
         {
-            var (exitCode, stdout) = EmitNativeAndRun(Source, "idx-native");
+            var platform = new TargetPlatform(TargetOS.Windows, arch);
+            var (exitCode, stdout) = EmitNativeAndRun(Source, "idx-native-" + arch);
             Assert.Equal(0, exitCode);
             Assert.Equal(ExpectedOutput, stdout);
         }
@@ -149,7 +152,10 @@ function Main(): i32
 
             var syntaxTree = SyntaxTree.Parse(source);
             var compilation = Compilation.Create(syntaxTree);
-            var diagnostics = compilation.EmitNative(name, exePath, new TargetPlatform(TargetOS.Windows, Architecture.X64));
+            var platform = name.Contains("X86")
+                ? new TargetPlatform(TargetOS.Windows, Architecture.X86)
+                : new TargetPlatform(TargetOS.Windows, Architecture.X64);
+            var diagnostics = compilation.EmitNative(name, exePath, platform);
 
             Assert.True(diagnostics.IsEmpty, string.Join("\n", diagnostics.Select(d => d.Message)));
             Assert.True(File.Exists(exePath));
