@@ -492,6 +492,22 @@ namespace Cocoa.CodeGen.Native
                 case BoundCallExpression call:
                     yield return call.Function;
                     break;
+                case BoundBinaryExpression binary:
+                    // 用户定义二元运算符（op_Addition 等）：Op.IsUserDefined 时目标方法须随发射集存活
+                    if (binary.Op.IsUserDefined && binary.Op.UserDefinedMethod != null)
+                    {
+                        yield return binary.Op.UserDefinedMethod;
+                    }
+
+                    break;
+                case BoundUnaryExpression unary:
+                    // 用户定义一元运算符（op_UnaryNegation 等）
+                    if (unary.Op.IsUserDefined && unary.Op.UserDefinedMethod != null)
+                    {
+                        yield return unary.Op.UserDefinedMethod;
+                    }
+
+                    break;
                 case BoundMemberCallExpression memberCall:
                     if (memberCall.Method != null)
                     {
