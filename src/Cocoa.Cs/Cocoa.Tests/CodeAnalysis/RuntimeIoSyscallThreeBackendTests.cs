@@ -128,6 +128,7 @@ function Main(): i32
 
         [Theory]
         [InlineData("windows-x64")]
+        [InlineData("windows-x86")]
         public void NativeE2e_BytesRoundTrip(string target)
         {
             var dir = NewDir();
@@ -178,14 +179,16 @@ function Main(): i32
             }
         }
 
-        [Fact]
-        public void NativeE2e_LaunchProcessWorkingDir()
+        [Theory]
+        [InlineData("windows-x64")]
+        [InlineData("windows-x86")]
+        public void NativeE2e_LaunchProcessWorkingDir(string target)
         {
             var dir = NewDir();
             try
             {
-                TargetPlatform.TryParse("windows-x64", out var platform);
-                var exePath = Path.Combine(dir, "launch.exe");
+                TargetPlatform.TryParse(target, out var platform);
+                var exePath = Path.Combine(dir, "launch" + (platform.Arch == Architecture.X86 ? "-x86" : "") + ".exe");
                 var compilation = Compilation.Create("Main", References(), SyntaxTree.Parse(LaunchProgram(dir)));
                 var diagnostics = compilation.EmitNative("launchwd", exePath, platform);
                 Assert.Empty(string.Join("\n", diagnostics));
