@@ -49,8 +49,8 @@ function Main(): i32
 
             var point = model.Types.Single(t => t.FullName == "Point");
             Assert.Equal((byte)TypeKind.Class, point.TypeKind);
-            // Point : Object（固定根不入存活类集合，但类型行 BaseFullName 指向其基类）
-            Assert.Equal("System.Object", point.BaseFullName);
+            // Point : any（对象根统一后基类全名为 any；固定根不入存活类集合，但类型行 BaseFullName 指向其基类）
+            Assert.Equal("any", point.BaseFullName);
             // 方法区段 = Distance 构造等
             Assert.True(point.MethodCount >= 1);
             Assert.Contains(model.Methods.Where(m => m.FullName == "Point.Distance"), m => m.OwnerType == "Point");

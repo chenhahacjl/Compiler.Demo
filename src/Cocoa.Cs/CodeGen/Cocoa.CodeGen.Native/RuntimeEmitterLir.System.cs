@@ -227,16 +227,105 @@ namespace Cocoa.CodeGen.Native
         }
 
         // ------------------------------------------------------------------
-        // ObjectEquals(a:8, b:8) → bool（指针比较）
+        // ObjectEquals(a:8, b:8) → bool
+        // 语义 = object.Equals：同引用 true；null 一方 false；同类型比较——
+        // 值盒（Boxed.* 伪 vtable）比较 payload；类实例/字符串异引用 false（引用相等）。
         // ------------------------------------------------------------------
+
+        private const string BoxedPrefix = "$vt:Boxed.";
+
+        /// <summary>Boxed.* 伪 vtable key → payload 宽度（字节；仅盒化的 1/2/4/8 字节基元）。</summary>
+        private static int BoxedPayloadWidth(string boxKey)
+        {
+            var typeName = boxKey.Substring(BoxedPrefix.Length);
+            switch (typeName)
+            {
+                case "System.Boolean":
+                case "System.Byte":
+                case "System.SByte":
+                    return 1;
+                case "System.Char":
+                case "System.Int16":
+                case "System.UInt16":
+                    return 2;
+                case "System.Int32":
+                case "System.UInt32":
+                case "System.Single":
+                    return 4;
+                default:
+                    return 8; // System.Int64 / System.UInt64 / System.Double
+            }
+        }
 
         private void EmitObjectEquals()
         {
             var a = _args[0];
             var b = _args[1];
-            Cmp(a, b);
             var result = NewReg(4);
-            Setcc(result, LirCond.Equal);
+            var equal = NewLabel();
+            var none = NewLabel();
+            var eqTail = NewLabel();
+
+            Cmp(a, b);
+            Jcc(LirCond.Equal, equal);
+
+            Cmp(a, 0);
+            Jcc(LirCond.Equal, none);
+            Cmp(b, 0);
+            Jcc(LirCond.Equal, none);
+
+            var va = NewPtr();
+            Load(va, a, 0, _isX64 ? 8 : 4);
+            var vb = NewPtr();
+            Load(vb, b, 0, _isX64 ? 8 : 4);
+            Cmp(va, vb);
+            Jcc(LirCond.NotEqual, none);
+
+            // vtable 相同：判断是否 Boxed.* 值盒，命中则比较 payload（HeaderBytes 起、按类型宽度）。
+            // 类实例/字符串同型异引用 → 落到 none（false，引用相等）。
+            foreach (var boxItem in _program.DataItems.Where(i => i.Key.StartsWith(BoxedPrefix)))
+            {
+                var boxKey = boxItem.Key;
+                var boxVt = NewPtr();
+                LeaData(boxVt, boxKey);
+                Cmp(va, boxVt);
+                var match = NewLabel();
+                Jcc(LirCond.NotEqual, match);
+
+                var boxWidth = BoxedPayloadWidth(boxKey);
+                var scalarWidth = Math.Min(boxWidth, 4);
+                var pa = NewReg(4);
+                Load(pa, a, NativeObjectModel.HeaderBytes, scalarWidth);
+                var pb = NewReg(4);
+                Load(pb, b, NativeObjectModel.HeaderBytes, scalarWidth);
+                Cmp(pa, pb);
+                var notMatch = NewLabel();
+                Jcc(LirCond.NotEqual, notMatch);
+
+                if (boxWidth > 4)
+                {
+                    var paHi = NewReg(4);
+                    Load(paHi, a, NativeObjectModel.HeaderBytes + 4, 4);
+                    var pbHi = NewReg(4);
+                    Load(pbHi, b, NativeObjectModel.HeaderBytes + 4, 4);
+                    Cmp(paHi, pbHi);
+                    Jcc(LirCond.NotEqual, notMatch);
+                }
+
+                Jmp(equal);
+                Mark(notMatch);
+                Jmp(none);
+                Mark(match);
+            }
+
+            // 无盒分支落入 → none
+            Jmp(none);
+            Mark(none);
+            Const(result, 0);
+            Jmp(eqTail);
+            Mark(equal);
+            Const(result, 1);
+            Mark(eqTail);
             StoreRet(result);
             EndFunction(_currentFunction!, 4);
         }

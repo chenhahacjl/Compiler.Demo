@@ -70,10 +70,10 @@ function Main(): i32
         }
 
         [Fact]
-        public void Native_AnyReceiver_ObjectFace_ReportsUnsupported()
+        public void Native_AnyReceiver_ObjectFace_BoxesValue()
         {
-            // any 接收者需装箱表示，native 明确报错不静默错编
-            var diagnostics = EmitNative(@"using System
+            // any 接收者装箱表示：值类型 box 后走 Object 面（ToString 输出盒类型名），与三后端一致
+            var source = @"using System
 
 function Pick(): any
 {
@@ -83,10 +83,29 @@ function Pick(): any
 function Main(): i32
 {
     var s = Pick().ToString()
+    Console.WriteLine(s)
     return 0
-}");
+}";
 
-            Assert.Contains(diagnostics, d => d.Message.Contains("不支持该接收者形状"));
+            var syntaxTree = SyntaxTree.Parse(source);
+            var compilation = Compilation.Create(syntaxTree);
+            var exePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "cocoa-native-any-receiver.exe");
+            var diagnostics = compilation.EmitNative("native-any-receiver", exePath);
+            Assert.Empty(diagnostics);
+
+            var psi = new System.Diagnostics.ProcessStartInfo(exePath)
+            {
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+            };
+            using var process = System.Diagnostics.Process.Start(psi)!;
+            using var output = new System.IO.MemoryStream();
+            var outputTask = process.StandardOutput.BaseStream.CopyToAsync(output);
+            Assert.True(process.WaitForExit(15000));
+            outputTask.Wait();
+            var stdout = System.Text.Encoding.Unicode.GetString(output.ToArray()).Replace("\r\n", "\n").Replace("\r", "\n");
+            Assert.Equal(0, process.ExitCode);
+            Assert.Equal("Boxed.System.Int32\n", stdout);
         }
     }
 }

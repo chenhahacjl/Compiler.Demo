@@ -2583,7 +2583,7 @@ function Main(): i32
 {
     var d = new Dog(""rex"", 4)
     if d.Tag() != ""dog:rex/4"" return 1
-    var o: object = d
+    var o: any = d
     if o.ToString() != ""Dog(dog:rex)"" return 2
     if d.GetType().Name != ""Dog"" return 3
     if !Object.ReferenceEquals(o, d) return 4

@@ -267,6 +267,15 @@ namespace Cocoa.Engine
         {
             _disposed = true;
             _ilSession?.Dispose();
+
+            // 清理进程级静态回调表（InterpreterBackend 静态），避免本引擎注册名残留——
+            // 后续编译中同名函数调用会误命中残留委托（参数签名不符即 TargetParameterCountException）。
+            foreach (var name in _callbacks.Keys)
+            {
+                InterpreterBackend.UnregisterCallback(name);
+            }
+
+            _callbacks.Clear();
         }
     }
 }

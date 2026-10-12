@@ -10,8 +10,9 @@ namespace Cocoa.CodeAnalysis.Symbols
     /// </summary>
     public class NamedTypeSymbol : TypeSymbol
     {
-        /// <summary>System.Object 内建单例（6e-M19 M2-a）：所有无显式基类类的隐式根，成员面随 M2-b/M2-c 接入。</summary>
-        public static readonly NamedTypeSymbol SystemObject = new NamedTypeSymbol("Object", "System", Visibility.Public, declaration: null);
+        /// <summary>System.Object 别名（6e-M19 M2-a 遗留）：与 <see cref="TypeSymbol.Any"/> 同一符号。
+        /// Cocoa 语言层无 `object` 关键字，本字段仅供内部 BCL 互操作/序列化按全名回指对象根使用。</summary>
+        public static NamedTypeSymbol SystemObject => TypeSymbol.Any;
 
         /// <summary>System.Type 内建单例（6e-M19 M2-a）：GetType() 的返回类型。</summary>
         public static readonly NamedTypeSymbol SystemType = new NamedTypeSymbol("Type", "System", Visibility.Public, declaration: null);
@@ -42,11 +43,16 @@ namespace Cocoa.CodeAnalysis.Symbols
             return FunctionTypeSymbol.Get(paramTypes, invoke.ReturnType);
         }
 
-        /// <summary>6e-M22 C5+：内建 Delegate/MulticastDelegate 继承链初始化。</summary>
-        static NamedTypeSymbol()
+        /// <summary>6e-M22 C5+：内建 Delegate/MulticastDelegate 继承链惰性初始化。
+        /// 不能在静态 ctor 中直接读 <see cref="TypeSymbol.Any"/>（Any 字段初始化器构造 NamedTypeSymbol
+        /// 会触发本 ctor，此时 Any 尚未赋值 → 转发读到 null），故改由 <c>CocoaBinder</c> 首次声明委托类前调用。</summary>
+        internal static void EnsureDelegateBaseTypes()
         {
-            SystemDelegate.BaseType = SystemObject;
-            SystemMulticastDelegate.BaseType = SystemDelegate;
+            if (SystemDelegate.BaseType == null)
+            {
+                SystemDelegate.BaseType = SystemObject;
+                SystemMulticastDelegate.BaseType = SystemDelegate;
+            }
         }
 
         private readonly ImmutableArray<FieldSymbol>.Builder _fields;
@@ -113,7 +119,7 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         private NamedTypeSymbol? _baseType;
 
-        /// <summary>是否为内建 Object 根单例（区别于用户声明的类）。</summary>
+        /// <summary>是否为内建对象根单例（即语言顶类型 any；区别于用户声明的类）。</summary>
         public bool IsSystemObjectRoot => this == SystemObject;
 
         /// <summary>

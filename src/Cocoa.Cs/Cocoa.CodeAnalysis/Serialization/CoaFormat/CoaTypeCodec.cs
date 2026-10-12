@@ -316,9 +316,8 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                 "char" => TypeSymbol.Char,
                 "string" => TypeSymbol.String,
                 "void" => TypeSymbol.Void,
-                // N1：object 字段/参数（Lock._owner 等）TypeRef 以全名落盘 → 回落 SystemObject 单例
-                "object" => NamedTypeSymbol.SystemObject,
-                "System.Object" => NamedTypeSymbol.SystemObject,
+                // N1：object 字段/参数（Lock._owner 等）TypeRef 以全名落盘 → 回指对象根 any（统一后语言层无 object 关键字）
+                "System.Object" => TypeSymbol.Any,
                 "i128" => TypeSymbol.Int128,
                 "u128" => TypeSymbol.UInt128,
                 "f128" => TypeSymbol.Float128,

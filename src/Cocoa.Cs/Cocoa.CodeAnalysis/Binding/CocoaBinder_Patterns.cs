@@ -384,7 +384,8 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundErrorExpression(ownerSyntax);
             }
 
-            if (receiverType == TypeSymbol.Any || receiverType.ElementType != null)
+            // 数组接收者无类型对象可判定（保留拒绝）；any 已是对象根（TypeKind.Class），放开 is/as 对齐 C# object 语义
+            if (receiverType.ElementType != null)
             {
                 _diagnostics.ReportIsAsUnsupportedReceiver(expressionSyntax.Location, receiverType);
                 return new BoundErrorExpression(ownerSyntax);

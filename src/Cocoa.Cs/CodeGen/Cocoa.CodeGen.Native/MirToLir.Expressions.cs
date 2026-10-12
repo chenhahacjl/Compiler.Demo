@@ -873,6 +873,34 @@ namespace Cocoa.CodeGen.Native
                         return EmitRuntimeBinaryValues(receiver, other, "StrEquals", invert: false);
                     }
 
+                    // 值类型（基元/枚举）Equals = 位比较（Cmp+Setcc，对齐 int==int 语义）。
+                    // 参数剥掉向 any 的装箱转换取源值，避免 ObjectEquals 运行时解引用原始值。
+                    if (receiverType.IsPrimitiveValueType || receiverType is NamedTypeSymbol { TypeKind: TypeKind.Enum })
+                    {
+                        var argExpression = node.Arguments[0];
+                        while (argExpression is BoundConversionExpression conversion)
+                        {
+                            argExpression = conversion.Expression;
+                        }
+
+                        var sourceOther = EmitExpression(argExpression);
+                        var eqReceiver = receiver;
+                        if (_builder.CurrentFunction.RegisterSize(eqReceiver) < 8)
+                        {
+                            eqReceiver = WidenTo8(eqReceiver);
+                        }
+
+                        if (_builder.CurrentFunction.RegisterSize(sourceOther) < 8)
+                        {
+                            sourceOther = WidenTo8(sourceOther);
+                        }
+
+                        var eqResult = AllocateRegister(4);
+                        Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(eqReceiver), LirOperand.Reg(sourceOther)));
+                        Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.Setcc, eqResult, LirOperand.Constant((int)LirCond.Equal)));
+                        return eqResult;
+                    }
+
                     var widenedReceiver = receiver;
                     var otherValue = node.Arguments.Length > 0 ? EmitExpression(node.Arguments[0]) : EmitConst(0);
                     if (_builder.CurrentFunction.RegisterSize(widenedReceiver) < 8)

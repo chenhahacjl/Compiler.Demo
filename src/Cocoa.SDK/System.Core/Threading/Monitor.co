@@ -7,44 +7,44 @@ namespace System.Threading
     [Facade("System.Threading.Monitor")]
     public class Monitor
     {
-        public static function Enter(obj: object): void
+        public static function Enter(obj: any): void
         {
         }
 
-        public static function Exit(obj: object): void
+        public static function Exit(obj: any): void
         {
         }
 
-        public static function IsEntered(obj: object): bool
+        public static function IsEntered(obj: any): bool
         {
             return false
         }
 
-        public static function TryEnter(obj: object): bool
+        public static function TryEnter(obj: any): bool
         {
             return true
         }
 
-        public static function TryEnter(obj: object, millisecondsTimeout: i32): bool
+        public static function TryEnter(obj: any, millisecondsTimeout: i32): bool
         {
             return true
         }
 
-        public static function Wait(obj: object): bool
+        public static function Wait(obj: any): bool
         {
             return false
         }
 
-        public static function Wait(obj: object, millisecondsTimeout: i32): bool
+        public static function Wait(obj: any, millisecondsTimeout: i32): bool
         {
             return false
         }
 
-        public static function Pulse(obj: object): void
+        public static function Pulse(obj: any): void
         {
         }
 
-        public static function PulseAll(obj: object): void
+        public static function PulseAll(obj: any): void
         {
         }
     }

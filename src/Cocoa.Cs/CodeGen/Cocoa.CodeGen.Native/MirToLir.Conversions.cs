@@ -185,8 +185,11 @@ namespace Cocoa.CodeGen.Native
             LirVirtualRegister result;
             if (runtimeName == "ObjectEquals")
             {
-                // M4：ObjectEquals 为栈 ABI（与 vtable 槽共享实现）
-                result = EmitStackRuntimeCall(runtimeName, resultSize, WidenTo8(left), WidenTo8(right));
+                // M4：ObjectEquals 为栈 ABI（与 vtable 槽共享实现）。
+                // 8 字节 Addr 指针原样传入（movzx 会截断 64 位地址）；仅窄于 8 字节的值零扩展。
+                var leftArg = _builder.CurrentFunction.RegisterSize(left) < 8 ? WidenTo8(left) : left;
+                var rightArg = _builder.CurrentFunction.RegisterSize(right) < 8 ? WidenTo8(right) : right;
+                result = EmitStackRuntimeCall(runtimeName, resultSize, leftArg, rightArg);
             }
             else
             {
@@ -356,13 +359,19 @@ namespace Cocoa.CodeGen.Native
         {
             var instructions = _builder.CurrentFunction.Instructions;
             var type = argument.Type;
+            LirVirtualRegister value;
 
             if (type == TypeSymbol.Any && argument is BoundConversionExpression conversion)
             {
+                // 剥掉向对象根 any 的装箱转换，直接按源值类型打印（值不装箱，与所选输出函数匹配）
                 type = conversion.Expression.Type;
+                value = EmitExpression(conversion.Expression);
+            }
+            else
+            {
+                value = EmitExpression(argument);
             }
 
-            var value = EmitExpression(argument);
             var stringFn = newline ? "PrintString" : "WriteString";
             var intFn = newline ? "PrintInt" : "WriteInt";
 
@@ -855,13 +864,8 @@ var wide = AllocateRegister(LirType.I64);
                 return value;
             }
 
-            if (from == TypeSymbol.Any || to == TypeSymbol.Any)
-            {
-                return value;
-            }
-
-            // object 多态：值类型 → System.Object 装箱；System.Object → 值类型 拆箱；
-            // string/类/接口（引用型）→ object 引用直通（本身即对象引用）。
+            // object 多态：值类型 → 对象根 any（System.Object）装箱；any → 值类型 拆箱；
+            // string/类/接口（引用型）→ any 引用直通（本身即对象引用）。
             if (to == NamedTypeSymbol.SystemObject)
             {
                 return IsBoxableValueType(from) ? EmitBoxValue(value, from) : value;

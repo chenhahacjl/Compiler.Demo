@@ -1250,7 +1250,7 @@ function Main()
     Console.WriteLine(p == r)
     Console.WriteLine(p != q)
     var d = new Point3D(2)
-    var o: object = d
+    var o: any = d
     Console.WriteLine(o == d)
     Console.WriteLine(o == p)
 }", "e2e-reference-equality");
@@ -1273,7 +1273,7 @@ public class Animal
         return ""animal""
     }
 
-    public function DescribeVia(o: object): string
+    public function DescribeVia(o: any): string
     {
         return ""D="" + o.ToString()
     }
@@ -1290,7 +1290,7 @@ public class Dog extends Animal
 function Main()
 {
     var d = new Dog()
-    var o: object = d
+    var o: any = d
     Console.WriteLine(o.ToString())
     Console.WriteLine(d.DescribeVia(d))
 }", "e2e-override-tostring");
@@ -1330,7 +1330,7 @@ function Main(): i32
 {
     var b = new Box(9)
     if b.GetHashCode() != 9 return 1
-    var o: object = b
+    var o: any = b
     if o.GetHashCode() != 9 return 2
     if !o.Equals(b) return 3
     return 0

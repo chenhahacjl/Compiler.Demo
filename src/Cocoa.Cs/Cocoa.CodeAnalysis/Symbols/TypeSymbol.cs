@@ -6,7 +6,14 @@ namespace Cocoa.CodeAnalysis.Symbols
     public class TypeSymbol : Symbol
     {
         public static readonly TypeSymbol Error = new TypeSymbol("?");
-        public static readonly TypeSymbol Any = new TypeSymbol("any");
+
+        /// <summary>语言顶类型（统一后即对象根）：`any`——Cocoa 语言层不存在 `object` 关键字，
+        /// 仅 .NET 互操作场景的 `System.Object` 全名映射到本符号。任意值可隐式装箱到 any，反向显式拆箱。</summary>
+        public static readonly NamedTypeSymbol Any = new NamedTypeSymbol("any", "", Visibility.Public, declaration: null)
+        {
+            SpecialType = SpecialType.System_Object,
+            TypeKind = TypeKind.Class,
+        };
 
         /// <summary>6e-M19 M5-a：null 字面量类型——只存在于字面量瞬间，绑定期即转换到目标引用型（类/接口/string/数组/any）。</summary>
         public static readonly TypeSymbol Null = new TypeSymbol("null");

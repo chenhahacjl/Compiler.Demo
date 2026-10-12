@@ -84,11 +84,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            // 6e-M19 M2-a：System.Object 内建单例（用户同名类已由上方 scope 命中短路；小写关键字与 C# 原名皆可）
-            if (name is "object" or "Object")
-            {
-                return NamedTypeSymbol.SystemObject;
-            }
+            // 6e-M19 M2-a：System.Object 内建单例（统一后对象根 = any；裸 `object`/`Object` 非类型名，报 undefined type）。
 
             // 点号全名（`Foo.Bar.Point` / `Foo.Bar.Color`）：内部类/枚举按 FullName 匹配，或外部类型直查
             if (name.IndexOf('.') >= 0)
@@ -412,15 +408,14 @@ namespace Cocoa.CodeAnalysis.Binding
             return null;
         }
 
-        /// <summary>6e-M19 M2-a：System.Object / System.Type 内建单例按名解析（裸 Type 不在此列，避免劫持 using 导入的同名类型）。</summary>
+        /// <summary>6e-M19 M2-a：System.Object / System.Type 内建单例按全名解析（裸 Type/object 不在此列；
+        /// 语言层对象根 = any，仅 .NET 互操作的 `System.Object` 全名回指对象根）。</summary>
         private static TypeSymbol? ResolveBuiltInSystemType(string fullName)
         {
             switch (fullName)
             {
-                case "object":
-                case "Object":
                 case "System.Object":
-                    return NamedTypeSymbol.SystemObject;
+                    return TypeSymbol.Any;
                 case "System.Type":
                     return NamedTypeSymbol.SystemType;
                 default:

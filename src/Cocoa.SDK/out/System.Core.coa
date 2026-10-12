@@ -309,11 +309,11 @@
       (fld _count @i32 private false false) events:0 props:0
     )
     (cls System.Threading.Lock public iface:false ifaces:0 struct:false bclTarget:System.Threading.Lock base:- methods:1 get_ContentionCount fields:1
-      (fld _owner System.Object private false false) events:0 props:2
+      (fld _owner @any private false false) events:0 props:2
       (prop IsHeldByCurrentThread @bool true false public false)
       (prop ContentionCount @i64 true false public true)
     )
-    (cls System.Threading.Monitor public iface:false ifaces:0 struct:false bclTarget:System.Threading.Monitor base:- methods:9 Enter[-System.Object] Exit[-System.Object] IsEntered[-System.Object] TryEnter[-System.Object] TryEnter[-System.Object,-@i32] Wait[-System.Object] Wait[-System.Object,-@i32] Pulse[-System.Object] PulseAll[-System.Object] fields:0 events:0 props:0)
+    (cls System.Threading.Monitor public iface:false ifaces:0 struct:false bclTarget:System.Threading.Monitor base:- methods:9 Enter[-@any] Exit[-@any] IsEntered[-@any] TryEnter[-@any] TryEnter[-@any,-@i32] Wait[-@any] Wait[-@any,-@i32] Pulse[-@any] PulseAll[-@any] fields:0 events:0 props:0)
     (gcls System.Collections.Generic.ISet public iface:true ifaces:0 struct:false tparams:1
       (tpar T 0 - v:- c:0) fields:0 methods:0 events:0 props:0
     )
@@ -1726,35 +1726,34 @@
     )
     (fn System.Core!System.Threading.Lock.get_IsHeldByCurrentThread[] name:get_IsHeldByCurrentThread tps:0 ret:@bool ns:- owner:System.Threading.Lock extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:true virt:false abs:false ovr:false seal:false params:0)
     (fn System.Core!System.Threading.Lock.get_ContentionCount[] name:get_ContentionCount tps:0 ret:@i64 ns:- owner:System.Threading.Lock extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:true virt:false abs:false ovr:false seal:false params:0)
-    (systype System.Object)
-    (fn System.Core!System.Threading.Monitor.Enter[-System.Object] name:Enter tps:0 ret:@void ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
-      (par System.Core!System.Threading.Monitor.Enter[-System.Object]/obj obj System.Object 0 - -)
+    (fn System.Core!System.Threading.Monitor.Enter[-@any] name:Enter tps:0 ret:@void ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
+      (par System.Core!System.Threading.Monitor.Enter[-@any]/obj obj @any 0 - -)
     )
-    (fn System.Core!System.Threading.Monitor.Exit[-System.Object] name:Exit tps:0 ret:@void ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
-      (par System.Core!System.Threading.Monitor.Exit[-System.Object]/obj obj System.Object 0 - -)
+    (fn System.Core!System.Threading.Monitor.Exit[-@any] name:Exit tps:0 ret:@void ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
+      (par System.Core!System.Threading.Monitor.Exit[-@any]/obj obj @any 0 - -)
     )
-    (fn System.Core!System.Threading.Monitor.IsEntered[-System.Object] name:IsEntered tps:0 ret:@bool ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
-      (par System.Core!System.Threading.Monitor.IsEntered[-System.Object]/obj obj System.Object 0 - -)
+    (fn System.Core!System.Threading.Monitor.IsEntered[-@any] name:IsEntered tps:0 ret:@bool ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
+      (par System.Core!System.Threading.Monitor.IsEntered[-@any]/obj obj @any 0 - -)
     )
-    (fn System.Core!System.Threading.Monitor.TryEnter[-System.Object] name:TryEnter tps:0 ret:@bool ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
-      (par System.Core!System.Threading.Monitor.TryEnter[-System.Object]/obj obj System.Object 0 - -)
+    (fn System.Core!System.Threading.Monitor.TryEnter[-@any] name:TryEnter tps:0 ret:@bool ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
+      (par System.Core!System.Threading.Monitor.TryEnter[-@any]/obj obj @any 0 - -)
     )
-    (fn System.Core!System.Threading.Monitor.TryEnter[-System.Object,-@i32] name:TryEnter tps:0 ret:@bool ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:2
-      (par System.Core!System.Threading.Monitor.TryEnter[-System.Object,-@i32]/obj obj System.Object 0 - -)
-      (par System.Core!System.Threading.Monitor.TryEnter[-System.Object,-@i32]/millisecondsTimeout millisecondsTimeout @i32 1 - -)
+    (fn System.Core!System.Threading.Monitor.TryEnter[-@any,-@i32] name:TryEnter tps:0 ret:@bool ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:2
+      (par System.Core!System.Threading.Monitor.TryEnter[-@any,-@i32]/obj obj @any 0 - -)
+      (par System.Core!System.Threading.Monitor.TryEnter[-@any,-@i32]/millisecondsTimeout millisecondsTimeout @i32 1 - -)
     )
-    (fn System.Core!System.Threading.Monitor.Wait[-System.Object] name:Wait tps:0 ret:@bool ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
-      (par System.Core!System.Threading.Monitor.Wait[-System.Object]/obj obj System.Object 0 - -)
+    (fn System.Core!System.Threading.Monitor.Wait[-@any] name:Wait tps:0 ret:@bool ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
+      (par System.Core!System.Threading.Monitor.Wait[-@any]/obj obj @any 0 - -)
     )
-    (fn System.Core!System.Threading.Monitor.Wait[-System.Object,-@i32] name:Wait tps:0 ret:@bool ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:2
-      (par System.Core!System.Threading.Monitor.Wait[-System.Object,-@i32]/obj obj System.Object 0 - -)
-      (par System.Core!System.Threading.Monitor.Wait[-System.Object,-@i32]/millisecondsTimeout millisecondsTimeout @i32 1 - -)
+    (fn System.Core!System.Threading.Monitor.Wait[-@any,-@i32] name:Wait tps:0 ret:@bool ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:2
+      (par System.Core!System.Threading.Monitor.Wait[-@any,-@i32]/obj obj @any 0 - -)
+      (par System.Core!System.Threading.Monitor.Wait[-@any,-@i32]/millisecondsTimeout millisecondsTimeout @i32 1 - -)
     )
-    (fn System.Core!System.Threading.Monitor.Pulse[-System.Object] name:Pulse tps:0 ret:@void ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
-      (par System.Core!System.Threading.Monitor.Pulse[-System.Object]/obj obj System.Object 0 - -)
+    (fn System.Core!System.Threading.Monitor.Pulse[-@any] name:Pulse tps:0 ret:@void ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
+      (par System.Core!System.Threading.Monitor.Pulse[-@any]/obj obj @any 0 - -)
     )
-    (fn System.Core!System.Threading.Monitor.PulseAll[-System.Object] name:PulseAll tps:0 ret:@void ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
-      (par System.Core!System.Threading.Monitor.PulseAll[-System.Object]/obj obj System.Object 0 - -)
+    (fn System.Core!System.Threading.Monitor.PulseAll[-@any] name:PulseAll tps:0 ret:@void ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
+      (par System.Core!System.Threading.Monitor.PulseAll[-@any]/obj obj @any 0 - -)
     )
     (fn System.Core!System.FileHandle.FileHandle[-@nint] name:FileHandle tps:0 ret:@void ns:- owner:System.FileHandle extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:true acc:false virt:false abs:false ovr:false seal:false params:1
       (par System.Core!System.FileHandle.FileHandle[-@nint]/value value @nint 0 - -)
@@ -2065,7 +2064,7 @@
     (loc System.Core!System.Collections.Generic.Dictionary.Dictionary[]/i false @i32)
     (loc System.Core!System.Collections.Generic.Dictionary.FindEntry[-!System.Collections.Generic.Dictionary.K]/b false @i32)
     (loc System.Core!System.Collections.Generic.Dictionary.FindEntry[-!System.Collections.Generic.Dictionary.K]/i false @i32)
-    (fn System.Core!System.Object.GetHashCode[] name:GetHashCode tps:0 ret:@i32 ns:- owner:System.Object extern:false dll:- cc:winapi builtin:ObjectGetHashCode entry:- charset:- attrs:- static:false ctor:false acc:false virt:true abs:false ovr:false seal:false params:0)
+    (fn System.Core!any.GetHashCode[] name:GetHashCode tps:0 ret:@i32 ns:- owner:any extern:false dll:- cc:winapi builtin:ObjectGetHashCode entry:- charset:- attrs:- static:false ctor:false acc:false virt:true abs:false ovr:false seal:false params:0)
     (loc System.Core!System.Collections.Generic.Dictionary.Rehash[-@i32]/newKeys false !System.Collections.Generic.Dictionary.K[])
     (loc System.Core!System.Collections.Generic.Dictionary.Rehash[-@i32]/newValues false !System.Collections.Generic.Dictionary.V[])
     (loc System.Core!System.Collections.Generic.Dictionary.Rehash[-@i32]/newNext false @i32[])
@@ -2081,8 +2080,8 @@
     (loc System.Core!System.Collections.Generic.Dictionary.Remove[-!System.Collections.Generic.Dictionary.K]/j false @i32)
     (loc System.Core!System.Collections.Generic.Dictionary.Remove[-!System.Collections.Generic.Dictionary.K]/bi false @i32)
     (loc System.Core!System.Collections.Generic.Dictionary.Remove[-!System.Collections.Generic.Dictionary.K]/ni false @i32)
-    (fn System.Core!System.Object.Equals[-@any] name:Equals tps:0 ret:@bool ns:- owner:System.Object extern:false dll:- cc:winapi builtin:ObjectEquals entry:- charset:- attrs:- static:false ctor:false acc:false virt:true abs:false ovr:false seal:false params:1
-      (par System.Core!System.Object.Equals[-@any]/other other @any 0 - -)
+    (fn System.Core!any.Equals[-@any] name:Equals tps:0 ret:@bool ns:- owner:any extern:false dll:- cc:winapi builtin:ObjectEquals entry:- charset:- attrs:- static:false ctor:false acc:false virt:true abs:false ovr:false seal:false params:1
+      (par System.Core!any.Equals[-@any]/other other @any 0 - -)
     )
     (loc System.Core!System.Collections.Generic.Dictionary.TryGetValue[-!System.Collections.Generic.Dictionary.K,out:!System.Collections.Generic.Dictionary.V]/idx false @i32)
     (loc System.Core!System.Collections.Generic.Dictionary.get_Item[-!System.Collections.Generic.Dictionary.K]/idx false @i32)
@@ -14694,8 +14693,8 @@
       (block 1
         (exprstmt
           (memberassign
-            (this System.Threading.Lock) name:_owner System.Object false
-            (objnew System.Object 0)
+            (this System.Threading.Lock) name:_owner @any false
+            (objnew @any 0)
           )
         )
       )
@@ -14703,9 +14702,9 @@
     (body System.Core!System.Threading.Lock.Enter[]
       (block 1
         (exprstmt
-          (membercall @void Enter System.Core!System.Threading.Monitor.Enter[-System.Object] 1
+          (membercall @void Enter System.Core!System.Threading.Monitor.Enter[-@any] 1
             (statictype System.Threading.Monitor)
-            (memberacc System.Object _owner owner:System.Threading.Lock
+            (memberacc @any _owner owner:System.Threading.Lock
               (this System.Threading.Lock)
             )
           )
@@ -14715,9 +14714,9 @@
     (body System.Core!System.Threading.Lock.Exit[]
       (block 1
         (exprstmt
-          (membercall @void Exit System.Core!System.Threading.Monitor.Exit[-System.Object] 1
+          (membercall @void Exit System.Core!System.Threading.Monitor.Exit[-@any] 1
             (statictype System.Threading.Monitor)
-            (memberacc System.Object _owner owner:System.Threading.Lock
+            (memberacc @any _owner owner:System.Threading.Lock
               (this System.Threading.Lock)
             )
           )
@@ -14748,9 +14747,9 @@
     (body System.Core!System.Threading.Lock.get_IsHeldByCurrentThread[]
       (block 1
         (return
-          (membercall @bool IsEntered System.Core!System.Threading.Monitor.IsEntered[-System.Object] 1
+          (membercall @bool IsEntered System.Core!System.Threading.Monitor.IsEntered[-@any] 1
             (statictype System.Threading.Monitor)
-            (memberacc System.Object _owner owner:System.Threading.Lock
+            (memberacc @any _owner owner:System.Threading.Lock
               (this System.Threading.Lock)
             )
           )
@@ -14766,51 +14765,51 @@
         )
       )
     )
-    (body System.Core!System.Threading.Monitor.Enter[-System.Object]
+    (body System.Core!System.Threading.Monitor.Enter[-@any]
       (block 0)
     )
-    (body System.Core!System.Threading.Monitor.Exit[-System.Object]
+    (body System.Core!System.Threading.Monitor.Exit[-@any]
       (block 0)
     )
-    (body System.Core!System.Threading.Monitor.IsEntered[-System.Object]
+    (body System.Core!System.Threading.Monitor.IsEntered[-@any]
       (block 1
         (return
           (lit @bool b:false)
         )
       )
     )
-    (body System.Core!System.Threading.Monitor.TryEnter[-System.Object]
+    (body System.Core!System.Threading.Monitor.TryEnter[-@any]
       (block 1
         (return
           (lit @bool b:true)
         )
       )
     )
-    (body System.Core!System.Threading.Monitor.TryEnter[-System.Object,-@i32]
+    (body System.Core!System.Threading.Monitor.TryEnter[-@any,-@i32]
       (block 1
         (return
           (lit @bool b:true)
         )
       )
     )
-    (body System.Core!System.Threading.Monitor.Wait[-System.Object]
+    (body System.Core!System.Threading.Monitor.Wait[-@any]
       (block 1
         (return
           (lit @bool b:false)
         )
       )
     )
-    (body System.Core!System.Threading.Monitor.Wait[-System.Object,-@i32]
+    (body System.Core!System.Threading.Monitor.Wait[-@any,-@i32]
       (block 1
         (return
           (lit @bool b:false)
         )
       )
     )
-    (body System.Core!System.Threading.Monitor.Pulse[-System.Object]
+    (body System.Core!System.Threading.Monitor.Pulse[-@any]
       (block 0)
     )
-    (body System.Core!System.Threading.Monitor.PulseAll[-System.Object]
+    (body System.Core!System.Threading.Monitor.PulseAll[-@any]
       (block 0)
     )
     (body System.Core!System.FileHandle.FileHandle[-@nint]
@@ -15210,7 +15209,7 @@
     (body System.Core!System.Collections.Generic.Dictionary.HashCode[-!System.Collections.Generic.Dictionary.K]
       (block 1
         (return
-          (membercall @i32 GetHashCode System.Core!System.Object.GetHashCode[] 0
+          (membercall @i32 GetHashCode System.Core!any.GetHashCode[] 0
             (var System.Core!System.Collections.Generic.Dictionary.HashCode[-!System.Collections.Generic.Dictionary.K]/key)
           )
         )
@@ -15742,14 +15741,14 @@
             (bop && @bool @bool)
             (binary
               (bop == @i32 @i32)
-              (membercall @i32 GetHashCode System.Core!System.Object.GetHashCode[] 0
+              (membercall @i32 GetHashCode System.Core!any.GetHashCode[] 0
                 (var System.Core!System.Collections.Generic.Dictionary.SameKey[-!System.Collections.Generic.Dictionary.K,-!System.Collections.Generic.Dictionary.K]/a)
               )
-              (membercall @i32 GetHashCode System.Core!System.Object.GetHashCode[] 0
+              (membercall @i32 GetHashCode System.Core!any.GetHashCode[] 0
                 (var System.Core!System.Collections.Generic.Dictionary.SameKey[-!System.Collections.Generic.Dictionary.K,-!System.Collections.Generic.Dictionary.K]/b)
               )
             )
-            (membercall @bool Equals System.Core!System.Object.Equals[-@any] 1
+            (membercall @bool Equals System.Core!any.Equals[-@any] 1
               (var System.Core!System.Collections.Generic.Dictionary.SameKey[-!System.Collections.Generic.Dictionary.K,-!System.Collections.Generic.Dictionary.K]/a)
               (conv @any
                 (var System.Core!System.Collections.Generic.Dictionary.SameKey[-!System.Collections.Generic.Dictionary.K,-!System.Collections.Generic.Dictionary.K]/b)
@@ -16557,14 +16556,14 @@
             (bop && @bool @bool)
             (binary
               (bop == @i32 @i32)
-              (membercall @i32 GetHashCode System.Core!System.Object.GetHashCode[] 0
+              (membercall @i32 GetHashCode System.Core!any.GetHashCode[] 0
                 (var System.Core!System.Collections.Generic.HashSet.SameItem[-!System.Collections.Generic.HashSet.T,-!System.Collections.Generic.HashSet.T]/a)
               )
-              (membercall @i32 GetHashCode System.Core!System.Object.GetHashCode[] 0
+              (membercall @i32 GetHashCode System.Core!any.GetHashCode[] 0
                 (var System.Core!System.Collections.Generic.HashSet.SameItem[-!System.Collections.Generic.HashSet.T,-!System.Collections.Generic.HashSet.T]/b)
               )
             )
-            (membercall @bool Equals System.Core!System.Object.Equals[-@any] 1
+            (membercall @bool Equals System.Core!any.Equals[-@any] 1
               (var System.Core!System.Collections.Generic.HashSet.SameItem[-!System.Collections.Generic.HashSet.T,-!System.Collections.Generic.HashSet.T]/a)
               (conv @any
                 (var System.Core!System.Collections.Generic.HashSet.SameItem[-!System.Collections.Generic.HashSet.T,-!System.Collections.Generic.HashSet.T]/b)
@@ -17163,14 +17162,14 @@
             (bop && @bool @bool)
             (binary
               (bop == @i32 @i32)
-              (membercall @i32 GetHashCode System.Core!System.Object.GetHashCode[] 0
+              (membercall @i32 GetHashCode System.Core!any.GetHashCode[] 0
                 (var System.Core!System.Collections.Generic.List.SameItem[-!System.Collections.Generic.List.T,-!System.Collections.Generic.List.T]/a)
               )
-              (membercall @i32 GetHashCode System.Core!System.Object.GetHashCode[] 0
+              (membercall @i32 GetHashCode System.Core!any.GetHashCode[] 0
                 (var System.Core!System.Collections.Generic.List.SameItem[-!System.Collections.Generic.List.T,-!System.Collections.Generic.List.T]/b)
               )
             )
-            (membercall @bool Equals System.Core!System.Object.Equals[-@any] 1
+            (membercall @bool Equals System.Core!any.Equals[-@any] 1
               (var System.Core!System.Collections.Generic.List.SameItem[-!System.Collections.Generic.List.T,-!System.Collections.Generic.List.T]/a)
               (conv @any
                 (var System.Core!System.Collections.Generic.List.SameItem[-!System.Collections.Generic.List.T,-!System.Collections.Generic.List.T]/b)
@@ -18261,4 +18260,4 @@
     (doc T:System.String <summary>Represents\sa\ssequence\sof\scharacters.\sProvides\sstring\smanipulation\smethods.</summary>)
   )
 )
-(checksum sha256:e028f71e80fea6715bd1d5692ed6d3bb7aec0fc62e7f1be4af9d91b522e03c68)
+(checksum sha256:9ba0ff575a3bd9f142fbfe3dd66c58367d8d8ae48b52312f3d0caa9ae64da85b)

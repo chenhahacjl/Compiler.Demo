@@ -124,9 +124,11 @@ namespace Cocoa.CodeAnalysis.Bound
 
             // 6e-M19 M2-c：类类型 == / != → 引用相等（动态合成，仿 enum 先例）。
             // 条件：双侧均为类（含 System.Object/接口/外部类），且存在继承关系（同型或一侧可隐式转换到另一侧）。
-            // string/值类型/any 走既有值比较表，不受影响。
+            // string/值类型走既有值比较表；any==any 亦走值比较表（对象根按装箱值语义，Equals 多态分派），
+            // 而单侧 any（any 与具体类混合）保持引用相等等价（C# object == Derived 引用语义）。
             if (leftType is NamedTypeSymbol { IsValueType: false } leftClass && rightType is NamedTypeSymbol { IsValueType: false } rightClass &&
                 leftType != TypeSymbol.String && rightType != TypeSymbol.String &&
+                !(leftType == TypeSymbol.Any && rightType == TypeSymbol.Any) &&
                 (leftClass == rightClass || leftClass.IsBaseOf(rightClass) || rightClass.IsBaseOf(leftClass)))
             {
                 var referenceKind = kind switch

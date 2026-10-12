@@ -131,6 +131,10 @@ namespace Cocoa.CodeAnalysis.Binding
             // 用户类 override 解析与成员沿链上溯依赖 Object 四虚方法已就位
             SystemObjectMembers.Ensure();
 
+            // 6e-M22 C5+：委托根继承链惰性初始化（须在 SystemObjectMembers.Ensure 之后，
+            // 彼时 TypeSymbol.Any 已构造完成，转发 SystemObject 才能读到有效对象根）
+            NamedTypeSymbol.EnsureDelegateBaseTypes();
+
             var parentScope = CreateParentScope(previous);
             InjectCodSymbols(parentScope, codLibraries);
 

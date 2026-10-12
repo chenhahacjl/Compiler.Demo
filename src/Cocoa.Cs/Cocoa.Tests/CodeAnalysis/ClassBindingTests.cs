@@ -2515,10 +2515,17 @@ public class Point
         }
 
         [Fact]
-        public void ObjectModel_ExplicitObjectSpellings_BindToSingleton()
+        public void ObjectModel_BareObjectSpellings_AreUndefined()
         {
-            // 注：基类子句解析仅接受裸标识符（`System.Object` 点号拼写在 Parser 层尚不支持）；
-            // CO 方言继承用 extends 关键字（冒号为 .cs 方言拼写）
+            // 统一后语言层无 object/Object 关键字：
+            // 1) 变量类型位置（LookupType）直接 undefined type
+            var varCode = @"public class Point
+{
+    private field _o: object
+}";
+            Assert.NotEmpty(GetDiagnostics(varCode).Where(d => d.IsError));
+
+            // 2) 基类位置无效类型静默忽略 → 默认对象根 any（无诊断，BaseType = any）
             foreach (var baseName in new[] { "object", "Object" })
             {
                 var code = $@"
@@ -2531,9 +2538,20 @@ public class Point extends {baseName}
 }}";
                 var syntaxTree = SyntaxTree.Parse(code);
                 var compilation = Compilation.Create(syntaxTree);
-                Assert.True(compilation.GlobalScope.Classes.Single(c => c.Name == "Point").BaseType == NamedTypeSymbol.SystemObject);
                 Assert.Empty(GetDiagnostics(code));
+                Assert.Same(TypeSymbol.Any, compilation.GlobalScope.Classes.Single(c => c.Name == "Point").BaseType);
             }
+
+            // any 仍是合法的对象根（extends 裸名 any → 隐式对象根）
+            var anyCode = @"
+public class Point extends any
+{
+    public function Get(): i32
+    {
+        return 1
+    }
+}";
+            Assert.Empty(GetDiagnostics(anyCode));
         }
 
         [Fact]
@@ -2656,7 +2674,7 @@ public class Point
             var code = @"
 public class Point
 {
-    public override function GetType(): object
+    public override function GetType(): any
     {
         return this
     }
@@ -2698,7 +2716,7 @@ function Main(): i32
             var code = @"
 public class Holder
 {
-    private field _o: object
+    private field _o: any
 }";
             Assert.Empty(GetDiagnostics(code));
         }
@@ -2772,7 +2790,7 @@ function Main(): i32
     if !(p == q) return 1
     if p != q return 2
     var d = new Point3D()
-    var o: object = d
+    var o: any = d
     if !(o == d) return 3
     if o != p return 4
     return 0

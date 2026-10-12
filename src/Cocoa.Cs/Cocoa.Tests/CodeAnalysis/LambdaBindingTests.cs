@@ -347,7 +347,7 @@ function Main(): i32
         public void Evaluator_Delegate_TypeResolves()
         {
             var code = @"using System
-delegate void Handler(a: Object)
+delegate void Handler(a: any)
 function Test(d: Handler): void { }
 function Main(): i32 { return 0 }";
             var result = Evaluate(code);

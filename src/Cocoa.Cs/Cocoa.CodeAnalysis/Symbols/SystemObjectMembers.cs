@@ -17,10 +17,10 @@ namespace Cocoa.CodeAnalysis.Symbols
         {
             new BuiltinSpec(BuiltinKind.ObjectToString, "ToString", TypeSymbol.String, System.Array.Empty<(string, TypeSymbol)>()),
             new BuiltinSpec(BuiltinKind.ObjectGetHashCode, "GetHashCode", TypeSymbol.Int32, System.Array.Empty<(string, TypeSymbol)>()),
-            new BuiltinSpec(BuiltinKind.ObjectEquals, "Equals", TypeSymbol.Boolean, new[] { ("other", TypeSymbol.Any) }),
+            new BuiltinSpec(BuiltinKind.ObjectEquals, "Equals", TypeSymbol.Boolean, new (string Name, TypeSymbol Type)[] { ("other", TypeSymbol.Any) }),
             new BuiltinSpec(BuiltinKind.ObjectGetType, "GetType", NamedTypeSymbol.SystemType, System.Array.Empty<(string, TypeSymbol)>()),
-            new BuiltinSpec(BuiltinKind.ObjectStaticEquals, "Equals", TypeSymbol.Boolean, new[] { ("a", TypeSymbol.Any), ("b", TypeSymbol.Any) }),
-            new BuiltinSpec(BuiltinKind.ObjectReferenceEquals, "ReferenceEquals", TypeSymbol.Boolean, new[] { ("a", TypeSymbol.Any), ("b", TypeSymbol.Any) }),
+            new BuiltinSpec(BuiltinKind.ObjectStaticEquals, "Equals", TypeSymbol.Boolean, new (string Name, TypeSymbol Type)[] { ("a", TypeSymbol.Any), ("b", TypeSymbol.Any) }),
+            new BuiltinSpec(BuiltinKind.ObjectReferenceEquals, "ReferenceEquals", TypeSymbol.Boolean, new (string Name, TypeSymbol Type)[] { ("a", TypeSymbol.Any), ("b", TypeSymbol.Any) }),
             new BuiltinSpec(BuiltinKind.TypeName, "get_Name", TypeSymbol.String, System.Array.Empty<(string, TypeSymbol)>()),
             new BuiltinSpec(BuiltinKind.TypeFullName, "get_FullName", TypeSymbol.String, System.Array.Empty<(string, TypeSymbol)>()),
         };
