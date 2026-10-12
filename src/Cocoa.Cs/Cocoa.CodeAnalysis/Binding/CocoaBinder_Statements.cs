@@ -778,9 +778,25 @@ namespace Cocoa.CodeAnalysis.Binding
 
             // 内层作用域：循环变量 x（只读，每迭代新建，C# 语义）
             _scopeStack.Push();
-            var loopVar = BindVariableDeclaration(syntax.Identifier, isReadOnly: true, elementType);
-            var elementAccess = new BoundElementAccessExpression(syntax, elementType, collectionVar, BoundNodeFactory.Variable(syntax, counter));
-            loopBody.Add(BoundNodeFactory.VariableDeclaration(syntax, loopVar, elementAccess));
+            if (syntax.VariableTuple is not CoreSyntax.TupleExpressionSyntax tupleTarget)
+            {
+                var loopVar = BindVariableDeclaration(syntax.Identifier, isReadOnly: true, elementType);
+                var elementAccess = new BoundElementAccessExpression(syntax, elementType, collectionVar, BoundNodeFactory.Variable(syntax, counter));
+                loopBody.Add(BoundNodeFactory.VariableDeclaration(syntax, loopVar, elementAccess));
+            }
+            else
+            {
+                // 元组解构变量 `foreach (var (a, b) in items)`：
+                //      var __tuple_t = items[__i]
+                //      var a = __tuple_t.Item1
+                //      var b = __tuple_t.Item2
+                var tupleTempName = $"__foreach_t{_labelCounter}";
+                var tupleTempToken = new CoreSyntax.SyntaxToken(syntax.SyntaxTree, CoreSyntax.SyntaxKind.IdentifierToken, syntax.Keyword.Span.Start, tupleTempName, tupleTempName, ImmutableArray<CoreSyntax.SyntaxTrivia>.Empty, ImmutableArray<CoreSyntax.SyntaxTrivia>.Empty);
+                var tupleTemp = BindVariableDeclaration(tupleTempToken, isReadOnly: true, elementType);
+                var tupleElementAccess = new BoundElementAccessExpression(syntax, elementType, collectionVar, BoundNodeFactory.Variable(syntax, counter));
+                loopBody.Add(BoundNodeFactory.VariableDeclaration(syntax, tupleTemp, tupleElementAccess));
+                BindForeachTupleDeconstruction(syntax, tupleTarget, BoundNodeFactory.Variable(syntax, tupleTemp), elementType, loopBody);
+            }
 
             _loopNestingStack.Push((breakLabel, continueLabel));
             loopBody.Add(BindStatement(syntax.Body));
@@ -806,6 +822,41 @@ namespace Cocoa.CodeAnalysis.Binding
             _scopeStack.Pop();
 
             return BoundNodeFactory.Block(syntax, collectionInit, counterInit, whileStatement);
+        }
+
+        /// <summary>
+        /// foreach 元组解构变量：把每迭代元素解构为多个只读变量声明
+        /// （`foreach (var (a, b) in items)` → `var a = __tuple.Item1; var b = __tuple.Item2`）。
+        /// </summary>
+        private void BindForeachTupleDeconstruction(ForeachStatementSyntax syntax, TupleExpressionSyntax target, BoundExpression value, TypeSymbol elementType, ImmutableArray<BoundStatement>.Builder statements)
+        {
+            if (elementType is not NamedTypeSymbol tupleType)
+            {
+                _diagnostics.ReportError(syntax.VariableTuple!.Location, $"foreach 解构要求元素是元组类型，但元素类型是 '{elementType}'。");
+                return;
+            }
+
+            var instanceFields = tupleType.Fields.Where(f => !f.IsStatic).ToArray();
+            for (var i = 0; i < target.Elements.Count; i++)
+            {
+                var elementSyntax = target.Elements[i];
+                if (elementSyntax is not CoreSyntax.NameExpressionSyntax nameExpression)
+                {
+                    _diagnostics.ReportError(elementSyntax.Location, "foreach 解构目标须为变量名。");
+                    continue;
+                }
+
+                if (i >= instanceFields.Length)
+                {
+                    _diagnostics.ReportError(elementSyntax.Location, $"元组没有第 {i + 1} 个字段。");
+                    continue;
+                }
+
+                var field = instanceFields[i];
+                var itemAccess = new BoundMemberAccessExpression(syntax, field.Type, value, field.Name, field);
+                var variable = BindVariableDeclaration(nameExpression.IdentifierToken, isReadOnly: true, field.Type);
+                statements.Add(BoundNodeFactory.VariableDeclaration(syntax, variable, itemAccess));
+            }
         }
 
         /// <summary>
@@ -892,11 +943,26 @@ namespace Cocoa.CodeAnalysis.Binding
 
             // 内层作用域：循环变量 x（只读，每迭代新建，C# 语义）
             _scopeStack.Push();
-            var loopVar = BindVariableDeclaration(syntax.Identifier, isReadOnly: true, elementType);
 
             var loopBody = ImmutableArray.CreateBuilder<BoundStatement>();
             var currentRead = new BoundMemberCallExpression(syntax, enumVariable, "Current", ImmutableArray<BoundExpression>.Empty, elementType, currentProperty.Getter);
-            loopBody.Add(BoundNodeFactory.VariableDeclaration(syntax, loopVar, currentRead));
+
+            if (syntax.VariableTuple is CoreSyntax.TupleExpressionSyntax tupleTarget)
+            {
+                // 元组解构变量 `foreach (var (a, b) in collection)`（枚举器路径）：
+                //      var a = __enum.Current.Item1
+                //      var b = __enum.Current.Item2
+                var tupleTempName = $"__foreach_t{counter}";
+                var tupleTempToken = new CoreSyntax.SyntaxToken(syntax.SyntaxTree, CoreSyntax.SyntaxKind.IdentifierToken, syntax.Keyword.Span.Start, tupleTempName, tupleTempName, ImmutableArray<CoreSyntax.SyntaxTrivia>.Empty, ImmutableArray<CoreSyntax.SyntaxTrivia>.Empty);
+                var tupleTemp = BindVariableDeclaration(tupleTempToken, isReadOnly: true, elementType);
+                loopBody.Add(BoundNodeFactory.VariableDeclaration(syntax, tupleTemp, currentRead));
+                BindForeachTupleDeconstruction(syntax, tupleTarget, BoundNodeFactory.Variable(syntax, tupleTemp), elementType, loopBody);
+            }
+            else
+            {
+                var loopVar = BindVariableDeclaration(syntax.Identifier, isReadOnly: true, elementType);
+                loopBody.Add(BoundNodeFactory.VariableDeclaration(syntax, loopVar, currentRead));
+            }
 
             _loopNestingStack.Push((breakLabel, continueLabel));
             loopBody.Add(BindStatement(syntax.Body));

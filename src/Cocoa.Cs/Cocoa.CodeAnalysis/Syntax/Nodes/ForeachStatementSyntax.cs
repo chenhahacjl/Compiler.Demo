@@ -3,17 +3,20 @@ using Cocoa.CodeAnalysis.Syntax;
 namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// foreach 寰幆锛歚foreach [var] x in collection`锛屾嫭鍙蜂笌 `var` 鍧囧彲閫夈€?
+    /// foreach 循环：`foreach [var] x in collection`，括号与 `var` 均可选。
+    /// 支持元组解构变量：`foreach (var (a, b) in pairs)` —— <see cref="Identifier"/> 为空、
+    /// <see cref="VariableTuple"/> 为元组表达式（元素为解构目标名）。
     /// </summary>
     public sealed partial class ForeachStatementSyntax : StatementSyntax
     {
-        internal ForeachStatementSyntax(SyntaxTree syntaxTree, SyntaxToken keyword, SyntaxToken? openParenToken, SyntaxToken? varKeyword, SyntaxToken identifier, SyntaxToken inKeyword, ExpressionSyntax collection, SyntaxToken? closeParenToken, StatementSyntax body)
+        internal ForeachStatementSyntax(SyntaxTree syntaxTree, SyntaxToken keyword, SyntaxToken? openParenToken, SyntaxToken? varKeyword, SyntaxToken identifier, ExpressionSyntax? variableTuple, SyntaxToken inKeyword, ExpressionSyntax collection, SyntaxToken? closeParenToken, StatementSyntax body)
             : base(syntaxTree)
         {
             Keyword = keyword;
             OpenParenToken = openParenToken;
             VarKeyword = varKeyword;
             Identifier = identifier;
+            VariableTuple = variableTuple;
             InKeyword = inKeyword;
             Collection = collection;
             CloseParenToken = closeParenToken;
@@ -26,6 +29,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         public SyntaxToken? OpenParenToken { get; }
         public SyntaxToken? VarKeyword { get; }
         public SyntaxToken Identifier { get; }
+        public ExpressionSyntax? VariableTuple { get; }
         public SyntaxToken InKeyword { get; }
         public ExpressionSyntax Collection { get; }
         public SyntaxToken? CloseParenToken { get; }
@@ -42,7 +46,14 @@ namespace Cocoa.CodeAnalysis.Syntax
             {
                 yield return VarKeyword;
             }
-            yield return Identifier;
+            if (VariableTuple != null)
+            {
+                yield return VariableTuple;
+            }
+            else
+            {
+                yield return Identifier;
+            }
             yield return InKeyword;
             yield return Collection;
             if (CloseParenToken != null)

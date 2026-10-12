@@ -334,18 +334,28 @@ namespace Cocoa.CodeAnalysis.Syntax
                 ReportError(Current.Location, "Cocoa foreach 循环变量须用 'var'（`foreach (var x in 集合)`）。");
             }
 
-            SyntaxToken? varKeyword = null;
-            if (Current.Kind == SyntaxKind.VarKeyword)
-            {
-                varKeyword = NextToken();
-            }
-            else if (Current.Kind == SyntaxKind.LetKeyword || Current.Kind == SyntaxKind.ConstKeyword)
+            var varKeyword = NextTokenIf(SyntaxKind.VarKeyword);
+            if (varKeyword == null &&
+                (Current.Kind == SyntaxKind.LetKeyword || Current.Kind == SyntaxKind.ConstKeyword))
             {
                 ReportError(Current.Location, "foreach 循环变量只能用 var 声明。");
                 varKeyword = NextToken();
             }
 
-            var identifier = MatchToken(SyntaxKind.IdentifierToken);
+            SyntaxToken identifier;
+            ExpressionSyntax? variableTuple = null;
+            if (Current.Kind == SyntaxKind.OpenParenthesisToken)
+            {
+                // 元组解构变量：`foreach (var (a, b) in pairs)` —— 复用元组表达式解析（元素为解构目标名）。
+                variableTuple = ParseParenthesizedExpression();
+                identifier = new SyntaxToken(_syntaxTree, SyntaxKind.IdentifierToken, variableTuple.Span.Start, "", null,
+                    ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+            }
+            else
+            {
+                identifier = MatchToken(SyntaxKind.IdentifierToken);
+            }
+
             var inKeyword = MatchToken(SyntaxKind.InKeyword);
             var collection = ParseExpression();
 
@@ -357,7 +367,17 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             var body = ParseStatement();
 
-            return new ForeachStatementSyntax(_syntaxTree, keyword, openParenToken, varKeyword, identifier, inKeyword, collection, closeParenToken, body);
+            return new ForeachStatementSyntax(_syntaxTree, keyword, openParenToken, varKeyword, identifier, variableTuple, inKeyword, collection, closeParenToken, body);
+        }
+
+        private SyntaxToken? NextTokenIf(SyntaxKind kind)
+        {
+            if (Current.Kind != kind)
+            {
+                return null;
+            }
+
+            return NextToken();
         }
 
         private StatementSyntax ParseSwitchStatement()

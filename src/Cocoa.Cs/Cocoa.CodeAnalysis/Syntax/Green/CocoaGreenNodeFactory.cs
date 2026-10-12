@@ -740,6 +740,14 @@ namespace Cocoa.CodeAnalysis.Syntax
                 slot++;
             }
 
+            ExpressionSyntax? variableTuple = null;
+            if (slot < _green.SlotCount && _green.GetSlot(slot)!.Kind == SyntaxKind.TupleExpression)
+            {
+                variableTuple = (ExpressionSyntax)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+                position += _green.GetSlot(slot)!.Width;
+                slot++;
+            }
+
             var identifier = (SyntaxToken)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
             position += _green.GetSlot(slot)!.Width;
             slot++;
@@ -759,7 +767,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
 
             var body = (StatementSyntax)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
-            return new ForeachStatementSyntax(syntaxTree, keyword, openParenthesis, varKeyword, identifier, inKeyword, collection, closeParenthesis, body);
+            return new ForeachStatementSyntax(syntaxTree, keyword, openParenthesis, varKeyword, identifier, variableTuple, inKeyword, collection, closeParenthesis, body);
         }
 
         private SyntaxNode BuildForStatement(SyntaxTree syntaxTree, int position)
