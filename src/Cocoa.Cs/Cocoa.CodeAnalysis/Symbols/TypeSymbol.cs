@@ -15,10 +15,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             TypeKind = TypeKind.Class,
         };
 
-        /// <summary>6f 重命名兼容别名：对象根（`object`）的旧称 `Any` 等价转发。</summary>
-        public static NamedTypeSymbol Any => Object;
-
-        /// <summary>6e-M19 M5-a：null 字面量类型——只存在于字面量瞬间，绑定期即转换到目标引用型（类/接口/string/数组/any）。</summary>
+        /// <summary>6e-M19 M5-a：null 字面量类型——只存在于字面量瞬间，绑定期即转换到目标引用型（类/接口/string/数组/object）。</summary>
         public static readonly TypeSymbol Null = new TypeSymbol("null");
         public static readonly TypeSymbol Boolean = new NamedTypeSymbol("bool", "", Visibility.Public, null) { SpecialType = SpecialType.System_Boolean, TypeKind = TypeKind.Struct };
         public static readonly TypeSymbol Int8 = new NamedTypeSymbol("sbyte", "", Visibility.Public, null) { SpecialType = SpecialType.System_Int8, TypeKind = TypeKind.Struct };

@@ -535,7 +535,7 @@ namespace Cocoa.CodeGen.Managed.Writer
 
             EmitBoxIfValueType(il, node.Expression.Type);
 
-            if (node.Type == TypeSymbol.Any || node.Type == NamedTypeSymbol.SystemObject)
+            if (node.Type == TypeSymbol.Object || node.Type == NamedTypeSymbol.SystemObject)
             {
                 // Done：EmitBoxIfValueType 已对值类型 box；引用类型（string/类）已是引用（object）。
                 // object 多态装箱目标——栈上已是 object，无需附加指令。

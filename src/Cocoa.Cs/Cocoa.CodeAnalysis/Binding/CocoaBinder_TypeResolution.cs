@@ -415,7 +415,7 @@ namespace Cocoa.CodeAnalysis.Binding
             switch (fullName)
             {
                 case "System.Object":
-                    return TypeSymbol.Any;
+                    return TypeSymbol.Object;
                 case "System.Type":
                     return NamedTypeSymbol.SystemType;
                 default:
@@ -621,7 +621,7 @@ namespace Cocoa.CodeAnalysis.Binding
         private static bool IsNullableReferenceType(TypeSymbol type)
         {
             return !type.IsValueType && (type is NamedTypeSymbol || type == TypeSymbol.String ||
-                   type == TypeSymbol.Any || type.ElementType != null);
+                   type == TypeSymbol.Object || type.ElementType != null);
         }
 
         /// <summary>6e-M21 Phase 4/6：可接受范围内常量隐式窄化的目标整型（含 64 位：ulong y = 2 与 C# 同构）。</summary>

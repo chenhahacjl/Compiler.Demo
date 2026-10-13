@@ -1106,7 +1106,7 @@ namespace Cocoa.CodeGen.Managed.Writer
 
     private IlType ToIlType(TypeSymbol type)
         {
-            if (type == TypeSymbol.Any)
+            if (type == TypeSymbol.Object)
             {
                 return IlType.Object;
             }

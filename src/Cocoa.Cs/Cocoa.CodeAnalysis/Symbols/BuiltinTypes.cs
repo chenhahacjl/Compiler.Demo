@@ -10,7 +10,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>内建类型名（object/bool/char/string/void 共享 + Cocoa 简写词汇）；未命中返回 null。</summary>
         public static TypeSymbol? Lookup(string name) => name switch
         {
-            "object" => TypeSymbol.Any,
+            "object" => TypeSymbol.Object,
             "bool" => TypeSymbol.Boolean,
             "char" => TypeSymbol.Char,
             "string" => TypeSymbol.String,

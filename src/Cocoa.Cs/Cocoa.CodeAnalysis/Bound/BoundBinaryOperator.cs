@@ -85,7 +85,7 @@ namespace Cocoa.CodeAnalysis.Bound
         private static bool IsNullableReference(TypeSymbol type)
         {
             return !type.IsValueType && (type is NamedTypeSymbol || type is FunctionTypeSymbol ||
-                type == TypeSymbol.String || type == TypeSymbol.Any || type.ElementType != null);
+                type == TypeSymbol.String || type == TypeSymbol.Object || type.ElementType != null);
         }
 
         /// <summary>兼容词法门（HIR 净化）：token → 语义 kind 翻译后委托语义入口。</summary>
@@ -128,7 +128,7 @@ namespace Cocoa.CodeAnalysis.Bound
             // 而单侧 object（object 与具体类混合）保持引用相等等价（C# object == Derived 引用语义）。
             if (leftType is NamedTypeSymbol { IsValueType: false } leftClass && rightType is NamedTypeSymbol { IsValueType: false } rightClass &&
                 leftType != TypeSymbol.String && rightType != TypeSymbol.String &&
-                !(leftType == TypeSymbol.Any && rightType == TypeSymbol.Any) &&
+                !(leftType == TypeSymbol.Object && rightType == TypeSymbol.Object) &&
                 (leftClass == rightClass || leftClass.IsBaseOf(rightClass) || rightClass.IsBaseOf(leftClass)))
             {
                 var referenceKind = kind switch

@@ -1179,7 +1179,7 @@ namespace Cocoa.CodeGen.Native
                     return false;
                 }
 
-                return type != TypeSymbol.String && type != TypeSymbol.Any && type != TypeSymbol.Void && type != TypeSymbol.Error;
+                return type != TypeSymbol.String && type != TypeSymbol.Object && type != TypeSymbol.Void && type != TypeSymbol.Error;
             }
 
             if (IsPureValue(arguments[0]) && IsPureValue(arguments[1]))

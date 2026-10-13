@@ -45,7 +45,7 @@ namespace Cocoa.CodeAnalysis.Bound
             // 否则 Null→any 被通用"非 void→any"吞掉、而 any→Null 会经 ③ 泄漏成合法显式转换。
             if (from == TypeSymbol.Null)
             {
-                if (to == TypeSymbol.Any || to == TypeSymbol.String || (!to.IsValueType && to is NamedTypeSymbol) || to.ElementType != null)
+                if (to == TypeSymbol.Object || to == TypeSymbol.String || (!to.IsValueType && to is NamedTypeSymbol) || to.ElementType != null)
                 {
                     return Conversion.Implicit;
                 }
@@ -53,12 +53,12 @@ namespace Cocoa.CodeAnalysis.Bound
                 return Conversion.None;
             }
 
-            if (from != TypeSymbol.Void && to == TypeSymbol.Any)
+            if (from != TypeSymbol.Void && to == TypeSymbol.Object)
             {
                 return Conversion.Implicit;
             }
 
-            if (from == TypeSymbol.Any && to != TypeSymbol.Void && to != TypeSymbol.Null)
+            if (from == TypeSymbol.Object && to != TypeSymbol.Void && to != TypeSymbol.Null)
             {
                 return Conversion.Explicit;
             }

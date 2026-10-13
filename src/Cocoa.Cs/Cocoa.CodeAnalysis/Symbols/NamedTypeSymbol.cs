@@ -10,9 +10,9 @@ namespace Cocoa.CodeAnalysis.Symbols
     /// </summary>
     public class NamedTypeSymbol : TypeSymbol
     {
-        /// <summary>System.Object 别名（6e-M19 M2-a 遗留）：与 <see cref="TypeSymbol.Any"/> 同一符号。
+        /// <summary>System.Object 别名（6e-M19 M2-a 遗留）：与 <see cref="TypeSymbol.Object"/> 同一符号。
         /// 语言层对象根关键字为 `object`；本字段供内部 BCL 互操作/序列化按全名回指对象根使用。</summary>
-        public static NamedTypeSymbol SystemObject => TypeSymbol.Any;
+        public static NamedTypeSymbol SystemObject => TypeSymbol.Object;
 
         /// <summary>System.Type 内建单例（6e-M19 M2-a）：GetType() 的返回类型。</summary>
         public static readonly NamedTypeSymbol SystemType = new NamedTypeSymbol("Type", "System", Visibility.Public, declaration: null);
@@ -44,7 +44,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         }
 
         /// <summary>6e-M22 C5+：内建 Delegate/MulticastDelegate 继承链惰性初始化。
-        /// 不能在静态 ctor 中直接读 <see cref="TypeSymbol.Any"/>（Any 字段初始化器构造 NamedTypeSymbol
+        /// 不能在静态 ctor 中直接读 <see cref="TypeSymbol.Object"/>（Any 字段初始化器构造 NamedTypeSymbol
         /// 会触发本 ctor，此时 Any 尚未赋值 → 转发读到 null），故改由 <c>CocoaBinder</c> 首次声明委托类前调用。</summary>
         internal static void EnsureDelegateBaseTypes()
         {

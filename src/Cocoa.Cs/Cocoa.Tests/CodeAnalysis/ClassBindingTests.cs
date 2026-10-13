@@ -2546,7 +2546,7 @@ public class Point extends object
 }";
             var objectComp = Compilation.Create(SyntaxTree.Parse(objectBase));
             Assert.Empty(GetDiagnostics(objectBase));
-            Assert.Same(TypeSymbol.Any, objectComp.GlobalScope.Classes.Single(c => c.Name == "Point").BaseType);
+            Assert.Same(TypeSymbol.Object, objectComp.GlobalScope.Classes.Single(c => c.Name == "Point").BaseType);
 
             foreach (var baseName in new[] { "Object", "any" })
             {
@@ -2561,7 +2561,7 @@ public class Point extends {baseName}
                 var syntaxTree = SyntaxTree.Parse(code);
                 var compilation = Compilation.Create(syntaxTree);
                 Assert.Empty(GetDiagnostics(code));
-                Assert.Same(TypeSymbol.Any, compilation.GlobalScope.Classes.Single(c => c.Name == "Point").BaseType);
+                Assert.Same(TypeSymbol.Object, compilation.GlobalScope.Classes.Single(c => c.Name == "Point").BaseType);
             }
         }
 

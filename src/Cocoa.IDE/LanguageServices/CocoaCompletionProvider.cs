@@ -69,9 +69,9 @@ public static class CocoaCompletionProvider
 {
     private static readonly string[] BuiltinTypeNames =
     {
-        "int", "long", "short", "byte", "sbyte", "uint", "ulong", "float", "double",
-        "bool", "char", "string", "object", "nint", "nuint", "i32", "i64",
-        "decimal", "f16",
+        "object", "bool", "char", "string", "void",
+        "i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64",
+        "f16", "f32", "f64", "decimal", "i128", "u128", "f128", "nint", "nuint",
     };
 
     private static readonly (string Text, string Body)[] CocoaSnippets =

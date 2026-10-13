@@ -612,7 +612,7 @@ namespace Cocoa.CodeGen.Native
             }
 
             if ((op == BoundBinaryOperatorKind.Equals || op == BoundBinaryOperatorKind.NotEquals) &&
-                node.Left.Type == TypeSymbol.Any)
+                node.Left.Type == TypeSymbol.Object)
             {
                 return EmitRuntimeBinary(node, "ObjectEquals", 4, invert: op == BoundBinaryOperatorKind.NotEquals);
             }

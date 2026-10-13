@@ -93,9 +93,9 @@ namespace Cocoa.CodeAnalysis.Bound
                 case IlTypeKind.U1: return TypeSymbol.UInt8;
                 case IlTypeKind.Double: return TypeSymbol.Double;
                 case IlTypeKind.String: return TypeSymbol.String;
-                case IlTypeKind.Object: return TypeSymbol.Any;
+                case IlTypeKind.Object: return TypeSymbol.Object;
                 case IlTypeKind.SzArray: return TypeSymbol.ArrayOf(ToTypeSymbol(type.ElementType!));
-                default: return TypeSymbol.Any;
+                default: return TypeSymbol.Object;
             }
         }
     }

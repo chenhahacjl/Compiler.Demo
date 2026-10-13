@@ -659,7 +659,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return true;
             }
 
-            return type == TypeSymbol.String || type == TypeSymbol.Any;
+            return type == TypeSymbol.String || type == TypeSymbol.Object;
         }
 
         /// <summary>值类型判定（where T: struct，6e-M22 C1）：基元数值全集 + bool + char + enum + 用户 struct；其数组形式同视为值类型。</summary>

@@ -930,7 +930,7 @@ namespace Cocoa.CodeGen.Interpreter
                 return value;
             }
 
-            if (node.Type == TypeSymbol.Any)
+            if (node.Type == TypeSymbol.Object)
             {
                 return value;
             }

@@ -377,7 +377,7 @@ namespace Cocoa.CodeGen.Native
             var type = argument.Type;
             LirVirtualRegister value;
 
-            if (type == TypeSymbol.Any && argument is BoundConversionExpression conversion)
+            if (type == TypeSymbol.Object && argument is BoundConversionExpression conversion)
             {
                 // 剥掉向对象根 object 的装箱转换，直接按源值类型打印（值不装箱，与所选输出函数匹配）
                 type = conversion.Expression.Type;

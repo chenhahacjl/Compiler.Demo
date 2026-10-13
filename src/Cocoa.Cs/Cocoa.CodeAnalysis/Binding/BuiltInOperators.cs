@@ -166,15 +166,15 @@ namespace Cocoa.CodeAnalysis.Binding
             ops.Add(new(BoundBinaryOperatorKind.GreaterOrEquals, TypeSymbol.Decimal, TypeSymbol.Decimal, TypeSymbol.Boolean));
 
             // any：相等
-            ops.Add(new(BoundBinaryOperatorKind.Equals, TypeSymbol.Any, TypeSymbol.Any, TypeSymbol.Boolean));
-            ops.Add(new(BoundBinaryOperatorKind.NotEquals, TypeSymbol.Any, TypeSymbol.Any, TypeSymbol.Boolean));
+            ops.Add(new(BoundBinaryOperatorKind.Equals, TypeSymbol.Object, TypeSymbol.Object, TypeSymbol.Boolean));
+            ops.Add(new(BoundBinaryOperatorKind.NotEquals, TypeSymbol.Object, TypeSymbol.Object, TypeSymbol.Boolean));
 
             // null == null / null != null（恒 true/false）
             ops.Add(new(BoundBinaryOperatorKind.Equals, TypeSymbol.Null, TypeSymbol.Null, TypeSymbol.Boolean));
             ops.Add(new(BoundBinaryOperatorKind.NotEquals, TypeSymbol.Null, TypeSymbol.Null, TypeSymbol.Boolean));
 
             // ?? null 合并：引用类型 x ?? y
-            foreach (var t in new[] { TypeSymbol.Any, TypeSymbol.String })
+            foreach (var t in new[] { TypeSymbol.Object, TypeSymbol.String })
             {
                 ops.Add(new(BoundBinaryOperatorKind.NullCoalescing, t, t, t));
             }

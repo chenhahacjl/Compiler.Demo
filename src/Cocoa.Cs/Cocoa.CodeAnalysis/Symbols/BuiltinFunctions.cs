@@ -13,8 +13,8 @@ namespace Cocoa.CodeAnalysis.Symbols
     public static class BuiltinFunctions
     {
         private static readonly ImmutableArray<BuiltinSpec> _specs = ImmutableArray.Create(
-            new BuiltinSpec(BuiltinKind.WriteLine, "WriteLine", TypeSymbol.Void, new (string Name, TypeSymbol Type)[] { ("text", TypeSymbol.Any) }),
-            new BuiltinSpec(BuiltinKind.Write, "Write", TypeSymbol.Void, new (string Name, TypeSymbol Type)[] { ("text", TypeSymbol.Any) }),
+            new BuiltinSpec(BuiltinKind.WriteLine, "WriteLine", TypeSymbol.Void, new (string Name, TypeSymbol Type)[] { ("text", TypeSymbol.Object) }),
+            new BuiltinSpec(BuiltinKind.Write, "Write", TypeSymbol.Void, new (string Name, TypeSymbol Type)[] { ("text", TypeSymbol.Object) }),
             new BuiltinSpec(BuiltinKind.ReadLine, "ReadLine", TypeSymbol.String, System.Array.Empty<(string, TypeSymbol)>()),
             new BuiltinSpec(BuiltinKind.ReadKey, "ReadKey", TypeSymbol.Char, new[] { ("intercept", TypeSymbol.Boolean) }),
             new BuiltinSpec(BuiltinKind.Random, "Random", TypeSymbol.Int32, new[] { ("max", TypeSymbol.Int32) }),

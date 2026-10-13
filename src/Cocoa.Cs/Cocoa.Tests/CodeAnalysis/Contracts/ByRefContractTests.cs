@@ -140,14 +140,14 @@ function Main(): i32
             var staticFieldSymbol = new FieldSymbol("S", TypeSymbol.Int32, Visibility.Public, NamedTypeSymbol.SystemObject, isStatic: true);
             var staticMember = new BoundMemberAccessExpression(
                 SyntaxTree.Parse("C.S").Root, TypeSymbol.Int32,
-                new BoundVariableExpression(SyntaxTree.Parse("C").Root, new ParameterSymbol("C", TypeSymbol.Any, 0)),
+                new BoundVariableExpression(SyntaxTree.Parse("C").Root, new ParameterSymbol("C", TypeSymbol.Object, 0)),
                 "S", staticFieldSymbol);
 
             // InstanceField → 实例字段 member access
             var instanceFieldSymbol = new FieldSymbol("f", TypeSymbol.Int32, Visibility.Public, NamedTypeSymbol.SystemObject, isStatic: false);
             var instanceMember = new BoundMemberAccessExpression(
                 SyntaxTree.Parse("o.f").Root, TypeSymbol.Int32,
-                new BoundVariableExpression(SyntaxTree.Parse("o").Root, new ParameterSymbol("o", TypeSymbol.Any, 0)),
+                new BoundVariableExpression(SyntaxTree.Parse("o").Root, new ParameterSymbol("o", TypeSymbol.Object, 0)),
                 "f", instanceFieldSymbol);
 
             // Element → 数组元素访问

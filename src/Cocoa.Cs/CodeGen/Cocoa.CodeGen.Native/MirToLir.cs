@@ -554,7 +554,7 @@ namespace Cocoa.CodeGen.Native
             return Is8ByteType(type) ? 8 : 4;
         }
 
-        private static bool Is8ByteType(TypeSymbol type) => type == TypeSymbol.String || type == TypeSymbol.Any ||
+        private static bool Is8ByteType(TypeSymbol type) => type == TypeSymbol.String || type == TypeSymbol.Object ||
             type == TypeSymbol.Double || type == TypeSymbol.Int64 || type == TypeSymbol.UInt64 ||
             type == TypeSymbol.NativeInt32 || type == TypeSymbol.NativeUInt32 ||
             type.ElementType != null || (type is NamedTypeSymbol { IsValueType: false }) ||
@@ -586,7 +586,7 @@ namespace Cocoa.CodeGen.Native
             }
 
             // 引用/数组/字符串/函数值/任意 → 指针（逻辑宽 8 字节）
-            if (type == TypeSymbol.String || type == TypeSymbol.Any ||
+            if (type == TypeSymbol.String || type == TypeSymbol.Object ||
                 type.ElementType != null || (type is NamedTypeSymbol { IsValueType: false }) ||
                 (type is NamedTypeSymbol { TypeKind: TypeKind.Struct } && !type.IsPrimitiveValueType) || type is FunctionTypeSymbol)
             {

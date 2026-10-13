@@ -106,7 +106,7 @@ namespace Cocoa.CodeGen.Interpreter
             Debug.Assert(value != null ||
                          assignment.Variable.Type is Symbols.NamedTypeSymbol ||
                          assignment.Variable.Type == TypeSymbol.String ||
-                         assignment.Variable.Type == TypeSymbol.Any ||
+                         assignment.Variable.Type == TypeSymbol.Object ||
                          assignment.Variable.Type.ElementType != null);
 
             Assign(assignment.Variable, value);

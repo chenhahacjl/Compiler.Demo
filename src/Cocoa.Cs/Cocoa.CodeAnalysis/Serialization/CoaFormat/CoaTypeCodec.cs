@@ -300,7 +300,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
 
             return name switch
             {
-                "object" => TypeSymbol.Any,
+                "object" => TypeSymbol.Object,
                 "null" => TypeSymbol.Null, // 6e-M19 M5-a
                 "bool" => TypeSymbol.Boolean,
                 "byte" => TypeSymbol.UInt8,
@@ -317,7 +317,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                 "string" => TypeSymbol.String,
                 "void" => TypeSymbol.Void,
                 // N1：object 字段/参数（Lock._owner 等）TypeRef 以全名落盘 → 回指对象根 object（System.Object 全名）
-                "System.Object" => TypeSymbol.Any,
+                "System.Object" => TypeSymbol.Object,
                 "i128" => TypeSymbol.Int128,
                 "u128" => TypeSymbol.UInt128,
                 "f128" => TypeSymbol.Float128,

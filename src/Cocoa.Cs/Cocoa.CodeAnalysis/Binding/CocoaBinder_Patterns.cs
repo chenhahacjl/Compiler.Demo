@@ -377,7 +377,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             // 接收者约束：类（含接口变量）/string/null 字面量之外拒绝（值类型/基元不支持 is/as）
             if (receiverType != TypeSymbol.Null && receiverType != TypeSymbol.String &&
-                receiverType != TypeSymbol.Any && receiverType.ElementType == null &&
+                receiverType != TypeSymbol.Object && receiverType.ElementType == null &&
                 (!(receiverType is NamedTypeSymbol) || receiverType.IsPrimitiveValueType))
             {
                 _diagnostics.ReportIsAsUnsupportedReceiver(expressionSyntax.Location, receiverType);

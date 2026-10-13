@@ -130,7 +130,7 @@ namespace Cocoa.CodeGen.Managed.Writer
                 if (node.Expression != null)
                 {
                     EmitExpression(il, node.Expression);
-                    var boxedName = _currentMethodReturnType == TypeSymbol.Any ? BoxedTypeName(node.Expression.Type) : null;
+                    var boxedName = _currentMethodReturnType == TypeSymbol.Object ? BoxedTypeName(node.Expression.Type) : null;
                     if (boxedName != null)
                     {
                         il.Emit(IlOpCodeTable.Get("Box"), _framework.RequireType(boxedName));
@@ -160,7 +160,7 @@ namespace Cocoa.CodeGen.Managed.Writer
 
                 // any/object 返回方法：值类型返回显式 box（$eval 等 script 顶层表达式；
                 // Binder 把顶层表达式转 ReturnStatement 时表达类型保持 int，但方法签名返回 any）
-                if (_currentMethodReturnType == TypeSymbol.Any &&
+                if (_currentMethodReturnType == TypeSymbol.Object &&
                     IsValueTypeSymbol(node.Expression.Type) &&
                     BoxedTypeName(node.Expression.Type) != null)
                 {
@@ -905,7 +905,7 @@ namespace Cocoa.CodeGen.Managed.Writer
 
             if (node.Op.Kind == BoundBinaryOperatorKind.Equals)
             {
-                if (node.Left.Type == TypeSymbol.Any && node.Right.Type == TypeSymbol.Any ||
+                if (node.Left.Type == TypeSymbol.Object && node.Right.Type == TypeSymbol.Object ||
                     node.Left.Type == TypeSymbol.String && node.Right.Type == TypeSymbol.String)
                 {
                     il.Emit(IlOpCodeTable.Get("Call"), _framework.ObjectEquals);
@@ -915,7 +915,7 @@ namespace Cocoa.CodeGen.Managed.Writer
 
             if (node.Op.Kind == BoundBinaryOperatorKind.NotEquals)
             {
-                if (node.Left.Type == TypeSymbol.Any && node.Right.Type == TypeSymbol.Any ||
+                if (node.Left.Type == TypeSymbol.Object && node.Right.Type == TypeSymbol.Object ||
                     node.Left.Type == TypeSymbol.String && node.Right.Type == TypeSymbol.String)
                 {
                     il.Emit(IlOpCodeTable.Get("Call"), _framework.ObjectEquals);

@@ -24,7 +24,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
             // 6f：对象根统一后符号名为 object；System.Object 为 .NET 互操作全名，等价映射。
             if (fullName == "System.Object" || fullName == "object")
             {
-                return TypeSymbol.Any;
+                return TypeSymbol.Object;
             }
 
             if (fullName == "System.Type")
@@ -58,7 +58,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
         {
             if (ownerText == "System.Object" || ownerText == "object")
             {
-                return TypeSymbol.Any;
+                return TypeSymbol.Object;
             }
 
             if (ownerText == "System.Type")

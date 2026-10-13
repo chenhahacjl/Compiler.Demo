@@ -120,7 +120,7 @@ namespace Cocoa.CodeGen.Native
                 return true; // 用户类/facade 类均受支持（facade 走基元路径）
             }
 
-            return type != TypeSymbol.Any && type != TypeSymbol.Void && type != TypeSymbol.Error;
+            return type != TypeSymbol.Object && type != TypeSymbol.Void && type != TypeSymbol.Error;
         }
 
         private static string Describe(TypeSymbol type)
