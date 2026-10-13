@@ -707,6 +707,13 @@ namespace Cocoa.CodeGen.Managed.Writer
                 il.Emit(IlOpCodeTable.Get("Newarr"), _framework.RequireType(PrimitiveArrayElementTypeName(elementType)));
             }
 
+            // 含运行时 spread（`[..a, 4]`）→ 元素写入需运行下标 + System.Array.Copy 段拷贝。
+            if (node.Initializers.Any(i => i is BoundArraySpreadExpression))
+            {
+                EmitArrayCreationWithSpread(il, node, elementType);
+                return;
+            }
+
             for (var i = 0; i < node.Initializers.Length; i++)
             {
                 il.Emit(IlOpCodeTable.Get("Dup"));
@@ -714,6 +721,67 @@ namespace Cocoa.CodeGen.Managed.Writer
                 EmitExpression(il, node.Initializers[i]);
                 EmitElementStore(il, elementType);
             }
+        }
+
+        /// <summary>含运行时 spread 的数组创建：newarr → 目标 local；逐元素/逐段填充；ldloc 返回。
+        /// 普通元素 stelem[t_]（t_++）；spread 用 Array.Copy(source, 0, target, t_, len)（t_ += len）。
+        /// 与 CopyRange 的 System.Array.Copy(Array,int,Array,int,int) 复用同一框架引用。</summary>
+        private void EmitArrayCreationWithSpread(IlAssembler il, BoundArrayCreationExpression node, TypeSymbol elementType)
+        {
+            var targetLocal = AllocateSyntheticTemporaryLocal(node, node.Type);
+            var indexLocal = AllocateSyntheticTemporaryLocal((node, "coll-index"), TypeSymbol.Int32);
+
+            il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)targetLocal);   // newarr → target
+            il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));
+            il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)indexLocal);    // t = 0
+
+            foreach (var initializer in node.Initializers)
+            {
+                if (initializer is BoundArraySpreadExpression spread)
+                {
+                    // [..src]：src→local；len = ldloc src → ldlen；Array.Copy(src, 0, target, t, len)；t += len
+                    var srcLocal = AllocateSyntheticTemporaryLocal((node, "coll-src", initializer), node.Type);
+                    var srcLengthLocal = AllocateSyntheticTemporaryLocal((node, spread), TypeSymbol.Int32);
+
+                    EmitExpression(il, spread.Array);
+                    il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)srcLocal);            // []
+
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)srcLocal);            // [src]
+                    il.Emit(IlOpCodeTable.Get("Ldlen"));
+                    il.Emit(IlOpCodeTable.Get("Conv_I4"));
+                    il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)srcLengthLocal);      // []
+
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)srcLocal);            // param1 sourceArray
+                    il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));              // sourceIndex=0
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)targetLocal); // dst
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)indexLocal);  // dstStart=t
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)srcLengthLocal); // count=len
+
+                    var arrayCopy = _framework.FindMethod("System.Array", "Copy",
+                        new[] { "System.Array", "System.Int32", "System.Array", "System.Int32", "System.Int32" });
+                    if (arrayCopy == null) throw new Exception("System.Array.Copy(Array,int,Array,int,int) not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), arrayCopy);       // []
+
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)indexLocal);
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)srcLengthLocal);
+                    il.Emit(IlOpCodeTable.Get("Add"));
+                    il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)indexLocal); // t += len
+                }
+                else
+                {
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)targetLocal);
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)indexLocal);
+                    EmitExpression(il, initializer);
+                    EmitElementStore(il, elementType);
+
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)indexLocal);
+                    il.Emit(IlOpCodeTable.Get("Ldc_I4_1"));
+                    il.Emit(IlOpCodeTable.Get("Add"));
+                    il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)indexLocal); // t += 1
+                }
+            }
+
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)targetLocal);
         }
 
         /// <summary>InlineType 操作数（Newarr 等）：泛型实例化必须注册为 TypeSpec（其 .Reference 指向的是

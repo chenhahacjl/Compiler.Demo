@@ -237,6 +237,8 @@ namespace Cocoa.CodeGen.Native
                 EmitNewArray();
                 _ = BeginFunctionTyped("SliceArray", new[] { 8, 4, 4, 4 }, LirType.Addr, LirType.I32, LirType.I32, LirType.I32);
                 EmitSliceArray();
+                _ = BeginFunctionTyped("ArrayCopyElements", new[] { 8, 8, 4, 4 }, LirType.Addr, LirType.Addr, LirType.I32, LirType.I32);
+                EmitArrayCopyElements();
                 _ = BeginFunction("ArrayBoundsCheck", 4, 4);
                 EmitArrayBoundsCheck();
                 _ = BeginFunction("BuildArgs");

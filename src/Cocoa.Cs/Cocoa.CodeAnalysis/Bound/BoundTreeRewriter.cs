@@ -326,6 +326,10 @@ namespace Cocoa.CodeAnalysis.Bound
                 {
                     return RewriteArrayCreationExpression((BoundArrayCreationExpression)node);
                 }
+                case BoundNodeKind.ArraySpreadExpression:
+                {
+                    return RewriteArraySpreadExpression((BoundArraySpreadExpression)node);
+                }
                 case BoundNodeKind.ElementAccessExpression:
                 {
                     return RewriteElementAccessExpression((BoundElementAccessExpression)node);
@@ -598,6 +602,17 @@ namespace Cocoa.CodeAnalysis.Bound
             }
 
             return new BoundArrayCreationExpression(node.Syntax, node.Type, length, initializers);
+        }
+
+        protected virtual BoundExpression RewriteArraySpreadExpression(BoundArraySpreadExpression node)
+        {
+            var array = RewriteExpression(node.Array);
+            if (array == node.Array)
+            {
+                return node;
+            }
+
+            return new BoundArraySpreadExpression(node.Syntax, array);
         }
 
         protected virtual BoundExpression RewriteElementAccessExpression(BoundElementAccessExpression node)

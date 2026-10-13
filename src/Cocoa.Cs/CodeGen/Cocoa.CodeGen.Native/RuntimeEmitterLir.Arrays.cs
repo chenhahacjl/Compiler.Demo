@@ -132,6 +132,79 @@ namespace Cocoa.CodeGen.Native
         }
 
         // ------------------------------------------------------------------
+        // ArrayCopyElements(src:8, dst:8, dstStart:4, elemSize:4) → void
+        // C-集合 spread：集合表达式 `[..a, 4]` 运行时把源数组 a 全部元素拷贝到
+        // 目标数组的 [dstStart, dstStart+src.Length) 处。count 由 src.Length 内部推导
+        // （避免第 5 栈参——x64 ABI 寄存器只到 R9，5+ 走栈；4 参全程寄存器）。
+        // 字节粒度（对齐 SliceArray），越界即打印 bounds 消息并退出。
+        // ------------------------------------------------------------------
+
+        private void EmitArrayCopyElements()
+        {
+            var src = _args[0];
+            var dst = _args[1];
+            var dstStart = _args[2];
+            var elementSize = _args[3];
+
+            var srcLength = NewReg(4);
+            Load(srcLength, src, NativeObjectModel.ArrayLengthOffset, 4);
+            var dstLength = NewReg(4);
+            Load(dstLength, dst, NativeObjectModel.ArrayLengthOffset, 4);
+
+            var error = NewLabel();
+            var done = NewLabel();
+            var exit = NewLabel();
+
+            // 越界：dstStart >= 0 && dstStart + src.Length <= dst.Length
+            Cmp(dstStart, 0);
+            Jcc(LirCond.Less, error);
+            var dstEnd = NewReg(4);
+            Add(dstEnd, dstStart, srcLength);
+            Cmp(dstEnd, dstLength);
+            Jcc(LirCond.Greater, error);
+
+            var totalBytes = NewReg(4);
+            Imul(totalBytes, srcLength, elementSize);
+            var dstByteBase = NewReg(4);
+            Imul(dstByteBase, dstStart, elementSize);
+
+            var index = NewReg(4);
+            Mov(index, C(4, 0));
+            var loop = NewLabel();
+
+            Mark(loop);
+            Cmp(index, totalBytes);
+            Jcc(LirCond.GreaterOrEqual, done);
+
+            var srcAddr = NewPtr();
+            Lea(srcAddr, src, NativeObjectModel.ArrayElementOffset);
+            Add(srcAddr, srcAddr, index);
+
+            var byteValue = NewReg(4);
+            Load(byteValue, srcAddr, 0, 1);
+
+            var dstAddr = NewPtr();
+            Lea(dstAddr, dst, NativeObjectModel.ArrayElementOffset);
+            Add(dstAddr, dstAddr, dstByteBase);
+            Add(dstAddr, dstAddr, index);
+            Store(dstAddr, 0, byteValue, 1);
+
+            AddI(index, index, 1);
+            Jmp(loop);
+
+            Mark(done);
+            Jmp(exit);
+            Mark(error);
+            var message = NewPtr();
+            LeaData(message, _arrayBoundsMessage);
+            CallRuntime(null, "PrintString", message);
+            CallRuntime(null, "ExitProcess", C(4, 1));
+
+            Mark(exit);
+            EndFunction(_currentFunction!, 0);
+        }
+
+        // ------------------------------------------------------------------
         // ArrayBoundsCheck(index:4, length:4) → 越界时报错退出
         // ------------------------------------------------------------------
 

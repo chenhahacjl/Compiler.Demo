@@ -1060,6 +1060,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var arrayType = TypeSymbol.ArrayOf(element);
 
             var initializers = ImmutableArray.CreateBuilder<BoundExpression>();
+            var hasRuntimeSpread = false;
             foreach (var elementSyntax in syntax.Elements)
             {
                 if (elementSyntax is RangeExpressionSyntax spreadSyntax && spreadSyntax.Right != null)
@@ -1073,7 +1074,20 @@ namespace Cocoa.CodeAnalysis.Binding
                         continue;
                     }
 
-                    AppendSpread(initializers, spread);
+                    if (spread is BoundArrayCreationExpression { Initializers.Length: > 0 } arrayLiteral)
+                    {
+                        // 编译期字面量数组：直接透传元素
+                        foreach (var item in arrayLiteral.Initializers)
+                        {
+                            initializers.Add(item);
+                        }
+                    }
+                    else
+                    {
+                        // 运行时 spread：NewArray element 标记，由发射端按运行时长拷贝（三后端）。
+                        initializers.Add(new BoundArraySpreadExpression(spreadSyntax.Right, spread));
+                        hasRuntimeSpread = true;
+                    }
                 }
                 else
                 {
@@ -1081,26 +1095,53 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            var length = new BoundLiteralExpression(syntax, initializers.Count);
+            BoundExpression length;
+            if (hasRuntimeSpread)
+            {
+                // 运行时长度 = 各 spread.Length + 字面量元素数
+                BoundExpression? sum = null;
+                var literalCount = 0;
+                foreach (var initializer in initializers)
+                {
+                    if (initializer is BoundArraySpreadExpression spreadExpr)
+                    {
+                        var spreadLength = BindArrayLengthOf(spreadExpr.Array);
+                        sum = sum == null ? spreadLength : new BoundBinaryExpression(syntax, sum,
+                            BoundBinaryOperator.Bind(CoreSyntax.SyntaxKind.PlusToken, sum.Type, spreadLength.Type)!,
+                            spreadLength);
+                    }
+                    else
+                    {
+                        literalCount++;
+                    }
+                }
+
+                if (sum == null)
+                {
+                    sum = new BoundLiteralExpression(syntax, 0);
+                }
+
+                if (literalCount > 0)
+                {
+                    sum = new BoundBinaryExpression(syntax, sum,
+                        BoundBinaryOperator.Bind(CoreSyntax.SyntaxKind.PlusToken, sum.Type, TypeSymbol.Int32)!,
+                        new BoundLiteralExpression(syntax, literalCount));
+                }
+
+                length = sum;
+            }
+            else
+            {
+                length = new BoundLiteralExpression(syntax, initializers.Count);
+            }
+
             return new BoundArrayCreationExpression(syntax, arrayType, length, initializers.ToImmutable());
         }
 
-        /// <summary>把已绑定的数组表达式逐元素加入集合初始值列表（spread 展平）。</summary>
-        private void AppendSpread(ImmutableArray<BoundExpression>.Builder initializers, BoundExpression spread)
+        /// <summary>数组 Length 作为 Bound 表达式（`arr.Length`，运行时可求值；用于集合表达式运行时长度求和）。</summary>
+        private BoundExpression BindArrayLengthOf(BoundExpression array)
         {
-            if (spread is BoundArrayCreationExpression { Initializers.Length: > 0 } arrayLiteral)
-            {
-                // 编译期字面量数组：直接透传元素
-                foreach (var item in arrayLiteral.Initializers)
-                {
-                    initializers.Add(item);
-                }
-
-                return;
-            }
-
-            _diagnostics.ReportError(spread.Syntax.Location,
-                "集合表达式 spread 目前仅支持编译期字面量数组（如 `[..[1,2]]`）；变量 spread 请改用显式循环。");
+            return new BoundMemberAccessExpression(array.Syntax!, TypeSymbol.Int32, array, "Length", null);
         }
 
         private BoundExpression BindElementAccessExpression(ElementAccessExpressionSyntax syntax)

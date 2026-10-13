@@ -89,6 +89,7 @@ namespace Cocoa.CodeAnalysis.Bound
             map[BoundNodeKind.ConversionExpression] = n => Single((BoundConversionExpression)n, x => x.Expression);
             map[BoundNodeKind.ArrayCreationExpression] = n => Snapshot(Single((BoundArrayCreationExpression)n, x => x.Length)
                 .Concat(Many((BoundArrayCreationExpression)n, x => x.Initializers, a => (BoundNode)a)));
+            map[BoundNodeKind.ArraySpreadExpression] = n => Single((BoundArraySpreadExpression)n, x => x.Array);
             map[BoundNodeKind.ElementAccessExpression] = n => Snapshot(Single((BoundElementAccessExpression)n, x => x.Target)
                 .Concat(Single((BoundElementAccessExpression)n, x => x.Index)));
             map[BoundNodeKind.ElementAssignmentExpression] = n => Snapshot(Single((BoundElementAssignmentExpression)n, x => (BoundNode?)x.Target)

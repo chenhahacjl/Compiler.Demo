@@ -37,16 +37,44 @@ namespace Cocoa.CodeGen.Native
             Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(2), LirOperand.Reg(arrayVtable)));
             Add(instructions, new LirInstruction(LirOpCode.Call, array, LirOperand.Runtime("NewArray"), LirOperand.Constant(0)));
 
-            for (var i = 0; i < node.Initializers.Length; i++)
-            {
-                var index = AllocateRegister(4);
-                Add(instructions, new LirInstruction(LirOpCode.Const, index, LirOperand.Constant(i)));
-                EmitArrayBoundsCheck(instructions, index, length);
+            // 运行时写入下标（普通元素 +1；spread 拷贝后 += src.Length）——统一路径兼容无 spread 场景
+            var writeIndex = AllocateRegister(4);
+            Add(instructions, new LirInstruction(LirOpCode.Const, writeIndex, LirOperand.Constant(0)));
 
-                var address = AllocateRegister(LirType.Addr);
-                Add(instructions, new LirInstruction(LirOpCode.Lea, address, LirOperand.Reg(array), LirOperand.None, NativeObjectModel.ArrayElementOffset + i * elementSize, 0));
-                var value = EmitExpression(node.Initializers[i]);
-                Add(instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(address), LirOperand.Reg(value), 0, elementSize));
+            foreach (var initializer in node.Initializers)
+            {
+                if (initializer is BoundArraySpreadExpression spreadExpr)
+                {
+                    // [..src]：ArrayCopyElements(src, dst=array, dstStart=writeIndex, elemSize)（count 内部按 src.Length 推导）
+                    var src = EmitExpression(spreadExpr.Array);
+                    var srcLength = AllocateRegister(4);
+                    Add(instructions, new LirInstruction(LirOpCode.Load, srcLength, LirOperand.Reg(src), LirOperand.None, NativeObjectModel.ArrayLengthOffset, 4));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(src)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(array)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(2), LirOperand.Reg(writeIndex)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(3), LirOperand.Reg(elementSizeRegister)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime("ArrayCopyElements"), LirOperand.Constant(0)));
+
+                    // writeIndex += src.Length
+                    Add(instructions, new LirInstruction(LirOpCode.Add, writeIndex, LirOperand.Reg(writeIndex), LirOperand.Reg(srcLength)));
+                }
+                else
+                {
+                    EmitArrayBoundsCheck(instructions, writeIndex, length);
+
+                    // address = array 元素区 + writeIndex*elementSize
+                    var offset = AllocateRegister(LirType.I64);
+                    Add(instructions, new LirInstruction(LirOpCode.Mov, offset, LirOperand.Reg(writeIndex)));
+                    EmitScaleOffset(instructions, offset, elementSize);
+
+                    var address = AllocateRegister(LirType.Addr);
+                    Add(instructions, new LirInstruction(LirOpCode.Lea, address, LirOperand.Reg(array), LirOperand.None, NativeObjectModel.ArrayElementOffset, 0));
+                    Add(instructions, new LirInstruction(LirOpCode.Add, address, LirOperand.Reg(address), LirOperand.Reg(offset)));
+                    var value = EmitExpression(initializer);
+                    Add(instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(address), LirOperand.Reg(value), 0, elementSize));
+
+                    Add(instructions, new LirInstruction(LirOpCode.Add, writeIndex, LirOperand.Reg(writeIndex), LirOperand.Constant(1)));
+                }
             }
 
             // M4：引用类型数组元素零值默认（null）——bump 分配器不复位脏页，逐元素清零（值类型数组不在此列）
@@ -56,6 +84,23 @@ namespace Cocoa.CodeGen.Native
             }
 
             return array;
+        }
+
+        /// <summary>按元素宽度把 index 寄存器扩展为字节偏移（1 倍直通，2/4/8 移位）。</summary>
+        private void EmitScaleOffset(List<LirInstruction> instructions, LirVirtualRegister offset, int elementSize)
+        {
+            switch (elementSize)
+            {
+                case 2:
+                    Add(instructions, new LirInstruction(LirOpCode.Shl, offset, LirOperand.Reg(offset), LirOperand.Constant(1)));
+                    break;
+                case 4:
+                    Add(instructions, new LirInstruction(LirOpCode.Shl, offset, LirOperand.Reg(offset), LirOperand.Constant(2)));
+                    break;
+                case 8:
+                    Add(instructions, new LirInstruction(LirOpCode.Shl, offset, LirOperand.Reg(offset), LirOperand.Constant(3)));
+                    break;
+            }
         }
 
         /// <summary>M4：把数组数据区（[8..8+len·elem]）清零（i 循环，仅引用宽度场景使用）。</summary>

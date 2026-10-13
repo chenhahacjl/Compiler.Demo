@@ -38,6 +38,7 @@ ConditionalExpression,
 CallExpression,
 ConversionExpression,
 ArrayCreationExpression,
+        ArraySpreadExpression,   // 集合表达式 spread：`[..a, 4]` 运行时拷贝（BoundArraySpreadExpression）
 ObjectCreationExpression,
 ThisExpression,
 BaseExpression,

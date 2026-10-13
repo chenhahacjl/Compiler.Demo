@@ -46,9 +46,23 @@ namespace Cocoa.CodeGen.Interpreter
                 }
             }
 
-            for (var i = 0; i < node.Initializers.Length; i++)
+            // 集合表达式 spread：`[..a]` 的 BoundArraySpreadExpression 在运行时把源数组逐元素拷贝。
+            // 下标递增跨过多个元素（与静态 mass 初始化的 1:1 下标不同）。
+            var writeIndex = 0;
+            foreach (var initializer in node.Initializers)
             {
-                array[i] = EvaluateExpression(node.Initializers[i])!;
+                if (initializer is BoundArraySpreadExpression spread)
+                {
+                    var source = (object[])EvaluateExpression(spread.Array)!;
+                    foreach (var item in source)
+                    {
+                        array[writeIndex++] = item;
+                    }
+                }
+                else
+                {
+                    array[writeIndex++] = EvaluateExpression(initializer)!;
+                }
             }
 
             return array;

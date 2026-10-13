@@ -98,6 +98,7 @@ namespace Cocoa.CodeGen.Native
             new("NewArray", "Arrays", RuntimePrimitivePlatform.All, "-"),
             new("SliceArray", "Arrays", RuntimePrimitivePlatform.All, "-"),
             new("ArrayBoundsCheck", "Arrays", RuntimePrimitivePlatform.All, "-"),
+            new("ArrayCopyElements", "Arrays", RuntimePrimitivePlatform.All, "-"),
             new("BuildArgs", "Arrays", RuntimePrimitivePlatform.All, "-"),
             new("DivByZero", "Arrays", RuntimePrimitivePlatform.All, "-"),
             new("StackOverflow", "Arrays", RuntimePrimitivePlatform.All, "-"),

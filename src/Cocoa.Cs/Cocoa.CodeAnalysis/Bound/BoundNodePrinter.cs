@@ -114,6 +114,9 @@ namespace Cocoa.CodeAnalysis.Bound
                 case BoundNodeKind.ArrayCreationExpression:
                     WriteArrayCreationExpression((BoundArrayCreationExpression)node, writer);
                     break;
+                case BoundNodeKind.ArraySpreadExpression:
+                    WriteArraySpreadExpression((BoundArraySpreadExpression)node, writer);
+                    break;
                 case BoundNodeKind.ElementAccessExpression:
                     WriteElementAccessExpression((BoundElementAccessExpression)node, writer);
                     break;
@@ -672,6 +675,12 @@ namespace Cocoa.CodeAnalysis.Bound
                 initializer.WriteTo(writer);
                 writer.WritePunctuation(SyntaxKind.CloseBraceToken);
             }
+        }
+
+        private static void WriteArraySpreadExpression(BoundArraySpreadExpression node, IndentedTextWriter writer)
+        {
+            writer.WritePunctuation(SyntaxKind.DotDotToken);
+            node.Array.WriteTo(writer);
         }
 
         private static void WriteElementAccessExpression(BoundElementAccessExpression node, IndentedTextWriter writer)
