@@ -135,6 +135,8 @@ namespace Cocoa.CodeAnalysis.Bound
                 {
                     BoundBinaryOperatorKind.Equals => BoundBinaryOperatorKind.ReferenceEquals,
                     BoundBinaryOperatorKind.NotEquals => BoundBinaryOperatorKind.ReferenceNotEquals,
+                    BoundBinaryOperatorKind.ReferenceEquals => BoundBinaryOperatorKind.ReferenceEquals,
+                    BoundBinaryOperatorKind.ReferenceNotEquals => BoundBinaryOperatorKind.ReferenceNotEquals,
                     _ => (BoundBinaryOperatorKind?)null,
                 };
 
@@ -180,12 +182,20 @@ namespace Cocoa.CodeAnalysis.Bound
                 }
             }
 
-            // ?? null 合并：左操作数必须为引用类型，右操作数类型与左相同，结果类型 = 左类型
+            // ?? null 合并：左操作数必须为引用类型，右操作数类型与左相同，结果类型 = 左类型。
+            // A-1：右侧可隐式转换到左侧（含具体值装箱到 object、派生引用到基类）时同样合法——
+            // C# `object a; int v; var x = a ?? v;`。
             if (kind == BoundBinaryOperatorKind.NullCoalescing)
             {
-                if (IsNullableReference(leftType) && leftType == rightType)
+                if (IsNullableReference(leftType))
                 {
-                    return new BoundBinaryOperator(BoundBinaryOperatorKind.NullCoalescing, leftType, rightType, leftType);
+                    var convertibleRight = leftType == rightType ||
+                        (rightType != TypeSymbol.Null && rightType != TypeSymbol.Void &&
+                         Conversion.Classify(rightType, leftType).Exists);
+                    if (convertibleRight)
+                    {
+                        return new BoundBinaryOperator(BoundBinaryOperatorKind.NullCoalescing, leftType, leftType, leftType);
+                    }
                 }
             }
 
@@ -205,6 +215,7 @@ namespace Cocoa.CodeAnalysis.Bound
                 SyntaxKind.QuestionQuestionToken => BoundBinaryOperatorKind.NullCoalescing,
                 SyntaxKind.HatToken => BoundBinaryOperatorKind.BitwiseXor,
                 SyntaxKind.EqualsEqualsToken => BoundBinaryOperatorKind.Equals,
+                SyntaxKind.EqualsEqualsEqualsToken => BoundBinaryOperatorKind.ReferenceEquals,
                 SyntaxKind.BangEqualsToken => BoundBinaryOperatorKind.NotEquals,
                 SyntaxKind.PlusToken => BoundBinaryOperatorKind.Addition,
                 SyntaxKind.MinusToken => BoundBinaryOperatorKind.Subtraction,
@@ -213,6 +224,7 @@ namespace Cocoa.CodeAnalysis.Bound
                 SyntaxKind.PercentToken => BoundBinaryOperatorKind.Modulo,
                 SyntaxKind.ShiftLeftToken => BoundBinaryOperatorKind.ShiftLeft,
                 SyntaxKind.ShiftRightToken => BoundBinaryOperatorKind.ShiftRight,
+                SyntaxKind.UnsignedShiftRightToken => BoundBinaryOperatorKind.UnsignedShiftRight,
                 SyntaxKind.LessToken => BoundBinaryOperatorKind.Less,
                 SyntaxKind.LessOrEqualsToken => BoundBinaryOperatorKind.LessOrEquals,
                 SyntaxKind.GreaterToken => BoundBinaryOperatorKind.Greater,

@@ -569,12 +569,56 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
                 return true;
             }
 
+            if (t1Kind == SyntaxKind.BangToken && t2Kind == SyntaxKind.EqualsEqualsEqualsToken)
+            {
+                return true;
+            }
+
             if (t1Kind == SyntaxKind.EqualsToken && t2Kind == SyntaxKind.EqualsToken)
             {
                 return true;
             }
 
             if (t1Kind == SyntaxKind.EqualsToken && t2Kind == SyntaxKind.EqualsEqualsToken)
+            {
+                return true;
+            }
+
+            if (t1Kind == SyntaxKind.EqualsToken && t2Kind == SyntaxKind.EqualsEqualsEqualsToken)
+            {
+                return true;
+            }
+
+            // ===（严格相等）引入的连写歧义：单 token `===` 会被贪婪吞并为整体——
+            // `==` + `=`（==== 或 ===）无法无分隔切回两 token，须分隔
+            if (t1Kind == SyntaxKind.EqualsEqualsToken && t2Kind == SyntaxKind.EqualsToken)
+            {
+                return true;
+            }
+
+            if (t1Kind == SyntaxKind.EqualsEqualsToken && t2Kind == SyntaxKind.EqualsEqualsToken)
+            {
+                return true;
+            }
+
+            // == followed by === would lex === then == (greedy 3+2); == never precedes === unambiguously
+            if (t1Kind == SyntaxKind.EqualsEqualsToken && t2Kind == SyntaxKind.EqualsEqualsEqualsToken)
+            {
+                return true;
+            }
+
+            // == followed by => would lex === then > (=== greedy match)
+            if (t1Kind == SyntaxKind.EqualsEqualsToken && t2Kind == SyntaxKind.FatArrowToken)
+            {
+                return true;
+            }
+
+            if (t1Kind == SyntaxKind.EqualsEqualsEqualsToken && t2Kind == SyntaxKind.EqualsToken)
+            {
+                return true;
+            }
+
+            if (t1Kind == SyntaxKind.EqualsEqualsEqualsToken && t2Kind == SyntaxKind.EqualsEqualsToken)
             {
                 return true;
             }
@@ -586,6 +630,12 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             }
 
             if (t1Kind == SyntaxKind.QuestionQuestionToken && t2Kind == SyntaxKind.EqualsEqualsToken)
+            {
+                return true;
+            }
+
+            // ???= followed by == always unambiguous, but ??=== merges as ??= + == (greedy)
+            if (t1Kind == SyntaxKind.QuestionQuestionToken && t2Kind == SyntaxKind.EqualsEqualsEqualsToken)
             {
                 return true;
             }
@@ -651,6 +701,11 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
                 return true;
             }
 
+            if (t1Kind == SyntaxKind.PlusToken && t2Kind == SyntaxKind.EqualsEqualsEqualsToken)
+            {
+                return true;
+            }
+
             if (t1Kind == SyntaxKind.PlusToken && t2Kind == SyntaxKind.PlusToken ||
                 t1Kind == SyntaxKind.PlusToken && t2Kind == SyntaxKind.PlusPlusToken ||
                 t1Kind == SyntaxKind.PlusToken && t2Kind == SyntaxKind.PlusEqualsToken ||
@@ -665,6 +720,11 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             }
 
             if (t1Kind == SyntaxKind.MinusToken && t2Kind == SyntaxKind.EqualsEqualsToken)
+            {
+                return true;
+            }
+
+            if (t1Kind == SyntaxKind.MinusToken && t2Kind == SyntaxKind.EqualsEqualsEqualsToken)
             {
                 return true;
             }
@@ -698,12 +758,22 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
                 return true;
             }
 
+            if (t1Kind == SyntaxKind.StarToken && t2Kind == SyntaxKind.EqualsEqualsEqualsToken)
+            {
+                return true;
+            }
+
             if (t1Kind == SyntaxKind.SlashToken && t2Kind == SyntaxKind.EqualsToken)
             {
                 return true;
             }
 
             if (t1Kind == SyntaxKind.SlashToken && t2Kind == SyntaxKind.EqualsEqualsToken)
+            {
+                return true;
+            }
+
+            if (t1Kind == SyntaxKind.SlashToken && t2Kind == SyntaxKind.EqualsEqualsEqualsToken)
             {
                 return true;
             }
@@ -718,12 +788,22 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
                 return true;
             }
 
+            if (t1Kind == SyntaxKind.LessToken && t2Kind == SyntaxKind.EqualsEqualsEqualsToken)
+            {
+                return true;
+            }
+
             if (t1Kind == SyntaxKind.GreaterToken && t2Kind == SyntaxKind.EqualsToken)
             {
                 return true;
             }
 
             if (t1Kind == SyntaxKind.GreaterToken && t2Kind == SyntaxKind.EqualsEqualsToken)
+            {
+                return true;
+            }
+
+            if (t1Kind == SyntaxKind.GreaterToken && t2Kind == SyntaxKind.EqualsEqualsEqualsToken)
             {
                 return true;
             }
@@ -744,6 +824,11 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             }
 
             if (t1Kind == SyntaxKind.AmpersandToken && t2Kind == SyntaxKind.EqualsEqualsToken)
+            {
+                return true;
+            }
+
+            if (t1Kind == SyntaxKind.AmpersandToken && t2Kind == SyntaxKind.EqualsEqualsEqualsToken)
             {
                 return true;
             }
@@ -773,6 +858,11 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
                 return true;
             }
 
+            if (t1Kind == SyntaxKind.PipeToken && t2Kind == SyntaxKind.EqualsEqualsEqualsToken)
+            {
+                return true;
+            }
+
             if (t1Kind == SyntaxKind.PipeToken && t2Kind == SyntaxKind.PipeEqualsToken)
             {
                 return true;
@@ -784,6 +874,11 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             }
 
             if (t1Kind == SyntaxKind.HatToken && t2Kind == SyntaxKind.EqualsEqualsToken)
+            {
+                return true;
+            }
+
+            if (t1Kind == SyntaxKind.HatToken && t2Kind == SyntaxKind.EqualsEqualsEqualsToken)
             {
                 return true;
             }
@@ -828,6 +923,11 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
                 return true;
             }
 
+            if (t1Kind == SyntaxKind.PercentToken && t2Kind == SyntaxKind.EqualsEqualsEqualsToken)
+            {
+                return true;
+            }
+
             if (t1Kind == SyntaxKind.LessToken && t2Kind == SyntaxKind.LessToken ||
                 t1Kind == SyntaxKind.LessToken && t2Kind == SyntaxKind.LessOrEqualsToken ||
                 t1Kind == SyntaxKind.LessToken && t2Kind == SyntaxKind.ShiftLeftToken ||
@@ -837,7 +937,8 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             }
 
             if (t1Kind == SyntaxKind.ShiftLeftToken && t2Kind == SyntaxKind.EqualsToken ||
-                t1Kind == SyntaxKind.ShiftLeftToken && t2Kind == SyntaxKind.EqualsEqualsToken)
+                t1Kind == SyntaxKind.ShiftLeftToken && t2Kind == SyntaxKind.EqualsEqualsToken ||
+                t1Kind == SyntaxKind.ShiftLeftToken && t2Kind == SyntaxKind.EqualsEqualsEqualsToken)
             {
                 return true;
             }
@@ -884,7 +985,8 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             }
 
             if (t1Kind == SyntaxKind.ShiftRightToken && t2Kind == SyntaxKind.EqualsToken ||
-                t1Kind == SyntaxKind.ShiftRightToken && t2Kind == SyntaxKind.EqualsEqualsToken)
+                t1Kind == SyntaxKind.ShiftRightToken && t2Kind == SyntaxKind.EqualsEqualsToken ||
+                t1Kind == SyntaxKind.ShiftRightToken && t2Kind == SyntaxKind.EqualsEqualsEqualsToken)
             {
                 return true;
             }

@@ -673,6 +673,11 @@ namespace Cocoa.CodeGen.Native
                     Add(instructions, new LirInstruction(isUnsigned ? LirOpCode.Shr : LirOpCode.Sar, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
+                case BoundBinaryOperatorKind.UnsignedShiftRight:
+                    // >>>：恒为逻辑右移（有符号数也按无符号补 0）
+                    Add(instructions, new LirInstruction(LirOpCode.Shr, result, LirOperand.Reg(left), LirOperand.Reg(right)));
+                    break;
+
                 case BoundBinaryOperatorKind.BitwiseOr:
                 case BoundBinaryOperatorKind.LogicalOr:
                     Add(instructions, new LirInstruction(LirOpCode.Or, result, LirOperand.Reg(left), LirOperand.Reg(right)));
@@ -935,6 +940,11 @@ namespace Cocoa.CodeGen.Native
                 case BoundBinaryOperatorKind.ShiftRight:
                     // u64 为逻辑右移（Shr64），i64 为算术右移（Sar64）
                     Add(instructions, new LirInstruction(isUnsigned ? LirOpCode.Shr : LirOpCode.Sar, result, LirOperand.Reg(left), LirOperand.Reg(right)));
+                    break;
+
+                case BoundBinaryOperatorKind.UnsignedShiftRight:
+                    // >>>：恒为逻辑右移（u64 也按逻辑移）
+                    Add(instructions, new LirInstruction(LirOpCode.Shr, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.Equals:

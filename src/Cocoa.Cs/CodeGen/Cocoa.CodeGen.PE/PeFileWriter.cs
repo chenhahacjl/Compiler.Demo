@@ -36,7 +36,7 @@ namespace Cocoa.CodeGen.PE
             return architecture == Architecture.X86 ? 0x400000 : 0x140000000;
         }
 
-        public static void Write(string outputPath, byte[] code, byte[] data, int entryPointRva, IReadOnlyList<PefileImport> imports, Architecture architecture, IReadOnlyList<int>? dataAbsoluteFixups = null, ushort subsystem = PeSubsystemWindowsCui, byte[]? cocoaMetadata = null)
+        public static void Write(string outputPath, byte[] code, byte[] data, int entryPointRva, IReadOnlyList<PefileImport> imports, Architecture architecture, IReadOnlyList<int>? dataAbsoluteFixups = null, ushort subsystem = PeSubsystemWindowsCui, byte[]? cocoaMetadata = null, IReadOnlyList<PeExportEntry>? exports = null)
         {
             var pe32 = architecture == Architecture.X86;
 
@@ -112,6 +112,25 @@ namespace Cocoa.CodeGen.PE
                 cocoaRva = afterReloc;
             }
 
+            // C-3：.edata 导出表节（`[Export]` 函数 → 名字表 + 函数地址表），紧随 .cocoa 之后布局。
+            uint edataRva = 0;
+            byte[] exportBlob;
+            if (exports != null && exports.Count > 0)
+            {
+                var afterCocoa = (uint)Align(idataRva + importLayout.Blob.Length, SectionAlignment);
+                if (cocoaMetadata != null && cocoaMetadata.Length > 0)
+                {
+                    afterCocoa = cocoaRva + (uint)Align(cocoaMetadata.Length, SectionAlignment);
+                }
+
+                edataRva = afterCocoa;
+                exportBlob = BuildExportTable(exports, edataRva);
+            }
+            else
+            {
+                exportBlob = Array.Empty<byte>();
+            }
+
             // 各节虚拟末端（对齐后）必须恰好落在下一节起点（Windows 加载器按相邻节连续校验）。
             // .text 单一节（不做 4KB 分页）：分页会让节表随 code 增长而膨胀（>92 节将溢出固定头区且部分加载器拒载）。
             var sections = new List<PeSectionSpec>
@@ -129,6 +148,12 @@ namespace Cocoa.CodeGen.PE
             if (cocoaMetadata != null && cocoaMetadata.Length > 0)
             {
                 sections.Add(new(".cocoa", cocoaMetadata, cocoaRva, PeSectionCharacteristics.Data | PeSectionCharacteristics.MemDiscardable));
+            }
+
+            if (exportBlob.Length > 0)
+            {
+                sections.Add(new(".edata", exportBlob, edataRva, PeSectionCharacteristics.Data));
+                directories.Add((PeDataDirectoryEntry.Export, edataRva, (uint)exportBlob.Length));
             }
 
             // 原生镜像：.text 按 4KB 页分页成多个节（.text/.textN），节表须容纳全部节头（每节 40 字节）。
@@ -206,6 +231,111 @@ namespace Cocoa.CodeGen.PE
         {
             blob.Add((byte)value);
             blob.Add((byte)(value >> 8));
+        }
+
+        /// <summary>
+        /// C-3：构建 .edata 导出表 blob（IMAGE_EXPORT_DIRECTORY + 名字表 + ordinal 表 + 函数地址表 + 名字字符串）。
+        /// 名字按 ord 排列以保证名字表与 ordinal 表一一对应；序号 = 每条目的索引（ordinal base 1）。
+        /// forwarder 不做（本编译器无转发导出）。
+        /// </summary>
+        private static byte[] BuildExportTable(IReadOnlyList<PeExportEntry> exports, uint edataRva)
+        {
+            var count = exports.Count;
+
+            // 布局（单位字节；blob 内相对偏移）：
+            //   [0 .. 40)         IMAGE_EXPORT_DIRECTORY
+            //   [40 .. 40+4N)     名字表（每个名字字符串 RVA）
+            //   [40+4N .. 40+6N)  ordinal 表（ushort：函数表索引）
+            //   [40+6N .. 40+10N) 函数地址表（每个函数 RVA）
+            //   [40+10N ..)       名字字符串（".edata 区末尾追加，供名字表引用"）
+            var namesTableOffset = 40;
+            var ordinalsTableOffset = 40 + 4 * count;
+            var functionsTableOffset = 40 + 6 * count;
+            var stringsOffset = 40 + 10 * count;
+
+            var blob = new List<byte>(64 + stringsOffset + count * 24);
+            for (var i = 0; i < stringsOffset; i++)
+            {
+                blob.Add(0);
+            }
+
+            // 名字字符串区：先写字符串，记录其相对偏移 → 再回填名字表
+            var nameRvas = new uint[count];
+            var nameOffsets = new int[count];
+            for (var i = 0; i < count; i++)
+            {
+                var bytes = System.Text.Encoding.UTF8.GetBytes(exports[i].Name + "\0");
+                nameOffsets[i] = blob.Count;
+                for (var b = 0; b < bytes.Length; b++)
+                {
+                    blob.Add(bytes[b]);
+                }
+            }
+
+            for (var i = 0; i < count; i++)
+            {
+                nameRvas[i] = edataRva + (uint)(stringsOffset + (nameOffsets[i] - stringsOffset));
+            }
+
+            // 名字表（Absolute RVA）
+            for (var i = 0; i < count; i++)
+            {
+                WriteUInt32Value(blob, (int)namesTableOffset + i * 4, nameRvas[i]);
+            }
+
+            // ordinal 表（函数表索引，0..N-1）
+            for (var i = 0; i < count; i++)
+            {
+                WriteUInt16Value(blob, ordinalsTableOffset + i * 2, (ushort)i);
+            }
+
+            // 函数地址表（函数 RVA）
+            for (var i = 0; i < count; i++)
+            {
+                WriteUInt32Value(blob, functionsTableOffset + i * 4, exports[i].Rva);
+            }
+
+            // 目录头：Name 字段 = 模块名前缀串（供工具显示），Base=1
+            var dllNameOffset = blob.Count;
+            foreach (var ch in "cocoa" + "\0")
+            {
+                blob.Add((byte)ch);
+            }
+
+            var dir = new ImageExportDirectory(
+                Characteristics: 0,
+                TimeDateStamp: 0,
+                MajorVersion: 0,
+                MinorVersion: 0,
+                Name: edataRva + (uint)dllNameOffset,
+                Base: 1,
+                NumberOfFunctions: (uint)count,
+                NumberOfNames: (uint)count,
+                AddressOfFunctions: edataRva + (uint)functionsTableOffset,
+                AddressOfNames: edataRva + (uint)namesTableOffset,
+                AddressOfNameOrdinals: edataRva + (uint)ordinalsTableOffset);
+            var header = new byte[ImageExportDirectory.SizeOfEntry];
+            dir.Write(header);
+            for (var i = 0; i < header.Length; i++)
+            {
+                blob[i] = header[i];
+            }
+
+            return blob.ToArray();
+        }
+
+        private static void WriteUInt32Value(List<byte> blob, int offset, uint value)
+        {
+            blob[offset] = (byte)value;
+            blob[offset + 1] = (byte)(value >> 8);
+            blob[offset + 2] = (byte)(value >> 16);
+            blob[offset + 3] = (byte)(value >> 24);
+        }
+
+        private static void WriteUInt16Value(List<byte> blob, int offset, ushort value)
+        {
+            blob[offset] = (byte)value;
+            blob[offset + 1] = (byte)(value >> 8);
         }
 
     }

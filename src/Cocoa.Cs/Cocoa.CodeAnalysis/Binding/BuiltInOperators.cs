@@ -125,6 +125,7 @@ namespace Cocoa.CodeAnalysis.Binding
                         ops.Add(new(BoundBinaryOperatorKind.Modulo, t, t, t));
                         ops.Add(new(BoundBinaryOperatorKind.ShiftLeft, t, t, t));
                         ops.Add(new(BoundBinaryOperatorKind.ShiftRight, t, t, t));
+                        ops.Add(new(BoundBinaryOperatorKind.UnsignedShiftRight, t, t, t));
                         ops.Add(new(BoundBinaryOperatorKind.BitwiseAnd, t, t, t));
                         ops.Add(new(BoundBinaryOperatorKind.BitwiseOr, t, t, t));
                         ops.Add(new(BoundBinaryOperatorKind.BitwiseXor, t, t, t));

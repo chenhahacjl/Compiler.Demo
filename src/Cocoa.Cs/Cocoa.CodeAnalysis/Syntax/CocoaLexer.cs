@@ -1502,7 +1502,15 @@ namespace Cocoa.CodeAnalysis.Syntax
                     {
 
                         _position++;
-                        _kind = SyntaxKind.EqualsEqualsToken;
+                        if (Current == '=')
+                        {
+                            _position++;
+                            _kind = SyntaxKind.EqualsEqualsEqualsToken;
+                        }
+                        else
+                        {
+                            _kind = SyntaxKind.EqualsEqualsToken;
+                        }
                     }
                     break;
                 }

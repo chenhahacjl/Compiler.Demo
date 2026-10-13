@@ -964,6 +964,10 @@ namespace Cocoa.CodeGen.Managed.Writer
                     // Shr=算术右移；Shr_Un=逻辑右移（无符号类型）
                     il.Emit(IlOpCodeTable.Get(isUnsigned ? "Shr_Un" : "Shr"));
                     break;
+                case BoundBinaryOperatorKind.UnsignedShiftRight:
+                    // >>>：恒为逻辑右移（有符号数也按无符号补 0）
+                    il.Emit(IlOpCodeTable.Get("Shr_Un"));
+                    break;
                 case BoundBinaryOperatorKind.LogicalAnd:
                 case BoundBinaryOperatorKind.BitwiseAnd:
                     il.Emit(IlOpCodeTable.Get("And"));

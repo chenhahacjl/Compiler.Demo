@@ -39,11 +39,13 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.MinusToken:
                 case SyntaxKind.ShiftLeftToken:
                 case SyntaxKind.ShiftRightToken:
+                case SyntaxKind.UnsignedShiftRightToken:
                 {
                     return 4;
                 }
 
                 case SyntaxKind.EqualsEqualsToken:
+                case SyntaxKind.EqualsEqualsEqualsToken:
                 case SyntaxKind.BangEqualsToken:
                 case SyntaxKind.LessToken:
                 case SyntaxKind.LessOrEqualsToken:
@@ -367,6 +369,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "^=";
                 case SyntaxKind.EqualsEqualsToken:
                     return "==";
+                case SyntaxKind.EqualsEqualsEqualsToken:
+                    return "===";
                 case SyntaxKind.BangEqualsToken:
                     return "!=";
                 case SyntaxKind.OpenParenthesisToken:

@@ -1054,6 +1054,14 @@ namespace Cocoa.CodeGen.Managed.Writer
                         EmitExpression(il, node.Expression);
                         il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.TypeGetFullName);
                         return;
+                    case BuiltinKind.TypeIsClass:
+                        EmitExpression(il, node.Expression);
+                        il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.TypeIsClass);
+                        return;
+                    case BuiltinKind.TypeIsValueType:
+                        EmitExpression(il, node.Expression);
+                        il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.TypeIsValueType);
+                        return;
                 }
             }
 

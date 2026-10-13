@@ -2009,6 +2009,39 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
+            // A-1 object 装箱提升（C# 语义）：`object v; v == 9` / `obj ?? x`——operatorKind 为
+            // 相等/不等/空合并，且一侧为 object 另一侧可隐式装箱到 object 时，先把该侧装箱，
+            // 再按 (object, object) 查表（BuiltInOperators 已注册；发射走既有装箱值比较/?? 脱糖路径）。
+            if (boundOperator == null && boundLeft.Type != TypeSymbol.Error && boundRight.Type != TypeSymbol.Error)
+            {
+                var semanticKind = BoundBinaryOperator.Translate(operatorKind);
+                if (semanticKind is BoundBinaryOperatorKind.Equals
+                    or BoundBinaryOperatorKind.NotEquals
+                    or BoundBinaryOperatorKind.NullCoalescing)
+                {
+                    if (boundLeft.Type == TypeSymbol.Object && boundRight.Type != TypeSymbol.Object)
+                    {
+                        var boxedRight = BindConversion(boundRight.Syntax.Location, boundRight, TypeSymbol.Object);
+                        var promoted = BoundBinaryOperator.Bind(operatorKind, TypeSymbol.Object, boxedRight.Type);
+                        if (promoted != null)
+                        {
+                            boundRight = boxedRight;
+                            boundOperator = promoted;
+                        }
+                    }
+                    else if (boundRight.Type == TypeSymbol.Object && boundLeft.Type != TypeSymbol.Object)
+                    {
+                        var boxedLeft = BindConversion(boundLeft.Syntax.Location, boundLeft, TypeSymbol.Object);
+                        var promoted = BoundBinaryOperator.Bind(operatorKind, boxedLeft.Type, TypeSymbol.Object);
+                        if (promoted != null)
+                        {
+                            boundLeft = boxedLeft;
+                            boundOperator = promoted;
+                        }
+                    }
+                }
+            }
+
             if (boundLeft.Type == TypeSymbol.Error || boundRight.Type == TypeSymbol.Error)
             {
                 return new BoundErrorExpression(syntax);
@@ -2138,7 +2171,8 @@ namespace Cocoa.CodeAnalysis.Binding
 
             // 统一归一化：任何落在 <32 位域的整数结果升到 32 位（运算符表仅注册 32/64 位算术）
             if (raw.IsInteger && !raw.IsPlaceholder128 && raw.BitWidth < 32 &&
-                operatorKind != CoreSyntax.SyntaxKind.ShiftLeftToken && operatorKind != CoreSyntax.SyntaxKind.ShiftRightToken)
+                operatorKind != CoreSyntax.SyntaxKind.ShiftLeftToken && operatorKind != CoreSyntax.SyntaxKind.ShiftRightToken &&
+                operatorKind != CoreSyntax.SyntaxKind.UnsignedShiftRightToken)
             {
                 return raw.IsSigned ? TypeSymbol.Int32 : TypeSymbol.UInt32;
             }
@@ -2190,7 +2224,8 @@ namespace Cocoa.CodeAnalysis.Binding
                 return TypeSymbol.NativeInt32;
             }
 
-            if (operatorKind == CoreSyntax.SyntaxKind.ShiftLeftToken || operatorKind == CoreSyntax.SyntaxKind.ShiftRightToken)
+            if (operatorKind == CoreSyntax.SyntaxKind.ShiftLeftToken || operatorKind == CoreSyntax.SyntaxKind.ShiftRightToken ||
+                operatorKind == CoreSyntax.SyntaxKind.UnsignedShiftRightToken)
             {
                 return left.IsInteger && left.BitWidth < 32 ? TypeSymbol.Int32 : left;
             }

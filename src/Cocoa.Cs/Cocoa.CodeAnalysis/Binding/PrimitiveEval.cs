@@ -181,6 +181,20 @@ namespace Cocoa.CodeAnalysis.Binding
                     }
 
                     break;
+                case BoundBinaryOperatorKind.UnsignedShiftRight:
+                    if (type == TypeSymbol.Int64)
+                    {
+                        result = (long)(((ulong)(long)left!) >> (int)right!);
+                        return PrimitiveEvalStatus.Computed;
+                    }
+
+                    if (type == TypeSymbol.Int32)
+                    {
+                        result = (int)(uint)((uint)(int)left! >> (int)right!);
+                        return PrimitiveEvalStatus.Computed;
+                    }
+
+                    break;
                 case BoundBinaryOperatorKind.BitwiseAnd:
                 case BoundBinaryOperatorKind.BitwiseOr:
                 case BoundBinaryOperatorKind.BitwiseXor:
@@ -335,6 +349,7 @@ namespace Cocoa.CodeAnalysis.Binding
                         return PrimitiveEvalStatus.Computed;
                     case BoundBinaryOperatorKind.ShiftLeft: result = NumericBox.Box(type, a << ((int)b & (type.BitWidth - 1))); return PrimitiveEvalStatus.Computed;
                     case BoundBinaryOperatorKind.ShiftRight: result = NumericBox.Box(type, a >> ((int)b & (type.BitWidth - 1))); return PrimitiveEvalStatus.Computed;
+                    case BoundBinaryOperatorKind.UnsignedShiftRight: result = NumericBox.Box(type, (long)(((ulong)a) >> ((int)b & (type.BitWidth - 1)))); return PrimitiveEvalStatus.Computed;
                     case BoundBinaryOperatorKind.BitwiseAnd: result = NumericBox.Box(type, a & b); return PrimitiveEvalStatus.Computed;
                     case BoundBinaryOperatorKind.BitwiseOr: result = NumericBox.Box(type, a | b); return PrimitiveEvalStatus.Computed;
                     case BoundBinaryOperatorKind.BitwiseXor: result = NumericBox.Box(type, a ^ b); return PrimitiveEvalStatus.Computed;
@@ -373,6 +388,7 @@ namespace Cocoa.CodeAnalysis.Binding
                         return PrimitiveEvalStatus.Computed;
                     case BoundBinaryOperatorKind.ShiftLeft: result = NumericBox.Box(type, a << ((int)b & (type.BitWidth - 1))); return PrimitiveEvalStatus.Computed;
                     case BoundBinaryOperatorKind.ShiftRight: result = NumericBox.Box(type, a >> ((int)b & (type.BitWidth - 1))); return PrimitiveEvalStatus.Computed;
+                    case BoundBinaryOperatorKind.UnsignedShiftRight: result = NumericBox.Box(type, a >> ((int)b & (type.BitWidth - 1))); return PrimitiveEvalStatus.Computed;
                     case BoundBinaryOperatorKind.BitwiseAnd: result = NumericBox.Box(type, a & b); return PrimitiveEvalStatus.Computed;
                     case BoundBinaryOperatorKind.BitwiseOr: result = NumericBox.Box(type, a | b); return PrimitiveEvalStatus.Computed;
                     case BoundBinaryOperatorKind.BitwiseXor: result = NumericBox.Box(type, a ^ b); return PrimitiveEvalStatus.Computed;

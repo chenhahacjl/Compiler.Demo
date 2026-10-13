@@ -22,6 +22,7 @@ namespace Cocoa.CodeAnalysis.Bound
                 BoundBinaryOperatorKind.Modulo => "%",
                 BoundBinaryOperatorKind.ShiftLeft => "<<",
                 BoundBinaryOperatorKind.ShiftRight => ">>",
+                BoundBinaryOperatorKind.UnsignedShiftRight => ">>>",
                 BoundBinaryOperatorKind.BitwiseAnd => "&",
                 BoundBinaryOperatorKind.BitwiseOr => "|",
                 BoundBinaryOperatorKind.BitwiseXor => "^",
@@ -65,7 +66,8 @@ namespace Cocoa.CodeAnalysis.Bound
                 BoundBinaryOperatorKind.Addition
                 or BoundBinaryOperatorKind.Subtraction
                 or BoundBinaryOperatorKind.ShiftLeft
-                or BoundBinaryOperatorKind.ShiftRight => 4,
+                or BoundBinaryOperatorKind.ShiftRight
+                or BoundBinaryOperatorKind.UnsignedShiftRight => 4,
 
                 BoundBinaryOperatorKind.Equals
                 or BoundBinaryOperatorKind.NotEquals

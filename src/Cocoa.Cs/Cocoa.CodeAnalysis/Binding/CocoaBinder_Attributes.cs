@@ -87,6 +87,27 @@ namespace Cocoa.CodeAnalysis.Binding
             return result.ToImmutable();
         }
 
+        /// <summary>C-3：识别 `[Export]`/`[DllExport]` attribute，标记函数为 DLL 导出。</summary>
+        private void MarkExportedIfDeclared(FunctionSymbol function, ImmutableArray<CoreSyntax.AttributeSyntax> attributes)
+        {
+            if (attributes.IsDefaultOrEmpty)
+            {
+                return;
+            }
+
+            foreach (var attribute in attributes)
+            {
+                if (attribute.Name.Text != "Export" && attribute.Name.Text != "ExportAttribute" &&
+                    attribute.Name.Text != "DllExport" && attribute.Name.Text != "DllExportAttribute")
+                {
+                    continue;
+                }
+
+                function.IsExported = true;
+                return;
+            }
+        }
+
         private AttributeSymbol? BindAttribute(CoreSyntax.AttributeSyntax attribute, Syntax.SyntaxNode target)
         {
             var name = attribute.Name.Text;

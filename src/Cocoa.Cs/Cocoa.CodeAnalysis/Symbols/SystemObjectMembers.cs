@@ -23,6 +23,8 @@ namespace Cocoa.CodeAnalysis.Symbols
             new BuiltinSpec(BuiltinKind.ObjectReferenceEquals, "ReferenceEquals", TypeSymbol.Boolean, new (string Name, TypeSymbol Type)[] { ("a", TypeSymbol.Object), ("b", TypeSymbol.Object) }),
             new BuiltinSpec(BuiltinKind.TypeName, "get_Name", TypeSymbol.String, System.Array.Empty<(string, TypeSymbol)>()),
             new BuiltinSpec(BuiltinKind.TypeFullName, "get_FullName", TypeSymbol.String, System.Array.Empty<(string, TypeSymbol)>()),
+            new BuiltinSpec(BuiltinKind.TypeIsClass, "get_IsClass", TypeSymbol.Boolean, System.Array.Empty<(string, TypeSymbol)>()),
+            new BuiltinSpec(BuiltinKind.TypeIsValueType, "get_IsValueType", TypeSymbol.Boolean, System.Array.Empty<(string, TypeSymbol)>()),
         };
 
         private static bool _initialized;
@@ -51,6 +53,12 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>Type.FullName 只读属性 getter。</summary>
         public static readonly FunctionSymbol TypeFullName = CreateInstance(BuiltinKind.TypeFullName);
 
+        /// <summary>Type.IsClass 只读属性 getter。</summary>
+        public static readonly FunctionSymbol TypeIsClass = CreateInstance(BuiltinKind.TypeIsClass);
+
+        /// <summary>Type.IsValueType 只读属性 getter。</summary>
+        public static readonly FunctionSymbol TypeIsValueType = CreateInstance(BuiltinKind.TypeIsValueType);
+
         /// <summary>
         /// 向 SystemObject/SystemType 单例注入成员面（幂等）。须先于类成员绑定调用，
         /// 保证用户类 override 解析与成员沿链上溯可见。SystemType 继承 SystemObject（Type 值可用 ToString/GetType 等）。
@@ -76,10 +84,16 @@ namespace Cocoa.CodeAnalysis.Symbols
             type.BaseType = NamedTypeSymbol.SystemObject;
             var nameProperty = new PropertySymbol("Name", TypeSymbol.String, type, TypeName, setter: null, Visibility.Public, isStatic: false);
             var fullNameProperty = new PropertySymbol("FullName", TypeSymbol.String, type, TypeFullName, setter: null, Visibility.Public, isStatic: false);
+            var isClassProperty = new PropertySymbol("IsClass", TypeSymbol.Boolean, type, TypeIsClass, setter: null, Visibility.Public, isStatic: false);
+            var isValueTypeProperty = new PropertySymbol("IsValueType", TypeSymbol.Boolean, type, TypeIsValueType, setter: null, Visibility.Public, isStatic: false);
             type.AddProperty(nameProperty);
             type.AddProperty(fullNameProperty);
+            type.AddProperty(isClassProperty);
+            type.AddProperty(isValueTypeProperty);
             type.AddMethod(TypeName);
             type.AddMethod(TypeFullName);
+            type.AddMethod(TypeIsClass);
+            type.AddMethod(TypeIsValueType);
         }
 
         /// <summary>是否为 Object/Type 内建单例（`.coa` 序列化跳过 cls 壳与方法回填的判据）。</summary>
@@ -97,6 +111,8 @@ namespace Cocoa.CodeAnalysis.Symbols
             BuiltinKind.ObjectReferenceEquals => ReferenceEquals,
             BuiltinKind.TypeName => TypeName,
             BuiltinKind.TypeFullName => TypeFullName,
+            BuiltinKind.TypeIsClass => TypeIsClass,
+            BuiltinKind.TypeIsValueType => TypeIsValueType,
             _ => null,
         };
 
@@ -117,10 +133,12 @@ namespace Cocoa.CodeAnalysis.Symbols
         private static FunctionSymbol CreateInstance(BuiltinKind kind)
         {
             var function = Create(kind);
-            // 虚方法仅 Object 四成员中的三个（GetType 非虚，C# 同构）；Type 属性 getter 非虚
+            // 虚方法仅 Object 四成员中的三个（GetType 非虚，C# 同构）；Type 全部成员非虚
             function.IsVirtual = kind != BuiltinKind.ObjectGetType &&
                                  kind != BuiltinKind.TypeName &&
-                                 kind != BuiltinKind.TypeFullName;
+                                 kind != BuiltinKind.TypeFullName &&
+                                 kind != BuiltinKind.TypeIsClass &&
+                                 kind != BuiltinKind.TypeIsValueType;
             return function;
         }
 

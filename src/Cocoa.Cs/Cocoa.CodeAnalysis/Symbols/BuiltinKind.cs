@@ -74,5 +74,10 @@ namespace Cocoa.CodeAnalysis.Symbols
         // 运行期 GetModuleHandle(NULL) → 基址 → 内存节表 RVA → 读自身 .cocoa 节并校验魔数。
         // 仅 native 产物内嵌 .cocoa；Evaluator/IL 无此载体 → 返回 false。
         SelfIntrospect,
+
+        // ---- 反射（C-1）：System.Type 完整面子集 ----
+        // 仅 Evaluator/IL 后端（跑在 CLR 上可直接反射宿主类型）；native 无宿主类型表故为覆盖缺口。
+        TypeIsClass,
+        TypeIsValueType,
     }
 }

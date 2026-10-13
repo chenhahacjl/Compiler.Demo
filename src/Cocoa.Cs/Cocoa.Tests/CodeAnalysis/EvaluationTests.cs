@@ -380,11 +380,6 @@ function Main(): i32
             Assert.Equal(expected, result.Value);
         }
 
-        [Fact(Skip = "yield requires deeper runtime integration - syntax/parser/binder done, evaluator pending")]
-        public void YieldStatement_Partial()
-        {
-        }
-
         [Theory]
         [InlineData("var a: i32 return a", 0)]
         [InlineData("var a: i32 a = 5 return a", 5)]

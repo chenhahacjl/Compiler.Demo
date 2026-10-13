@@ -32,6 +32,14 @@ namespace Cocoa.CodeAnalysis.Syntax
             TypeClauseSyntax type = ParseGenericTypeSuffix(colonToken, identifier);
             type = WrapArrayTypeClause(colonToken, type);
 
+            // 可空引用标注（B-5 最小块）：`T?` 后缀。Cocoa 引用类型本就允许 null（M5-a），
+            // 故此处仅作为语法标注透明消费——不改变类型身份，也不产生运行时差别。
+            // 语义上 `string?` ≡ `string`；后续可空流分析接入时再落字段。
+            if (Current.Kind == SyntaxKind.QuestionToken)
+            {
+                NextToken();
+            }
+
             return type;
         }
 

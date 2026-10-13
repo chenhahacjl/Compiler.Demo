@@ -22,12 +22,45 @@ namespace Cocoa.CodeAnalysis.Lowering
         {
             var lowered = Lowerer.Lower(function, body);
 
-            if (returnCheckLocation != null && !ControlFlowGraph.AllPathsReturn(lowered))
+            if (returnCheckLocation != null && !ContainsYield(body) && !ControlFlowGraph.AllPathsReturn(lowered))
             {
                 diagnostics.ReportAllPathsMustReturn(returnCheckLocation.Value);
             }
 
             return lowered;
+        }
+
+        /// <summary>C-2 yield 状态：含 `yield return`/`yield break` 的函数返回值由求值器汇编为数组，
+        /// 函数语义天然是「枚举器生产」，不要求普通单值返回路径覆盖。故豁免全路径返回校验。</summary>
+        private static bool ContainsYield(BoundStatement statement)
+        {
+            if (statement is BoundYieldReturnStatement || statement is BoundYieldBreakStatement)
+            {
+                return true;
+            }
+
+            if (statement is BoundBlockStatement block)
+            {
+                foreach (var s in block.Statements)
+                {
+                    if (ContainsYield(s))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            if (statement is BoundTryStatement tryStmt && tryStmt.TryBlock != null && ContainsYield(tryStmt.TryBlock))
+            {
+                return true;
+            }
+
+            if (statement is BoundCheckedStatement checkedStmt && checkedStmt.Body != null && ContainsYield(checkedStmt.Body))
+            {
+                return true;
+            }
+
+            return false;
         }
     }
 }

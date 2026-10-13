@@ -1,0 +1,12 @@
+// Cocoa 系统标准库 · System.ExportAttribute
+// C-3：`[Export]` attribute —— 把函数标记为 DLL 导出入口（native `.edata` 导出表）。
+// 编译器在声明处消费（见 CocoaBinder.MarkExportedIfDeclared）：设置 FunctionSymbol.IsExported，
+// native 后端据此生成 PE 导出目录（名字表 + 函数地址表），可用 GetProcAddress 按名调用。
+// 仅顶层函数有意义；类方法带 `[Export]` 会被忽略（虚分派/实例上下文无导出入口）。
+
+namespace System
+{
+    public class ExportAttribute extends Attribute
+    {
+    }
+}

@@ -39,6 +39,9 @@ namespace Cocoa.CodeGen.Managed.Writer
             DelegateRemove = RequireMethod("System.Delegate", "Remove", new[] { "System.Delegate", "System.Delegate" });
             // net9 CoreLib 的 System.Type 无 get_Name（Name 属性非虚实现），Type.Name 经 FullName+切分组合
             TypeGetFullName = RequireMethod("System.Type", "get_FullName", Array.Empty<string>());
+            // C-1 反射子集：System.Type 反射面（IsClass/IsValueType 标量 getter，无重载歧义）
+            TypeIsClass = RequireMethod("System.Type", "get_IsClass", Array.Empty<string>());
+            TypeIsValueType = RequireMethod("System.Type", "get_IsValueType", Array.Empty<string>());
             // typeof(T) → ldtoken T; call Type::GetTypeFromHandle(RuntimeTypeHandle)
             TypeGetTypeFromHandle = RequireMethod("System.Type", "GetTypeFromHandle", new[] { "System.RuntimeTypeHandle" });
             StringLastIndexOfChar = RequireMethod("System.String", "LastIndexOf", new[] { "System.Char" });
@@ -123,6 +126,10 @@ namespace Cocoa.CodeGen.Managed.Writer
         public IlMethodRef TypeGetTypeFromHandle { get; }
         public IlMethodRef StringLastIndexOfChar { get; }
         public IlMethodRef StringSubstringFrom { get; }
+
+        // C-1 反射子集：System.Type 反射面
+        public IlMethodRef TypeIsClass { get; }
+        public IlMethodRef TypeIsValueType { get; }
         public IlMethodRef ConsoleReadLine { get; }
         public IlMethodRef ConsoleWriteLine { get; }
         public IlMethodRef ConsoleWrite { get; }

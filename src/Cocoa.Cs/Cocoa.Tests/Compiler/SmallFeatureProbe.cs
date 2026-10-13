@@ -463,8 +463,7 @@ namespace Cocoa.Tests.Compiler
         /// 运算符 kind 映射 → 发射器（<c>ceq</c> + 非 <c>ceq</c>）→ 求值器，
         /// 共 6 处，属于「漏一处就废」的多点改动，尚未实施。
         /// </summary>
-        [Fact(Skip = "引用相等 === 未实现：实测连词法都没有（Unexpected token <EqualsToken>），"
-                        + "需 6 处改动（词法/SyntaxKind/parser switch/运算符映射/发射器/求值器），尚未实施。")]
+        [Fact]
         public void Operator_Audit_ReferenceEquality()
         {
             var result = RunMain(
@@ -483,48 +482,35 @@ namespace Cocoa.Tests.Compiler
         }
 
         /// <summary>
-        /// 无符号右移 `>>>` —— **仅词法 + token 存在，语义层刻意未接**。
+        /// 无符号右移 `>>>` —— **已实现**（A-3：绑定 + 三后端发射齐备）。
         ///
-        /// 已接：词法（`>>` 后再跟 `>`；注意 `>>=` 优先判定，避免 `a >>= b` 被误切）
-        /// + `SyntaxKind.UnsignedShiftRightToken` + token 字形（供诊断/高亮显示）。
-        ///
-        /// **刻意未接**：parser 的二元运算符 switch、优先级、`BoundBinaryOperator`、发射、求值器。
-        ///
-        /// 为什么停在词法（这是本轮的关键取舍）：
-        /// 先试过把它**接进 parser**（构出 `BinaryExpression`），结果绑定器
-        /// `BoundBinaryOperator.Translate` 对未知 token 抛 **NotSupportedException**——
-        /// 那是**未处理异常**，比明确报错更糟。再往前一步（让绑定器报诊断）就进入
-        /// 「绑定通了但发射语义没接」的半修状态，会**静默给出错误结果**
-        /// （上一轮 `any` 转换就踩了这个坑）。
-        ///
-        /// 所以最终选择：只留词法，`a >>> b` 得到干净的
-        /// `Unexpected token &lt;UnsignedShiftRightToken&gt;` 解析错误。
-        /// 这样边界清晰，且失败方式不会误导人。
-        ///
-        /// `Shr_Un` opcode 其实**已存在**（IlOpCode.cs 定义 0x64），将来补齐时缺的只是
-        /// 运算符 kind 注册、parser 接入与发射分支。
+        /// 词法：`>>` 后再跟 `>`（注意 `>>=` 优先判定，避免 `a >>= b` 被误切）。
+        /// 语义：恒为逻辑右移（高位补 0）——`>>>` 与 `>>` 在无符号整型上同值，
+        /// 在有符号整型上区别于算术右移（负数 `>>>` 补 0 得正大数）。
+        /// 发射：IL 用 <c>Shr_Un</c>；native 用逻辑右移指令；求值核按位掩码后无符号移位。
         /// </summary>
         [Fact]
-        public void UnsignedShiftRight_LexesButNotParsed()
+        public void UnsignedShiftRight_ComputesLogicalShift()
         {
-            // 词法层：token 存在，且显示文本是 ">>>"（不是被切成 ">>" + ">"）
-            var tree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(
+            // 8 >>> 1 == 4
+            var r1 = RunMain(
                 "function Main(args: string[]): i32 {" + Nl +
                 "    var a = 8" + Nl +
                 "    var b = 1" + Nl +
-                "    var c = a >>> b" + Nl +
-                "    return c" + Nl +
-                "}");
+                "    return a >>> b" + Nl +
+                "}", "ShrUn_pos");
 
-            // 语义层未接 -> 明确的解析错误（不是异常，也不是静默错值）
-            var errors = Diagnostics(
+            Assert.Equal(4, r1);
+
+            // -1 >>> 1 == 0x7FFFFFFF（逻辑右移补 0，区别算术右移仍为 -1）
+            var r2 = RunMain(
                 "function Main(args: string[]): i32 {" + Nl +
-                "    var a = 8" + Nl +
+                "    var a = -1" + Nl +
                 "    var b = 1" + Nl +
-                "    var c = a >>> b" + Nl +
-                "    return c" + Nl +
-                "}");
-            Assert.Contains(errors.Where(d => d.IsError), d => d.Message.Contains("UnsignedShiftRightToken"));
+                "    return a >>> b" + Nl +
+                "}", "ShrUn_neg");
+
+            Assert.Equal(int.MaxValue, r2);
         }
         /// <summary>数字分隔符（C# 7.0）：词法在扫描时跳过 `_`
         /// （LexerBase.CharsNumbers.cs 的十六进制/二进制/十进制三处 while 都含 `|| Current == '_'`）。
@@ -575,9 +561,7 @@ namespace Cocoa.Tests.Compiler
         /// 所以这不是"算子缺失"，而是**底层转换推导缺口**——它同时挡住了
         /// `??=`、`v == 9`（v: object）等多个看似独立的缺口。
         /// </summary>
-        [Fact(Skip = "实测缺口：`a ??= 7`（a: object）报 `'??=' is not defined for types 'object'`。"
-                        + "根因与 Probe_CoalesceRight 同源：算子表只注册了 (Any,Any)/(String,String) 的 NullCoalescing，"
-                        + "缺 any <-> 具体类型的隐式转换（C# 允许 object a; a ??= 7;）。属底层转换推导缺口，不是算子缺失。")]
+        [Fact]
         public void Probe_CoalesceAssignment()
         {
             var r = RunMain(
@@ -616,7 +600,7 @@ namespace Cocoa.Tests.Compiler
         /// '==' is not defined for types 'object' and 'int'。
         /// 与 Probe_CoalesceAssignment **同源**：any 与具体类型缺隐式转换推导。
         /// 这是三个缺口里最基础的一个，建议优先修——修好后 `??=` 等可能同时可用。</summary>
-        [Fact(Skip = "实测缺口：`v == 9`（v: object）报 ''==' is not defined for types 'object' and 'int''。与 Probe_CoalesceAssignment 同源：缺 any <-> 具体类型的隐式转换。")]
+        [Fact]
         public void Probe_CoalesceRight()
         {
             var r = RunMain(
@@ -629,6 +613,51 @@ namespace Cocoa.Tests.Compiler
                 "}", "CoalesceRight");
 
             Assert.Equal(1, r);
+        }
+
+        /// <summary>
+        /// B-5 可空引用标注最小块：`T?` 后缀语法透明接受（引用类型本就允许 null，M5-a；
+        /// 值类型 `i32?` 亦透明 —— 等价 `i32`，语义不变）。
+        /// 可空流分析（`len != null` 收紧等）属后续，不在本最小块。
+        /// </summary>
+        [Fact]
+        public void NullableAnnotation_Transparent()
+        {
+            // 引用类型可空标注 + null 赋值 + null 比较
+            var r1 = RunMain(
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var s: string? = null" + Nl +
+                "    if s == null { return 1 }" + Nl +
+                "    return 0" + Nl +
+                "}", "NullableRef");
+
+            Assert.Equal(1, r1);
+
+            // 值类型可空标注 → 语义不变（i32? ≡ i32）
+            var r2 = RunMain(
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var x: i32? = 5" + Nl +
+                "    var y: i32? = 7" + Nl +
+                "    return x + y" + Nl +
+                "}", "NullableVal");
+
+            Assert.Equal(12, r2);
+        }
+
+        /// <summary>null 条件访问（?.）非空路径（探针既有用例的补充断言：结果按成员类型，5）。</summary>
+        [Fact]
+        public void Probe_NullConditionalDirect()
+        {
+            var r = RunMain(
+                "class Box { public field V: i32 }" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var b = new Box()" + Nl +
+                "    b.V = 5" + Nl +
+                "    var v = b?.V" + Nl +
+                "    return v" + Nl +
+                "}", "NullCondDirect");
+
+            Assert.Equal(5, r);
         }
     }
 }

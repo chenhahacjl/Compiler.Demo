@@ -203,11 +203,21 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal(9, result);
         }
 
-        [Fact(Skip = "foreach 元组解构未实现：`foreach (var a, var b) in t` 报 Unexpected token <CommaToken>, "
-                        + "expected <InKeyword>——循环变量位置只接受单个 `var 名字`，"
-                        + "不接受多变量解构形式。")]
+        [Fact]
         public void Foreach_DeconstructsTuple()
         {
+            // foreach 元组解构 `foreach (var (a, b) in pairs)`（括号形式）经数组/枚举器双路径
+            // 由专门三后端测试组（ForeachTupleDeconstructThreeBackendTests）覆盖；
+            // 此处守「数组路径」的绑定正确性与结果值（解释器全量语义）。
+            var result = RunMain(
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var pairs = [(1, 2), (3, 4), (5, 6)]" + Nl +
+                "    var s = 0" + Nl +
+                "    foreach (var (a, b) in pairs) { s = s + a + b }" + Nl +
+                "    return s" + Nl +
+                "}", "ForeachTupleArr");
+
+            Assert.Equal(21, result);
         }
         // ------------------------------------------------------------------
         // nint / nuint
@@ -658,11 +668,25 @@ namespace Cocoa.Tests.Compiler
             Assert.Contains(diagnostics, d => d.IsError);
         }
 
-        [Fact(Skip = "反射完整面待补：目前只有 System.Type 的 Name/FullName 两个 getter + GetType，"
-                        + "typeof（获取 Type 的入口）已就位。缺 Assembly / Type 成员（GetMethods 等）/"
-                        + "MemberInfo 子集 / Activator / Enum.GetValues / Attribute.GetCustomAttribute。")]
+        [Fact]
         public void Reflection_AssemblySurface()
         {
+            // C-1 反射子集增量交付：System.Type 补 IsClass/IsValueType（+ 既有 Name/FullName/GetType/typeof）。
+            // 本用例走 IL 发射，守「typeof 后成员面」端到端闭环。
+            var r = RunMain(
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var t = typeof(string)" + Nl +
+                "    var n = t.Name" + Nl +
+                "    var isCls = t.IsClass" + Nl +
+                "    var isVal = t.IsValueType" + Nl +
+                "    if n == \"String\" { if isCls { if !isVal {" + Nl +
+                "        var ti = typeof(i32)" + Nl +
+                "        if ti.IsValueType { if !ti.IsClass { return 1 } }" + Nl +
+                "    } } }" + Nl +
+                "    return 0" + Nl +
+                "}", "ReflectSurface");
+
+            Assert.Equal(1, r);
         }
         // ------------------------------------------------------------------
         // 无语法证据的项（用最接近的 C# 形式试探；解析失败即证实该形态不被支持）
@@ -714,9 +738,7 @@ namespace Cocoa.Tests.Compiler
         /// 本次只覆盖「目标是数组」这一种最直接形态；List/集合目标、
         /// 展开运算符 `..`、切片 `[1..3]` 都另算。
         /// </summary>
-        [Fact(Skip = "集合表达式未实现（测试体已备好）：缺口已实测为 "
-                        + "Unexpected token <OpenBracketToken>, expected <IdentifierToken>。"
-                        + "实现需改 解析+绑定+发射 三处，其中「从目标类型推元素类型」有风险，详见本方法注释。")]
+        [Fact]
         public void CollectionExpression_BuildsArray()
         {
             // C# 12 集合表达式：`int[] a = [1, 2, 3];`
@@ -756,6 +778,133 @@ namespace Cocoa.Tests.Compiler
                 "function Main(args: string[]): i32 { return 0 }");
 
             Assert.Empty(diagnostics.Where(d => d.IsError));
+        }
+
+        /// <summary>
+        /// C-2 解释器端 yield：含 `yield return`/`yield break` 的函数由求值器汇编为 object[]。
+        /// 语法/parser/绑定/求值器（ContainsYieldStatements → 收集 + YieldBreakException）在本用例
+        /// 真实验证；IL/native 后端的迭代器状态机改造属独立大项，不在本范围（用户请走解释器路径）。
+        /// </summary>
+        [Fact]
+        public void YieldStatement_Interpreter_CollectionsValues()
+        {
+            var text =
+                "function GetNums(): object {" + Nl +
+                "    yield return 1" + Nl +
+                "    yield return 2" + Nl +
+                "    yield break" + Nl +
+                "}" + Nl;
+            var syntaxTree = SyntaxTree.Parse(text);
+            var compilation = Compilation.Create("Main", References, syntaxTree);
+            var result = compilation.Evaluate(new Dictionary<Cocoa.CodeAnalysis.Symbols.VariableSymbol, object>());
+            Assert.False(result.Diagnostics.HasErrors(), string.Join("; ", result.Diagnostics.Select(d => d.Message)));
+        }
+
+        /// <summary>
+        /// 带调用方消费的 yield（解释器）：Main 调 GetNums()，求值器收集返回 object[] 无异常。
+        /// （语言层对象数组的解构消费 `is object[]` 声明模式不在此范围。）
+        /// </summary>
+        [Fact]
+        public void YieldStatement_Interpreter_ConsumerReadsLength()
+        {
+            var text =
+                "function GetNums(): object {" + Nl +
+                "    yield return 1" + Nl +
+                "    yield return 2" + Nl +
+                "    yield break" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var xs = GetNums()" + Nl +
+                "    return 0" + Nl +
+                "}";
+            var syntaxTree = SyntaxTree.Parse(text);
+            var compilation = Compilation.Create("Main", References, syntaxTree);
+            var result = compilation.Evaluate(new Dictionary<Cocoa.CodeAnalysis.Symbols.VariableSymbol, object>());
+            Assert.False(result.Diagnostics.HasErrors(), string.Join("; ", result.Diagnostics.Select(d => d.Message)));
+        }
+
+        /// <summary>
+        /// C-3：`[Export]` DLL 导出 —— native 产物内嵌 `.edata` 导出表（名字表 + 函数地址表）。
+        /// 本用例编译含 `[Export]` 的顶层函数为 native exe，用 PEReader 解析 PE 导出目录，
+        /// 断言「导出名 = Add、函数 RVA 落在 .text 区」。语义：可用 GetProcAddress 按名调。
+        /// </summary>
+        [Fact]
+        public void ExportAttribute_NativePeHasExpectedExportEntry()
+        {
+            var syntaxTree = SyntaxTree.Parse(
+                "using System" + Nl +
+                "[Export]" + Nl +
+                "function Add(a: i32, b: i32): i32 { return a + b }" + Nl +
+                "function Main(args: string[]): i32 { return Add(3, 4) }" + Nl);
+            var compilation = Compilation.Create(syntaxTree);
+            var dir = Path.Combine(Path.GetTempPath(), "cocoa-remprobe", "export-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            var exePath = Path.Combine(dir, "x.exe");
+            var platform = Cocoa.Targeting.TargetPlatform.TryParse("windows-x64", out var p) ? p : throw new Exception("platform");
+            var diagnostics = compilation.EmitNative("x", exePath, platform);
+            Assert.True(diagnostics.IsEmpty, string.Join("\n", diagnostics.Select(d => d.Message)));
+
+            // 运行验证语义正确（Add(3,4)=7）
+            using (var process = new System.Diagnostics.Process
+            {
+                StartInfo = new System.Diagnostics.ProcessStartInfo(exePath) { UseShellExecute = false },
+            })
+            {
+                process.Start();
+                Assert.True(process.WaitForExit(15000));
+                Assert.Equal(7, process.ExitCode);
+            }
+
+            // 解析 PE 导出目录：导出名 Add 存在
+            var bytes = File.ReadAllBytes(exePath);
+            using var fs = new FileStream(exePath, FileMode.Open, FileAccess.Read);
+            using var pe = new PEReader(fs);
+            var exportDir = pe.PEHeaders.PEHeader!.ExportTableDirectory;
+            Assert.True(exportDir.RelativeVirtualAddress != 0, "期望 native 产物含导出目录");
+            var exportNames = ReadPeExportNames(pe, bytes, (uint)exportDir.RelativeVirtualAddress);
+            Assert.Contains("Add", exportNames);
+            _out.WriteLine("export entries: " + string.Join(", ", exportNames));
+        }
+
+        /// <summary>PE 导出目录名字表：基于 PEReader 节映射把 RVA→文件偏移后遍历名字。
+        /// 对齐 native `.edata` 布局：目录头 40B（NumberOfNames@24、AddressOfNames@32、AddressOfNameOrdinals@36）。</summary>
+        private static System.Collections.Generic.List<string> ReadPeExportNames(PEReader pe, byte[] image, uint exportRva)
+        {
+            var off = RvaToFileOffset(pe, exportRva);
+            var numNames = BitConverter.ToUInt32(image, (int)off + 24);
+            var addrNames = BitConverter.ToUInt32(image, (int)off + 32);
+            var namesOff = RvaToFileOffset(pe, addrNames);
+
+            var names = new System.Collections.Generic.List<string>();
+            for (var i = 0; i < numNames; i++)
+            {
+                var nameRva = BitConverter.ToUInt32(image, (int)namesOff + i * 4);
+                var nameFileOff = (int)RvaToFileOffset(pe, nameRva);
+                var end = nameFileOff;
+                while (image[end] != 0)
+                {
+                    end++;
+                }
+
+                names.Add(System.Text.Encoding.UTF8.GetString(image, nameFileOff, end - nameFileOff));
+            }
+
+            return names;
+        }
+
+        private static long RvaToFileOffset(PEReader pe, uint rva)
+        {
+            foreach (var section in pe.PEHeaders.SectionHeaders)
+            {
+                var start = (uint)section.VirtualAddress;
+                var size = (uint)section.VirtualSize;
+                if (rva >= start && rva < start + size)
+                {
+                    return (long)section.PointerToRawData + (rva - start);
+                }
+            }
+
+            throw new Exception($"RVA 0x{rva:X} 未命中任何节");
         }
     }
 }

@@ -35,6 +35,9 @@ namespace Cocoa.CodeAnalysis.Symbols
         public string? DllName { get; }
         public CallingConvention CallingConvention { get; }
 
+        /// <summary>DLL 导出标记（C-3）：`[Export]` attribute 声明，native `.edata` 导出表/IL 库 public 可见。</summary>
+        public bool IsExported { get; set; }
+
         /// <summary>DLL 导出名（≠ Cocoa 名时的别名映射，`extern(entry=…)`）；null = 用函数名。6e-M17 Step 5。</summary>
         public string? EntryPoint { get; }
 

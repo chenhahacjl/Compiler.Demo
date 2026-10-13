@@ -81,6 +81,7 @@ namespace Cocoa.CodeAnalysis.Binding
                     TypeParameters = _declaringMethodTypeParameters,
                 };
                 function.Attributes = BindAttributes(syntax.Attributes, syntax);
+                MarkExportedIfDeclared(function, syntax.Attributes);
                 DocumentationBackfill.BackfillDocumentation(function, syntax, _diagnostics);
                 BindWhereClauses(syntax.WhereClauses, function.TypeParameters);
 

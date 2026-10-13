@@ -31,6 +31,7 @@
     (cls System.Exception public iface:false ifaces:0 struct:false bclTarget:System.Exception base:- methods:1 get_Message[-System.Exception] fields:0 events:0 props:1
       (prop Message @string true false public false)
     )
+    (cls System.ExportAttribute public iface:false ifaces:0 struct:false bclTarget:- base:System.Attribute methods:0 fields:0 events:0 props:0)
     (cls System.Index public iface:false ifaces:0 struct:true bclTarget:System.Index base:- methods:4 FromStart[-@i32] FromEnd[-@i32] get_Start get_End fields:1
       (fld _value @i32 public false false) events:0 props:4
       (prop Value @i32 true false public false)
@@ -18260,4 +18261,4 @@
     (doc T:System.String <summary>Represents\sa\ssequence\sof\scharacters.\sProvides\sstring\smanipulation\smethods.</summary>)
   )
 )
-(checksum sha256:c8f1b4e9ba3ea6e3982bba6b122fc0b3a2175a56e6f6438ba417fb661aca5390)
+(checksum sha256:675cdf523b0d8a6e89c29b50c9733222ada6d58f28fd45e8f5fed5fccf95e87d)

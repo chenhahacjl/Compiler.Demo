@@ -257,7 +257,7 @@ ColonToken,               // :
         TypeofKeyword = 238,   // typeof：`typeof(T)`
         SizeofKeyword = 239,   // sizeof：`sizeof(T)`
         TypeOperatorExpression = 240,   // 类型运算表达式：typeof(T) / sizeof(T)
-        UnsignedShiftRightToken = 243, // >>> 无符号右移（**仅解析**，绑定/发射未接）
+        UnsignedShiftRightToken = 243, // >>> 无符号右移（A-3 已实现：绑定 + 三后端发射；恒逻辑右移高位补 0）
         WithKeyword = 244,     // with（record 非破坏复制表达式关键字，C# 9）
         WithExpression = 245,  // with 表达式：expr with { 成员 = 值, ... }
         InitKeyword = 246,     // init（仅初始化访问器，C# 9：构造上下文内可赋值）
@@ -265,5 +265,6 @@ ColonToken,               // :
         GlobalKeyword = 248,   // global（`global using X;` 全局 using 前缀，C# 10）
         FileKeyword = 249,     // file（文件范围类型修饰符，C# 11）
         CollectionExpression = 250, // 集合表达式：`[1, 2, 3]` / `[..a, 4]`（C# 12）
+        EqualsEqualsEqualsToken = 251, // === 引用相等（strict equality，近似 JS/TS 语义）
     }
 }

@@ -50,7 +50,40 @@ namespace Cocoa.CodeGen.Native
             // M4a：数据段绝对地址槽 → .reloc（ASLR 下加载器同步修正 vtable 函数/名字指针）
             // M4：.cocoa 元数据节默认强制内嵌（设计稿：体积接受；无 strip 选项）
             var cocoaMetadata = new CocoaMetadataBuilder(emit.Symbols).Build();
-            PeFileWriter.Write(outputPath, code, a.GetData(), entryPointRva, result.Imports, platform.Arch, a.DataAbsoluteFixups, subsystem, cocoaMetadata);
+            PeFileWriter.Write(outputPath, code, a.GetData(), entryPointRva, result.Imports, platform.Arch, a.DataAbsoluteFixups, subsystem, cocoaMetadata, CollectExports(emit.Symbols, result, a));
+        }
+
+        /// <summary>C-3：收集 `[Export]` 顶层函数 → (导出名, RVA)。RVA = TextRva + 函数入口标签相对 code 偏移。</summary>
+        private static System.Collections.Generic.List<PE.PeExportEntry>? CollectExports(
+            EmittedSymbolSnapshot symbols,
+            LirEmitResult result,
+            IAssembler a)
+        {
+            if (symbols.Functions.IsEmpty)
+            {
+                return null;
+            }
+
+            var exports = new System.Collections.Generic.List<PE.PeExportEntry>();
+            foreach (var kvp in symbols.Functions)
+            {
+                var function = kvp.Key;
+                if (!function.IsExported || function.ContainingClass != null)
+                {
+                    continue;
+                }
+
+                // 顶层导出函数：LIR 名 → asm label → code 内偏移 → RVA
+                if (!result.Labels.TryGetValue(kvp.Value.Name, out var label))
+                {
+                    continue;
+                }
+
+                var offset = a.GetLabelOffset(label);
+                exports.Add(new PE.PeExportEntry(function.Name, (uint)(PE.PeFileWriter.TextRva + offset), IsForwarder: false));
+            }
+
+            return exports.Count > 0 ? exports : null;
         }
     }
 }

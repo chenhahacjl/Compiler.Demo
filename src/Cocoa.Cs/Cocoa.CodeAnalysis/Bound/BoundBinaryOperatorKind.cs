@@ -27,5 +27,7 @@ namespace Cocoa.CodeAnalysis.Bound
         Greater,
         GreaterOrEquals,
         NullCoalescing,
+        /// <summary>无符号右移（>>>，仅整数；高位补 0，C# uint/ulong 语义）。</summary>
+        UnsignedShiftRight = 100,
     }
 }

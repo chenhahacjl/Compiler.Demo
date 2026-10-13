@@ -306,6 +306,27 @@ namespace Cocoa.CodeGen.Interpreter
                     return lastDot < 0 ? fullName : fullName.Substring(lastDot + 1);
                 case BuiltinKind.TypeFullName:
                     return FullNameOfTypeValue(receiver);
+
+                // C-1 反射子集：宿主 CLR Type 直取真实反射面；用户类（EvaluatorTypeInfo）无符号引用 → 保守默认。
+                case BuiltinKind.TypeIsClass:
+                {
+                    if (receiver is System.Type clrIsClass)
+                    {
+                        return clrIsClass.IsClass && !clrIsClass.IsValueType;
+                    }
+
+                    return true;
+                }
+
+                case BuiltinKind.TypeIsValueType:
+                {
+                    if (receiver is System.Type clrIsValueType)
+                    {
+                        return clrIsValueType.IsValueType;
+                    }
+
+                    return false;
+                }
                 default:
                     throw new Exception($"Unexpected builtin kind {kind}");
             }
