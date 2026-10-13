@@ -105,7 +105,7 @@ function Main(): i32
             outputTask.Wait();
             var stdout = System.Text.Encoding.Unicode.GetString(output.ToArray()).Replace("\r\n", "\n").Replace("\r", "\n");
             Assert.Equal(0, process.ExitCode);
-            Assert.Equal("Boxed.System.Int32\n", stdout);
+            Assert.Equal("5\n", stdout);
         }
     }
 }

@@ -8,8 +8,8 @@ namespace Cocoa.CodeGen.Native
     {
         // ------------------------------------------------------------------
         // 委托列表助手（6e-M22 委托真实类型化 M5）：函数值对象指针数组的 Combine/Remove/Equals。
-        // 数组布局同 NewArray：[0..4) 长度；[8..) 元素（元素宽固定 8，存函数值对象指针，
-        // x86 下指针 32 位 + 高位零填充）。
+        // 数组布局同 NewArray：[0]=vtable(ps) [8..12) 长度；[16..) 元素（元素宽固定 8，
+        // 存函数值对象指针，x86 下指针 32 位 + 高位零填充）。
         // ------------------------------------------------------------------
 
         private void EmitDelegateCombine()
@@ -17,14 +17,16 @@ namespace Cocoa.CodeGen.Native
             var a = _args[0];
             var b = _args[1];
             var la = NewReg(4);
-            Load(la, a, 0, 4);
+            Load(la, a, NativeObjectModel.ArrayLengthOffset, 4);
             var lb = NewReg(4);
-            Load(lb, b, 0, 4);
+            Load(lb, b, NativeObjectModel.ArrayLengthOffset, 4);
             var total = NewReg(4);
             Add(total, la, lb);
 
             var array = NewPtr();
-            CallRuntime(array, "NewArray", total, C(4, 8));
+            var combineVt = NewPtr();
+            LeaData(combineVt, NativeObjectModel.PseudoVTableKey("System.Array"));
+            CallRuntime(array, "NewArray", total, C(4, 8), combineVt);
             EmitCopyRange(a, array, la, C(4, 0), C(4, 0));
             EmitCopyRange(b, array, lb, C(4, 0), la);
             StoreRet(array);
@@ -37,9 +39,9 @@ namespace Cocoa.CodeGen.Native
             var a = _args[0];
             var b = _args[1];
             var la = NewReg(4);
-            Load(la, a, 0, 4);
+            Load(la, a, NativeObjectModel.ArrayLengthOffset, 4);
             var lb = NewReg(4);
-            Load(lb, b, 0, 4);
+            Load(lb, b, NativeObjectModel.ArrayLengthOffset, 4);
 
             var unchanged = NewLabel();
             Cmp(la, lb);
@@ -70,7 +72,7 @@ namespace Cocoa.CodeGen.Native
             Mov(eao, pos);
             Add(eao, eao, k);
             Shl(eao, eao, 3);
-            Lea(eaAddr, a, 8);
+            Lea(eaAddr, a, NativeObjectModel.ArrayElementOffset);
             Add(eaAddr, eaAddr, eao);
             Load(eaVal, eaAddr, 0, 8);
 
@@ -79,7 +81,7 @@ namespace Cocoa.CodeGen.Native
             var ebo = NewReg(4);
             Mov(ebo, k);
             Shl(ebo, ebo, 3);
-            Lea(ebAddr, b, 8);
+            Lea(ebAddr, b, NativeObjectModel.ArrayElementOffset);
             Add(ebAddr, ebAddr, ebo);
             Load(ebVal, ebAddr, 0, 8);
 
@@ -99,7 +101,9 @@ namespace Cocoa.CodeGen.Native
             var result = NewPtr();
             var newLen = NewReg(4);
             Sub(newLen, la, lb);
-            CallRuntime(result, "NewArray", newLen, C(4, 8));
+            var removeVt = NewPtr();
+            LeaData(removeVt, NativeObjectModel.PseudoVTableKey("System.Array"));
+            CallRuntime(result, "NewArray", newLen, C(4, 8), removeVt);
             EmitCopyRange(a, result, pos, C(4, 0), C(4, 0));
             var after = NewReg(4);
             Add(after, pos, lb);
@@ -125,9 +129,9 @@ namespace Cocoa.CodeGen.Native
             var a = _args[0];
             var b = _args[1];
             var la = NewReg(4);
-            Load(la, a, 0, 4);
+            Load(la, a, NativeObjectModel.ArrayLengthOffset, 4);
             var lb = NewReg(4);
-            Load(lb, b, 0, 4);
+            Load(lb, b, NativeObjectModel.ArrayLengthOffset, 4);
             var notEqual = NewLabel();
             var equal = NewLabel();
             var done = NewLabel();
@@ -148,7 +152,7 @@ namespace Cocoa.CodeGen.Native
             var eao = NewReg(4);
             Mov(eao, i);
             Shl(eao, eao, 3);
-            Lea(eaAddr, a, 8);
+            Lea(eaAddr, a, NativeObjectModel.ArrayElementOffset);
             Add(eaAddr, eaAddr, eao);
             Load(eaVal, eaAddr, 0, 8);
 
@@ -157,7 +161,7 @@ namespace Cocoa.CodeGen.Native
             var ebo = NewReg(4);
             Mov(ebo, i);
             Shl(ebo, ebo, 3);
-            Lea(ebAddr, b, 8);
+            Lea(ebAddr, b, NativeObjectModel.ArrayElementOffset);
             Add(ebAddr, ebAddr, ebo);
             Load(ebVal, ebAddr, 0, 8);
 
@@ -210,7 +214,7 @@ namespace Cocoa.CodeGen.Native
             Add(srcOffset, srcOffset, srcBase);
             Shl(srcOffset, srcOffset, 3);
             var srcAddr = NewPtr();
-            Lea(srcAddr, src, 8);
+            Lea(srcAddr, src, NativeObjectModel.ArrayElementOffset);
             Add(srcAddr, srcAddr, srcOffset);
 
             var value = NewPtr();
@@ -221,7 +225,7 @@ namespace Cocoa.CodeGen.Native
             Add(dstOffset, dstOffset, dstBase);
             Shl(dstOffset, dstOffset, 3);
             var dstAddr = NewPtr();
-            Lea(dstAddr, dst, 8);
+            Lea(dstAddr, dst, NativeObjectModel.ArrayElementOffset);
             Add(dstAddr, dstAddr, dstOffset);
             Store(dstAddr, 0, value, 8);
 

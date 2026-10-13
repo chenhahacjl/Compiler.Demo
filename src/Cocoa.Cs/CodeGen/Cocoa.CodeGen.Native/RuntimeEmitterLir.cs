@@ -233,7 +233,7 @@ namespace Cocoa.CodeGen.Native
                 EmitObjectGetType();
                 _ = BeginFunctionTyped("TypeSimpleName", new[] { 8 }, LirType.Addr);
                 EmitTypeSimpleName();
-                _ = BeginFunction("NewArray", 4, 4);
+                _ = BeginFunction("NewArray", 4, 4, _isX64 ? 8 : 4);
                 EmitNewArray();
                 _ = BeginFunctionTyped("SliceArray", new[] { 8, 4, 4, 4 }, LirType.Addr, LirType.I32, LirType.I32, LirType.I32);
                 EmitSliceArray();
@@ -557,7 +557,9 @@ namespace Cocoa.CodeGen.Native
 
             private void Shl(LirVirtualRegister dst, LirVirtualRegister a, int count) => Add(LirOpCode.Shl, dst, LirOperand.Reg(a), LirOperand.Constant(count));
 
-            private void Shr(LirVirtualRegister dst, LirVirtualRegister a, int count) => Add(LirOpCode.Shr, dst, LirOperand.Reg(a), LirOperand.Constant(count));
+                        private void Shr(LirVirtualRegister dst, LirVirtualRegister a, int count) => Add(LirOpCode.Shr, dst, LirOperand.Reg(a), LirOperand.Constant(count));
+
+            private void Sar(LirVirtualRegister dst, LirVirtualRegister a, int count) => Add(LirOpCode.Sar, dst, LirOperand.Reg(a), LirOperand.Constant(count));
 
             private void Shl(LirVirtualRegister dst, LirVirtualRegister a, LirVirtualRegister count) => Add(LirOpCode.Shl, dst, LirOperand.Reg(a), LirOperand.Reg(count));
 
@@ -655,6 +657,8 @@ namespace Cocoa.CodeGen.Native
             private void FCmp(LirVirtualRegister a, LirVirtualRegister b) => Add(LirOpCode.FCmp, LirOperand.Reg(a), LirOperand.Reg(b));
 
             private void FCvtSD(LirVirtualRegister dst, LirVirtualRegister src) => Add(LirOpCode.FCvtSD, dst, LirOperand.Reg(src));
+
+            private void FCvtSSD(LirVirtualRegister dst, LirVirtualRegister src) => Add(LirOpCode.FCvtSSD, dst, LirOperand.Reg(src));
 
     }
 }

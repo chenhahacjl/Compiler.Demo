@@ -12,18 +12,18 @@ namespace Cocoa.CodeGen.Native
     internal sealed partial class RuntimeFunctionEmitter
     {
         // StringFromChars(chars:8 char[]) → string（e-G7 ③a）：
-        // char[] 布局 [len:4][元素区@8（8 字节对齐，char 2 字节）] → CO 串 [len:4][chars:2×len]。
+        // char[] 布局 [vtable][len@8][元素区@16（8 字节对齐，char 2 字节）] → CO 串 [vtable][len@8][chars@12]。
         // 直接复制 UTF-16 数据区（AllocStringFromBuf 顺带补 null 结尾）。
         private void EmitStringFromChars()
         {
             var arr = _args[0];
             var arrLen = NewReg(4);
-            Load(arrLen, arr, 0, 4);
+            Load(arrLen, arr, NativeObjectModel.ArrayLengthOffset, 4);
             var lenBytes = NewReg(4);
             Mov(lenBytes, arrLen);
             Shl(lenBytes, lenBytes, 1);
             var src = NewPtr();
-            Lea(src, arr, 8);
+            Lea(src, arr, NativeObjectModel.ArrayElementOffset);
             var result = NewPtr();
             CallRuntime(result, "AllocStringFromBuf", src, lenBytes);
             StoreRet(result);
@@ -208,12 +208,14 @@ namespace Cocoa.CodeGen.Native
             Load(total, sizePtr, 0, 4); // 低 32 位即文件大小（<4GB）
 
             var arr = NewPtr();
-            CallRuntime(arr, "NewArray", total, C(4, 1));
+            var readBytesVt = NewPtr();
+            LeaData(readBytesVt, NativeObjectModel.PseudoVTableKey("System.Array"));
+            CallRuntime(arr, "NewArray", total, C(4, 1), readBytesVt);
             Cmp(arr, 0);
             Jcc(LirCond.Equal, fail);
 
             var arrBase = NewPtr();
-            Lea(arrBase, arr, 8);
+            Lea(arrBase, arr, NativeObjectModel.ArrayElementOffset);
             var off = NewReg(4);
             Const(off, 0);
             var read = NewReg(4);
@@ -243,7 +245,9 @@ namespace Cocoa.CodeGen.Native
             Jmp(done);
 
             Mark(fail);
-            CallRuntime(result, "NewArray", C(4, 0), C(4, 1));
+            var emptyBytesVt = NewPtr();
+            LeaData(emptyBytesVt, NativeObjectModel.PseudoVTableKey("System.Array"));
+            CallRuntime(result, "NewArray", C(4, 0), C(4, 1), emptyBytesVt);
             Jmp(done);
 
             Mark(done);
@@ -262,9 +266,9 @@ namespace Cocoa.CodeGen.Native
             EmitCheckInvalidHandle(fp, fail);
 
             var len = NewReg(4);
-            Load(len, data, 0, 4);
+            Load(len, data, NativeObjectModel.ArrayLengthOffset, 4);
             var src = NewPtr();
-            Lea(src, data, 8);
+            Lea(src, data, NativeObjectModel.ArrayElementOffset);
             var written = NewReg(4);
             Const(written, 0);
             var writtenPtr = NewPtr();
@@ -420,7 +424,7 @@ namespace Cocoa.CodeGen.Native
             var fp = NewPtr();
             Mov(fp, _args[0]);
             var dst = NewPtr();
-            Lea(dst, _args[1], 8);
+            Lea(dst, _args[1], NativeObjectModel.ArrayElementOffset);
             Add(dst, dst, _args[2]);
             var read = NewReg(4);
             Const(read, 0);
@@ -438,7 +442,7 @@ namespace Cocoa.CodeGen.Native
             var fp = NewPtr();
             Mov(fp, _args[0]);
             var src = NewPtr();
-            Lea(src, _args[1], 8);
+            Lea(src, _args[1], NativeObjectModel.ArrayElementOffset);
             Add(src, src, _args[2]);
             var written = NewReg(4);
             Const(written, 0);

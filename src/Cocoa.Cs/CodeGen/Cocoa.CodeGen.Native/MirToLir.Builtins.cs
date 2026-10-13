@@ -456,7 +456,7 @@ namespace Cocoa.CodeGen.Native
         private LirVirtualRegister EmitElementAddress(List<LirInstruction> instructions, LirVirtualRegister array, LirVirtualRegister index, int elementSize)
         {
             var length = AllocateRegister(4);
-            Add(instructions, new LirInstruction(LirOpCode.Load, length, LirOperand.Reg(array), LirOperand.None, 0, 4));
+            Add(instructions, new LirInstruction(LirOpCode.Load, length, LirOperand.Reg(array), LirOperand.None, NativeObjectModel.ArrayLengthOffset, 4));
             EmitArrayBoundsCheck(instructions, index, length);
 
             var offset = AllocateRegister(4);
@@ -475,7 +475,7 @@ namespace Cocoa.CodeGen.Native
             }
 
             var address = AllocateRegister(LirType.Addr);
-            Add(instructions, new LirInstruction(LirOpCode.Lea, address, LirOperand.Reg(array), LirOperand.None, 8, 0));
+            Add(instructions, new LirInstruction(LirOpCode.Lea, address, LirOperand.Reg(array), LirOperand.None, NativeObjectModel.ArrayElementOffset, 0));
             Add(instructions, new LirInstruction(LirOpCode.Add, address, LirOperand.Reg(address), LirOperand.Reg(offset)));
             return address;
         }
@@ -866,12 +866,14 @@ namespace Cocoa.CodeGen.Native
             var pointerSize = _isX64 ? 8 : 4;
 
             var array = AllocateRegister(LirType.Addr);
+            var delegateArrayVt = EmitPseudoVTable("System.Array");
             Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(EmitConst(1))));
             Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(EmitConst(8))));
+            Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(2), LirOperand.Reg(delegateArrayVt)));
             Add(instructions, new LirInstruction(LirOpCode.Call, array, LirOperand.Runtime("NewArray"), LirOperand.Constant(0)));
 
             var address = AllocateRegister(LirType.Addr);
-            Add(instructions, new LirInstruction(LirOpCode.Lea, address, LirOperand.Reg(array), LirOperand.None, 8, 0));
+            Add(instructions, new LirInstruction(LirOpCode.Lea, address, LirOperand.Reg(array), LirOperand.None, NativeObjectModel.ArrayElementOffset, 0));
             Add(instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(address), LirOperand.Reg(fnValue), 0, pointerSize));
             return EmitDelegateObjectFromList(delegateClass, array);
         }

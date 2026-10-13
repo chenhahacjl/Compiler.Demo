@@ -669,5 +669,45 @@ function Main()
             Assert.Equal(0, exitCode);
             Assert.Equal("True\r\nFalse\r\nTrue\r\nTrue\r\nFalse\r\nTrue\r\n", stdout);
         }
+
+        /// <summary>
+        /// 方案 B：any 接收者的 Object 面方法与 IL/Evaluator 对齐——
+        /// string→ToString 返回自身/Equals 内容比较/GetHashCode 稳定/GetType System.String；
+        /// 装箱值→ToString 解盒格式化/Equals 值语义/GetHashCode 值本身/GetType 去壳全名。
+        /// 数组→引用相等 + 稳定哈希（无元素类型标记，GetType 统一 System.Array，属既有设计折衷）。
+        /// </summary>
+        [Theory]
+        [MemberData(nameof(GetPlatforms))]
+        public void AnyReceiver_ObjectFace_MatchesIl(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
+function Main(): i32
+{
+    var s: any = ""hello""
+    var st = s.ToString()
+    Console.WriteLine(st)
+    if st != ""hello"" return 1
+    var i: any = 42
+    Console.WriteLine(i.ToString())
+    if i.ToString() != ""42"" return 2
+    Console.WriteLine(s.Equals(""hello""))
+    if !s.Equals(""hello"") return 3
+    Console.WriteLine(s.Equals(""world""))
+    if s.Equals(""world"") return 4
+    Console.WriteLine(i.Equals(42))
+    if !i.Equals(42) return 5
+    var gh = i.GetHashCode()
+    Console.WriteLine(gh)
+    if gh != 42 return 6
+    if s.GetHashCode() != s.GetHashCode() return 7
+    Console.WriteLine(s.GetType().FullName)
+    Console.WriteLine(i.GetType().FullName)
+    return 0
+}", "anyobjface-native", (TargetPlatform)platform);
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("hello\r\n42\r\nTrue\r\nFalse\r\nTrue\r\n42\r\nSystem.String\r\nSystem.Int32\r\n", stdout);
+        }
     }
 }

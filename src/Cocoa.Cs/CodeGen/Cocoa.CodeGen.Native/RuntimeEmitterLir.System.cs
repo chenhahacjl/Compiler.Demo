@@ -80,20 +80,23 @@ namespace Cocoa.CodeGen.Native
             AddI(size, size, 1);
             Shr(size, size, 1);
             Shl(size, size, 2);
-            AddI(size, size, 4);
+            AddI(size, size, NativeObjectModel.StringDataOffset);
 
             var obj = NewPtr();
             CallRuntime(obj, "Alloc", size);
             Cmp(obj, 0);
             Jcc(LirCond.Equal, fail);
-            Store(obj, 0, chars, 4);
+            var stringVt = NewPtr();
+            LeaData(stringVt, NativeObjectModel.PseudoVTableKey("System.String"));
+            Store(obj, 0, stringVt, _isX64 ? 8 : 4);
+            Store(obj, NativeObjectModel.StringLengthOffset, chars, 4);
 
             var count = NewReg(4);
             Mov(count, chars);
             AddI(count, count, 1);
             Shr(count, count, 1);
             var dst = NewPtr();
-            Lea(dst, obj, 4);
+            Lea(dst, obj, NativeObjectModel.StringDataOffset);
             CallRuntime(null, "CopyChars", dst, buf, count);
             StoreRet(obj);
             Jmp(done);
@@ -281,6 +284,20 @@ namespace Cocoa.CodeGen.Native
             Cmp(va, vb);
             Jcc(LirCond.NotEqual, none);
 
+            // 方案 B：string vtable 相同 → 内容比较（对齐 C# object.Equals(string,string)）
+            var stringVt = NewPtr();
+            LeaData(stringVt, NativeObjectModel.PseudoVTableKey("System.String"));
+            var notString = NewLabel();
+            Cmp(va, stringVt);
+            Jcc(LirCond.NotEqual, notString);
+            var strEq = NewReg(4);
+            SetArg(0, a);
+            SetArg(1, b);
+            Add(LirOpCode.Call, strEq, LirOperand.Runtime("StrEquals"));
+            Mov(result, strEq);
+            Jmp(eqTail);
+            Mark(notString);
+
             // vtable 相同：判断是否 Boxed.* 值盒，命中则比较 payload（HeaderBytes 起、按类型宽度）。
             // 类实例/字符串同型异引用 → 落到 none（false，引用相等）。
             foreach (var boxItem in _program.DataItems.Where(i => i.Key.StartsWith(BoxedPrefix)))
@@ -333,27 +350,252 @@ namespace Cocoa.CodeGen.Native
         // ------------------------------------------------------------------
         // ObjectToString(obj:ptr) → str（e-M19 M4）：读对象的 vtable 与名字指针。
         // 对象布局 [0]=vtablePtr；vtable [8]=类型全名字符串指针（伪记录自引用的 Type 值同样成立）
+        // 方案 B：any receiver 统一经对象头 vtable 分派——
+        //   · string vtable → 返回自身（C# string.ToString() 返回自身）
+        //   · Boxed.* vtable → 解盒 payload 按类型格式化（int→IntToString 等）
+        //   · 其余（用户类/数组/Type 伪记录）→ 类型全名
         // ------------------------------------------------------------------
 
         private void EmitObjectToString()
         {
             var obj = _args[0];
+            var done = NewLabel();
             var vtable = NewPtr();
             Load(vtable, obj, 0, _isX64 ? 8 : 4);
+
+            // ---- string → 自身 ----
+            var stringVt = NewPtr();
+            LeaData(stringVt, NativeObjectModel.PseudoVTableKey("System.String"));
+            var notString = NewLabel();
+            Cmp(vtable, stringVt);
+            Jcc(LirCond.NotEqual, notString);
+            StoreRet(obj);
+            Jmp(done);
+            Mark(notString);
+
+            // ---- Boxed.* → 解盒格式化 ----
+            foreach (var boxItem in _program.DataItems.Where(i => i.Key.StartsWith(BoxedPrefix)))
+            {
+                var boxKey = boxItem.Key;
+                var boxVt = NewPtr();
+                LeaData(boxVt, boxKey);
+                var notBox = NewLabel();
+                Cmp(vtable, boxVt);
+                Jcc(LirCond.NotEqual, notBox);
+                EmitBoxedToString(obj, boxKey, done);
+                Mark(notBox);
+            }
+
+            // ---- 用户类/数组/Type 伪记录 → vtable 名字 ----
             var name = NewPtr();
             Load(name, vtable, 8, _isX64 ? 8 : 4);
             StoreRet(name);
+            Mark(done);
             EndFunction(_currentFunction!, 8);
         }
 
+        /// <summary>box payload（HeaderBytes 起）→ 字符串：按 boxKey 类型名路由到既有格式化运行时；完成后 StoreRet + Jmp done。</summary>
+        private void EmitBoxedToString(LirVirtualRegister obj, string boxKey, int done)
+        {
+            var typeName = boxKey.Substring(BoxedPrefix.Length);
+            var width = BoxedPayloadWidth(boxKey);
+
+            switch (typeName)
+            {
+                case "System.Boolean":
+                {
+                    var flag = NewReg(4);
+                    Load(flag, obj, NativeObjectModel.HeaderBytes, 1);
+                    var isTrue = NewLabel();
+                    Cmp(flag, 0);
+                    Jcc(LirCond.NotEqual, isTrue);
+                    var falseStr = NewPtr();
+                    LeaData(falseStr, _formatFalse);
+                    StoreRet(falseStr);
+                    Jmp(done);
+                    Mark(isTrue);
+                    var trueStr = NewPtr();
+                    LeaData(trueStr, _formatTrue);
+                    StoreRet(trueStr);
+                    Jmp(done);
+                    break;
+                }
+
+                case "System.Char":
+                {
+                    var ch = NewReg(4);
+                    Load(ch, obj, NativeObjectModel.HeaderBytes, 2);
+                    var str = NewPtr();
+                    CallRuntime(str, "CharToString", ch);
+                    StoreRet(str);
+                    Jmp(done);
+                    break;
+                }
+
+                case "System.SByte":
+                case "System.Int16":
+                {
+                    // 有符号 1/2 字节：Load 零扩展后符号扩展为 int32
+                    var raw = NewReg(4);
+                    Load(raw, obj, NativeObjectModel.HeaderBytes, width);
+                    var shift = (4 - width) * 8;
+                    Shl(raw, raw, shift);
+                    Sar(raw, raw, shift);
+                    var str = NewPtr();
+                    CallRuntime(str, "IntToString", raw);
+                    StoreRet(str);
+                    Jmp(done);
+                    break;
+                }
+
+                case "System.Byte":
+                case "System.UInt16":
+                case "System.Int32":
+                case "System.UInt32":
+                {
+                    var v = NewReg(4);
+                    Load(v, obj, NativeObjectModel.HeaderBytes, width);
+                    var str = NewPtr();
+                    CallRuntime(str, "IntToString", v);
+                    StoreRet(str);
+                    Jmp(done);
+                    break;
+                }
+
+                case "System.Int64":
+                case "System.UInt64":
+                {
+                    var str = NewPtr();
+                    if (_isX64)
+                    {
+                        var val8 = NewReg(8);
+                        Load(val8, obj, NativeObjectModel.HeaderBytes, 8);
+                        SetArg(0, val8);
+                    }
+                    else
+                    {
+                        var lo = NewReg(4);
+                        Load(lo, obj, NativeObjectModel.HeaderBytes, 4);
+                        var hi = NewReg(4);
+                        Load(hi, obj, NativeObjectModel.HeaderBytes + 4, 4);
+                        SetArg(0, lo);
+                        SetArg(1, hi);
+                    }
+
+                    CallRuntime(str, typeName == "System.Int64" ? "Int64ToString" : "UInt64ToString");
+                    StoreRet(str);
+                    Jmp(done);
+                    break;
+                }
+
+                case "System.Double":
+                {
+                    var str = NewPtr();
+                    if (_isX64)
+                    {
+                        var val8 = NewReg(8);
+                        Load(val8, obj, NativeObjectModel.HeaderBytes, 8);
+                        SetArg(0, val8);
+                    }
+                    else
+                    {
+                        var lo = NewReg(4);
+                        Load(lo, obj, NativeObjectModel.HeaderBytes, 4);
+                        var hi = NewReg(4);
+                        Load(hi, obj, NativeObjectModel.HeaderBytes + 4, 4);
+                        SetArg(0, lo);
+                        SetArg(1, hi);
+                    }
+
+                    CallRuntime(str, "DoubleToString");
+                    StoreRet(str);
+                    Jmp(done);
+                    break;
+                }
+
+                case "System.Single":
+                {
+                    var f32 = NewReg(LirType.F32);
+                    Load(f32, obj, NativeObjectModel.HeaderBytes, 4);
+                    var f64 = NewF64();
+                    FCvtSSD(f64, f32);
+                    var str = NewPtr();
+                    if (_isX64)
+                    {
+                        SetArg(0, f64);
+                    }
+                    else
+                    {
+                        var lo = NewReg(4);
+                        LoadSlotField(lo, f64, 0, 4);
+                        var hi = NewReg(4);
+                        LoadSlotField(hi, f64, 4, 4);
+                        SetArg(0, lo);
+                        SetArg(1, hi);
+                    }
+
+                    CallRuntime(str, "DoubleToString");
+                    StoreRet(str);
+                    Jmp(done);
+                    break;
+                }
+
+                default:
+                    throw new Exception($"Unexpected boxed type in ObjectToString: {typeName}");
+            }
+        }
+
         // ------------------------------------------------------------------
-        // ObjectGetHashCode(x:8) → int（指针位模式散列：lo ^ hi 后乘黄金比例常数）
+        // ObjectGetHashCode(x:8) → int。
+        // 方案 B：vtable 感知——
+        //   · string vtable → 内容哈希（多项式滚动，等串同哈希，对齐 C# string.GetHashCode 契约）
+        //   · Boxed.* vtable → payload 值作为哈希（对齐 C# 值类型 GetHashCode = 值本身）
+        //   · 其余（用户类/数组/Type/委托）→ 指针位模式散列（lo ^ hi 后乘黄金比例常数）
         // x86 指针为 4，仅低 dword 参与散列
         // ------------------------------------------------------------------
 
         private void EmitObjectGetHashCode()
         {
             var value = _args[0];
+            var done = NewLabel();
+            var vtable = NewPtr();
+            Load(vtable, value, 0, _isX64 ? 8 : 4);
+
+            // ---- string → 内容哈希 ----
+            var stringVt = NewPtr();
+            LeaData(stringVt, NativeObjectModel.PseudoVTableKey("System.String"));
+            var notString = NewLabel();
+            Cmp(vtable, stringVt);
+            Jcc(LirCond.NotEqual, notString);
+            EmitStringContentHash(value, done);
+            Mark(notString);
+
+            // ---- Boxed.* → payload 值哈希 ----
+            foreach (var boxItem in _program.DataItems.Where(i => i.Key.StartsWith(BoxedPrefix)))
+            {
+                var boxKey = boxItem.Key;
+                var boxVt = NewPtr();
+                LeaData(boxVt, boxKey);
+                var notBox = NewLabel();
+                Cmp(vtable, boxVt);
+                Jcc(LirCond.NotEqual, notBox);
+                var width = BoxedPayloadWidth(boxKey);
+                var scalarWidth = Math.Min(width, 4);
+                var payload = NewReg(4);
+                Load(payload, value, NativeObjectModel.HeaderBytes, scalarWidth);
+                if (width > 4)
+                {
+                    var hi = NewReg(4);
+                    Load(hi, value, NativeObjectModel.HeaderBytes + 4, 4);
+                    Xor(payload, payload, hi);
+                }
+
+                StoreRet(payload);
+                Jmp(done);
+                Mark(notBox);
+            }
+
+            // ---- 其余 → 指针位模式散列 ----
             var lo = NewReg(4);
             LoadSlotField(lo, value, 0, 4);
 
@@ -373,7 +615,40 @@ namespace Cocoa.CodeGen.Native
             var hashed = NewReg(4);
             Imul(hashed, mixed, C(4, unchecked((int)0x9E3779B1)));
             StoreRet(hashed);
+            Mark(done);
             EndFunction(_currentFunction!, 4);
+        }
+
+        /// <summary>字符串内容哈希（多项式 hash*31+char，UTF-16 字符逐 2 字节）；完成后 StoreRet + Jmp done。</summary>
+        private void EmitStringContentHash(LirVirtualRegister s, int done)
+        {
+            var len = NewReg(4);
+            Load(len, s, NativeObjectModel.StringLengthOffset, 4);
+            var p = NewPtr();
+            Lea(p, s, NativeObjectModel.StringDataOffset);
+            var hash = NewReg(4);
+            Const(hash, 0);
+            var i = NewReg(4);
+            Const(i, 0);
+            var loop = NewLabel();
+            var loopDone = NewLabel();
+            Mark(loop);
+            Cmp(i, len);
+            Jcc(LirCond.GreaterOrEqual, loopDone);
+            var ch = NewReg(4);
+            Load(ch, p, 0, 2);
+            var next = NewReg(4);
+            Imul(next, hash, C(4, 31));
+            Add(next, next, ch);
+            Mov(hash, next);
+            var np = NewPtr();
+            Lea(np, p, 2);
+            Mov(p, np);
+            AddI(i, i, 1);
+            Jmp(loop);
+            Mark(loopDone);
+            StoreRet(hash);
+            Jmp(done);
         }
 
         // ------------------------------------------------------------------
@@ -398,10 +673,10 @@ namespace Cocoa.CodeGen.Native
         {
             var s = _args[0];
             var len = NewReg(4);
-            Load(len, s, 0, 4);
+            Load(len, s, NativeObjectModel.StringLengthOffset, 4);
 
             var chars = NewPtr();
-            Lea(chars, s, 4);
+            Lea(chars, s, NativeObjectModel.StringDataOffset);
 
             var index = NewReg(4);
             Const(index, 0);
@@ -506,7 +781,7 @@ namespace Cocoa.CodeGen.Native
         private LirVirtualRegister WidePtr(LirVirtualRegister s)
         {
             var p = NewPtr();
-            Lea(p, s, 4);
+            Lea(p, s, NativeObjectModel.StringDataOffset);
             return p;
         }
 
@@ -520,7 +795,7 @@ namespace Cocoa.CodeGen.Native
         {
             var path = WidePtr(s);
             var pathLen = NewReg(4);
-            Load(pathLen, s, 0, 4);
+            Load(pathLen, s, NativeObjectModel.StringLengthOffset, 4);
             var pb = NewPtr();
             LeaData(pb, bufferKey);
             var pSrc = NewPtr();

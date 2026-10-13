@@ -17,8 +17,19 @@ namespace Cocoa.CodeGen.Native
     /// </summary>
     internal static class NativeObjectModel
     {
-        /// <summary>对象头字节数（vtablePtr + pad；两架构统一 8 字节，对齐 string/array 惯例）。</summary>
+        /// <summary>对象头字节数（vtablePtr + pad；两架构统一 8 字节）。</summary>
         public const int HeaderBytes = 8;
+
+        // ------------------------------------------------------------------
+        // string / array 布局（6f：对齐 .NET 对象模型——String/Array 也是完整对象）
+        //   string: [0)=vtablePtr(ps) [4..8)=pad [8..12)=长度 [12..)=UTF-16字符
+        //   数组 :  [0)=vtablePtr(ps) [4..8)=pad [8..12)=长度 [12..16)=pad [16..)=元素区(8对齐)
+        // ------------------------------------------------------------------
+        public const int StringLengthOffset = 8;
+        public const int StringDataOffset = 12;
+        public const int ArrayLengthOffset = 8;
+        public const int ArrayElementOffset = 16;
+        public const string SystemStringVTableName = "System.String";
 
         public const int SlotToString = 0;
         public const int SlotGetHashCode = 1;

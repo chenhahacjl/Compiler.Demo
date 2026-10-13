@@ -234,6 +234,10 @@ namespace Cocoa.CodeGen.Native
 
         private void EmitProgram()
         {
+            // 对齐 .NET 对象模型：String/Array 是完整对象，基础 vtable 恒注册（运行时引用）
+            EnsurePseudoVTable(NativeObjectModel.SystemStringVTableName);
+            EnsurePseudoVTable("System.Array");
+
             // 可达性过滤（6e-M17）：仅发射从入口可达的函数；M4 起存活类把构造函数与
             // 虚槽实现并入可达集（vtable 分派目标无法静态枚举，须随类存活整体发射）
             var reachable = ComputeReachableFunctions(_program.MainFunction!);

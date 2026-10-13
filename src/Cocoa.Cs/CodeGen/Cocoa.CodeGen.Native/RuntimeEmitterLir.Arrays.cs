@@ -14,29 +14,34 @@ namespace Cocoa.CodeGen.Native
         // ------------------------------------------------------------------
 
         // ------------------------------------------------------------------
-        // NewArray(size:4, elementSize:4) → ptr:8
-        // 布局：[0..4) 长度；[8..) 元素区（8 字节对齐，内存零初始化）
+        // NewArray(size:4, elementSize:4, vtable:ps) → ptr:8
+        // 布局（对齐 .NET 数组对象）：[0)=vtablePtr [4..8)=pad [8..12)=长度 [12..16)=pad [16..)=元素区(8对齐)
         // ------------------------------------------------------------------
 
         private void EmitNewArray()
         {
             var size = _args[0];
             var elementSize = _args[1];
+            var vtable = _args[2];
             var oom = NewLabel();
             var done = NewLabel();
+            var ps = _isX64 ? 8 : 4;
 
+            var payload = NewReg(4);
+            Imul(payload, size, elementSize);
             var total = NewReg(4);
-            Imul(total, size, elementSize);
+            Mov(total, payload);
             AddI(total, total, 7);
             Shr(total, total, 3);
             Shl(total, total, 3);
-            AddI(total, total, 8);
+            AddI(total, total, NativeObjectModel.ArrayElementOffset);
 
             var obj = NewPtr();
             CallRuntime(obj, "Alloc", total);
             Cmp(obj, 0);
             Jcc(LirCond.Equal, oom);
-            Store(obj, 0, size, 4);
+            Store(obj, 0, vtable, ps);
+            Store(obj, NativeObjectModel.ArrayLengthOffset, size, 4);
             StoreRet(obj);
             Jmp(done);
 
@@ -61,13 +66,15 @@ namespace Cocoa.CodeGen.Native
             var count = _args[2];
             var elementSize = _args[3];
 
-            // dst = NewArray(count, elemSize)
+            // dst = NewArray(count, elemSize, srcVtable)——切片保持源数组类型（复制 vtable 头）
+            var srcVtable = NewPtr();
+            Load(srcVtable, src, 0, _isX64 ? 8 : 4);
             var dst = NewPtr();
-            CallRuntime(dst, "NewArray", count, elementSize);
+            CallRuntime(dst, "NewArray", count, elementSize, srcVtable);
 
             // 越界即退出：start >= 0、count >= 0、start + count <= src.Length
             var srcLength = NewReg(4);
-            Load(srcLength, src, 0, 4);
+            Load(srcLength, src, NativeObjectModel.ArrayLengthOffset, 4);
             var error = NewLabel();
             var exit = NewLabel();
             Cmp(start, 0);
@@ -95,7 +102,7 @@ namespace Cocoa.CodeGen.Native
             Jcc(LirCond.GreaterOrEqual, done);
 
             var srcAddr = NewPtr();
-            Lea(srcAddr, src, 8);
+            Lea(srcAddr, src, NativeObjectModel.ArrayElementOffset);
             Add(srcAddr, srcAddr, srcByteBase);
             Add(srcAddr, srcAddr, index);
 
@@ -103,7 +110,7 @@ namespace Cocoa.CodeGen.Native
             Load(byteValue, srcAddr, 0, 1);
 
             var dstAddr = NewPtr();
-            Lea(dstAddr, dst, 8);
+            Lea(dstAddr, dst, NativeObjectModel.ArrayElementOffset);
             Add(dstAddr, dstAddr, index);
             Store(dstAddr, 0, byteValue, 1);
 
@@ -256,8 +263,11 @@ namespace Cocoa.CodeGen.Native
             // ---- 分配数组 ----
             var elementSizeReg = C(4, elementSize);
             var arr = NewPtr();
+            var splitArrayVt = NewPtr();
+            LeaData(splitArrayVt, NativeObjectModel.PseudoVTableKey("System.Array"));
             SetArg(0, count);
             SetArg(1, elementSizeReg);
+            SetArg(2, splitArrayVt);
             Add(LirOpCode.Call, arr, LirOperand.Runtime("NewArray"), LirOperand.Constant(0));
 
             var oom = NewLabel();
@@ -270,7 +280,7 @@ namespace Cocoa.CodeGen.Native
             Mov(p, first);
             var slot = NewPtr();
             var slotBase = NewPtr();
-            Lea(slotBase, arr, 8);
+            Lea(slotBase, arr, NativeObjectModel.ArrayElementOffset);
             Mov(slot, slotBase);
 
             var buildWs = NewLabel();
@@ -327,12 +337,12 @@ namespace Cocoa.CodeGen.Native
             AddI(lenChars, lenChars, 1);
             Jmp(buildTokNext);
 
-            // ---- 构造字符串：Alloc(lenChars*2+4 对齐 4)，剥离引号拷贝 ----
+            // ---- 构造字符串：Alloc(lenChars*2+12 对齐 4)，剥离引号拷贝 ----
             Mark(buildStr);
             var bytes = NewReg(4);
             Mov(bytes, lenChars);
             Shl(bytes, bytes, 1);
-            AddI(bytes, bytes, 4);
+            AddI(bytes, bytes, NativeObjectModel.StringDataOffset);
             AddI(bytes, bytes, 3);
             And(bytes, bytes, C(4, 0xFFFFFFFC));
             var obj = NewPtr();
@@ -340,9 +350,12 @@ namespace Cocoa.CodeGen.Native
             Cmp(obj, 0);
             Jcc(LirCond.Equal, buildStrNext);
 
-Store(obj, 0, lenChars, 4);
+            var stringVt = NewPtr();
+            LeaData(stringVt, NativeObjectModel.PseudoVTableKey("System.String"));
+            Store(obj, 0, stringVt, _isX64 ? 8 : 4);
+            Store(obj, NativeObjectModel.StringLengthOffset, lenChars, 4);
             var dst = NewPtr();
-            Lea(dst, obj, 4);
+            Lea(dst, obj, NativeObjectModel.StringDataOffset);
             var src = NewPtr();
             Mov(src, start);
             var remaining = NewReg(4);
@@ -437,9 +450,9 @@ Store(obj, 0, lenChars, 4);
 
             // ---- BCryptHashData ----
             var dataLen = NewReg(4);
-            Load(dataLen, data, 0, 4);
+            Load(dataLen, data, NativeObjectModel.ArrayLengthOffset, 4);
             var dataPtr = NewPtr();
-            Lea(dataPtr, data, 8);
+            Lea(dataPtr, data, NativeObjectModel.ArrayElementOffset);
             SysCallDll(null, "bcrypt.dll", "BCryptHashData",
                 4, false, hashVal, dataPtr, dataLen, zero32);
 
@@ -459,7 +472,9 @@ Store(obj, 0, lenChars, 4);
 
             // ---- Copy hash to u8[32] array ----
             var arr = NewPtr();
-            CallRuntime(arr, "NewArray", C(4, 32), C(4, 1));
+            var u8ArrayVt = NewPtr();
+            LeaData(u8ArrayVt, NativeObjectModel.PseudoVTableKey("System.Array"));
+            CallRuntime(arr, "NewArray", C(4, 32), C(4, 1), u8ArrayVt);
             Cmp(arr, 0);
             Jcc(LirCond.Equal, errLabel);
 
@@ -473,7 +488,7 @@ Store(obj, 0, lenChars, 4);
             var tb = NewReg(4);
             Load(tb, buf32, 0, 1);
             var arrDst = NewPtr();
-            Lea(arrDst, arr, 8);
+            Lea(arrDst, arr, NativeObjectModel.ArrayElementOffset);
             var arrOff = NewPtr();
             Mov(arrOff, ci);
             Add(arrDst, arrDst, arrOff);
@@ -522,7 +537,7 @@ Store(obj, 0, lenChars, 4);
             var cmdWbuf = NewPtr();
             LeaData(cmdWbuf, _fileBuffer2);
             var strLen = NewReg(4);
-            Load(strLen, cmdLine, 0, 4);
+            Load(strLen, cmdLine, NativeObjectModel.StringLengthOffset, 4);
             var di = NewReg(4);
             Const(di, 0);
             var copyLoop = NewLabel();
@@ -530,13 +545,13 @@ Store(obj, 0, lenChars, 4);
             Mark(copyLoop);
             Cmp(di, strLen);
             Jcc(LirCond.GreaterOrEqual, copyDone);
-            // src = cmdLine + 4 + di*2
+            // src = cmdLine + 12 + di*2
             var ch = NewReg(4);
             var srcOff = NewPtr();
             Mov(srcOff, di);
             Shl(srcOff, srcOff, 1);
             var srcAddr = NewPtr();
-            Lea(srcAddr, cmdLine, 4);
+            Lea(srcAddr, cmdLine, NativeObjectModel.StringDataOffset);
             Add(srcAddr, srcAddr, srcOff);
             Load(ch, srcAddr, 0, 2);
             // dst = cmdWbuf + di*2
@@ -563,7 +578,7 @@ Store(obj, 0, lenChars, 4);
             // CreateProcessW：lpCurrentDirectory 直接给 workdir（非空→WidePtrZ；空→NULL）
             var wdWide = NewPtr();
             var wdLen = NewReg(4);
-            Load(wdLen, workdir, 0, 4);
+            Load(wdLen, workdir, NativeObjectModel.StringLengthOffset, 4);
             var wdNull = NewLabel();
             var wdReady = NewLabel();
             Cmp(wdLen, 0);

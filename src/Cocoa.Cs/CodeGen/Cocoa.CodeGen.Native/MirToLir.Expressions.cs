@@ -31,8 +31,10 @@ namespace Cocoa.CodeGen.Native
             var length = EmitExpression(node.Length);
             var array = AllocateRegister(LirType.Addr);
             var elementSizeRegister = EmitConst(elementSize);
+            var arrayVtable = EmitPseudoVTable(FacadeFullNameOfType(node.Type));
             Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(length)));
             Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(elementSizeRegister)));
+            Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(2), LirOperand.Reg(arrayVtable)));
             Add(instructions, new LirInstruction(LirOpCode.Call, array, LirOperand.Runtime("NewArray"), LirOperand.Constant(0)));
 
             for (var i = 0; i < node.Initializers.Length; i++)
@@ -42,7 +44,7 @@ namespace Cocoa.CodeGen.Native
                 EmitArrayBoundsCheck(instructions, index, length);
 
                 var address = AllocateRegister(LirType.Addr);
-                Add(instructions, new LirInstruction(LirOpCode.Lea, address, LirOperand.Reg(array), LirOperand.None, 8 + i * elementSize, 0));
+                Add(instructions, new LirInstruction(LirOpCode.Lea, address, LirOperand.Reg(array), LirOperand.None, NativeObjectModel.ArrayElementOffset + i * elementSize, 0));
                 var value = EmitExpression(node.Initializers[i]);
                 Add(instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(address), LirOperand.Reg(value), 0, elementSize));
             }
@@ -85,7 +87,7 @@ namespace Cocoa.CodeGen.Native
             }
 
             var address = AllocateRegister(LirType.Addr);
-            Add(instructions, new LirInstruction(LirOpCode.Lea, address, LirOperand.Reg(array), LirOperand.None, 8, 0));
+            Add(instructions, new LirInstruction(LirOpCode.Lea, address, LirOperand.Reg(array), LirOperand.None, NativeObjectModel.ArrayElementOffset, 0));
             Add(instructions, new LirInstruction(LirOpCode.Add, address, LirOperand.Reg(address), LirOperand.Reg(offset)));
 
             var zero = AllocateRegister(4);
@@ -153,9 +155,9 @@ namespace Cocoa.CodeGen.Native
 
             if (node.Target.Type == TypeSymbol.String)
             {
-                // 字符串布局 [len:4][chars:2×len]，数据区紧邻长度头（offset 4）
+                // 字符串布局（对齐 .NET 对象模型）：[vtablePtr][pad][len:4][chars:2×len]
                 var length = AllocateRegister(4);
-                Add(instructions, new LirInstruction(LirOpCode.Load, length, LirOperand.Reg(target), LirOperand.None, 0, 4));
+                Add(instructions, new LirInstruction(LirOpCode.Load, length, LirOperand.Reg(target), LirOperand.None, NativeObjectModel.StringLengthOffset, 4));
                 EmitArrayBoundsCheck(instructions, index, length);
 
                 var offset = AllocateRegister(4);
@@ -163,7 +165,7 @@ namespace Cocoa.CodeGen.Native
                 Add(instructions, new LirInstruction(LirOpCode.Shl, offset, LirOperand.Reg(offset), LirOperand.Constant(1)));
 
                 var address = AllocateRegister(LirType.Addr);
-                Add(instructions, new LirInstruction(LirOpCode.Lea, address, LirOperand.Reg(target), LirOperand.None, 4, 0));
+                Add(instructions, new LirInstruction(LirOpCode.Lea, address, LirOperand.Reg(target), LirOperand.None, NativeObjectModel.StringDataOffset, 0));
                 Add(instructions, new LirInstruction(LirOpCode.Add, address, LirOperand.Reg(address), LirOperand.Reg(offset)));
 
                 var result = AllocateRegister(4);
@@ -220,7 +222,16 @@ namespace Cocoa.CodeGen.Native
 
             var lengthTarget = EmitExpression(node.Target);
             var length = AllocateRegister(4);
-            Add(instructions, new LirInstruction(LirOpCode.Load, length, LirOperand.Reg(lengthTarget), LirOperand.None, 0, 4));
+            if (node.Target.Type == TypeSymbol.String)
+            {
+                Add(instructions, new LirInstruction(LirOpCode.Load, length, LirOperand.Reg(lengthTarget), LirOperand.None, NativeObjectModel.StringLengthOffset, 4));
+            }
+            else
+            {
+                // 数组 Length：对象头之后（对齐 .NET 数组布局）
+                Add(instructions, new LirInstruction(LirOpCode.Load, length, LirOperand.Reg(lengthTarget), LirOperand.None, NativeObjectModel.ArrayLengthOffset, 4));
+            }
+
             return length;
         }
 
@@ -607,7 +618,7 @@ namespace Cocoa.CodeGen.Native
             var list = AllocateRegister(LirType.Addr);
             Add(instructions, new LirInstruction(LirOpCode.Load, list, LirOperand.Reg(callee), LirOperand.None, NativeObjectModel.HeaderBytes, pointerSize));
             var length = AllocateRegister(4);
-            Add(instructions, new LirInstruction(LirOpCode.Load, length, LirOperand.Reg(list), LirOperand.None, 0, 4));
+            Add(instructions, new LirInstruction(LirOpCode.Load, length, LirOperand.Reg(list), LirOperand.None, NativeObjectModel.ArrayLengthOffset, 4));
 
             // 参数区：this(env, 8B) + 实参（x64 每参 8；x86 按 ReturnSize 累计）——与 fnty 间接调用同构
             var argumentOffsets = new int[node.Arguments.Length];
@@ -647,7 +658,7 @@ namespace Cocoa.CodeGen.Native
             Add(instructions, new LirInstruction(LirOpCode.Mov, elementOffset, LirOperand.Reg(index)));
             Add(instructions, new LirInstruction(LirOpCode.Shl, elementOffset, LirOperand.Reg(elementOffset), LirOperand.Constant(3)));
             var elementAddress = AllocateRegister(LirType.Addr);
-            Add(instructions, new LirInstruction(LirOpCode.Lea, elementAddress, LirOperand.Reg(list), LirOperand.None, 8, 0));
+            Add(instructions, new LirInstruction(LirOpCode.Lea, elementAddress, LirOperand.Reg(list), LirOperand.None, NativeObjectModel.ArrayElementOffset, 0));
             Add(instructions, new LirInstruction(LirOpCode.Add, elementAddress, LirOperand.Reg(elementAddress), LirOperand.Reg(elementOffset)));
 
             var fnValue = AllocateRegister(LirType.Addr);
@@ -842,6 +853,13 @@ namespace Cocoa.CodeGen.Native
                         return InvokeVirtualSlot(hcls, NativeObjectModel.SlotGetHashCode, receiver, node.Arguments);
                     }
 
+                    // 值类型（基元/枚举）GetHashCode = 值位模式（C# Int32.GetHashCode 返回值本身）。
+                    // 不解引用裸值——运行时 ObjectGetHashCode 期望对象指针（读 [x] 会踩数据地址）。
+                    if (receiverType.IsPrimitiveValueType || receiverType is NamedTypeSymbol { TypeKind: TypeKind.Enum })
+                    {
+                        return EmitLowDword(receiver);
+                    }
+
                     return EmitRuntimeCall1("ObjectGetHashCode", receiver);
                 }
 
@@ -980,7 +998,13 @@ namespace Cocoa.CodeGen.Native
             var key = NativeObjectModel.PseudoVTableKey(fullName);
             if (_pseudoVTableKeys.Add(key))
             {
-                _irProgram.AddData(LirDataItem.VTable(key, -1, _irProgram.InternString(fullName), NativeObjectModel.ObjectSlotFunctions));
+                // Boxed.* 伪记录的名字去壳（`System.Int32` 而非 `Boxed.System.Int32`），
+                // 使 GetType().FullName / Type 值命名与 IL/Evaluator（真实 CLR 类型名）对齐；
+                // is/as 判定只读 key（$vt:Boxed.*）不受影响。
+                var displayName = fullName.StartsWith("Boxed.", StringComparison.Ordinal)
+                    ? fullName.Substring("Boxed.".Length)
+                    : fullName;
+                _irProgram.AddData(LirDataItem.VTable(key, -1, _irProgram.InternString(displayName), NativeObjectModel.ObjectSlotFunctions));
             }
         }
 
@@ -1097,6 +1121,14 @@ namespace Cocoa.CodeGen.Native
             var widened = AllocateRegister(LirType.I64);
             Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.Movzx64, widened, LirOperand.Reg(value)));
             return widened;
+        }
+
+        /// <summary>取寄存器位模式的低 32 位（mov 到 4 字节寄存器即截断高半，对齐值类型 GetHashCode 位语义）。</summary>
+        private LirVirtualRegister EmitLowDword(LirVirtualRegister value)
+        {
+            var result = AllocateRegister(4);
+            Add(_builder.CurrentFunction.Instructions, new LirInstruction(LirOpCode.Mov, result, LirOperand.Reg(value)));
+            return result;
         }
 
         /// <summary>两个已求值寄存器的运行时布尔比较。StrEquals 保持寄存器 ABI；ObjectEquals 走栈 ABI（M4）。</summary>

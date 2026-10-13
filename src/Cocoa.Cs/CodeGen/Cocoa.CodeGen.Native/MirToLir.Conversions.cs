@@ -150,6 +150,22 @@ namespace Cocoa.CodeGen.Native
                 Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(curVt), LirOperand.Reg(candidate)));
                 Add(instructions, new LirInstruction(LirOpCode.Jcc, LirOperand.Constant((int)LirCond.Equal), LirOperand.Label(found)));
             }
+            else if (targetType == TypeSymbol.String)
+            {
+                // 方案 B：string 是完整对象（vtable 头 = $vt:System.String）。
+                EnsurePseudoVTable(NativeObjectModel.SystemStringVTableName);
+                Add(instructions, new LirInstruction(LirOpCode.LeaData, candidate, LirOperand.Data(NativeObjectModel.PseudoVTableKey(NativeObjectModel.SystemStringVTableName))));
+                Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(curVt), LirOperand.Reg(candidate)));
+                Add(instructions, new LirInstruction(LirOpCode.Jcc, LirOperand.Constant((int)LirCond.Equal), LirOperand.Label(found)));
+            }
+            else if (targetType.ElementType != null)
+            {
+                // 方案 B：数组是完整对象（vtable 头统一 $vt:System.Array，GetType 返回 System.Array）。
+                EnsurePseudoVTable("System.Array");
+                Add(instructions, new LirInstruction(LirOpCode.LeaData, candidate, LirOperand.Data(NativeObjectModel.PseudoVTableKey("System.Array"))));
+                Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(curVt), LirOperand.Reg(candidate)));
+                Add(instructions, new LirInstruction(LirOpCode.Jcc, LirOperand.Constant((int)LirCond.Equal), LirOperand.Label(found)));
+            }
             else
             {
                 foreach (var key in EnumerateDescendantVTableKeys((NamedTypeSymbol)targetType))
@@ -293,7 +309,7 @@ namespace Cocoa.CodeGen.Native
                 else if (IsBlittableExternArray(parameterType))
                 {
                     var elementPtr = AllocateRegister(LirType.Addr);
-                    Add(instructions, new LirInstruction(LirOpCode.Lea, elementPtr, LirOperand.Reg(value), LirOperand.None, 8, 0));
+                    Add(instructions, new LirInstruction(LirOpCode.Lea, elementPtr, LirOperand.Reg(value), LirOperand.None, NativeObjectModel.ArrayElementOffset, 0));
                     value = elementPtr;
                 }
 

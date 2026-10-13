@@ -24,9 +24,9 @@ namespace Cocoa.CodeGen.Native
             var done = NewLabel();
 
             var len = NewReg(4);
-            Load(len, s, 0, 4);
+            Load(len, s, NativeObjectModel.StringLengthOffset, 4);
             var p = NewPtr();
-            Lea(p, s, 4);
+            Lea(p, s, NativeObjectModel.StringDataOffset);
             var acc = C(4, 0);
             var i = C(4, 0);
             var ten = C(4, 10);
@@ -63,7 +63,7 @@ namespace Cocoa.CodeGen.Native
             Cmp(s, 0);
             Jcc(LirCond.Equal, done);
             var len = NewReg(4);
-            Load(len, s, 0, 4);
+            Load(len, s, NativeObjectModel.StringLengthOffset, 4);
             Cmp(len, 0);
             Jcc(LirCond.Equal, done);
             Const(result, 1);
@@ -93,14 +93,14 @@ namespace Cocoa.CodeGen.Native
             Mov(lenA, C(4, 0));
             Cmp(a, 0);
             Jcc(LirCond.Equal, lenADone);
-            Load(lenA, a, 0, 4);
+            Load(lenA, a, NativeObjectModel.StringLengthOffset, 4);
             Mark(lenADone);
 
             var lenB = NewReg(4);
             Mov(lenB, C(4, 0));
             Cmp(b, 0);
             Jcc(LirCond.Equal, lenBDone);
-            Load(lenB, b, 0, 4);
+            Load(lenB, b, NativeObjectModel.StringLengthOffset, 4);
             Mark(lenBDone);
 
             var size = NewReg(4);
@@ -109,17 +109,21 @@ namespace Cocoa.CodeGen.Native
             AddI(size, size, 1);
             Shr(size, size, 1);
             Shl(size, size, 2);
-            AddI(size, size, 4);
+            AddI(size, size, NativeObjectModel.StringDataOffset);
 
             var obj = NewPtr();
             CallRuntime(obj, "Alloc", size);
             Cmp(obj, 0);
             Jcc(LirCond.Equal, fail);
 
+            var stringVt = NewPtr();
+            LeaData(stringVt, NativeObjectModel.PseudoVTableKey("System.String"));
+            Store(obj, 0, stringVt, _isX64 ? 8 : 4);
+
             var total = NewReg(4);
             Mov(total, lenA);
             Add(total, total, lenB);
-            Store(obj, 0, total, 4);
+            Store(obj, NativeObjectModel.StringLengthOffset, total, 4);
 
             // 拷贝 A（源为 null 时跳过——lenA 已按 0 计入总长与偏移）
             Cmp(a, 0);
@@ -129,9 +133,9 @@ namespace Cocoa.CodeGen.Native
             AddI(countA, countA, 1);
             Shr(countA, countA, 1);
             var srcA = NewPtr();
-            Lea(srcA, a, 4);
+            Lea(srcA, a, NativeObjectModel.StringDataOffset);
             var dstA = NewPtr();
-            Lea(dstA, obj, 4);
+            Lea(dstA, obj, NativeObjectModel.StringDataOffset);
             CallRuntime(null, "CopyChars", dstA, srcA, countA);
             Mark(copiedA);
 
@@ -143,9 +147,9 @@ namespace Cocoa.CodeGen.Native
             AddI(countB, countB, 1);
             Shr(countB, countB, 1);
             var srcB = NewPtr();
-            Lea(srcB, b, 4);
+            Lea(srcB, b, NativeObjectModel.StringDataOffset);
             var dstB = NewPtr();
-            Lea(dstB, obj, 4);
+            Lea(dstB, obj, NativeObjectModel.StringDataOffset);
             var lenAQuad = NewPtr();
             Mov(lenAQuad, lenA);
             Shl(lenAQuad, lenAQuad, 1);
@@ -188,17 +192,17 @@ namespace Cocoa.CodeGen.Native
             Jcc(LirCond.Equal, isFalse);
 
             var lenA = NewReg(4);
-            Load(lenA, a, 0, 4);
+            Load(lenA, a, NativeObjectModel.StringLengthOffset, 4);
             var lenB = NewReg(4);
-            Load(lenB, b, 0, 4);
+            Load(lenB, b, NativeObjectModel.StringLengthOffset, 4);
             Cmp(lenA, lenB);
             Jcc(LirCond.NotEqual, isFalse);
 
             // 按 2 字节字符比较（非 dword：奇数长度末 dword 含堆/数据区填充垃圾，误判不等）
             var ap = NewPtr();
-            Lea(ap, a, 4);
+            Lea(ap, a, NativeObjectModel.StringDataOffset);
             var bp = NewPtr();
-            Lea(bp, b, 4);
+            Lea(bp, b, NativeObjectModel.StringDataOffset);
             var count = NewReg(4);
             Mov(count, lenA);
 
@@ -248,7 +252,7 @@ namespace Cocoa.CodeGen.Native
             var done = NewLabel();
 
             var len = NewReg(4);
-            Load(len, s, 0, 4);
+            Load(len, s, NativeObjectModel.StringLengthOffset, 4);
 
             Cmp(start, 0);
             Jcc(LirCond.Less, invalid);
@@ -265,19 +269,22 @@ namespace Cocoa.CodeGen.Native
             Shl(size, size, 1);
             AddI(size, size, 3);
             And(size, size, C(4, ~3));
-            AddI(size, size, 4);
+            AddI(size, size, NativeObjectModel.StringDataOffset);
 
             var obj = NewPtr();
             CallRuntime(obj, "Alloc", size);
             Cmp(obj, 0);
             Jcc(LirCond.Equal, oom);
 
-            Store(obj, 0, count, 4);
+            var stringVt = NewPtr();
+            LeaData(stringVt, NativeObjectModel.PseudoVTableKey("System.String"));
+            Store(obj, 0, stringVt, _isX64 ? 8 : 4);
+            Store(obj, NativeObjectModel.StringLengthOffset, count, 4);
 
             var dst = NewPtr();
-            Lea(dst, obj, 4);
+            Lea(dst, obj, NativeObjectModel.StringDataOffset);
             var src = NewPtr();
-            Lea(src, s, 4);
+            Lea(src, s, NativeObjectModel.StringDataOffset);
             var charOffset = NewReg(4);
             Mov(charOffset, start);
             Shl(charOffset, charOffset, 1);
@@ -318,12 +325,15 @@ namespace Cocoa.CodeGen.Native
             var done = NewLabel();
 
             var obj = NewPtr();
-            CallRuntime(obj, "Alloc", C(4, 8));
+            CallRuntime(obj, "Alloc", C(4, NativeObjectModel.StringDataOffset + 4));
             Cmp(obj, 0);
             Jcc(LirCond.Equal, oom);
 
-            Store(obj, 0, C(4, 1), 4);
-            Store(obj, 4, c, 2);
+            var stringVt = NewPtr();
+            LeaData(stringVt, NativeObjectModel.PseudoVTableKey("System.String"));
+            Store(obj, 0, stringVt, _isX64 ? 8 : 4);
+            Store(obj, NativeObjectModel.StringLengthOffset, C(4, 1), 4);
+            Store(obj, NativeObjectModel.StringDataOffset, c, 2);
             StoreRet(obj);
             Jmp(done);
 
@@ -434,7 +444,7 @@ namespace Cocoa.CodeGen.Native
             Mark(wExtDone);
 
             var fmtLen = NewReg(4);
-            Load(fmtLen, fmtPtr, 0, 4);
+            Load(fmtLen, fmtPtr, NativeObjectModel.StringLengthOffset, 4);
 
             var code = NewReg(4);
             var n = NewReg(4);
@@ -459,7 +469,7 @@ namespace Cocoa.CodeGen.Native
             // ---- string：原样（对齐在末尾统一处理）----
             Mark(stringKind);
             Mov(strObj, value);
-            Load(strLen, value, 0, 4);
+            Load(strLen, value, NativeObjectModel.StringLengthOffset, 4);
             Shl(strLen, strLen, 1);
             Jmp(applyAlign);
 
@@ -481,7 +491,7 @@ namespace Cocoa.CodeGen.Native
             // ---- char：CharToString ----
             Mark(charKind);
             CallRuntime(strObj, "CharToString", value);
-            Load(strLen, strObj, 0, 4);
+            Load(strLen, strObj, NativeObjectModel.StringLengthOffset, 4);
             Shl(strLen, strLen, 1);
             Jmp(applyAlign);
 
@@ -495,17 +505,17 @@ namespace Cocoa.CodeGen.Native
             Jmp(intPlain);
             Mark(intDecPad);
             CallRuntime(strObj, "FormatDecPad", value, n);
-            Load(strLen, strObj, 0, 4);
+            Load(strLen, strObj, NativeObjectModel.StringLengthOffset, 4);
             Shl(strLen, strLen, 1);
             Jmp(applyAlign);
             Mark(intHex);
             CallRuntime(strObj, "FormatHex", value, n, lowerCase);
-            Load(strLen, strObj, 0, 4);
+            Load(strLen, strObj, NativeObjectModel.StringLengthOffset, 4);
             Shl(strLen, strLen, 1);
             Jmp(applyAlign);
             Mark(intPlain);
             CallRuntime(strObj, "IntToString", value);
-            Load(strLen, strObj, 0, 4);
+            Load(strLen, strObj, NativeObjectModel.StringLengthOffset, 4);
             Shl(strLen, strLen, 1);
             Jmp(applyAlign);
 
@@ -534,7 +544,7 @@ namespace Cocoa.CodeGen.Native
             Jmp(dPlain);
             Mark(dIsSpecial);
             EmitCallDoubleToString(strObj, value, valueHigh);
-            Load(strLen, strObj, 0, 4);
+            Load(strLen, strObj, NativeObjectModel.StringLengthOffset, 4);
             Shl(strLen, strLen, 1);
             Jmp(applyAlign);
             Mark(dFmt);
@@ -542,7 +552,7 @@ namespace Cocoa.CodeGen.Native
             Cmp(n, 24); Jcc(LirCond.Greater, dPlain);
             Mark(dFmtOk);
             EmitCallFormatFixed(strObj, value, valueHigh, n);
-            Load(strLen, strObj, 0, 4);
+            Load(strLen, strObj, NativeObjectModel.StringLengthOffset, 4);
             Shl(strLen, strLen, 1);
             Jmp(applyAlign);
             Mark(dSci);
@@ -565,12 +575,12 @@ namespace Cocoa.CodeGen.Native
             Shl(sciLower, sciLower, 1);
             Add(sciFlags, sciFlags, sciLower);
             EmitCallFormatSci(strObj, value, valueHigh, n, sciFlags);
-            Load(strLen, strObj, 0, 4);
+            Load(strLen, strObj, NativeObjectModel.StringLengthOffset, 4);
             Shl(strLen, strLen, 1);
             Jmp(applyAlign);
             Mark(dPlain);
             EmitCallDoubleToString(strObj, value, valueHigh);
-            Load(strLen, strObj, 0, 4);
+            Load(strLen, strObj, NativeObjectModel.StringLengthOffset, 4);
             Shl(strLen, strLen, 1);
             Jmp(applyAlign);
 
@@ -594,7 +604,7 @@ namespace Cocoa.CodeGen.Native
             var str = _args[0];
             var width = _args[1];
             var len = NewReg(4);
-            Load(len, str, 0, 4);
+            Load(len, str, NativeObjectModel.StringLengthOffset, 4);
             Shl(len, len, 1);
             var aligned = NewPtr();
             CallRuntime(aligned, "ApplyAlignment", str, len, width);
@@ -666,7 +676,7 @@ namespace Cocoa.CodeGen.Native
         private void EmitCopyStrChars(LirVirtualRegister bufPos, LirVirtualRegister len, LirVirtualRegister srcObj)
         {
             var chars = NewReg(4);
-            Load(chars, srcObj, 0, 4);
+            Load(chars, srcObj, NativeObjectModel.StringLengthOffset, 4);
             var loop = NewLabel();
             var done = NewLabel();
             var i = NewReg(4);
@@ -675,7 +685,7 @@ namespace Cocoa.CodeGen.Native
             Cmp(i, chars);
             Jcc(LirCond.GreaterOrEqual, done);
             var srcPos = NewPtr();
-            Lea(srcPos, srcObj, 4);
+            Lea(srcPos, srcObj, NativeObjectModel.StringDataOffset);
             var off = NewReg(4);
             Mov(off, i);
             Shl(off, off, 1);
@@ -734,21 +744,24 @@ namespace Cocoa.CodeGen.Native
             AddI(size, size, 2);
             Shr(size, size, 2);
             Shl(size, size, 2);
-            AddI(size, size, 4);
+            AddI(size, size, NativeObjectModel.StringDataOffset);
             var obj = NewPtr();
             CallRuntime(obj, "Alloc", size);
             Cmp(obj, 0);
             Jcc(LirCond.Equal, oom);
+            var stringVt = NewPtr();
+            LeaData(stringVt, NativeObjectModel.PseudoVTableKey("System.String"));
+            Store(obj, 0, stringVt, _isX64 ? 8 : 4);
             var chars = NewReg(4);
             Mov(chars, lenBytes);
             Shr(chars, chars, 1);
-            Store(obj, 0, chars, 4);
+            Store(obj, NativeObjectModel.StringLengthOffset, chars, 4);
             var count = NewReg(4);
             Mov(count, lenBytes);
             AddI(count, count, 2);
             Shr(count, count, 2);
             var dst = NewPtr();
-            Lea(dst, obj, 4);
+            Lea(dst, obj, NativeObjectModel.StringDataOffset);
             CallRuntime(null, "CopyChars", dst, buf, count);
             Jmp(done);
             Mark(oom);
@@ -856,9 +869,9 @@ namespace Cocoa.CodeGen.Native
             var str = NewPtr();
             CallRuntime(str, "IntToString", value);
             var lenChars = NewReg(4);
-            Load(lenChars, str, 0, 4);
+            Load(lenChars, str, NativeObjectModel.StringLengthOffset, 4);
             var first = NewReg(4);
-            Load(first, str, 4, 2);
+            Load(first, str, NativeObjectModel.StringDataOffset, 2);
             var sign = NewReg(4);
             var isNeg = NewLabel();
             var signDone = NewLabel();
@@ -926,9 +939,9 @@ namespace Cocoa.CodeGen.Native
             var str = NewPtr();
             CallRuntime(str, "IntToString", value);
             var lenChars = NewReg(4);
-            Load(lenChars, str, 0, 4);
+            Load(lenChars, str, NativeObjectModel.StringLengthOffset, 4);
             var first = NewReg(4);
-            Load(first, str, 4, 2);
+            Load(first, str, NativeObjectModel.StringDataOffset, 2);
             var sign = NewReg(4);
             var isNeg = NewLabel();
             var signDone = NewLabel();
@@ -1081,7 +1094,7 @@ namespace Cocoa.CodeGen.Native
             var expZero = NewReg(4);
             Const(expZero, 0);
             var expLen = NewReg(4);
-            Load(expLen, expStr, 0, 4);
+            Load(expLen, expStr, NativeObjectModel.StringLengthOffset, 4);
             EmitCopyDigits(bufPos, lenBytes, expStr, expZero, expLen);
             Mark(eSuffixDone);
 
@@ -1104,7 +1117,7 @@ namespace Cocoa.CodeGen.Native
             var idx = NewReg(4);
             Add(idx, startChar, i);
             var srcPos = NewPtr();
-            Lea(srcPos, srcObj, 4);
+            Lea(srcPos, srcObj, NativeObjectModel.StringDataOffset);
             var off = NewReg(4);
             Mov(off, idx);
             Shl(off, off, 1);

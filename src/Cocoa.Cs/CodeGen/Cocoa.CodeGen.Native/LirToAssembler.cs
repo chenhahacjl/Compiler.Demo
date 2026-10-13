@@ -155,7 +155,22 @@ namespace Cocoa.CodeGen.Native
 
                         break;
                     case LirDataKind.Utf16:
-                        _a.WriteDataUtf16(item.Text!);
+                        // 字符串字面量＝对象：头部 vtable 指针（后经 AddDataDataFixup 重定位到 $vt:System.String）
+                        // + [8] 长度 + [12] 字符，与堆上字符串对象布局一致（StringLengthOffset/StringDataOffset）。
+                        _stringVtFixupOffsets.Add(_a.GetDataOffset(_dataSymbols[item.Key]));
+                        for (var vi = 0; vi < (_isX64 ? 8 : 4); vi++)
+                        {
+                            _a.WriteDataByte(0);
+                        }
+                        if (!_isX64)
+                        {
+                            _a.WriteDataInt32(0);
+                        }
+                        _a.WriteDataInt32(item.Text!.Length);
+                        foreach (var cx in item.Text)
+                        {
+                            _a.WriteDataInt16(cx);
+                        }
                         _a.AlignData(4);
                         break;
                     case LirDataKind.Bytes:
@@ -225,6 +240,9 @@ namespace Cocoa.CodeGen.Native
 
         private readonly List<(LirDataItem Item, int Symbol)> _vtableSymbols = new();
 
+        // 字符串字面量数据项起始偏移（Utf16 发射时记录），Patch 阶段回填 $vt:System.String 指针。
+        private readonly List<int> _stringVtFixupOffsets = new();
+
         private void EmitVTableData(LirDataItem item)
         {
             var symbol = _dataSymbols[item.Key];
@@ -288,6 +306,15 @@ namespace Cocoa.CodeGen.Native
                     }
 
                     _a.AddDataCodeFixup(baseOffset + 8 + ps * (i + 1), label);
+                }
+            }
+
+            // 字符串字面量 vtable 头 @0 → $vt:System.String 数据项
+            if (_dataSymbols.TryGetValue(NativeObjectModel.PseudoVTableKey(NativeObjectModel.SystemStringVTableName), out var stringVtSymbol))
+            {
+                foreach (var offset in _stringVtFixupOffsets)
+                {
+                    _a.AddDataDataFixup(offset, stringVtSymbol);
                 }
             }
         }
