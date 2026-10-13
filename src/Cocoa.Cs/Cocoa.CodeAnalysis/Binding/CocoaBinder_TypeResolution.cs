@@ -408,8 +408,8 @@ namespace Cocoa.CodeAnalysis.Binding
             return null;
         }
 
-        /// <summary>6e-M19 M2-a：System.Object / System.Type 内建单例按全名解析（裸 Type/object 不在此列；
-        /// 语言层对象根 = any，仅 .NET 互操作的 `System.Object` 全名回指对象根）。</summary>
+        /// <summary>6e-M19 M2-a：System.Object / System.Type 内建单例按全名解析（裸 Type 不在此列；
+        /// 语言层对象根 = object，`System.Object` 全名回指对象根符号）。</summary>
         private static TypeSymbol? ResolveBuiltInSystemType(string fullName)
         {
             switch (fullName)

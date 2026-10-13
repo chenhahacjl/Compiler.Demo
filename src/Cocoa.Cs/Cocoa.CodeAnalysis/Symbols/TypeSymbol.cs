@@ -7,13 +7,16 @@ namespace Cocoa.CodeAnalysis.Symbols
     {
         public static readonly TypeSymbol Error = new TypeSymbol("?");
 
-        /// <summary>语言顶类型（统一后即对象根）：`any`——Cocoa 语言层不存在 `object` 关键字，
-        /// 仅 .NET 互操作场景的 `System.Object` 全名映射到本符号。任意值可隐式装箱到 any，反向显式拆箱。</summary>
-        public static readonly NamedTypeSymbol Any = new NamedTypeSymbol("any", "", Visibility.Public, declaration: null)
+        /// <summary>语言顶类型（统一后即对象根）：`object`——对齐 C#。
+        /// 任意值可隐式装箱到 object，反向显式拆箱；`System.Object` 全名映射到本符号。</summary>
+        public static readonly NamedTypeSymbol Object = new NamedTypeSymbol("object", "", Visibility.Public, declaration: null)
         {
             SpecialType = SpecialType.System_Object,
             TypeKind = TypeKind.Class,
         };
+
+        /// <summary>6f 重命名兼容别名：对象根（`object`）的旧称 `Any` 等价转发。</summary>
+        public static NamedTypeSymbol Any => Object;
 
         /// <summary>6e-M19 M5-a：null 字面量类型——只存在于字面量瞬间，绑定期即转换到目标引用型（类/接口/string/数组/any）。</summary>
         public static readonly TypeSymbol Null = new TypeSymbol("null");
@@ -69,7 +72,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>知名 BCL 类型标记（默认 None；基元单例构造时赋值，对齐 Roslyn SpecialType）。</summary>
         public SpecialType SpecialType { get; internal set; } = SpecialType.None;
 
-        /// <summary>基元值类型（bool/数值/char，含 8/16/32/64/128 位；不含 string/void/error/any/null）。
+        /// <summary>基元值类型（bool/数值/char，含 8/16/32/64/128 位；不含 string/void/error/object/null）。
         /// 引用相等判定——无论实例是轻量 TypeSymbol 还是 NamedTypeSymbol（C3），单例不变故恒成立。</summary>
         public bool IsPrimitiveValueType =>
             this == Boolean || this == Int8 || this == Int16 || this == Int32 || this == Int64 ||
@@ -80,7 +83,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>是否为值类型（基元值类型 + 用户 struct/enum；NamedTypeSymbol 覆盖见下）。</summary>
         public virtual bool IsValueType => IsPrimitiveValueType;
 
-        /// <summary>是否为引用类型（类/接口/delegate/string/any/数组/函数值）。</summary>
+        /// <summary>是否为引用类型（类/接口/delegate/string/object/数组/函数值）。</summary>
         public bool IsReferenceType => !IsValueType;
 
         /// <summary>是否为整数类型（含有/无符号 8/16/32/64/128 位，不含 bool/char）。</summary>

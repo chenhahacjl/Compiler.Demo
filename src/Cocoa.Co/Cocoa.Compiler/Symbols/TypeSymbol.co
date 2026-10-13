@@ -13,7 +13,7 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         // ── 静态单例（对齐 C# TypeSymbol 22 个）──
         public static function Error(): TypeSymbol { return TypeSymbol.CreateSpecial("?") }
-        public static function Any(): TypeSymbol { return TypeSymbol.CreateSpecial("any") }
+        public static function Any(): TypeSymbol { return TypeSymbol.CreateSpecial("object") }
         public static function Null(): TypeSymbol { return TypeSymbol.CreateSpecial("null") }
         public static function Boolean(): TypeSymbol { return TypeSymbol.CreateSpecial("bool") }
         public static function Int8(): TypeSymbol { return TypeSymbol.CreateSpecial("sbyte") }

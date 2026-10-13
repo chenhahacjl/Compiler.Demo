@@ -51,7 +51,7 @@ function Main(): i32
 
         private const string LockTemplate = @"using System
 
-function Grab(obj: any): i32
+function Grab(obj: object): i32
 {
     lock (obj)
     {
@@ -61,7 +61,7 @@ function Grab(obj: any): i32
 
 function Main(): i32
 {
-    var gate = new any()
+    var gate = new object()
     lock (gate)
     {
         System.Console.WriteLine(""locked"")

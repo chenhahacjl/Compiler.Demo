@@ -68,10 +68,10 @@ namespace Cocoa.Tests.CodeAnalysis
         [InlineData("\"test\" == \"abc\"", false)]
         [InlineData("\"test\" != \"abc\"", true)]
         [InlineData("\"test\" + \"abc\"", "testabc")]
-        [InlineData("{ var a : any = 0 var b : any = \"b\" return a == b }", false)]
-        [InlineData("{ var a : any = 0 var b : any = \"b\" return a != b }", true)]
-        [InlineData("{ var a : any = 0 var b : any = 0 return a == b }", true)]
-        [InlineData("{ var a : any = 0 var b : any = 0 return a != b }", false)]
+        [InlineData("{ var a : object = 0 var b : object = \"b\" return a == b }", false)]
+        [InlineData("{ var a : object = 0 var b : object = \"b\" return a != b }", true)]
+        [InlineData("{ var a : object = 0 var b : object = 0 return a == b }", true)]
+        [InlineData("{ var a : object = 0 var b : object = 0 return a != b }", false)]
         [InlineData("{ var a = 10 return a * a }", 100)]
         [InlineData("{ var a = 0 return (a = 10) * a }", 100)]
         [InlineData("{ var a = 0 if a == 0 a = 10 return a }", 10)]
@@ -119,8 +119,8 @@ namespace Cocoa.Tests.CodeAnalysis
         [InlineData("{ var x = 10 return nameof(x) }", "x")]
         [InlineData("{ var x = 10 return nameof(x).Length }", 1)]
         // is 常量模式
-        [InlineData("{ var x: any = null return x is null }", true)]
-        [InlineData("{ var x: any = 0 return x is null }", false)]
+        [InlineData("{ var x: object = null return x is null }", true)]
+        [InlineData("{ var x: object = 0 return x is null }", false)]
         [InlineData("{ var x: string = null return x is null }", true)]
         [InlineData("{ var x: string = \"hello\" return x is null }", false)]
         [InlineData("{ var x: string = \"hello\" return x is \"hello\" }", true)]
@@ -139,31 +139,31 @@ namespace Cocoa.Tests.CodeAnalysis
         [InlineData("{ var s: string = null return s?.Length }", 0)]
         [InlineData("{ var s: string = \"hello\" return s?.Length }", 5)]
         // 声明模式 is i32 n
-        [InlineData("{ var x: any = 42 return x is i32 n }", true)]
-        [InlineData("{ var x: any = 42 if x is i32 n return n return 0 }", 42)]
-        [InlineData("{ var x: any = \"hi\" return x is i32 n }", false)]
+        [InlineData("{ var x: object = 42 return x is i32 n }", true)]
+        [InlineData("{ var x: object = 42 if x is i32 n return n return 0 }", 42)]
+        [InlineData("{ var x: object = \"hi\" return x is i32 n }", false)]
         // 关系模式 is > 0
-        [InlineData("{ var x: any = 5 return x is > 0 }", true)]
-        [InlineData("{ var x: any = -1 return x is > 0 }", false)]
-        [InlineData("{ var x: any = 5 return x is >= 5 }", true)]
-        [InlineData("{ var x: any = 5 return x is < 10 }", true)]
+        [InlineData("{ var x: object = 5 return x is > 0 }", true)]
+        [InlineData("{ var x: object = -1 return x is > 0 }", false)]
+        [InlineData("{ var x: object = 5 return x is >= 5 }", true)]
+        [InlineData("{ var x: object = 5 return x is < 10 }", true)]
         // 逻辑模式 (and/or/not)
-        [InlineData("{ var x: any = 5 return x is > 0 and < 10 }", true)]
-        [InlineData("{ var x: any = 15 return x is > 0 and < 10 }", false)]
-        [InlineData("{ var x: any = null return x is not null }", false)]
-        [InlineData("{ var x: any = 5 return x is not null }", true)]
+        [InlineData("{ var x: object = 5 return x is > 0 and < 10 }", true)]
+        [InlineData("{ var x: object = 15 return x is > 0 and < 10 }", false)]
+        [InlineData("{ var x: object = null return x is not null }", false)]
+        [InlineData("{ var x: object = 5 return x is not null }", true)]
         // 属性模式
-        [InlineData("{ var s: any = \"hello\" return s is { Length: 5 } }", true)]
-        [InlineData("{ var s: any = \"hi\" return s is { Length: 5 } }", false)]
-        [InlineData("{ var s: any = \"hello\" return s is { Length: > 3 } }", true)]
-        [InlineData("{ var s: any = \"hi\" return s is { Length: > 3 } }", false)]
+        [InlineData("{ var s: object = \"hello\" return s is { Length: 5 } }", true)]
+        [InlineData("{ var s: object = \"hi\" return s is { Length: 5 } }", false)]
+        [InlineData("{ var s: object = \"hello\" return s is { Length: > 3 } }", true)]
+        [InlineData("{ var s: object = \"hi\" return s is { Length: > 3 } }", false)]
         // switch 表达式 pattern arm
-        [InlineData("{ var x: any = 42 return x switch { is i32 n => n, _ => 0 } }", 42)]
-        [InlineData("{ var x: any = \"hello\" return x switch { is i32 n => n, _ => 0 } }", 0)]
-        [InlineData("{ var x: any = 5 return x switch { > 0 => 1, _ => 0 } }", 1)]
-        [InlineData("{ var x: any = -1 return x switch { > 0 => 1, _ => 0 } }", 0)]
-        [InlineData("{ var x: any = null return x switch { not null => 1, _ => 0 } }", 0)]
-        [InlineData("{ var x: any = 5 return x switch { not null => 1, _ => 0 } }", 1)]
+        [InlineData("{ var x: object = 42 return x switch { is i32 n => n, _ => 0 } }", 42)]
+        [InlineData("{ var x: object = \"hello\" return x switch { is i32 n => n, _ => 0 } }", 0)]
+        [InlineData("{ var x: object = 5 return x switch { > 0 => 1, _ => 0 } }", 1)]
+        [InlineData("{ var x: object = -1 return x switch { > 0 => 1, _ => 0 } }", 0)]
+        [InlineData("{ var x: object = null return x switch { not null => 1, _ => 0 } }", 0)]
+        [InlineData("{ var x: object = 5 return x switch { not null => 1, _ => 0 } }", 1)]
         public void Evaluator_Computes_CorrectValues(string text, object expectedValue)
         {
             AssertValue(text, expectedValue);
@@ -174,14 +174,14 @@ namespace Cocoa.Tests.CodeAnalysis
         {
             var testCases = new[]
             {
-                "{ var x: any = 42 return x is i32 n }",
-                "{ var x: any = 42 if x is i32 n return n return 0 }",
-                "{ var x: any = \"hi\" return x is i32 n }",
-                "{ var x: any = 5 return x is > 0 and < 10 }",
-                "{ var x: any = null return x is not null }",
-                "{ var x: any = 5 return x is not null }",
-                "{ var s: any = \"hello\" return s is { Length: 5 } }",
-                "{ var s: any = \"hello\" return s is { Length: > 3 } }",
+                "{ var x: object = 42 return x is i32 n }",
+                "{ var x: object = 42 if x is i32 n return n return 0 }",
+                "{ var x: object = \"hi\" return x is i32 n }",
+                "{ var x: object = 5 return x is > 0 and < 10 }",
+                "{ var x: object = null return x is not null }",
+                "{ var x: object = 5 return x is not null }",
+                "{ var s: object = \"hello\" return s is { Length: 5 } }",
+                "{ var s: object = \"hello\" return s is { Length: > 3 } }",
             };
 
             foreach (var text in testCases)
@@ -2583,7 +2583,7 @@ function Main(): i32
 {
     var d = new Dog(""rex"", 4)
     if d.Tag() != ""dog:rex/4"" return 1
-    var o: any = d
+    var o: object = d
     if o.ToString() != ""Dog(dog:rex)"" return 2
     if d.GetType().Name != ""Dog"" return 3
     if !Object.ReferenceEquals(o, d) return 4
@@ -2713,7 +2713,7 @@ return p.Get() * 2";
         [InlineData("var s: string = null return s != null", false)]
         [InlineData("var s: string = \"x\" return s == null", false)]
         [InlineData("var s: string return s == null", true)]
-        [InlineData("var a: any = null return a == null", true)]
+        [InlineData("var a: object = null return a == null", true)]
         public void Evaluator_NullLiteral_Comparisons(string text, bool expected)
         {
             AssertValue(text, expected);

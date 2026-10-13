@@ -3,8 +3,8 @@ namespace System.Syscall
 {
     class ConsoleSyscall
     {
-        syscall function WriteLine(text: any): void
-        syscall function Write(text: any): void
+        syscall function WriteLine(text: object): void
+        syscall function Write(text: object): void
         syscall function ReadLine(): string
         syscall function ReadKey(intercept: bool): char
         syscall function Sleep(ms: i32): void

@@ -222,7 +222,7 @@ namespace Cocoa.Tests.Compiler
         public void Tuple_PassedAsArgument()
         {
             var result = RunMain(
-                "function Add(t: any): i32 { return 1 }" + Nl +
+                "function Add(t: object): i32 { return 1 }" + Nl +
                 "function Main(args: string[]): i32 {" + Nl +
                 "    return Add((5, 6))" + Nl +
                 "}", "TupleArg");
@@ -455,7 +455,7 @@ namespace Cocoa.Tests.Compiler
         ///     所以它比「发射器漏了分支」更早失败。
         ///   - <c>??</c> 能解析（走的是不经 <c>NullCoalescing</c> 的路径），
         ///     但结果类型不参与统一：`var v = a ?? b` 得到 <c>any</c>，
-        ///     再 <c>return v</c> 到 <c>i32</c> 报 <c>Cannot convert type 'any' to 'int'</c>。
+        ///     再 <c>return v</c> 到 <c>i32</c> 报 <c>Cannot convert type 'object' to 'int'</c>。
         ///     **注意这一条不是 bug**——C# 里 <c>object a; object b;</c> 的
         ///     <c>a ?? b</c> 结果同样是 <c>object</c>，返回到 <c>int</c> 一样报错。
         ///
@@ -565,7 +565,7 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal(5, r);
         }
 
-        /// <summary>实测缺口：`a ??= 7`（a: any）报 `'??=' is not defined for types 'any'`。
+        /// <summary>实测缺口：`a ??= 7`（a: object）报 `'??=' is not defined for types 'object'`。
         ///
         /// **根因与 <see cref="Probe_CoalesceRight"/> 同源**：算子表只注册了
         /// `(Any, Any)` 与 `(String, String)` 的 NullCoalescing
@@ -573,16 +573,16 @@ namespace Cocoa.Tests.Compiler
         /// 而 C# 允许 `object a; a ??= 7;`。
         ///
         /// 所以这不是"算子缺失"，而是**底层转换推导缺口**——它同时挡住了
-        /// `??=`、`v == 9`（v: any）等多个看似独立的缺口。
+        /// `??=`、`v == 9`（v: object）等多个看似独立的缺口。
         /// </summary>
-        [Fact(Skip = "实测缺口：`a ??= 7`（a: any）报 `'??=' is not defined for types 'any'`。"
+        [Fact(Skip = "实测缺口：`a ??= 7`（a: object）报 `'??=' is not defined for types 'object'`。"
                         + "根因与 Probe_CoalesceRight 同源：算子表只注册了 (Any,Any)/(String,String) 的 NullCoalescing，"
                         + "缺 any <-> 具体类型的隐式转换（C# 允许 object a; a ??= 7;）。属底层转换推导缺口，不是算子缺失。")]
         public void Probe_CoalesceAssignment()
         {
             var r = RunMain(
                 "function Main(args: string[]): i32 {" + Nl +
-                "    var a: any = null" + Nl +
+                "    var a: object = null" + Nl +
                 "    var b = 0" + Nl +
                 "    a ??= 7" + Nl +
                 "    if a != null { b = 1 }" + Nl +
@@ -612,17 +612,17 @@ namespace Cocoa.Tests.Compiler
             Assert.Equal(5, r);
         }
 
-        /// <summary>实测缺口：`var v = a ?? b; if v == 9`（v: any）报
-        /// '==' is not defined for types 'any' and 'int'。
+        /// <summary>实测缺口：`var v = a ?? b; if v == 9`（v: object）报
+        /// '==' is not defined for types 'object' and 'int'。
         /// 与 Probe_CoalesceAssignment **同源**：any 与具体类型缺隐式转换推导。
         /// 这是三个缺口里最基础的一个，建议优先修——修好后 `??=` 等可能同时可用。</summary>
-        [Fact(Skip = "实测缺口：`v == 9`（v: any）报 ''==' is not defined for types 'any' and 'int''。与 Probe_CoalesceAssignment 同源：缺 any <-> 具体类型的隐式转换。")]
+        [Fact(Skip = "实测缺口：`v == 9`（v: object）报 ''==' is not defined for types 'object' and 'int''。与 Probe_CoalesceAssignment 同源：缺 any <-> 具体类型的隐式转换。")]
         public void Probe_CoalesceRight()
         {
             var r = RunMain(
                 "function Main(args: string[]): i32 {" + Nl +
-                "    var a: any = null" + Nl +
-                "    var b: any = 9" + Nl +
+                "    var a: object = null" + Nl +
+                "    var b: object = 9" + Nl +
                 "    var v = a ?? b" + Nl +
                 "    if v == 9 { return 1 }" + Nl +
                 "    return 0" + Nl +

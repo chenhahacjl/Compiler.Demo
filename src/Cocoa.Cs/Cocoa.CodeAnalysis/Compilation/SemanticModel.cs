@@ -345,7 +345,7 @@ namespace Cocoa.CodeAnalysis
                 "char" => TypeSymbol.Char,
                 "string" => TypeSymbol.String,
                 "void" => TypeSymbol.Void,
-                "any" => TypeSymbol.Any,
+                "object" => TypeSymbol.Object,
                 _ => null,
             };
         }

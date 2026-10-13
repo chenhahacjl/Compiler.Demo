@@ -379,7 +379,7 @@ namespace Cocoa.CodeGen.Native
 
             if (type == TypeSymbol.Any && argument is BoundConversionExpression conversion)
             {
-                // 剥掉向对象根 any 的装箱转换，直接按源值类型打印（值不装箱，与所选输出函数匹配）
+                // 剥掉向对象根 object 的装箱转换，直接按源值类型打印（值不装箱，与所选输出函数匹配）
                 type = conversion.Expression.Type;
                 value = EmitExpression(conversion.Expression);
             }
@@ -880,8 +880,8 @@ var wide = AllocateRegister(LirType.I64);
                 return value;
             }
 
-            // object 多态：值类型 → 对象根 any（System.Object）装箱；any → 值类型 拆箱；
-            // string/类/接口（引用型）→ any 引用直通（本身即对象引用）。
+            // object 多态：值类型 → 对象根 object（System.Object）装箱；object → 值类型 拆箱；
+            // string/类/接口（引用型）→ object 引用直通（本身即对象引用）。
             if (to == NamedTypeSymbol.SystemObject)
             {
                 return IsBoxableValueType(from) ? EmitBoxValue(value, from) : value;

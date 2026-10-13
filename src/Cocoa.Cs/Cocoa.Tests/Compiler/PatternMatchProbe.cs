@@ -88,7 +88,7 @@ namespace Cocoa.Tests.Compiler
             var result = RunMain(
                 "class A { public field X: i32 }" + Nl +
                 "class B { public field Y: i32 }" + Nl +
-                "function Describe(o: any): i32 {" + Nl +
+                "function Describe(o: object): i32 {" + Nl +
                 "    if o is A a { return a.X }" + Nl +
                 "    if o is B b { return b.Y }" + Nl +
                 "    return -1" + Nl +
@@ -225,7 +225,7 @@ namespace Cocoa.Tests.Compiler
             var result = RunMain(
                 "class Box { public field V: i32 }" + Nl +
                 "function Main(args: string[]): i32 {" + Nl +
-                "    var o: any = 42" + Nl +
+                "    var o: object = 42" + Nl +
                 "    if o is i32 n { return n }" + Nl +
                 "    return -1" + Nl +
                 "}", "DeclValueType");
@@ -242,7 +242,7 @@ namespace Cocoa.Tests.Compiler
             var result = RunMain(
                 "class Box { public field V: i32 }" + Nl +
                 "function Main(args: string[]): i32 {" + Nl +
-                "    var o: any = 7" + Nl +
+                "    var o: object = 7" + Nl +
                 "    if o is bool b { return 1 }" + Nl +
                 "    if o is i32 n { return n }" + Nl +
                 "    return -1" + Nl +
@@ -258,7 +258,7 @@ namespace Cocoa.Tests.Compiler
             var result = RunMain(
                 "class Box { public field V: i32 }" + Nl +
                 "function Main(args: string[]): i32 {" + Nl +
-                "    var o: any = new Box()" + Nl +
+                "    var o: object = new Box()" + Nl +
                 "    if o is i32 n { return 1 }" + Nl +
                 "    return -1" + Nl +
                 "}", "DeclValueTypeRefNoMatch");
@@ -303,7 +303,7 @@ namespace Cocoa.Tests.Compiler
             var result = RunMain(
                 "class A { public field X: i32 }" + Nl +
                 "class B { public field Y: i32 }" + Nl +
-                "function Describe(o: any): i32 {" + Nl +
+                "function Describe(o: object): i32 {" + Nl +
                 "    if o is A a when a.X > 100 { return 1 }" + Nl +
                 "    if o is A a { return 2 }" + Nl +
                 "    if o is B b { return 3 }" + Nl +

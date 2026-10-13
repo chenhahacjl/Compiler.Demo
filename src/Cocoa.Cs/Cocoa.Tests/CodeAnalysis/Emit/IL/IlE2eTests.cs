@@ -1250,7 +1250,7 @@ function Main()
     Console.WriteLine(p == r)
     Console.WriteLine(p != q)
     var d = new Point3D(2)
-    var o: any = d
+    var o: object = d
     Console.WriteLine(o == d)
     Console.WriteLine(o == p)
 }", "e2e-reference-equality");
@@ -1273,7 +1273,7 @@ public class Animal
         return ""animal""
     }
 
-    public function DescribeVia(o: any): string
+    public function DescribeVia(o: object): string
     {
         return ""D="" + o.ToString()
     }
@@ -1290,7 +1290,7 @@ public class Dog extends Animal
 function Main()
 {
     var d = new Dog()
-    var o: any = d
+    var o: object = d
     Console.WriteLine(o.ToString())
     Console.WriteLine(d.DescribeVia(d))
 }", "e2e-override-tostring");
@@ -1319,7 +1319,7 @@ public class Box
         return _v
     }
 
-    public override function Equals(other: any): bool
+    public override function Equals(other: object): bool
     {
         // v1 引用同一性演示 override 生效（null/is/as 随后续里程碑引入）
         return System.Object.ReferenceEquals(other, this)
@@ -1330,7 +1330,7 @@ function Main(): i32
 {
     var b = new Box(9)
     if b.GetHashCode() != 9 return 1
-    var o: any = b
+    var o: object = b
     if o.GetHashCode() != 9 return 2
     if !o.Equals(b) return 3
     return 0
@@ -2999,19 +2999,19 @@ public class Point
 
 function Main()
 {
-    var a: any = 0
-    var b: any = 0
+    var a: object = 0
+    var b: object = 0
     Console.WriteLine(a == b)
     Console.WriteLine(a != b)
     a = ""x""
     b = ""x""
     Console.WriteLine(a == b)
-    var n: any = null
+    var n: object = null
     Console.WriteLine(n == null)
     Console.WriteLine(a == n)
     var p1 = new Point(1)
-    var r1: any = p1
-    var r2: any = p1
+    var r1: object = p1
+    var r2: object = p1
     Console.WriteLine(r1 == r2)
 }", "m5c-anyeq-il");
 

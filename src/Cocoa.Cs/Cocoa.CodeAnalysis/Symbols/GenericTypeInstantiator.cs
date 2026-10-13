@@ -200,7 +200,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             [TypeSymbol.Boolean] = "@bool",
             [TypeSymbol.Char] = "@char",
             [TypeSymbol.String] = "@string",
-            [TypeSymbol.Any] = "@any",
+            [TypeSymbol.Any] = "@object",
             [TypeSymbol.Void] = "@void",
             [TypeSymbol.Null] = "@null",
             [TypeSymbol.Int128] = "@i128",

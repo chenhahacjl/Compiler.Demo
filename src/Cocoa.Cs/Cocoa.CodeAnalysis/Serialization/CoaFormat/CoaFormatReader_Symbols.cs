@@ -167,10 +167,11 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
         private void ReadSystemType()
         {
             // 6e-M19 M2-c：内建单例按全名映射（成员面已由 Ensure 内建注入）。
+            // 6f：对象根全名即 System.Object（符号名 object）；保留全名与互操作全名两读法。
             var fullName = _tokens.ExpectString();
             var singleton = fullName switch
             {
-                "System.Object" => NamedTypeSymbol.SystemObject,
+                "System.Object" or "object" => NamedTypeSymbol.SystemObject,
                 "System.Type" => NamedTypeSymbol.SystemType,
                 _ => throw new InvalidDataException($"Unknown builtin system class '{fullName}'"),
             };

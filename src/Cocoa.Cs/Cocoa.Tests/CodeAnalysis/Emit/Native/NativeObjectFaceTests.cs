@@ -75,7 +75,7 @@ function Main(): i32
             // any 接收者装箱表示：值类型 box 后走 Object 面（ToString 输出盒类型名），与三后端一致
             var source = @"using System
 
-function Pick(): any
+function Pick(): object
 {
     return 5
 }

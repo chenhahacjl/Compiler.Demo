@@ -39,7 +39,7 @@ namespace Cocoa.Tests.CodeAnalysis
         {
             var source =
                 "function Main(): i32\n{\n" +
-                "    let o: any = 5\n" +
+                "    let o: object = 5\n" +
                 "    let back: i32 = (i32)o\n" +
                 "    return back\n" +
                 "}\n";
@@ -52,9 +52,9 @@ namespace Cocoa.Tests.CodeAnalysis
         {
             var source =
                 "function Main(): i32\n{\n" +
-                "    let a: any = 3.14\n" +
-                "    let b: any = \"hi\"\n" +
-                "    let c: any = true\n" +
+                "    let a: object = 3.14\n" +
+                "    let b: object = \"hi\"\n" +
+                "    let c: object = true\n" +
                 "    let da: f64 = (f64)a\n" +
                 "    let sb: string = (string)b\n" +
                 "    let cb: bool = (bool)c\n" +
@@ -73,9 +73,9 @@ namespace Cocoa.Tests.CodeAnalysis
         {
             var source =
                 "function Main(): i32\n{\n" +
-                "    let a: any = 5\n" +
-                "    let b: any = \"hi\"\n" +
-                "    let c: any = 3.5\n" +
+                "    let a: object = 5\n" +
+                "    let b: object = \"hi\"\n" +
+                "    let c: object = 3.5\n" +
                 "    var n = 0\n" +
                 "    if a is i32 { n = n + 1 }\n" +
                 "    if !(a is string) { n = n + 1 }\n" +
@@ -93,9 +93,9 @@ namespace Cocoa.Tests.CodeAnalysis
         {
             var source =
                 "function Main(): i32\n{\n" +
-                "    let a: any = 5\n" +
-                "    let b: any = \"hi\"\n" +
-                "    let c: any = 3.5\n" +
+                "    let a: object = 5\n" +
+                "    let b: object = \"hi\"\n" +
+                "    let c: object = 3.5\n" +
                 "    let ai = a as i32\n" +
                 "    let bs = b as string\n" +
                 "    let cd = c as f64\n" +
@@ -112,10 +112,10 @@ namespace Cocoa.Tests.CodeAnalysis
         public void Object_As_Return_And_Param()
         {
             var source =
-                "function Wrap(v: i32): any\n{\n    return v\n}\n\n" +
-                "function Unwrap(o: any): i32\n{\n    return (i32)o\n}\n\n" +
+                "function Wrap(v: i32): object\n{\n    return v\n}\n\n" +
+                "function Unwrap(o: object): i32\n{\n    return (i32)o\n}\n\n" +
                 "function Main(): i32\n{\n" +
-                "    let o: any = Wrap(42)\n" +
+                "    let o: object = Wrap(42)\n" +
                 "    return Unwrap(o)\n" +
                 "}\n";
             var value = Run(source, out _);
@@ -127,27 +127,27 @@ namespace Cocoa.Tests.CodeAnalysis
         [Theory]
         [InlineData(
             "function Main(): i32\n{\n" +
-            "    let a: any = 5\n" +
-            "    let b: any = \"hi\"\n" +
-            "    let c: any = 3.5\n" +
+            "    let a: object = 5\n" +
+            "    let b: object = \"hi\"\n" +
+            "    let c: object = 3.5\n" +
             "    if a is i32 && b is string && c is f64 { return (i32)a }\n" +
             "    return 0\n" +
             "}\n", 5)]
         [InlineData(
             "function Main(): i32\n{\n" +
-            "    let a: any = 5\n" +
+            "    let a: object = 5\n" +
             "    if a is string { return 1 }\n" +
             "    return 0\n" +
             "}\n", 0)]
         [InlineData(
             "function Main(): i32\n{\n" +
-            "    let b: any = \"hi\"\n" +
+            "    let b: object = \"hi\"\n" +
             "    if b is string { return 1 }\n" +
             "    return 0\n" +
             "}\n", 1)]
         [InlineData(
             "function Main(): i32\n{\n" +
-            "    let o: any = 7\n" +
+            "    let o: object = 7\n" +
             "    return (i32)o\n" +
             "}\n", 7)]
         public void Il_BoxingAndIsAs_Match(string source, int expectedExit)
@@ -171,25 +171,25 @@ namespace Cocoa.Tests.CodeAnalysis
         [Theory]
         [InlineData(
             "function Main(): i32\n{\n" +
-            "    let a: any = 5\n" +
-            "    let b: any = \"hi\"\n" +
+            "    let a: object = 5\n" +
+            "    let b: object = \"hi\"\n" +
             "    if a is i32 { return (i32)a }\n" +
             "    return 0\n" +
             "}\n", 5)]
         [InlineData(
             "function Main(): i32\n{\n" +
-            "    let a: any = 5\n" +
+            "    let a: object = 5\n" +
             "    if a is string { return 1 }\n" +
             "    return 0\n" +
             "}\n", 0)]
         [InlineData(
             "function Main(): i32\n{\n" +
-            "    let o: any = 7\n" +
+            "    let o: object = 7\n" +
             "    return (i32)o\n" +
             "}\n", 7)]
         [InlineData(
             "function Main(): i32\n{\n" +
-            "    let c: any = 3.5\n" +
+            "    let c: object = 3.5\n" +
             "    if c is f64 { return 1 }\n" +
             "    return 0\n" +
             "}\n", 1)]

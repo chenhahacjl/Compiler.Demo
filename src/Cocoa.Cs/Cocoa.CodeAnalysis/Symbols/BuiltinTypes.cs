@@ -7,10 +7,10 @@ namespace Cocoa.CodeAnalysis.Symbols
     /// </summary>
     public static class BuiltinTypes
     {
-        /// <summary>内建类型名（any/bool/char/string/void 共享 + Cocoa 简写词汇）；未命中返回 null。</summary>
+        /// <summary>内建类型名（object/bool/char/string/void 共享 + Cocoa 简写词汇）；未命中返回 null。</summary>
         public static TypeSymbol? Lookup(string name) => name switch
         {
-            "any" => TypeSymbol.Any,
+            "object" => TypeSymbol.Any,
             "bool" => TypeSymbol.Boolean,
             "char" => TypeSymbol.Char,
             "string" => TypeSymbol.String,

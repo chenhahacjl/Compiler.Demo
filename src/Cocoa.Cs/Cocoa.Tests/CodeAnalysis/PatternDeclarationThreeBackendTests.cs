@@ -24,7 +24,7 @@ namespace Cocoa.Tests.CodeAnalysis
 
 function Main(): i32
 {
-    var box: any = 42
+    var box: object = 42
     if box is i32 n
     {
         Console.WriteLine(n)
@@ -44,7 +44,7 @@ function Main(): i32
         Console.WriteLine(""bad"")
     }
 
-    var neg: any = ""x""
+    var neg: object = ""x""
     if neg is f64 d
     {
         Console.WriteLine(d)
@@ -204,7 +204,7 @@ function Main(): i32
                 : @"using System
 function Main(): i32
 {
-    var box: any = 42
+    var box: object = 42
     if box is i32 n
     {
         Console.WriteLine(n)

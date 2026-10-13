@@ -70,7 +70,7 @@ public static class CocoaCompletionProvider
     private static readonly string[] BuiltinTypeNames =
     {
         "int", "long", "short", "byte", "sbyte", "uint", "ulong", "float", "double",
-        "bool", "char", "string", "object", "any", "nint", "nuint", "i32", "i64",
+        "bool", "char", "string", "object", "nint", "nuint", "i32", "i64",
         "decimal", "f16",
     };
 

@@ -153,13 +153,13 @@ EmitTryStatement(node):                    # MirToLir.Statements.cs 新 case
 **BuiltinFunctions.cs** 新增 7 个 kind + spec（`TypeSymbol.Any` 参数已有先例 ConsoleSyscall）：
 
 ```csharp
-MonitorEnter    (obj: any): void
-MonitorExit     (obj: any): void
-MonitorTryEnter (obj: any, ms: i32): bool      # 无超时重载由 facade 层传 -1
-MonitorIsEntered(obj: any): bool
-MonitorWait     (obj: any, ms: i32): bool
-MonitorPulse    (obj: any): void
-MonitorPulseAll (obj: any): void
+MonitorEnter    (obj: object): void
+MonitorExit     (obj: object): void
+MonitorTryEnter (obj: object, ms: i32): bool      # 无超时重载由 facade 层传 -1
+MonitorIsEntered(obj: object): bool
+MonitorWait     (obj: object, ms: i32): bool
+MonitorPulse    (obj: object): void
+MonitorPulseAll (obj: object): void
 ```
 
 - BuiltinKind 枚举（:10-75）+ BuiltinSpec（:89-125）+ FunctionSymbol 字段（:130-207）+ GetByKind case（:224-266）

@@ -11,7 +11,7 @@ namespace Cocoa.CodeAnalysis.Symbols
     public class NamedTypeSymbol : TypeSymbol
     {
         /// <summary>System.Object 别名（6e-M19 M2-a 遗留）：与 <see cref="TypeSymbol.Any"/> 同一符号。
-        /// Cocoa 语言层无 `object` 关键字，本字段仅供内部 BCL 互操作/序列化按全名回指对象根使用。</summary>
+        /// 语言层对象根关键字为 `object`；本字段供内部 BCL 互操作/序列化按全名回指对象根使用。</summary>
         public static NamedTypeSymbol SystemObject => TypeSymbol.Any;
 
         /// <summary>System.Type 内建单例（6e-M19 M2-a）：GetType() 的返回类型。</summary>

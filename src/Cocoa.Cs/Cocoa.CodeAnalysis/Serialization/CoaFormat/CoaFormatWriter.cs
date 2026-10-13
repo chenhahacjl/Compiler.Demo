@@ -459,11 +459,12 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
             _output.End();
         }
 
-        /// <summary>6e-M19 M2-c：内建单例（System.Object/System.Type）按全名序列化，读侧映射回单例。</summary>
+        /// <summary>6e-M19 M2-c：内建单例（System.Object/System.Type）按全名序列化，读侧映射回单例。
+        /// 6f：对象根符号名 object，但 .coa 内统一写 .NET 全名 System.Object（读侧同时兼容两者）。</summary>
         internal void EmitBuiltinSystemClass(NamedTypeSymbol classType)
         {
             _output.Open("systype");
-            _output.Field(classType.FullName);
+            _output.Field(classType.SpecialType == SpecialType.System_Object ? "System.Object" : classType.FullName);
             _output.End();
         }
 

@@ -2517,16 +2517,38 @@ public class Point
         [Fact]
         public void ObjectModel_BareObjectSpellings_AreUndefined()
         {
-            // 统一后语言层无 object/Object 关键字：
-            // 1) 变量类型位置（LookupType）直接 undefined type
-            var varCode = @"public class Point
+            // 6f 改名后：object 是对象根关键字（合法）；Object/any 不是内建类型名。
+            // 1) 变量类型位置 object 合法（对象根）；Object 与 any 报 undefined type
+            var varObject = @"public class Point
 {
     private field _o: object
 }";
-            Assert.NotEmpty(GetDiagnostics(varCode).Where(d => d.IsError));
+            Assert.Empty(GetDiagnostics(varObject));
 
-            // 2) 基类位置无效类型静默忽略 → 默认对象根 any（无诊断，BaseType = any）
-            foreach (var baseName in new[] { "object", "Object" })
+            foreach (var badName in new[] { "Object", "any" })
+            {
+                var varCode = $@"
+public class Point
+{{
+    private field _o: {badName}
+}}";
+                Assert.NotEmpty(GetDiagnostics(varCode).Where(d => d.IsError));
+            }
+
+            // 2) 基类位置：object 合法（BaseType = object）；Object/any 无效类型静默忽略 → 默认对象根 object（无诊断）
+            var objectBase = @"
+public class Point extends object
+{
+    public function Get(): i32
+    {
+        return 1
+    }
+}";
+            var objectComp = Compilation.Create(SyntaxTree.Parse(objectBase));
+            Assert.Empty(GetDiagnostics(objectBase));
+            Assert.Same(TypeSymbol.Any, objectComp.GlobalScope.Classes.Single(c => c.Name == "Point").BaseType);
+
+            foreach (var baseName in new[] { "Object", "any" })
             {
                 var code = $@"
 public class Point extends {baseName}
@@ -2541,17 +2563,6 @@ public class Point extends {baseName}
                 Assert.Empty(GetDiagnostics(code));
                 Assert.Same(TypeSymbol.Any, compilation.GlobalScope.Classes.Single(c => c.Name == "Point").BaseType);
             }
-
-            // any 仍是合法的对象根（extends 裸名 any → 隐式对象根）
-            var anyCode = @"
-public class Point extends any
-{
-    public function Get(): i32
-    {
-        return 1
-    }
-}";
-            Assert.Empty(GetDiagnostics(anyCode));
         }
 
         [Fact]
@@ -2617,7 +2628,7 @@ public class Point
         return _x * 31
     }
 
-    public override function Equals(other: any): bool
+    public override function Equals(other: object): bool
     {
         // v1 以引用同一性演示 override 生效（null/as 随后续里程碑引入）
         return System.Object.ReferenceEquals(other, this)
@@ -2654,11 +2665,11 @@ public class Point
         [Fact]
         public void ObjectModel_Override_WrongParameterCount_Reports()
         {
-            // Equals(other: any) 参数个数不符 → 签名不匹配诊断
+            // Equals(other: object) 参数个数不符 → 签名不匹配诊断
             var code = @"
 public class Point
 {
-    public override function Equals(a: any, b: any): bool
+    public override function Equals(a: object, b: object): bool
     {
         return false
     }
@@ -2674,7 +2685,7 @@ public class Point
             var code = @"
 public class Point
 {
-    public override function GetType(): any
+    public override function GetType(): object
     {
         return this
     }
@@ -2716,7 +2727,7 @@ function Main(): i32
             var code = @"
 public class Holder
 {
-    private field _o: any
+    private field _o: object
 }";
             Assert.Empty(GetDiagnostics(code));
         }
@@ -2790,7 +2801,7 @@ function Main(): i32
     if !(p == q) return 1
     if p != q return 2
     var d = new Point3D()
-    var o: any = d
+    var o: object = d
     if !(o == d) return 3
     if o != p return 4
     return 0

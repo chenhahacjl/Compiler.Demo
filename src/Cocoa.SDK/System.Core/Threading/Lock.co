@@ -8,7 +8,7 @@ namespace System.Threading
     [Facade("System.Threading.Lock")]
     public sealed class Lock
     {
-        private field _owner: any = new any()
+        private field _owner: object = new object()
 
         public constructor()
         {
