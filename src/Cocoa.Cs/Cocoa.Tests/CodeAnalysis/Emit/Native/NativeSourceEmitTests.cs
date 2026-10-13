@@ -980,7 +980,7 @@ function Main()
             var compilation = Compilation.Create(syntaxTree);
             var diagnostics = compilation.EmitNative("test", GetExePath("src-array-jagged", target), platform);
 
-            Assert.Contains(diagnostics, d => d.Message == "Cannot convert type 'int[]' to 'int'.");
+            Assert.Contains(diagnostics, d => d.Message == "Cannot convert type 'i32[]' to 'i32'.");
         }
 
         [Theory]

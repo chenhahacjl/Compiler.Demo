@@ -840,19 +840,9 @@ _localCount = 0
             return CanonicalType(TypeOfIdentifier(node))
         }
 
-        /// <summary>Cocoa 简写词汇 → C# 风格规范名（对齐 TypeSymbol 常量构造名）。</summary>
+        /// <summary>Cocoa 简写词汇规范名（物理名即简写，恒等直通）。</summary>
         private function CanonicalType(name: string): string
         {
-            if name == "i8" { return "sbyte" }
-            if name == "u8" { return "byte" }
-            if name == "i16" { return "short" }
-            if name == "u16" { return "ushort" }
-            if name == "i32" { return "int" }
-            if name == "u32" { return "uint" }
-            if name == "i64" { return "long" }
-            if name == "u64" { return "ulong" }
-            if name == "f32" { return "float" }
-            if name == "f64" { return "double" }
             return name
         }
 

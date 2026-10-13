@@ -79,12 +79,12 @@ function Main(): i32
 
             var getX = model.Methods.Single(m => m.FullName == "Point.GetX");
             Assert.Equal("Point", getX.OwnerType);
-            Assert.Equal("int", getX.ReturnType);
+            Assert.Equal("i32", getX.ReturnType);
             Assert.True(getX.Line > 0);
             Assert.False(getX.IsStatic);
 
             var field = model.Fields.Single(f => f.Name == "x");
-            Assert.Equal("int", field.Type);
+            Assert.Equal("i32", field.Type);
             Assert.Equal("Point", field.OwnerType);
         }
 

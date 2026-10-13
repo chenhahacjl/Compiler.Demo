@@ -50,7 +50,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         [Fact]
         public void Co_Parameter_Plain_StaysUnmodified()
         {
-            var tree = SyntaxTree.Parse("function Add(a: int, b: int): int { return a + b }");
+            var tree = SyntaxTree.Parse("function Add(a: i32, b: i32): i32 { return a + b }");
             Assert.Empty(tree.Diagnostics.Where(d => d.IsError));
 
             var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(((CompilationUnitSyntax)tree.Root).Members));

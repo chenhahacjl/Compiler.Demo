@@ -1023,18 +1023,18 @@ namespace Cocoa.CodeGen.Native
 
             switch (type.Name)
             {
-                case "int": return "System.Int32";
-                case "long": return "System.Int64";
-                case "double": return "System.Double";
+                case "i32": return "System.Int32";
+                case "i64": return "System.Int64";
+                case "f64": return "System.Double";
                 case "bool": return "System.Boolean";
                 case "char": return "System.Char";
-                case "byte": return "System.Byte";
-                case "sbyte": return "System.SByte";
-                case "short": return "System.Int16";
-                case "ushort": return "System.UInt16";
-                case "uint": return "System.UInt32";
-                case "ulong": return "System.UInt64";
-                case "float": return "System.Single";
+                case "u8": return "System.Byte";
+                case "i8": return "System.SByte";
+                case "i16": return "System.Int16";
+                case "u16": return "System.UInt16";
+                case "u32": return "System.UInt32";
+                case "u64": return "System.UInt64";
+                case "f32": return "System.Single";
                 case "string": return "System.String";
             }
 

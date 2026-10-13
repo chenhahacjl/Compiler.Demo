@@ -18,16 +18,16 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>6e-M19 M5-a：null 字面量类型——只存在于字面量瞬间，绑定期即转换到目标引用型（类/接口/string/数组/object）。</summary>
         public static readonly TypeSymbol Null = new TypeSymbol("null");
         public static readonly TypeSymbol Boolean = new NamedTypeSymbol("bool", "", Visibility.Public, null) { SpecialType = SpecialType.System_Boolean, TypeKind = TypeKind.Struct };
-        public static readonly TypeSymbol Int8 = new NamedTypeSymbol("sbyte", "", Visibility.Public, null) { SpecialType = SpecialType.System_Int8, TypeKind = TypeKind.Struct };
-        public static readonly TypeSymbol Int16 = new NamedTypeSymbol("short", "", Visibility.Public, null) { SpecialType = SpecialType.System_Int16, TypeKind = TypeKind.Struct };
-        public static readonly TypeSymbol Int32 = new NamedTypeSymbol("int", "", Visibility.Public, null) { SpecialType = SpecialType.System_Int32, TypeKind = TypeKind.Struct };
-        public static readonly TypeSymbol Int64 = new NamedTypeSymbol("long", "", Visibility.Public, null) { SpecialType = SpecialType.System_Int64, TypeKind = TypeKind.Struct };
-        public static readonly TypeSymbol UInt16 = new NamedTypeSymbol("ushort", "", Visibility.Public, null) { SpecialType = SpecialType.System_UInt16, TypeKind = TypeKind.Struct };
-        public static readonly TypeSymbol UInt32 = new NamedTypeSymbol("uint", "", Visibility.Public, null) { SpecialType = SpecialType.System_UInt32, TypeKind = TypeKind.Struct };
-        public static readonly TypeSymbol UInt64 = new NamedTypeSymbol("ulong", "", Visibility.Public, null) { SpecialType = SpecialType.System_UInt64, TypeKind = TypeKind.Struct };
-        public static readonly TypeSymbol UInt8 = new NamedTypeSymbol("byte", "", Visibility.Public, null) { SpecialType = SpecialType.System_UInt8, TypeKind = TypeKind.Struct };
-        public static readonly TypeSymbol Double = new NamedTypeSymbol("double", "", Visibility.Public, null) { SpecialType = SpecialType.System_Double, TypeKind = TypeKind.Struct };
-        public static readonly TypeSymbol Float = new NamedTypeSymbol("float", "", Visibility.Public, null) { SpecialType = SpecialType.System_Single, TypeKind = TypeKind.Struct };
+        public static readonly TypeSymbol Int8 = new NamedTypeSymbol("i8", "", Visibility.Public, null) { SpecialType = SpecialType.System_Int8, TypeKind = TypeKind.Struct };
+        public static readonly TypeSymbol Int16 = new NamedTypeSymbol("i16", "", Visibility.Public, null) { SpecialType = SpecialType.System_Int16, TypeKind = TypeKind.Struct };
+        public static readonly TypeSymbol Int32 = new NamedTypeSymbol("i32", "", Visibility.Public, null) { SpecialType = SpecialType.System_Int32, TypeKind = TypeKind.Struct };
+        public static readonly TypeSymbol Int64 = new NamedTypeSymbol("i64", "", Visibility.Public, null) { SpecialType = SpecialType.System_Int64, TypeKind = TypeKind.Struct };
+        public static readonly TypeSymbol UInt16 = new NamedTypeSymbol("u16", "", Visibility.Public, null) { SpecialType = SpecialType.System_UInt16, TypeKind = TypeKind.Struct };
+        public static readonly TypeSymbol UInt32 = new NamedTypeSymbol("u32", "", Visibility.Public, null) { SpecialType = SpecialType.System_UInt32, TypeKind = TypeKind.Struct };
+        public static readonly TypeSymbol UInt64 = new NamedTypeSymbol("u64", "", Visibility.Public, null) { SpecialType = SpecialType.System_UInt64, TypeKind = TypeKind.Struct };
+        public static readonly TypeSymbol UInt8 = new NamedTypeSymbol("u8", "", Visibility.Public, null) { SpecialType = SpecialType.System_UInt8, TypeKind = TypeKind.Struct };
+        public static readonly TypeSymbol Double = new NamedTypeSymbol("f64", "", Visibility.Public, null) { SpecialType = SpecialType.System_Double, TypeKind = TypeKind.Struct };
+        public static readonly TypeSymbol Float = new NamedTypeSymbol("f32", "", Visibility.Public, null) { SpecialType = SpecialType.System_Single, TypeKind = TypeKind.Struct };
         public static readonly TypeSymbol Char = new NamedTypeSymbol("char", "", Visibility.Public, null) { SpecialType = SpecialType.System_Char, TypeKind = TypeKind.Struct };
         public static readonly TypeSymbol String = new NamedTypeSymbol("string", "", Visibility.Public, null) { SpecialType = SpecialType.System_String, TypeKind = TypeKind.Class };
         public static readonly TypeSymbol Void = new TypeSymbol("void");

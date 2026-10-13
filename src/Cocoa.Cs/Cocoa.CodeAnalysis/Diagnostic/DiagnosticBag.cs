@@ -208,7 +208,7 @@ namespace Cocoa.CodeAnalysis
 
         public void ReportByteConstantOutOfRange(TextLocation location, int value)
         {
-            var message = $"Constant value '{value}' is out of range for 'byte' (0-255). Use an explicit cast.";
+            var message = $"Constant value '{value}' is out of range for 'u8' (0-255). Use an explicit cast.";
             ReportError(location, message);
         }
 

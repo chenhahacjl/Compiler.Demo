@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Syntax;
 using Xunit;
@@ -83,7 +83,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         [Fact]
         public void ImplicitConversion_Parses()
         {
-            var function = ParseSingleFunction("public static function implicit operator int(v: Point): int { return 0 }");
+            var function = ParseSingleFunction("public static function implicit operator int(v: Point): i32 { return 0 }");
 
             Assert.True(function.IsOperatorDeclaration);
             Assert.True(function.IsImplicitConversion);
@@ -91,13 +91,13 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             Assert.True(function.IsConversionOperator);
             Assert.Null(function.OperatorToken);
             Assert.Single(function.Parameters);
-            Assert.Equal("int", function.Type!.Identifier.Text);
+            Assert.Equal("i32", function.Type!.Identifier.Text);
         }
 
         [Fact]
         public void ExplicitConversion_Parses()
         {
-            var function = ParseSingleFunction("public static function explicit operator string(v: int): string { return \"\" }");
+            var function = ParseSingleFunction("public static function explicit operator string(v: i32): string { return \"\" }");
 
             Assert.True(function.IsExplicitConversion);
             Assert.False(function.IsImplicitConversion);
@@ -107,7 +107,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         [Fact]
         public void ConversionOperator_QualifiedTargetType_Parses()
         {
-            var function = ParseSingleFunction("public static function implicit operator Foo.Bar(v: int): void { }");
+            var function = ParseSingleFunction("public static function implicit operator Foo.Bar(v: i32): void { }");
 
             Assert.True(function.IsImplicitConversion);
         }
@@ -127,7 +127,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         [Fact]
         public void RegularFunction_NotOperatorDeclaration()
         {
-            var function = ParseSingleFunction("function Add(a: int, b: int): int { return a }");
+            var function = ParseSingleFunction("function Add(a: i32, b: i32): i32 { return a }");
 
             Assert.False(function.IsOperatorDeclaration);
             Assert.False(function.IsConversionOperator);
@@ -138,7 +138,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         public void OperatorKeyword_NotUsableAsPlainIdentifier()
         {
             // `operator` 成为关键字后不能再当普通函数名
-            var tree = SyntaxTree.Parse("function operator(a: int): int { return a }");
+            var tree = SyntaxTree.Parse("function operator(a: i32): i32 { return a }");
 
             Assert.NotEmpty(tree.Diagnostics.Where(d => d.IsError));
         }

@@ -590,21 +590,21 @@ Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0),
 
                 switch (to.Name)
                 {
-                    case "byte":
+                    case "u8":
                     {
                         var r = AllocateRegister(4);
                         Add(instructions, new LirInstruction(LirOpCode.And, r, LirOperand.Reg(source), LirOperand.Constant(0xFF)));
                         result = r;
                         break;
                     }
-                    case "ushort":
+                    case "u16":
                     {
                         var r = AllocateRegister(4);
                         Add(instructions, new LirInstruction(LirOpCode.And, r, LirOperand.Reg(source), LirOperand.Constant(0xFFFF)));
                         result = r;
                         break;
                     }
-                    case "sbyte":
+                    case "i8":
                     {
                         var shifted = AllocateRegister(4);
                         var r = AllocateRegister(4);
@@ -615,7 +615,7 @@ Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0),
                         result = r;
                         break;
                     }
-                    default: // short
+                    default: // i16
                     {
                         var shifted = AllocateRegister(4);
                         var r = AllocateRegister(4);
@@ -732,21 +732,21 @@ Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0),
 
                     switch (to.Name)
                     {
-                        case "byte":
+                        case "u8":
                         {
                             var r = AllocateRegister(4);
                             Add(instructions, new LirInstruction(LirOpCode.And, r, LirOperand.Reg(truncated), LirOperand.Constant(0xFF)));
                             result = r;
                             break;
                         }
-                        case "ushort":
+                        case "u16":
                         {
                             var r = AllocateRegister(4);
                             Add(instructions, new LirInstruction(LirOpCode.And, r, LirOperand.Reg(truncated), LirOperand.Constant(0xFFFF)));
                             result = r;
                             break;
                         }
-                        case "sbyte":
+                        case "i8":
                         {
                             var shifted = AllocateRegister(4);
                             var r = AllocateRegister(4);
@@ -757,7 +757,7 @@ Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0),
                             result = r;
                             break;
                         }
-                        default: // short
+                        default: // i16
                         {
                             var shifted = AllocateRegister(4);
                             var r = AllocateRegister(4);

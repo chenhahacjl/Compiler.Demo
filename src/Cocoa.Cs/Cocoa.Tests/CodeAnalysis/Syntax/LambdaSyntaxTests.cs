@@ -18,7 +18,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         [Fact]
         public void Co_FunctionType_ParsesInParameter()
         {
-            var tree = SyntaxTree.Parse("function apply(f: (i64) -> i64, x: int): int { return x }");
+            var tree = SyntaxTree.Parse("function apply(f: (i64) -> i64, x: i32): i32 { return x }");
             Assert.Empty(tree.Diagnostics.Where(d => d.IsError));
 
             var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(((CompilationUnitSyntax)tree.Root).Members));
@@ -83,7 +83,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         [Fact]
         public void Co_Lambda_BlockBody_Parses()
         {
-            var tree = SyntaxTree.Parse("let square = (x: int) => { return x * x }");
+            var tree = SyntaxTree.Parse("let square = (x: i32) => { return x * x }");
 
             var lambda = FindLambda<LambdaExpressionSyntax>(tree.Root)!;
             Assert.Equal(SyntaxKind.BlockStatement, lambda.Body.Kind);

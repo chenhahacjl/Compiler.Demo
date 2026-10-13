@@ -16,16 +16,16 @@ namespace Cocoa.CodeAnalysis.Symbols
         public static function Any(): TypeSymbol { return TypeSymbol.CreateSpecial("object") }
         public static function Null(): TypeSymbol { return TypeSymbol.CreateSpecial("null") }
         public static function Boolean(): TypeSymbol { return TypeSymbol.CreateSpecial("bool") }
-        public static function Int8(): TypeSymbol { return TypeSymbol.CreateSpecial("sbyte") }
-        public static function Int16(): TypeSymbol { return TypeSymbol.CreateSpecial("short") }
-        public static function Int32(): TypeSymbol { return TypeSymbol.CreateSpecial("int") }
-        public static function Int64(): TypeSymbol { return TypeSymbol.CreateSpecial("long") }
-        public static function UInt8(): TypeSymbol { return TypeSymbol.CreateSpecial("byte") }
-        public static function UInt16(): TypeSymbol { return TypeSymbol.CreateSpecial("ushort") }
-        public static function UInt32(): TypeSymbol { return TypeSymbol.CreateSpecial("uint") }
-        public static function UInt64(): TypeSymbol { return TypeSymbol.CreateSpecial("ulong") }
-        public static function Float(): TypeSymbol { return TypeSymbol.CreateSpecial("float") }
-        public static function Double(): TypeSymbol { return TypeSymbol.CreateSpecial("double") }
+        public static function Int8(): TypeSymbol { return TypeSymbol.CreateSpecial("i8") }
+        public static function Int16(): TypeSymbol { return TypeSymbol.CreateSpecial("i16") }
+        public static function Int32(): TypeSymbol { return TypeSymbol.CreateSpecial("i32") }
+        public static function Int64(): TypeSymbol { return TypeSymbol.CreateSpecial("i64") }
+        public static function UInt8(): TypeSymbol { return TypeSymbol.CreateSpecial("u8") }
+        public static function UInt16(): TypeSymbol { return TypeSymbol.CreateSpecial("u16") }
+        public static function UInt32(): TypeSymbol { return TypeSymbol.CreateSpecial("u32") }
+        public static function UInt64(): TypeSymbol { return TypeSymbol.CreateSpecial("u64") }
+        public static function Float(): TypeSymbol { return TypeSymbol.CreateSpecial("f32") }
+        public static function Double(): TypeSymbol { return TypeSymbol.CreateSpecial("f64") }
         public static function Char(): TypeSymbol { return TypeSymbol.CreateSpecial("char") }
         public static function String(): TypeSymbol { return TypeSymbol.CreateSpecial("string") }
         public static function Void(): TypeSymbol { return TypeSymbol.CreateSpecial("void") }

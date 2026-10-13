@@ -489,7 +489,7 @@ function Main(): i32
             ";
 
             var diagnostics = @"
-                foreach 只能遍历数组、字符串或实现 IEnumerable<T> 的集合，不能遍历 'int'。
+                foreach 只能遍历数组、字符串或实现 IEnumerable<T> 的集合，不能遍历 'i32'。
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -656,7 +656,7 @@ function Main(): i32
             ";
 
             var diagnostics = @"
-                Cannot convert type 'int' to 'bool'.
+                Cannot convert type 'i32' to 'bool'.
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -784,7 +784,7 @@ function Main(): i32
             ";
 
             var diagnostics = @"
-                Cannot index a value of type 'int'. Indexing requires an array type.
+                Cannot index a value of type 'i32'. Indexing requires an array type.
             ";
 
             AssertDiagnostics(text, diagnostics, false);
@@ -799,7 +799,7 @@ function Main(): i32
             ";
 
             var diagnostics = @"
-                Type 'int' doesn't have a member named 'Length' (only array/string 'Length' is supported).
+                Type 'i32' doesn't have a member named 'Length' (only array/string 'Length' is supported).
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -886,7 +886,7 @@ function Main(): i32
             ";
 
             var diagnostics = @"
-                Type 'int' doesn't have a member named 'substring' (only array/string 'Length' is supported).
+                Type 'i32' doesn't have a member named 'substring' (only array/string 'Length' is supported).
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -901,7 +901,7 @@ function Main(): i32
             ";
 
             var diagnostics = @"
-                Cannot convert type 'string' to 'int'.
+                Cannot convert type 'string' to 'i32'.
             ";
 
             AssertDiagnostics(text, diagnostics, false);
@@ -1033,7 +1033,7 @@ function Main()
 }";
 
             var diagnostics = @"
-                Cannot convert type 'int' to 'Color'. An explicit conversion exists (are you missing a cast?)
+                Cannot convert type 'i32' to 'Color'. An explicit conversion exists (are you missing a cast?)
             ";
 
             AssertDiagnostics(text, diagnostics, false);
@@ -1171,7 +1171,7 @@ function Main()
             ";
 
             var diagnostics = @"
-                Cannot convert type 'int' to 'bool'.
+                Cannot convert type 'i32' to 'bool'.
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -1189,7 +1189,7 @@ function Main()
             ";
 
             var diagnostics = @"
-                Cannot convert type 'int' to 'bool'.
+                Cannot convert type 'i32' to 'bool'.
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -1208,7 +1208,7 @@ function Main()
             ";
 
             var diagnostics = @"
-                Cannot convert type 'int' to 'bool'.
+                Cannot convert type 'i32' to 'bool'.
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -1226,7 +1226,7 @@ function Main()
             ";
 
             var diagnostics = @"
-                Cannot convert type 'bool' to 'int'.
+                Cannot convert type 'bool' to 'i32'.
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -1244,7 +1244,7 @@ function Main()
             ";
 
             var diagnostics = @"
-                Cannot convert type 'bool' to 'int'.
+                Cannot convert type 'bool' to 'i32'.
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -1355,7 +1355,7 @@ function Main()
             ";
 
             var diagnostics = @"
-                Variable 'int' is read-only and cannot be assigned to.
+                Variable 'i32' is read-only and cannot be assigned to.
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -1403,7 +1403,7 @@ function Main()
             var text = @"10 [*] false";
 
             var diagnostics = @"
-                Binary operator '*' is not defined for types 'int' and 'bool'.
+                Binary operator '*' is not defined for types 'i32' and 'bool'.
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -1416,7 +1416,7 @@ function Main()
                          x [+=] false";
 
             var diagnostics = @"
-                Binary operator '+=' is not defined for types 'int' and 'bool'.
+                Binary operator '+=' is not defined for types 'i32' and 'bool'.
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -1452,7 +1452,7 @@ function Main()
             var text = @"10 [??] false";
 
             var diagnostics = @"
-                Binary operator '??' is not defined for types 'int' and 'bool'.
+                Binary operator '??' is not defined for types 'i32' and 'bool'.
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -1465,7 +1465,7 @@ function Main()
                          x [??=] false";
 
             var diagnostics = @"
-                Binary operator '??=' is not defined for types 'int' and 'bool'.
+                Binary operator '??=' is not defined for types 'i32' and 'bool'.
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -1526,7 +1526,7 @@ function Main()
             ";
 
             var diagnostics = @"
-                Cannot convert type 'bool' to 'int'.
+                Cannot convert type 'bool' to 'i32'.
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -1606,7 +1606,7 @@ function Main()
             ";
 
             var diagnostics = @"
-                An expression of type 'int' is expected.
+                An expression of type 'i32' is expected.
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -1786,7 +1786,7 @@ function Main()
             ";
 
             var diagnostics = @"
-                Cannot convert type 'string' to 'int'. An explicit conversion exists (are you missing a cast?)
+                Cannot convert type 'string' to 'i32'. An explicit conversion exists (are you missing a cast?)
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -1920,7 +1920,7 @@ var z = x [+] y
             ";
 
             var diagnostics = @"
-                Binary operator '+' is not defined for types 'long' and 'ulong'.
+                Binary operator '+' is not defined for types 'i64' and 'u64'.
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -1944,7 +1944,7 @@ var z = x [+] y
             var text = @"var x: u16 = [70000]";
 
             var diagnostics = @"
-                Constant value '70000' is out of range for 'ushort'. Use an explicit cast.
+                Constant value '70000' is out of range for 'u16'. Use an explicit cast.
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -2004,7 +2004,7 @@ var z = x [+] y
             ";
 
             var diagnostics = @"
-                Constant value '300' is out of range for 'byte' (0-255). Use an explicit cast.
+                Constant value '300' is out of range for 'u8' (0-255). Use an explicit cast.
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -2033,7 +2033,7 @@ var z = x [+] y
             ";
 
             var diagnostics = @"
-                Constant value '300' is out of range for 'byte' (0-255). Use an explicit cast.
+                Constant value '300' is out of range for 'u8' (0-255). Use an explicit cast.
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -2765,7 +2765,7 @@ return s + ""x"" == ""x"" ? 0 : 6";
             var text = @"var n: i32 = [null]";
 
             AssertDiagnostics(text,
-                "Cannot convert type 'null' to 'int'.");
+                "Cannot convert type 'null' to 'i32'.");
         }
 
         [Fact]
@@ -2774,7 +2774,7 @@ return s + ""x"" == ""x"" ? 0 : 6";
             var text = @"var n: i32 = [(i32)null]";
 
             AssertDiagnostics(text,
-                "Cannot convert type 'null' to 'int'.", assertLocation: false);
+                "Cannot convert type 'null' to 'i32'.", assertLocation: false);
         }
 
         [Fact]
@@ -2783,7 +2783,7 @@ return s + ""x"" == ""x"" ? 0 : 6";
             var text = @"return [null + 1]";
 
             AssertDiagnostics(text,
-                "Binary operator '+' is not defined for types 'null' and 'int'.", assertLocation: false);
+                "Binary operator '+' is not defined for types 'null' and 'i32'.", assertLocation: false);
         }
 
         // ── 6e-M19 M5-b：is / as 运算符 ──────────────────────────────────────
@@ -2850,7 +2850,7 @@ public class Animal { }
 return [n is String]";
 
             AssertDiagnostics(text,
-                "Operator 'is'/'as' requires a reference receiver (class or string), but got 'int'.", assertLocation: false);
+                "Operator 'is'/'as' requires a reference receiver (class or string), but got 'i32'.", assertLocation: false);
         }
 
         [Fact]

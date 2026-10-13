@@ -173,7 +173,7 @@ namespace Cocoa.Tests.Compiler
             var vec = program.Classes.Single(c => c.Name == "Vec");
             var op = vec.GetMethods("op_Implicit").Single();
             Assert.Equal(OperatorKind.ImplicitConversion, op.OperatorKind);
-            Assert.Equal("int", op.ReturnType.Name);
+            Assert.Equal("i32", op.ReturnType.Name);
             Assert.Equal(1, op.Parameters.Length);
             Assert.Equal("Vec", op.Parameters[0].Type.Name);
         }

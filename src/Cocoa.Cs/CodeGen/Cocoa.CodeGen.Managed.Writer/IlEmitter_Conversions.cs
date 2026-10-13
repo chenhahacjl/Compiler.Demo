@@ -107,32 +107,32 @@ namespace Cocoa.CodeGen.Managed.Writer
 
             switch (to.Name)
             {
-                case "sbyte":
+                case "i8":
                     il.Emit(IlOpCodeTable.Get("Conv_I1"));
                     return true;
-                case "byte":
+                case "u8":
                     il.Emit(IlOpCodeTable.Get("Conv_U1"));
                     return true;
-                case "short":
+                case "i16":
                     il.Emit(IlOpCodeTable.Get("Conv_I2"));
                     return true;
-                case "ushort":
+                case "u16":
                     il.Emit(IlOpCodeTable.Get("Conv_U2"));
                     return true;
-                case "int":
+                case "i32":
                     if (from == TypeSymbol.Int64)
                         il.Emit(IlOpCodeTable.Get("Conv_I4"));
                     else if (from == TypeSymbol.UInt64)
                         il.Emit(IlOpCodeTable.Get("Conv_U4"));
                     else if (from.IsFloat)
                         il.Emit(IlOpCodeTable.Get("Conv_I4"));
-                    // ≤32 位整数/char/enum → int：栈同宽，无需指令
+                    // ≤32 位整数/char/enum → i32：栈同宽，无需指令
                     return true;
-                case "uint":
+                case "u32":
                     if (from == TypeSymbol.Int64 || from == TypeSymbol.UInt64 || from.IsFloat)
                         il.Emit(IlOpCodeTable.Get("Conv_U4"));
                     return true;
-                case "long":
+                case "i64":
                     if (from != TypeSymbol.Int64 && from != TypeSymbol.UInt64)
                     {
                         if (from == TypeSymbol.UInt32 || from == TypeSymbol.UInt16 || from == TypeSymbol.UInt8)
@@ -147,7 +147,7 @@ namespace Cocoa.CodeGen.Managed.Writer
                     }
 
                     return true;
-                case "ulong":
+                case "u64":
                     if (from != TypeSymbol.Int64 && from != TypeSymbol.UInt64)
                     {
                         if (from == TypeSymbol.Int8 || from == TypeSymbol.Int16 ||
@@ -169,7 +169,7 @@ namespace Cocoa.CodeGen.Managed.Writer
                     }
 
                     return true;
-                case "float":
+                case "f32":
                     if (from == TypeSymbol.Double)
                     {
                         il.Emit(IlOpCodeTable.Get("Conv_R4"));
@@ -189,7 +189,7 @@ namespace Cocoa.CodeGen.Managed.Writer
                     }
 
                     return true;
-                case "double":
+                case "f64":
                     if (from == TypeSymbol.Float)
                     {
                         il.Emit(IlOpCodeTable.Get("Conv_R8"));

@@ -267,18 +267,18 @@ namespace Cocoa.CodeGen.Interpreter
             var actual = value.GetType();
             switch (targetType.Name)
             {
-                case "int" when actual == typeof(int):
-                case "double" when actual == typeof(double):
+                case "i32" when actual == typeof(int):
+                case "f64" when actual == typeof(double):
                 case "bool" when actual == typeof(bool):
                 case "char" when actual == typeof(char):
-                case "byte" when actual == typeof(byte):
+                case "u8" when actual == typeof(byte):
                 case "string" when actual == typeof(string):
                     return value;
-                case "int": return Convert.ToInt32(value);
-                case "double": return Convert.ToDouble(value);
+                case "i32": return Convert.ToInt32(value);
+                case "f64": return Convert.ToDouble(value);
                 case "bool": return Convert.ToBoolean(value);
                 case "char": return Convert.ToChar(value);
-                case "byte": return Convert.ToByte(value);
+                case "u8": return Convert.ToByte(value);
                 default:
                     throw new ArgumentException($"函数 '{functionName}' 实参 {index}：无法将 .NET 类型 '{actual}' 编组为 Cocoa 类型 '{targetType.Name}'");
             }
