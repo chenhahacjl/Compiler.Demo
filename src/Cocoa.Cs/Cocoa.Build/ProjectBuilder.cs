@@ -155,7 +155,9 @@ namespace Cocoa.Build
                             ? (ushort)2 /* PeSubsystem.WindowsGui */
                             : (ushort)3 /* PeSubsystem.WindowsCui */;
 
-                    diagnostics = compilation.EmitNative(project.Name, outputFile, platform, subsystem);
+                        // 版本信息（.coproj 元数据 → PE .rsrc）：规避杀软误报 + 产物右键属性可见
+                        var versionInfo = BuildPeVersionInfo(project);
+                        diagnostics = compilation.EmitNative(project.Name, outputFile, platform, subsystem, versionInfo);
                 }
                 else
                 {
@@ -261,6 +263,23 @@ namespace Cocoa.Build
             messageWriter.WriteLine(outputFile);
 
             return new ProjectBuildResult(success: true, upToDate: false);
+        }
+
+        /// <summary>从项目元数据构建 PE 版本信息（native 产物 .rsrc）；文件版本缺省取 1.0。</summary>
+        private static PeVersionInfo BuildPeVersionInfo(CocoaProjectFile project)
+        {
+            var metadata = project.Metadata;
+            var fileVersion = string.IsNullOrWhiteSpace(metadata.FileVersion) ? "1.0" : metadata.FileVersion;
+            var assemblyVersion = string.IsNullOrWhiteSpace(metadata.AssemblyVersion) ? fileVersion : metadata.AssemblyVersion;
+
+            return new PeVersionInfo(
+                metadata.Company ?? "",
+                metadata.Product ?? project.AssemblyName,
+                metadata.Description ?? "",
+                fileVersion,
+                assemblyVersion,
+                project.AssemblyName,
+                metadata.Copyright ?? "");
         }
 
         /// <summary>

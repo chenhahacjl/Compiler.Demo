@@ -22,7 +22,7 @@ namespace Cocoa.CodeGen.Native
     /// </summary>
     internal sealed class NativeCodeEmitter
     {
-        public static void Emit(BoundProgram program, string moduleName, string outputPath, TargetPlatform platform, ushort subsystem)
+        public static void Emit(BoundProgram program, string moduleName, string outputPath, TargetPlatform platform, ushort subsystem, Cocoa.CodeAnalysis.PeVersionInfo? versionInfo = null)
         {
             IAssembler a = platform.Arch == Architecture.X64
                 ? new X64Assembler()
@@ -50,7 +50,9 @@ namespace Cocoa.CodeGen.Native
             // M4a：数据段绝对地址槽 → .reloc（ASLR 下加载器同步修正 vtable 函数/名字指针）
             // M4：.cocoa 元数据节默认强制内嵌（设计稿：体积接受；无 strip 选项）
             var cocoaMetadata = new CocoaMetadataBuilder(emit.Symbols).Build();
-            PeFileWriter.Write(outputPath, code, a.GetData(), entryPointRva, result.Imports, platform.Arch, a.DataAbsoluteFixups, subsystem, cocoaMetadata, CollectExports(emit.Symbols, result, a));
+            // 版本资源（VS_VERSIONINFO → .rsrc）——规避杀软对无资源裸 PE 的启发式误报
+            var resources = versionInfo != null ? Cocoa.CodeGen.PE.VersionResourceBuilder.Build(versionInfo) : null;
+            PeFileWriter.Write(outputPath, code, a.GetData(), entryPointRva, result.Imports, platform.Arch, a.DataAbsoluteFixups, subsystem, cocoaMetadata, CollectExports(emit.Symbols, result, a), resources);
         }
 
         /// <summary>C-3：收集 `[Export]` 顶层函数 → (导出名, RVA)。RVA = TextRva + 函数入口标签相对 code 偏移。</summary>

@@ -10,6 +10,15 @@
 
 ## 未发布（2026-10-14）
 
+### 编译器：native 产物 PE 版本资源（.rsrc VS_VERSIONINFO）+ 资源读取器修正
+- **版本资源嵌入**：`.coproj` 元数据（Company/Product/FileVersion/AssemblyVersion/Description/Copyright）→ `PeVersionInfo` → `VersionResourceBuilder` 生成 `VS_VERSIONINFO` 资源 blob（VS_FIXEDFILEINFO + StringFileInfo/040904b0/StringTable，含 CompanyName/FileDescription/FileVersion/InternalName/OriginalFilename/ProductName/ProductVersion/LegalCopyright），经 `PeFileWriter` 布局 `.rsrc` 节并注册 Resource 数据目录（index 2）。
+- **PE 注入链**：`Compilation.EmitNative` 增可选 `versionInfo` 参数（向后兼容），`NativeBackend` → `NativeCodeEmitter` → `PeFileWriter` 穿透；`ProjectBuilder.BuildPeVersionInfo` 从项目元数据构造。
+- **资源目录读取器修正**：`PeResourceTable` 目录项偏移对齐 PE 规范（相对 `IMAGE_DIRECTORY_ENTRY_RESOURCE` 根，先前误用相对父目录）；叶子层判定放宽。
+- 收益：native 产物携带合法版本信息，规避杀软（360 等）对无资源裸 PE 的启发式误报；IDA 不再将之手写布局误判为加壳压缩。
+- 验证：新增 `VersionResource_Embedded_VsVersionInfo` 测试（x64/x86 双平台：Resource 目录树展开 + VS_VERSION_INFO 键 + 版本字符串 + e2e 运行）；全量回归 3291 通过。
+
+---
+
 ### IDE：VS/dotnet 风格发布布局（编译器 `./Compiler` + SDK `./SDK`）
 - **独立发布布局**：`tools/publish-ide.ps1` 把 `Cocoa.IDE` 发布为三件套——宿主 exe + `Compiler\`（编译器程序集 `Cocoa.*.dll`，排除 `Cocoa.IDE.dll`）+ `SDK\`（系统库 `System*.coa`），对齐 dotnet `host + sdk/` 与 VS 安装目录形态。
 - **编译器运行时加载**：`Program.cs` 注册 `AssemblyLoadContext.Default.Resolving` 钩子，启动时从 `./Compiler` 按名加载 `Cocoa.*` 编译器程序集；目录缺失（开发期）回退默认 BaseDirectory 解析——不破坏 `dotnet build` 直接运行。

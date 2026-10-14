@@ -6,5 +6,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Cocoa.Targeting\Cocoa.Targeting.csproj" />
+    <ProjectReference Include="..\..\Cocoa.CodeAnalysis\Cocoa.CodeAnalysis.csproj" />
   </ItemGroup>
 </Project>

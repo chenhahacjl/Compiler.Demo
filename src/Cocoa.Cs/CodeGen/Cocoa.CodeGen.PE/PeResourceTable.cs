@@ -5,7 +5,8 @@ using System.Text;
 
 namespace Cocoa.CodeGen.PE
 {
-    /// <summary>资源表读取器：展开三层目录树（类型 → 名称 → 语言）。</summary>
+    /// <summary>资源表读取器：展开三层目录树（类型 → 名称 → 语言）。
+    /// 目录项偏移遵循 PE 规范——相对 <c>IMAGE_DIRECTORY_ENTRY_RESOURCE</c>（资源节根 RVA）。</summary>
     public static class PeResourceTable
     {
         public static PeResourceNode? Read(ReadOnlySpan<byte> image, Func<uint, uint> rvaToOffset, uint rootRva)
@@ -19,7 +20,7 @@ namespace Cocoa.CodeGen.PE
             return ReadDirectory(image, rvaToOffset, rootRva, rootOffset, 0);
         }
 
-        private static PeResourceNode ReadDirectory(ReadOnlySpan<byte> image, Func<uint, uint> rvaToOffset, uint directoryRva, uint directoryOffset, int depth)
+        private static PeResourceNode ReadDirectory(ReadOnlySpan<byte> image, Func<uint, uint> rvaToOffset, uint rootRva, uint directoryOffset, int depth)
         {
             var children = new List<PeResourceNode>();
 
@@ -45,7 +46,8 @@ namespace Cocoa.CodeGen.PE
 
                 if (entry.NameIsStringFlag)
                 {
-                    var stringOffset = rvaToOffset(directoryRva + entry.NameStringOffset);
+                    // 名称字符串偏移同样相对资源节根
+                    var stringOffset = rvaToOffset(rootRva + entry.NameStringOffset);
                     var resourceString = ImageResourceDirectoryString.Read(image.Slice((int)stringOffset));
                     name = resourceString.ValueString;
                 }
@@ -59,15 +61,16 @@ namespace Cocoa.CodeGen.PE
 
                 if (entry.DataIsDirectoryFlag)
                 {
-                    var subDirectoryRva = directoryRva + entry.OffsetToDataValue;
-                    childNodes = ReadDirectory(image, rvaToOffset, subDirectoryRva, rvaToOffset(subDirectoryRva), depth + 1).Children;
+                    var subDirectoryRva = rootRva + entry.OffsetToDataValue;
+                    childNodes = ReadDirectory(image, rvaToOffset, rootRva, rvaToOffset(subDirectoryRva), depth + 1).Children;
                 }
-                else if (depth == 2)
+                else if (depth >= 2)
                 {
-                    var dataOffset = rvaToOffset(directoryRva + entry.OffsetToDataValue);
-                    if (dataOffset + ImageResourceDataEntry.SizeOfEntry <= (uint)image.Length)
+                    // 叶子：entry.OffsetToData 指向 IMAGE_RESOURCE_DATA_ENTRY（同样相对资源节根）
+                    var dataEntryOffset = rvaToOffset(rootRva + entry.OffsetToDataValue);
+                    if (dataEntryOffset + ImageResourceDataEntry.SizeOfEntry <= (uint)image.Length)
                     {
-                        var data = ImageResourceDataEntry.Read(image.Slice((int)dataOffset, ImageResourceDataEntry.SizeOfEntry));
+                        var data = ImageResourceDataEntry.Read(image.Slice((int)dataEntryOffset, ImageResourceDataEntry.SizeOfEntry));
                         leaf = new PeResourceLeaf(data.OffsetToData, data.Size);
                     }
                 }

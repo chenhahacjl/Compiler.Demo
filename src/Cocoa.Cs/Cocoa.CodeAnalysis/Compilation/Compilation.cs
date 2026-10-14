@@ -46,7 +46,7 @@ namespace Cocoa.CodeAnalysis
         private static volatile Func<BoundProgram, string, string[], string, IlTarget, bool, ImmutableDictionary<object, string>?, bool, ImmutableArray<Diagnostic>>? _managedEmitter;
 
         /// <summary>native 后端发射委托（由 <c>Cocoa.CodeGen.Native</c> 经 <see cref="RegisterNativeEmitter"/> 注入，含后端专属校验）。幂等同上。</summary>
-        private static volatile Func<Compilation, string, string, TargetPlatform, ushort, ImmutableArray<Diagnostic>>? _nativeEmitter;
+        private static volatile Func<Compilation, string, string, TargetPlatform, ushort, PeVersionInfo?, ImmutableArray<Diagnostic>>? _nativeEmitter;
 
         /// <summary>注册 managed（dotnet/IL）后端发射实现（后端/宿主启动时调用；Core 自身不引用后端）。幂等。</summary>
         public static void RegisterManagedEmitter(Func<BoundProgram, string, string[], string, IlTarget, bool, ImmutableDictionary<object, string>?, bool, ImmutableArray<Diagnostic>> emitter)
@@ -55,7 +55,7 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>注册 native 后端发射实现（后端/宿主启动时调用；Core 自身不引用后端）。幂等。</summary>
-        public static void RegisterNativeEmitter(Func<Compilation, string, string, TargetPlatform, ushort, ImmutableArray<Diagnostic>> emitter)
+        public static void RegisterNativeEmitter(Func<Compilation, string, string, TargetPlatform, ushort, PeVersionInfo?, ImmutableArray<Diagnostic>> emitter)
         {
             Interlocked.CompareExchange(ref _nativeEmitter, emitter, null);
         }
@@ -476,8 +476,9 @@ namespace Cocoa.CodeAnalysis
         /// <summary>
         /// 把程序直接生成为原生可执行文件，不依赖 .NET 运行时。
         /// 实现经 <see cref="RegisterNativeEmitter"/> 注入的 native 后端（Core 自身不引用后端）。
+        /// <paramref name="versionInfo"/> 非空时在产物内嵌 .rsrc 版本信息（VS_VERSIONINFO）——规避杀软误报。
         /// </summary>
-        public ImmutableArray<Diagnostic> EmitNative(string moduleName, string outputPath, TargetPlatform platform = default, ushort subsystem = 3 /* PeSubsystem.WindowsCui */)
+        public ImmutableArray<Diagnostic> EmitNative(string moduleName, string outputPath, TargetPlatform platform = default, ushort subsystem = 3 /* PeSubsystem.WindowsCui */, PeVersionInfo? versionInfo = null)
         {
             if (_nativeEmitter == null)
             {
@@ -497,7 +498,7 @@ namespace Cocoa.CodeAnalysis
                 return yieldDiagnostics;
             }
 
-            return _nativeEmitter(this, moduleName, outputPath, platform, subsystem);
+            return _nativeEmitter(this, moduleName, outputPath, platform, subsystem, versionInfo);
         }
 
         /// <summary>C-2：含 `yield return`/`yield break` 的函数仅在解释器后端可执行（迭代器状态机未实现）。

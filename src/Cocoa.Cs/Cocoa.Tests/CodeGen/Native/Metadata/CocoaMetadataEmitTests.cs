@@ -183,5 +183,106 @@ function Main(): i32
             var run = Run(exePath);
             Assert.Equal(0, run.ExitCode);
         }
+
+        /// <summary>从 PE 头数据目录（index 2 = Resource）取 .rsrc 根 RVA。</summary>
+        private static uint GetResourceRva(byte[] image)
+        {
+            var peOffset = BitConverter.ToInt32(image, 0x3C);
+            var magic = BitConverter.ToUInt16(image, peOffset + 24);
+            // 数据目录起点：PE32+ 可选头 @ pe+24，标准字段 24B + Windows 特化 88B + 目录
+            var dirBase = peOffset + 24 + (magic == 0x20B ? 24 + 88 : 28 + 68);
+            return BitConverter.ToUInt32(image, dirBase + 2 * 8);
+        }
+
+        /// <summary>RVA → 文件偏移（依节表映射）。</summary>
+        private static int RvaToOffset(byte[] image, uint rva)
+        {
+            var peOffset = BitConverter.ToInt32(image, 0x3C);
+            var numSections = BitConverter.ToInt16(image, peOffset + 6);
+            var optSize = BitConverter.ToInt16(image, peOffset + 20);
+            var sectionTable = peOffset + 24 + optSize;
+            for (var i = 0; i < numSections; i++)
+            {
+                var offset = sectionTable + i * ImageSectionHeader.Size;
+                var va = BitConverter.ToUInt32(image, offset + 12);
+                var rawPtr = BitConverter.ToUInt32(image, offset + 20);
+                var rawSize = BitConverter.ToUInt32(image, offset + 16);
+                if (rva >= va && rva < va + rawSize)
+                {
+                    return (int)(rawPtr + (rva - va));
+                }
+            }
+
+            return -1;
+        }
+
+        [Theory]
+        [MemberData(nameof(GetPlatforms))]
+        public void VersionResource_Embedded_VsVersionInfo(object platform)
+        {
+            // 版本资源（VS_VERSIONINFO → .rsrc RT_VERSION）：native 产物须携带合法资源目录 +
+            // VS_FIXEDFILEINFO + StringFileInfo（CompanyName/ProductName/FileVersion 等），
+            // 规避杀软对无资源裸 PE 的启发式误报。
+            var target = (TargetPlatform)platform;
+            var syntaxTree = SyntaxTree.Parse("function Main(): i32 { return 0 }");
+            var compilation = Compilation.Create(syntaxTree);
+            var exePath = GetExePath("cocoa-version", target);
+            var diags = compilation.EmitNative("cocoa-version", exePath, target, 3, new PeVersionInfo(
+                CompanyName: "Acme Corp",
+                ProductName: "Version Probe",
+                FileDescription: "version resource probe",
+                FileVersion: "1.2.3.4",
+                ProductVersion: "2.0",
+                AssemblyName: "cocoa-version",
+                Copyright: "Copyright (c) 2026"));
+            Assert.Empty(diags);
+
+            var image = File.ReadAllBytes(exePath);
+
+            // 资源目录存在
+            var rsrcRva = GetResourceRva(image);
+            Assert.True(rsrcRva > 0, "Resource 数据目录缺失");
+
+            // PeResourceTable 展开三层树：RT_VERSION(16) → id=1 → lang
+            var root = PeResourceTable.Read(image, rva => (uint)RvaToOffset(image, rva), rsrcRva);
+            Assert.NotNull(root);
+
+            var versionType = root!.Children.FirstOrDefault(c => c.Id == 16); // RT_VERSION
+            Assert.NotNull(versionType);
+            var idNode = versionType!.Children.FirstOrDefault(c => c.Id == 1);
+            Assert.NotNull(idNode);
+            var langLeaf = idNode!.Children.FirstOrDefault();
+            Assert.NotNull(langLeaf);
+            Assert.NotNull(langLeaf!.Leaf);
+
+            // 数据区含 VS_VERSION_INFO 键与版本字符串
+            var dataOffset = RvaToOffset(image, langLeaf.Leaf!.Rva);
+            Assert.True(dataOffset >= 0, "版本数据 RVA 映射失败");
+            var blob = image.AsSpan(dataOffset, (int)langLeaf.Leaf.Size);
+            // 键 "VS_VERSION_INFO"（UTF-16LE）紧跟 6 字节头（wLength/wValueLength/wType）
+            var keyUtf16 = Encoding.Unicode.GetBytes("VS_VERSION_INFO");
+            var found = IndexOf(blob, keyUtf16);
+            Assert.True(found >= 0, "VS_VERSION_INFO 键缺失");
+
+            // StringFileInfo 含 CompanyName 键值（BuildVersionInfo 写入）
+            var company = Encoding.Unicode.GetBytes("Acme Corp");
+            Assert.True(IndexOf(blob, company) >= 0, "CompanyName 值缺失");
+            var fileVer = Encoding.Unicode.GetBytes("1.2.3.4");
+            Assert.True(IndexOf(blob, fileVer) >= 0, "FileVersion 值缺失");
+
+            // e2e：带资源节的产物仍正常运行
+            var run = Run(exePath);
+            Assert.Equal(0, run.ExitCode);
+        }
+
+        private static int IndexOf(ReadOnlySpan<byte> haystack, ReadOnlySpan<byte> needle)
+        {
+            for (var i = 0; i + needle.Length <= haystack.Length; i++)
+            {
+                if (haystack.Slice(i, needle.Length).SequenceEqual(needle)) return i;
+            }
+
+            return -1;
+        }
     }
 }
