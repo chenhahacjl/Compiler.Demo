@@ -58,9 +58,8 @@ namespace Cocoa.CodeAnalysis.Serialization
                 return builder.ToImmutable();
             }
 
-            var directory = !string.IsNullOrEmpty(env) && Directory.Exists(env)
-                ? env
-                : FindLibsStore(AppContext.BaseDirectory) ?? AppContext.BaseDirectory;
+            var directory = ResolveStdlibDirectory(env);
+            if (directory == null) return builder.ToImmutable();
 
             var files = Directory.EnumerateFiles(directory, "System*.coa")
                                  .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
@@ -90,6 +89,35 @@ namespace Cocoa.CodeAnalysis.Serialization
             }
 
             return builder.ToImmutable();
+        }
+
+        /// <summary>
+        /// 解析系统库目录，优先级（对齐 VS/dotnet SDK 布局，随 IDE 一起分发）：
+        /// ① <c>COCOA_SDK</c> env（目录）→ ② <c>./SDK</c>（exe 相对）→ ③ <c>COCOA_STDLIB</c> env（目录）
+        /// → ④ 祖先 <c>libs/</c>（仓库开发期兜底）→ ⑤ <c>AppContext.BaseDirectory</c>。
+        /// 无可用目录返回 null（stdlib 不可用但不崩，绑定走空表）。
+        /// </summary>
+        private static string? ResolveStdlibDirectory(string? cocoaStdlibEnv)
+        {
+            var sdkEnv = Environment.GetEnvironmentVariable("COCOA_SDK");
+            if (!string.IsNullOrEmpty(sdkEnv) && Directory.Exists(sdkEnv))
+            {
+                return sdkEnv;
+            }
+
+            // ./SDK 相对 exe：随 IDE/CLI 一起发布的独立 SDK 目录
+            var sdkRelative = Path.Combine(AppContext.BaseDirectory, "SDK");
+            if (Directory.Exists(sdkRelative))
+            {
+                return sdkRelative;
+            }
+
+            if (!string.IsNullOrEmpty(cocoaStdlibEnv) && Directory.Exists(cocoaStdlibEnv))
+            {
+                return cocoaStdlibEnv;
+            }
+
+            return FindLibsStore(AppContext.BaseDirectory) ?? AppContext.BaseDirectory;
         }
 
         private static bool TryLoad(string path, ImmutableArray<CoaProgram> external, out CoaProgram program)

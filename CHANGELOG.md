@@ -10,6 +10,14 @@
 
 ## 未发布（2026-10-14）
 
+### IDE：VS/dotnet 风格发布布局（编译器 `./Compiler` + SDK `./SDK`）
+- **独立发布布局**：`tools/publish-ide.ps1` 把 `Cocoa.IDE` 发布为三件套——宿主 exe + `Compiler\`（编译器程序集 `Cocoa.*.dll`，排除 `Cocoa.IDE.dll`）+ `SDK\`（系统库 `System*.coa`），对齐 dotnet `host + sdk/` 与 VS 安装目录形态。
+- **编译器运行时加载**：`Program.cs` 注册 `AssemblyLoadContext.Default.Resolving` 钩子，启动时从 `./Compiler` 按名加载 `Cocoa.*` 编译器程序集；目录缺失（开发期）回退默认 BaseDirectory 解析——不破坏 `dotnet build` 直接运行。
+- **SDK 目录发现**：`SystemLibrary.ResolveStdlibDirectory` 解析优先级 `COCOA_SDK` env → `./SDK`（exe 相对）→ `COCOA_STDLIB` env → 祖先 `libs/` → `AppContext.BaseDirectory`；`COCOA_STDLIB` 单文件形态与 `libs/` 兜底保持向后兼容。
+- 验证：发布脚本产出正确布局（host/Compiler/SDK），发布产物 `Cocoa.IDE.exe` 成功启动；新增 `Cod_SystemLibrary_Discovers_From_CocoaSdk` 测试（COCOA_SDK 优先于 COCOA_STDLIB）；编译器全量回归通过。
+
+---
+
 ### IDE：文档大纲面板 + 补全关键字补齐 + 语义服务对齐
 - **文档大纲面板**（VS 风格）：右侧栏改 TabControl「属性 / 大纲」。`DocumentOutlineProvider` 遍历语法树生成符号树（顶层函数/类/接口/枚举/命名空间 → 成员函数/属性/字段/事件/枚举值），随活动标签与内容实时刷新；单击条目跳转到声明行。纯语法树实现，与语义着色/补全同走编译器管线。
 - **补全关键字列表**与 `SyntaxFacts.GetKeywordKind` 全集对齐：补 `and`/`or`/`not`（逻辑模式）、`yield`、`with`、`init`/`required`/`file`/`global`（C# 批次）、`operator`/`implicit`/`explicit`（运算符重载）、`params`、`nameof`、`lock`、`checked`/`unchecked`、`typeof`/`sizeof`、`field`；`record` 为上下文标识符（非语法关键字）不加，与分类器一致。

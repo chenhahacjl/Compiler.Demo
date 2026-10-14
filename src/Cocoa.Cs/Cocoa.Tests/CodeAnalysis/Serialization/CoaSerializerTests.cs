@@ -811,6 +811,49 @@ function Main(): i32
         }
 
         [Fact]
+        public void Cod_SystemLibrary_Discovers_From_CocoaSdk()
+        {
+            // VS/dotnet 风格发布布局：SDK 放在 <exe>/SDK，经 COCOA_SDK env 或 ./SDK 相对发现。
+            // 本测试验证 COCOA_SDK env 指向目录时优先加载（优先级高于 COCOA_STDLIB）。
+            var baseDirectory = Path.GetDirectoryName(typeof(CoaSerializerTests).Assembly.Location)!;
+            if (!File.Exists(Path.Combine(baseDirectory, "System.Core.coa")))
+            {
+                return; // 核心库未部署时跳过（降级语义）
+            }
+
+            var dir = Path.Combine(Path.GetTempPath(), "cocoa-sdk-discovery", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            try
+            {
+                File.Copy(Path.Combine(baseDirectory, "System.Core.coa"), Path.Combine(dir, "System.Core.coa"));
+
+                var previousSdk = Environment.GetEnvironmentVariable("COCOA_SDK");
+                var previousStdlib = Environment.GetEnvironmentVariable("COCOA_STDLIB");
+                try
+                {
+                    // COCOA_SDK 指向目录：应优先于 COCOA_STDLIB（干扰值指向不存在目录）
+                    Environment.SetEnvironmentVariable("COCOA_SDK", dir);
+                    Environment.SetEnvironmentVariable("COCOA_STDLIB", Path.Combine(Path.GetTempPath(), "does-not-exist-sdk-probe"));
+                    SystemLibrary.Reset();
+                    var libraries = SystemLibrary.Load();
+
+                    Assert.NotEmpty(libraries);
+                    Assert.Contains(libraries, lib => lib.Classes.Any(c => c.Name == "Runtime"));
+                }
+                finally
+                {
+                    Environment.SetEnvironmentVariable("COCOA_SDK", previousSdk);
+                    Environment.SetEnvironmentVariable("COCOA_STDLIB", previousStdlib);
+                    SystemLibrary.Reset();
+                }
+            }
+            finally
+            {
+                Directory.Delete(dir, true);
+            }
+        }
+
+        [Fact]
         public void FacadeInstanceClass_RoundTrips_MemberFlags()
         {
             // 6b：facade 实例类（映射 BCL、体内不经 cod 执行）按符号序列化——属性访问器（acc 位）往返一致；
