@@ -4,6 +4,7 @@ using AvaloniaEdit.Document;
 using AvaloniaEdit.Editing;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Bound;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using CocoaUsing = Cocoa.CodeAnalysis.Syntax.UsingDirectiveSyntax;
@@ -88,15 +89,17 @@ public static class CocoaCompletionProvider
 
     private static readonly string[] StatementKeywords =
     {
-        "abstract", "as", "base", "break", "case", "catch", "cdecl", "class",
-        "const", "constructor", "continue", "default", "delegate", "do", "else",
-        "enum", "event", "extends", "extern", "facade", "false", "finally",
-        "for", "foreach", "function", "get", "if", "import", "in", "interface",
-        "internal", "is", "let", "namespace", "new", "null", "out", "override",
-        "partial", "private", "property", "protected", "public", "readonly",
-        "ref", "return", "sealed", "set", "static", "stdcall", "step", "struct",
-        "switch", "syscall", "this", "throw", "to", "true", "try", "using",
-        "var", "virtual", "when", "where", "while",
+        "abstract", "and", "as", "base", "break", "case", "catch", "cdecl", "checked",
+        "class", "const", "constructor", "continue", "default", "delegate", "do",
+        "else", "enum", "event", "explicit", "extends", "extern", "facade", "false",
+        "field", "file", "finally", "for", "foreach", "function", "get", "global",
+        "if", "implicit", "import", "in", "init", "interface", "internal", "is",
+        "let", "lock", "nameof", "namespace", "new", "not", "null", "operator", "or",
+        "out", "override", "params", "partial", "private", "property", "protected",
+        "public", "readonly", "ref", "required", "return", "sealed", "set", "sizeof",
+        "static", "stdcall", "step", "struct", "switch", "syscall", "this", "throw",
+        "to", "true", "try", "typeof", "unchecked", "using", "var", "virtual", "when",
+        "where", "while", "with", "yield",
     };
 
     private static readonly string[] ExpressionKeywords = { "true", "false", "null", "new" };
