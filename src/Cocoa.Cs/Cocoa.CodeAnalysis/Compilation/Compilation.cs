@@ -453,6 +453,14 @@ namespace Cocoa.CodeAnalysis
 
             // 6e-M22 C4-b：IL 后端已支持函数值（Func`N 委托映射），门禁移除；native 见 EmitNative
 
+            // C-2 yield 边界：迭代器状态机仅在解释器实现；IL/native 后端不支持含 yield 函数，
+            // 编译期明确诊断（避免发射器遇未知节点抛未处理异常）。
+            var yieldDiagnostics = CheckYieldBackendSupport(program);
+            if (yieldDiagnostics.Length > 0)
+            {
+                return diagnostics.Concat(yieldDiagnostics).ToImmutableArray();
+            }
+
             var ilReferences = references
                 .Where(r => !r.EndsWith(".coa", StringComparison.OrdinalIgnoreCase))
                 .ToArray();
@@ -476,7 +484,70 @@ namespace Cocoa.CodeAnalysis
                 return ImmutableArray.Create(Diagnostic.Error(ZeroLocation, "native 后端未注册（Cocoa.CodeGen.Native 未初始化）"));
             }
 
+            var program = GetProgram();
+            if (program.Diagnostics.HasErrors())
+            {
+                return program.Diagnostics;
+            }
+
+            // C-2 yield 边界（同 Emit）：IL/native 无迭代器状态机，明确诊断而非发射期异常。
+            var yieldDiagnostics = CheckYieldBackendSupport(program);
+            if (yieldDiagnostics.Length > 0)
+            {
+                return yieldDiagnostics;
+            }
+
             return _nativeEmitter(this, moduleName, outputPath, platform, subsystem);
+        }
+
+        /// <summary>C-2：含 `yield return`/`yield break` 的函数仅在解释器后端可执行（迭代器状态机未实现）。
+        /// IL/native 发射会遇未知节点抛异常——此处编译期报明确诊断，边界清晰不误导。</summary>
+        private ImmutableArray<Diagnostic> CheckYieldBackendSupport(BoundProgram program)
+        {
+            foreach (var kvp in program.Functions)
+            {
+                if (ContainsYield(kvp.Value))
+                {
+                    var location = kvp.Key.Syntax != null
+                        ? kvp.Key.Syntax.Location
+                        : ZeroLocation;
+                    return ImmutableArray.Create(Diagnostic.Error(location,
+                        $"yield 迭代器仅解释器后端支持（'{kvp.Key.Name}' 含 yield return/break）；IL/native 后端尚未实现状态机，请改用 Evaluate 执行。"));
+                }
+            }
+
+            return ImmutableArray<Diagnostic>.Empty;
+        }
+
+        private static bool ContainsYield(BoundStatement statement)
+        {
+            if (statement is BoundYieldReturnStatement || statement is BoundYieldBreakStatement)
+            {
+                return true;
+            }
+
+            if (statement is BoundBlockStatement block)
+            {
+                foreach (var s in block.Statements)
+                {
+                    if (ContainsYield(s))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            if (statement is BoundTryStatement tryStmt && tryStmt.TryBlock != null && ContainsYield(tryStmt.TryBlock))
+            {
+                return true;
+            }
+
+            if (statement is BoundCheckedStatement checkedStmt && checkedStmt.Body != null && ContainsYield(checkedStmt.Body))
+            {
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>

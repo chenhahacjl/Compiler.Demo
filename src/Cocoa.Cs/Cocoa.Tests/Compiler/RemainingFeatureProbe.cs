@@ -906,5 +906,35 @@ namespace Cocoa.Tests.Compiler
 
             throw new Exception($"RVA 0x{rva:X} 未命中任何节");
         }
+
+        /// <summary>
+        /// C-2 边界：yield 迭代器状态机仅解释器后端实现。IL/native 发射遇含 yield 函数时
+        /// 必须报明确编译诊断（而非发射器抛未处理异常）。本用例守两条路线的诊断。
+        /// </summary>
+        [Fact]
+        public void YieldStatement_IlAndNativeReportClearDiagnostic()
+        {
+            var source =
+                "function GetNums(): object {" + Nl +
+                "    yield return 1" + Nl +
+                "    yield break" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 { return 0 }" + Nl;
+
+            // IL 后端（Emit）：返回诊断，含 "yield" 说明
+            var ilCompilation = Compilation.Create(References, SyntaxTree.Parse(source));
+            var dir = Path.Combine(Path.GetTempPath(), "cocoa-remprobe", "yield-il-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            var ilPath = Path.Combine(dir, "y.dll");
+            var ilDiags = ilCompilation.Emit("y", References, ilPath, Cocoa.Targeting.IlTarget.Parse("net9.0"), emitLibrary: true);
+            Assert.Contains(ilDiags, d => d.IsError && d.Message.Contains("yield"));
+
+            // native 后端（EmitNative）：同样明确诊断
+            var nativeCompilation = Compilation.Create(References, SyntaxTree.Parse(source));
+            var nativePath = Path.Combine(dir, "y.exe");
+            var platform = Cocoa.Targeting.TargetPlatform.TryParse("windows-x64", out var p) ? p : throw new Exception("platform");
+            var nativeDiags = nativeCompilation.EmitNative("y", nativePath, platform);
+            Assert.Contains(nativeDiags, d => d.IsError && d.Message.Contains("yield"));
+        }
     }
 }
