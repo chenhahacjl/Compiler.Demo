@@ -871,6 +871,32 @@ namespace Cocoa.CodeGen.Interpreter
         /// <summary>类型符号 → 宿主 <see cref="System.Type"/>：按全名解析，解析不到回退 <see cref="object"/>。</summary>
         private static System.Type ClrTypeOf(Symbols.TypeSymbol type)
         {
+            // 基元：Cocoa 用物理名简写（i32/i64/f64...），非 CLR 类型名，按 SpecialType 映射对齐 IL 后端
+            // （IL 的 typeof(i32) → System.Int32 via IsInstTypeToken；此处须同一宿主类型）。
+            switch (type.SpecialType)
+            {
+                case Symbols.SpecialType.System_Object: return typeof(object);
+                case Symbols.SpecialType.System_String: return typeof(string);
+                case Symbols.SpecialType.System_Char: return typeof(char);
+                case Symbols.SpecialType.System_Boolean: return typeof(bool);
+                case Symbols.SpecialType.System_Int8: return typeof(sbyte);
+                case Symbols.SpecialType.System_UInt8: return typeof(byte);
+                case Symbols.SpecialType.System_Int16: return typeof(short);
+                case Symbols.SpecialType.System_UInt16: return typeof(ushort);
+                case Symbols.SpecialType.System_Int32: return typeof(int);
+                case Symbols.SpecialType.System_UInt32: return typeof(uint);
+                case Symbols.SpecialType.System_Int64: return typeof(long);
+                case Symbols.SpecialType.System_UInt64: return typeof(ulong);
+                case Symbols.SpecialType.System_Single: return typeof(float);
+                case Symbols.SpecialType.System_Double: return typeof(double);
+                case Symbols.SpecialType.System_Int128: return typeof(Int128);
+                case Symbols.SpecialType.System_UInt128: return typeof(UInt128);
+                case Symbols.SpecialType.System_IntPtr: return typeof(IntPtr);
+                case Symbols.SpecialType.System_UIntPtr: return typeof(UIntPtr);
+                case Symbols.SpecialType.System_Decimal: return typeof(decimal);
+                case Symbols.SpecialType.System_Half: return typeof(System.Half);
+            }
+
             if (type is Symbols.NamedTypeSymbol named && named.Namespace.Length > 0)
             {
                 var resolved = System.Type.GetType(named.FullName + ", System.Private.CoreLib")

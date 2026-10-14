@@ -62,6 +62,7 @@ new(BuiltinKind.TypeName, BuiltinBackend.All, null),
             // C-1 反射子集：native 无宿主类型表（Type 值即 vtable 记录指针，无反查 member 分类的运行时通道）
             new(BuiltinKind.TypeIsClass, BuiltinBackend.Evaluator | BuiltinBackend.Il, "native Type 值为 vtable 记录指针，无反查 member 分类的运行时通道"),
             new(BuiltinKind.TypeIsValueType, BuiltinBackend.Evaluator | BuiltinBackend.Il, "native Type 值为 vtable 记录指针，无反查 member 分类的运行时通道"),
+            new(BuiltinKind.TypeGetMethods, BuiltinBackend.Evaluator | BuiltinBackend.Il, "native Type 值为 vtable 记录指针，无反查成员列表的运行时通道"),
             new(BuiltinKind.Sha256Hash, BuiltinBackend.All, null),
             new(BuiltinKind.LaunchProcess, BuiltinBackend.All, null),
             new(BuiltinKind.CopyRange, BuiltinBackend.All, null),

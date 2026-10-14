@@ -688,6 +688,53 @@ namespace Cocoa.Tests.Compiler
 
             Assert.Equal(1, r);
         }
+
+        [Fact]
+        public void Reflection_GetMethods_IlChain()
+        {
+            // C-1 反射子集增量交付：Type.GetMethods() → string[]（名字投影）。
+            // typeof(i32) 的宿主 Int32 有大量方法——>10 即证明数组循环投影发射与
+            // MethodInfo/MemberInfo 成员引用（TypeRef 重解析 + MemberRef 签名登记）闭环。
+            var count = RunMain(
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var t = typeof(i32)" + Nl +
+                "    var ms = t.GetMethods()" + Nl +
+                "    if ms.Length > 10 { return ms.Length }" + Nl +
+                "    return 0" + Nl +
+                "}", "ReflectGetMethods");
+            Assert.True(count > 10, "期望 typeof(i32).GetMethods() 方法数 > 10，实际 " + count);
+        }
+
+        [Fact]
+        public void Reflection_GetMethods_Interpreter()
+        {
+            // 解释器后端：typeof(i32) 直接返回宿主 System.Int32，GetMethods 用 CLR 反射取名字
+            var syntaxTree = SyntaxTree.Parse(
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var t = typeof(i32)" + Nl +
+                "    var ms = t.GetMethods()" + Nl +
+                "    if ms.Length > 10 { return ms.Length }" + Nl +
+                "    return 0" + Nl +
+                "}");
+            var result = Compilation.Create("Main", References, syntaxTree).Evaluate(
+                new Dictionary<Cocoa.CodeAnalysis.Symbols.VariableSymbol, object>());
+            Assert.False(result.Diagnostics.HasErrors(), string.Join("; ", result.Diagnostics.Select(d => d.Message)));
+            var count = Assert.IsType<int>(result.Value);
+            Assert.True(count > 10, "期望 typeof(i32).GetMethods() 方法数 > 10，实际 " + count);
+        }
+
+        [Fact]
+        public void Reflection_GetMethods_NativeGapDeclared()
+        {
+            // native 无宿主类型表：Type 值为 vtable 记录指针，无反查成员列表的运行时通道。
+            // 覆盖登记须为 Evaluator|Il 且带缺口原因（否则 BuiltinCoverageTests 报警）。
+            var row = Cocoa.CodeAnalysis.Symbols.BuiltinCoverage.Get(Cocoa.CodeAnalysis.Symbols.BuiltinKind.TypeGetMethods);
+            Assert.NotNull(row);
+            Assert.False(row!.Backends.HasFlag(Cocoa.CodeAnalysis.Symbols.BuiltinBackend.Native));
+            Assert.True(row.Backends.HasFlag(Cocoa.CodeAnalysis.Symbols.BuiltinBackend.Evaluator));
+            Assert.True(row.Backends.HasFlag(Cocoa.CodeAnalysis.Symbols.BuiltinBackend.Il));
+            Assert.False(string.IsNullOrWhiteSpace(row.GapReason));
+        }
         // ------------------------------------------------------------------
         // 无语法证据的项（用最接近的 C# 形式试探；解析失败即证实该形态不被支持）
         // ------------------------------------------------------------------

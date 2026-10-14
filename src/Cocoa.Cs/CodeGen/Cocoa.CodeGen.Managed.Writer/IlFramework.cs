@@ -42,6 +42,9 @@ namespace Cocoa.CodeGen.Managed.Writer
             // C-1 反射子集：System.Type 反射面（IsClass/IsValueType 标量 getter，无重载歧义）
             TypeIsClass = RequireMethod("System.Type", "get_IsClass", Array.Empty<string>());
             TypeIsValueType = RequireMethod("System.Type", "get_IsValueType", Array.Empty<string>());
+            // C-1 反射子集：GetMethods() → MethodInfo[]（Bind 反射投影时用），MemberInfo.Name getter
+            TypeGetMethods = RequireMethod("System.Type", "GetMethods", new[] { "System.Reflection.BindingFlags" });
+            MemberInfoName = RequireMethod("System.Reflection.MemberInfo", "get_Name", Array.Empty<string>());
             // typeof(T) → ldtoken T; call Type::GetTypeFromHandle(RuntimeTypeHandle)
             TypeGetTypeFromHandle = RequireMethod("System.Type", "GetTypeFromHandle", new[] { "System.RuntimeTypeHandle" });
             StringLastIndexOfChar = RequireMethod("System.String", "LastIndexOf", new[] { "System.Char" });
@@ -130,6 +133,8 @@ namespace Cocoa.CodeGen.Managed.Writer
         // C-1 反射子集：System.Type 反射面
         public IlMethodRef TypeIsClass { get; }
         public IlMethodRef TypeIsValueType { get; }
+        public IlMethodRef TypeGetMethods { get; }
+        public IlMethodRef MemberInfoName { get; }
         public IlMethodRef ConsoleReadLine { get; }
         public IlMethodRef ConsoleWriteLine { get; }
         public IlMethodRef ConsoleWrite { get; }
@@ -201,7 +206,29 @@ namespace Cocoa.CodeGen.Managed.Writer
                 parameterTypes.Add(ResolveClassType(parameterType));
             }
 
+            // 签名编码 EncodeType 的 CodedIndexTypeDefOrRef 需要签名里出现的每个 Class TypeRef 都已入 TypeRef 表；
+            // 否则（声明/参数/返回类型仅出现在方法签名中）抛 KeyNotFoundException。
+            _metadata.RegisterTypeRef(resolved.DeclaringType);
+            RegisterSignatureTypeRef(returnType);
+            foreach (var parameterType in parameterTypes)
+            {
+                RegisterSignatureTypeRef(parameterType);
+            }
+
             return _metadata.DefineMethodRef(resolved.DeclaringType, resolved.Name, returnType, parameterTypes, resolved.IsStatic);
+        }
+
+        /// <summary>把签名编码会用到的 Class TypeRef（含数组元素）登记进 TypeRef 表。</summary>
+        private void RegisterSignatureTypeRef(IlType type)
+        {
+            if (type.Kind == IlTypeKind.Class && type.Reference != null)
+            {
+                _metadata.RegisterTypeRef(type.Reference);
+            }
+            else if (type.Kind == IlTypeKind.SzArray && type.ElementType is { Kind: IlTypeKind.Class } element && element.Reference != null)
+            {
+                _metadata.RegisterTypeRef(element.Reference);
+            }
         }
 
         /// <summary>外部字段动态解析（FindField + 注册 MemberRef）；未找到返回 null。</summary>
@@ -218,7 +245,9 @@ namespace Cocoa.CodeGen.Managed.Writer
             return _metadata.DefineFieldRef(resolved.DeclaringType, resolved.Name, fieldType);
         }
 
-        /// <summary>把签名中的 Class TypeRef 解析为带 scope 的注册引用（供签名编码使用）。</summary>
+        /// <summary>把签名中的 Class TypeRef 解析为带 scope 的注册引用（供签名编码使用）。
+        /// SzArray 元素同样重解析——否则数组元素（如 MethodInfo）保留 reader 的 null-scope TypeRef，
+        /// 写出时 ResolutionScope=0（当前模块），CLR 无法匹配宿主成员签名。</summary>
         private IlType ResolveClassType(IlType type)
         {
             if (type.Kind == IlTypeKind.Class)
@@ -228,6 +257,10 @@ namespace Cocoa.CodeGen.Managed.Writer
                 {
                     return IlType.Class(resolved, type.IsValueType);
                 }
+            }
+            else if (type.Kind == IlTypeKind.SzArray)
+            {
+                return IlType.SzArrayOf(ResolveClassType(type.ElementType!));
             }
 
             return type;

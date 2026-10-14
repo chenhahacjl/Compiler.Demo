@@ -79,5 +79,6 @@ namespace Cocoa.CodeAnalysis.Symbols
         // 仅 Evaluator/IL 后端（跑在 CLR 上可直接反射宿主类型）；native 无宿主类型表故为覆盖缺口。
         TypeIsClass,
         TypeIsValueType,
+        TypeGetMethods,
     }
 }

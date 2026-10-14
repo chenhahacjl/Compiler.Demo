@@ -606,7 +606,11 @@ namespace Cocoa.CodeGen.Managed.Writer
         private static int CodedIndexTypeDefOrRef(IlTypeRef typeRef, Dictionary<IlTypeRef, int> typeRefIndex)
         {
             // tag 2 位：TypeDef=0, TypeRef=1
-            var rowId = typeRefIndex[typeRef];
+            if (!typeRefIndex.TryGetValue(typeRef, out var rowId))
+            {
+                throw new KeyNotFoundException($"TypeRef '{typeRef.FullName}' not registered in TypeRef table.");
+            }
+
             return (rowId << 2) | 1;
         }
 

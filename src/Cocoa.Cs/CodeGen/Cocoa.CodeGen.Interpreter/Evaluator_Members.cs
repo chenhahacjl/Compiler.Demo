@@ -341,6 +341,19 @@ namespace Cocoa.CodeGen.Interpreter
 
                     return false;
                 }
+
+                case BuiltinKind.TypeGetMethods:
+                {
+                    if (receiver is System.Type clrTypeForMethods)
+                    {
+                        return clrTypeForMethods.GetMethods(
+                                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public
+                                | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+                            .Select(m => m.Name).ToArray();
+                    }
+
+                    return System.Array.Empty<string>();
+                }
                 default:
                     throw new Exception($"Unexpected builtin kind {kind}");
             }

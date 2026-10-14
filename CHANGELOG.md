@@ -8,6 +8,16 @@
 
 ---
 
+## 未发布（2026-10-14）
+
+### 语言特性：反射面子集补 `System.Type.GetMethods()` ✅
+- **`Type.GetMethods(): string[]`**——宿主反射面的方法名投影。解释器（CLR `Type.GetMethods(BindingFlags.Instance|Public|NonPublic|Static)`）与 IL（`callvirt GetMethods` + 名字循环投影到 `string[]`）两端闭环；native 无宿主类型表（Type 值为 vtable 记录指针）登记为覆盖缺口，`EvaluatorTypeInfo`（用户类）返回空数组。
+- **元数据签名登记修复**：`ResolveMethodRef` 对返回/参数类型补 `RegisterSignatureTypeRef`（含 SzArray 元素），`ResolveClassType` 递归重解析数组元素——否则数组元素（如 `MethodInfo`）保留 reader 的 null-scope TypeRef，写出 ResolutionScope=0（当前模块），CLR 无法匹配成员签名（`MissingMethodException`）。
+- **解释器 `typeof` 对齐**：`ClrTypeOf` 按 `SpecialType` 把 Cocoa 物理简写（`i32`/`f64`/...）映射宿主类型——此前 `typeof(i32)` 落到 `typeof(object)`，系解释器与 IL 的行为分叉。
+- 测试：`RemainingFeatureProbe.Reflection_GetMethods_IlChain` / `_Interpreter` / `_NativeGapDeclared` 3 例；全量回归通过。
+
+---
+
 ## 未发布（2026-10-08）
 
 ### 语言特性：`with` + `init` + `required` + `global using`（C# 9/10/11 批次）✅

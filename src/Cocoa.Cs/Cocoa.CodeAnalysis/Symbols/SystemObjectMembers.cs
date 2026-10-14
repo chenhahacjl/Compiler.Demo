@@ -25,6 +25,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             new BuiltinSpec(BuiltinKind.TypeFullName, "get_FullName", TypeSymbol.String, System.Array.Empty<(string, TypeSymbol)>()),
             new BuiltinSpec(BuiltinKind.TypeIsClass, "get_IsClass", TypeSymbol.Boolean, System.Array.Empty<(string, TypeSymbol)>()),
             new BuiltinSpec(BuiltinKind.TypeIsValueType, "get_IsValueType", TypeSymbol.Boolean, System.Array.Empty<(string, TypeSymbol)>()),
+            new BuiltinSpec(BuiltinKind.TypeGetMethods, "GetMethods", TypeSymbol.ArrayOf(TypeSymbol.String), System.Array.Empty<(string, TypeSymbol)>()),
         };
 
         private static bool _initialized;
@@ -58,6 +59,9 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         /// <summary>Type.IsValueType 只读属性 getter。</summary>
         public static readonly FunctionSymbol TypeIsValueType = CreateInstance(BuiltinKind.TypeIsValueType);
+
+        /// <summary>Type.GetMethods(): string[]（实例/静态方法名字符串数组，反射面简化子集）。</summary>
+        public static readonly FunctionSymbol TypeGetMethods = CreateInstance(BuiltinKind.TypeGetMethods);
 
         /// <summary>
         /// 向 SystemObject/SystemType 单例注入成员面（幂等）。须先于类成员绑定调用，
@@ -94,6 +98,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             type.AddMethod(TypeFullName);
             type.AddMethod(TypeIsClass);
             type.AddMethod(TypeIsValueType);
+            type.AddMethod(TypeGetMethods);
         }
 
         /// <summary>是否为 Object/Type 内建单例（`.coa` 序列化跳过 cls 壳与方法回填的判据）。</summary>
@@ -113,6 +118,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             BuiltinKind.TypeFullName => TypeFullName,
             BuiltinKind.TypeIsClass => TypeIsClass,
             BuiltinKind.TypeIsValueType => TypeIsValueType,
+            BuiltinKind.TypeGetMethods => TypeGetMethods,
             _ => null,
         };
 
@@ -138,7 +144,8 @@ namespace Cocoa.CodeAnalysis.Symbols
                                  kind != BuiltinKind.TypeName &&
                                  kind != BuiltinKind.TypeFullName &&
                                  kind != BuiltinKind.TypeIsClass &&
-                                 kind != BuiltinKind.TypeIsValueType;
+                                 kind != BuiltinKind.TypeIsValueType &&
+                                 kind != BuiltinKind.TypeGetMethods;
             return function;
         }
 
