@@ -10,6 +10,14 @@
 
 ## 未发布（2026-10-14）
 
+### IDE：补全关键字补齐 + 语义服务对齐最新编译器
+- **补全关键字列表**与 `SyntaxFacts.GetKeywordKind` 全集对齐：补 `and`/`or`/`not`（逻辑模式）、`yield`、`with`、`init`/`required`/`file`/`global`（C# 批次）、`operator`/`implicit`/`explicit`（运算符重载）、`params`、`nameof`、`lock`、`checked`/`unchecked`、`typeof`/`sizeof`、`field`；`record` 为上下文标识符（非语法关键字）不加，与分类器一致。
+- **构建修复**：语义服务三文件补 `using Cocoa.CodeAnalysis.Bound`（`BoundVariableDeclaration` 命名空间）；`PropertiesViewModel` 移除已删的 `CocoaProjectFile.Language` 显示（去 C# 方言后语言恒为 Cocoa）。
+- 语义着色基于编译器 `Classifier`、Hover/补全走 `SemanticModel`——自动反映列表模式 `..rest`/反射面（GetMethods/GetMethod/HasMethod）/主构造函数/可空标注等最新特性。
+- IDE 构建 0 错误；全量回归 3288 通过。
+
+---
+
 ### 文档：彻底清除 C# 方言残留（去 C# 方言收尾）
 - **§44 改「Cocoa 语法速查」**：删掉全部 C# 拼写列（成员/参数/局部变量/接口成员对照），仅保留 Cocoa 写法；`§44.7` 删 `.cs` 示例、`§44.8/§44.9` 删 C# 列。
 - **§45 折叠为历史说明**：删掉 P1-P7 C# 式写法规表（`public int X`/`static Foo()` 等），保留「去 C# 方言前历史批次」定位，指明沿用至今的 Cocoa 拼写（表达式体/静态构造/foreach/switch/多接口/const）；索引器（6e-M24）说明保留。
