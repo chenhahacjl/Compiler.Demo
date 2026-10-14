@@ -10,11 +10,12 @@
 
 ## 未发布（2026-10-14）
 
-### IDE：补全关键字补齐 + 语义服务对齐最新编译器
+### IDE：文档大纲面板 + 补全关键字补齐 + 语义服务对齐
+- **文档大纲面板**（VS 风格）：右侧栏改 TabControl「属性 / 大纲」。`DocumentOutlineProvider` 遍历语法树生成符号树（顶层函数/类/接口/枚举/命名空间 → 成员函数/属性/字段/事件/枚举值），随活动标签与内容实时刷新；单击条目跳转到声明行。纯语法树实现，与语义着色/补全同走编译器管线。
 - **补全关键字列表**与 `SyntaxFacts.GetKeywordKind` 全集对齐：补 `and`/`or`/`not`（逻辑模式）、`yield`、`with`、`init`/`required`/`file`/`global`（C# 批次）、`operator`/`implicit`/`explicit`（运算符重载）、`params`、`nameof`、`lock`、`checked`/`unchecked`、`typeof`/`sizeof`、`field`；`record` 为上下文标识符（非语法关键字）不加，与分类器一致。
 - **构建修复**：语义服务三文件补 `using Cocoa.CodeAnalysis.Bound`（`BoundVariableDeclaration` 命名空间）；`PropertiesViewModel` 移除已删的 `CocoaProjectFile.Language` 显示（去 C# 方言后语言恒为 Cocoa）。
 - 语义着色基于编译器 `Classifier`、Hover/补全走 `SemanticModel`——自动反映列表模式 `..rest`/反射面（GetMethods/GetMethod/HasMethod）/主构造函数/可空标注等最新特性。
-- IDE 构建 0 错误；全量回归 3288 通过。
+- IDE 构建 0 警告 0 错误；全量回归 3288 通过。
 
 ---
 

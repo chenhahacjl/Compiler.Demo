@@ -608,6 +608,14 @@ public partial class MainWindow : Window
 
     private void OnTreeCollapseAll(object? sender, RoutedEventArgs e) => ViewModel.SolutionTree.CollapseAll();
 
+    // ─── 文档大纲 ───
+
+    private void OnOutlineSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (e.AddedItems.Count > 0 && e.AddedItems[0] is DocumentOutlineNode node)
+            ViewModel.Outline.NavigateTo(node);
+    }
+
     private void OnTreeProperties(object? sender, RoutedEventArgs e)
     {
         if (SolutionTree.SelectedItem is TreeNodeViewModel node)

@@ -205,35 +205,63 @@
 
                 <GridSplitter Grid.Column="3" x:Name="PropertiesSplitter" Background="{DynamicResource SeparatorBrush}" Width="4" />
 
-                <!-- 右：属性窗口（VS 风格，选中自动填充） -->
+                <!-- 右：属性窗口 + 文档大纲（VS 风格，选中自动填充 / 符号树跳转） -->
                 <Border Grid.Column="4" x:Name="PropertiesPanel"
                         Background="{DynamicResource PanelBrush}"
                         BorderBrush="{DynamicResource SeparatorBrush}"
                         BorderThickness="1,0,0,0">
-                    <DockPanel>
-                        <TextBlock DockPanel.Dock="Top"
-                                   Text="属性"
-                                   FontSize="12" FontWeight="SemiBold"
-                                   Padding="8,6" Foreground="{DynamicResource TextBrush}"
-                                   Background="{DynamicResource PanelHeaderBrush}" />
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <ItemsControl ItemsSource="{Binding Properties.Items}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid ColumnDefinitions="110,*"
-                                              Margin="4,2" VerticalAlignment="Center">
-                                            <TextBlock Grid.Column="0" Text="{Binding Name}"
-                                                       FontSize="12" Foreground="{DynamicResource IdentifierBrush}"
+                    <TabControl Padding="0" SelectedIndex="0">
+                        <TabItem Header="属性">
+                            <DockPanel>
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <ItemsControl ItemsSource="{Binding Properties.Items}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid ColumnDefinitions="110,*"
+                                                      Margin="4,2" VerticalAlignment="Center">
+                                                    <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                               FontSize="12" Foreground="{DynamicResource IdentifierBrush}"
+                                                               VerticalAlignment="Center" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding Value}"
+                                                               FontSize="12" Foreground="{DynamicResource TextBrush}"
+                                                               TextWrapping="Wrap" VerticalAlignment="Center" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </DockPanel>
+                        </TabItem>
+                        <TabItem Header="大纲">
+                            <TreeView ItemsSource="{Binding Outline.Roots}"
+                                      Background="Transparent"
+                                      BorderThickness="0"
+                                      SelectionChanged="OnOutlineSelectionChanged">
+                                <TreeView.Styles>
+                                    <Style Selector="TreeViewItem">
+                                        <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+                                        <Setter Property="IsExpanded" Value="True" />
+                                    </Style>
+                                </TreeView.Styles>
+                                <TreeView.ItemTemplate>
+                                    <TreeDataTemplate ItemsSource="{Binding Children}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6"
+                                                    Background="Transparent"
+                                                    Margin="0,1">
+                                            <TextBlock Text="{Binding KindText}"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource CommentBrush}"
                                                        VerticalAlignment="Center" />
-                                            <TextBlock Grid.Column="1" Text="{Binding Value}"
-                                                       FontSize="12" Foreground="{DynamicResource TextBrush}"
-                                                       TextWrapping="Wrap" VerticalAlignment="Center" />
-                                        </Grid>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
-                    </DockPanel>
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontSize="12"
+                                                       Foreground="{DynamicResource TextBrush}"
+                                                       VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </TreeDataTemplate>
+                                </TreeView.ItemTemplate>
+                            </TreeView>
+                        </TabItem>
+                    </TabControl>
                 </Border>
             </Grid>
 

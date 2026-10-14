@@ -25,6 +25,7 @@ public partial class MainViewModel : ObservableObject
     public OutputViewModel Output { get; } = new();
     public StatusBarViewModel StatusBar { get; } = new();
     public PropertiesViewModel Properties { get; } = new();
+    public DocumentOutlineViewModel Outline { get; } = new();
     public BuildService BuildService { get; } = new();
     public DiagnosticService DiagnosticService { get; } = new();
     public DebuggerService DebuggerService { get; } = new();
@@ -56,6 +57,11 @@ public partial class MainViewModel : ObservableObject
         {
             SolutionTree.Refresh();
             StatusBar.StatusText = "项目属性已保存";
+        };
+        Outline.NavigateRequested += line =>
+        {
+            var tab = EditorTabs.ActiveTab;
+            if (tab != null) EditorTabsRegistry.RequestNavigate(tab, line, 1);
         };
         ErrorList.ItemActivated += item => NavigateToError(item);
         BuildService.OutputLine += line => Output.AppendLine(line);
@@ -142,6 +148,7 @@ public partial class MainViewModel : ObservableObject
     {
         var context = SolutionTree.GetContext(tab.FilePath);
             DiagnosticService.TextChanged(tab.FilePath, tab.Content, context);
+        Outline.Refresh(tab.Content, tab.FilePath);
     }
 
     private void OnActiveTabChanged()
@@ -159,12 +166,14 @@ public partial class MainViewModel : ObservableObject
             StatusBar.Language = "项目属性";
             StatusBar.CursorPosition = "";
             Properties.Clear();
+            Outline.Refresh("", null);
             return;
         }
 
         StatusBar.Language = tab.Dialect;
         StatusBar.CursorPosition = $"Ln {tab.CursorLine}, Col {tab.CursorColumn}";
         Properties.ShowDocument(tab);
+        Outline.Refresh(tab.Content, tab.FilePath);
 
         if (SolutionTree.AutoSync)
             SolutionTree.SyncToFile(tab.FilePath);
