@@ -2,6 +2,7 @@
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.Targeting;
 using Cocoa.CodeGen.Managed.Writer;
+using Cocoa.CodeGen.PE;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
 using System;
@@ -126,6 +127,12 @@ namespace Cocoa.Build
                     ? Compilation.Create(references.ToArray(), linkCodDynamically, syntaxTrees)
                     : Compilation.Create(project.Entry, references.ToArray(), linkCodDynamically, syntaxTrees);
 
+                // 版本信息（.coproj 元数据 → PE .rsrc / IL Assembly 属性）：规避杀软误报 + 产物右键属性可见
+                var versionInfo = BuildPeVersionInfo(project);
+
+                // 资源（图标 / 通用 RT_RCDATA / IL 内嵌资源）：读项目配置组装
+                var resourceOptions = BuildResourceOptions(project, versionInfo);
+
                 if (format == ProjectOutputFormat.Cocoa)
                 {
                     // `.coa` 语义层程序集：编译到 BoundProgram 即停（不走 IR/机器码/IL），后端无关。
@@ -155,9 +162,7 @@ namespace Cocoa.Build
                             ? (ushort)2 /* PeSubsystem.WindowsGui */
                             : (ushort)3 /* PeSubsystem.WindowsCui */;
 
-                        // 版本信息（.coproj 元数据 → PE .rsrc）：规避杀软误报 + 产物右键属性可见
-                        var versionInfo = BuildPeVersionInfo(project);
-                        diagnostics = compilation.EmitNative(project.Name, outputFile, platform, subsystem, versionInfo);
+                        diagnostics = compilation.EmitNative(project.Name, outputFile, platform, subsystem, resourceOptions);
                 }
                 else
                 {
@@ -175,7 +180,7 @@ namespace Cocoa.Build
                         // netcore 可执行：托管程序集产出 `<name>.dll`，另生成原生 apphost `<name>.exe`（SDK 标准布局），
                         // 双击/直接运行即经 apphost 激活 dotnet 宿主。netfx 仍是托管 exe（mscoree 导入）直接运行。
                         var managedDllPath = Path.ChangeExtension(outputFile, ".dll");
-                        diagnostics = compilation.Emit(project.Name, referencePaths, managedDllPath, target, emitLibrary: false);
+                        diagnostics = compilation.Emit(project.Name, referencePaths, managedDllPath, target, emitLibrary: false, versionInfo, resourceOptions);
                         if (!diagnostics.HasErrors())
                         {
                             var templatePath = AppHostPatcher.FindDefaultTemplate();
@@ -187,7 +192,7 @@ namespace Cocoa.Build
                     }
                     else
                     {
-                        diagnostics = compilation.Emit(project.Name, referencePaths, outputFile, target, emitLibrary);
+                        diagnostics = compilation.Emit(project.Name, referencePaths, outputFile, target, emitLibrary, versionInfo, resourceOptions);
                     }
                 }
             }
@@ -265,7 +270,7 @@ namespace Cocoa.Build
             return new ProjectBuildResult(success: true, upToDate: false);
         }
 
-        /// <summary>从项目元数据构建 PE 版本信息（native 产物 .rsrc）；文件版本缺省取 1.0。</summary>
+        /// <summary>从项目元数据构建 PE 版本信息（native .rsrc / IL Assembly 属性）；文件版本缺省取 1.0。</summary>
         private static PeVersionInfo BuildPeVersionInfo(CocoaProjectFile project)
         {
             var metadata = project.Metadata;
@@ -273,13 +278,57 @@ namespace Cocoa.Build
             var assemblyVersion = string.IsNullOrWhiteSpace(metadata.AssemblyVersion) ? fileVersion : metadata.AssemblyVersion;
 
             return new PeVersionInfo(
-                metadata.Company ?? "",
-                metadata.Product ?? project.AssemblyName,
-                metadata.Description ?? "",
-                fileVersion,
-                assemblyVersion,
-                project.AssemblyName,
-                metadata.Copyright ?? "");
+                CompanyName: metadata.Company ?? "",
+                ProductName: metadata.Product ?? project.AssemblyName,
+                FileDescription: metadata.Description ?? "",
+                FileVersion: fileVersion,
+                ProductVersion: assemblyVersion,
+                AssemblyVersion: assemblyVersion,
+                AssemblyName: project.AssemblyName,
+                Copyright: metadata.Copyright ?? "");
+        }
+
+        /// <summary>
+        /// 组装 PE 资源选项：`ApplicationIcon`（.ico → RT_GROUP_ICON/RT_ICON）+ `&lt;Resource&gt;`（→ RT_RCDATA，
+        /// 名称 ID 1..N）+ `&lt;EmbeddedResource&gt;`（→ IL ManifestResource，名称 = 文件名）。路径相对项目目录解析。
+        /// </summary>
+        private static PeResourceOptions BuildResourceOptions(CocoaProjectFile project, PeVersionInfo versionInfo)
+        {
+            var iconPath = project.ApplicationIcon != null
+                ? Path.GetFullPath(Path.Combine(project.Directory, project.ApplicationIcon))
+                : null;
+
+            var extra = new List<PeResourceItem>();
+            var nameId = 1u;
+            foreach (var resource in project.Resources)
+            {
+                var path = Path.IsPathRooted(resource)
+                    ? resource
+                    : Path.GetFullPath(Path.Combine(project.Directory, resource));
+                if (File.Exists(path))
+                {
+                    extra.Add(new PeResourceItem(ResourceSectionBuilder.RtRcData, nameId++, ResourceSectionBuilder.DefaultLanguageId, File.ReadAllBytes(path)));
+                }
+            }
+
+            var embedded = new List<PeEmbeddedResource>();
+            foreach (var resource in project.EmbeddedResources)
+            {
+                var path = Path.IsPathRooted(resource)
+                    ? resource
+                    : Path.GetFullPath(Path.Combine(project.Directory, resource));
+                if (File.Exists(path))
+                {
+                    embedded.Add(new PeEmbeddedResource(Path.GetFileName(resource), File.ReadAllBytes(path)));
+                }
+            }
+
+            if (iconPath == null && extra.Count == 0 && embedded.Count == 0)
+            {
+                return new PeResourceOptions(versionInfo);
+            }
+
+            return new PeResourceOptions(versionInfo, iconPath, extra, embedded);
         }
 
         /// <summary>

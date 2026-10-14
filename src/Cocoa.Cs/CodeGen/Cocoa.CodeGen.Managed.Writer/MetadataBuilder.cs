@@ -23,6 +23,10 @@ namespace Cocoa.CodeGen.Managed.Writer
         private readonly List<IlFieldRef> _fieldRefs = new List<IlFieldRef>();
         private readonly List<IlCustomAttribute> _customAttributes = new List<IlCustomAttribute>();
         private readonly List<IlStandAloneSig> _standAloneSigs = new List<IlStandAloneSig>();
+        private readonly List<IlManifestResource> _manifestResources = new List<IlManifestResource>();
+
+        /// <summary>程序集版本信息（.coproj 元数据 → Assembly 表版本 + 程序集级 CustomAttribute）。</summary>
+        private readonly Cocoa.CodeAnalysis.PeVersionInfo? _versionInfo;
 
         /// <summary>全部方法（按类型分组：Program 在前，各 class 依序）。</summary>
         public IReadOnlyList<IlMethodDef> MethodDefs => _typeDefs.SelectMany(t => t.Methods).ToList();
@@ -51,10 +55,11 @@ namespace Cocoa.CodeGen.Managed.Writer
         private const uint AssemblyRefTable = 0x23;
         private const uint UserStringTable = 0x70;
 
-        public MetadataBuilder(string moduleName, string assemblyName)
+        public MetadataBuilder(string moduleName, string assemblyName, Cocoa.CodeAnalysis.PeVersionInfo? versionInfo = null)
         {
             _moduleName = moduleName;
             _assemblyName = assemblyName;
+            _versionInfo = versionInfo;
             // 6e-M26：MVID 确定性派生（同程序多次编译字节可复现）。MVID 仅信息性、不参与程序集绑定，
             // 用 MD5(module|assembly) 的 16 字节生成稳定 GUID（对齐可复现构建语义）。
             _mvid = DeterministicMvid(moduleName, assemblyName);
@@ -68,12 +73,30 @@ namespace Cocoa.CodeGen.Managed.Writer
             _blobs.Add(new BlobKey(Array.Empty<byte>()), 0);
         }
 
-        /// <summary>由模块/程序集名确定性生成 MVID（16 字节 = MD5 前 16 字节）。</summary>
+        /// <summary>由 MVID 派生法生成的 GUID（模块/程序集名确定性）。</summary>
         private static Guid DeterministicMvid(string moduleName, string assemblyName)
         {
             using var md5 = System.Security.Cryptography.MD5.Create();
             var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(moduleName + "|" + assemblyName));
             return new Guid(hash);
+        }
+
+        /// <summary>解析程序集版本（a.b.c.d，缺段补 0）；无版本信息默认 1.0.0.0。</summary>
+        private System.Version ParseAssemblyVersion()
+        {
+            var versionText = _versionInfo?.AssemblyVersion ?? _versionInfo?.FileVersion;
+            if (string.IsNullOrWhiteSpace(versionText))
+            {
+                return new System.Version(1, 0, 0, 0);
+            }
+
+            if (System.Version.TryParse(versionText, out var v))
+            {
+                // 装配表 Build/Revision 段不能为 -1（缺位数时 Version 用 -1 表示）
+                return new System.Version(v.Major, v.Minor < 0 ? 0 : v.Minor, v.Build < 0 ? 0 : v.Build, v.Revision < 0 ? 0 : v.Revision);
+            }
+
+            return new System.Version(1, 0, 0, 0);
         }
 
         // ------------------------------------------------------------------
@@ -204,6 +227,34 @@ namespace Cocoa.CodeGen.Managed.Writer
         public void AddTypeDef(IlTypeDef typeDef) => _typeDefs.Add(typeDef);
 
         public void AddCustomAttribute(IlCustomAttribute attribute) => _customAttributes.Add(attribute);
+
+        /// <summary>注册内嵌资源（ManifestResource：名称 + 原始字节）。CLR 运行时经 Assembly.GetManifestResourceStream 读取。</summary>
+        public void AddManifestResource(IlManifestResource resource) => _manifestResources.Add(resource);
+
+        public IReadOnlyList<IlManifestResource> ManifestResources => _manifestResources;
+
+        /// <summary>程序集级版本属性（右键"属性 → 详细信息"显示）。parentRow=1、parentTag=Assembly(0x14)、ctorTag=MemberRef(3)。</summary>
+        public void AddAssemblyVersionAttributes(
+            Cocoa.CodeAnalysis.PeVersionInfo info,
+            IlMethodRef versionCtor, IlMethodRef fileVersionCtor, IlMethodRef companyCtor,
+            IlMethodRef productCtor, IlMethodRef descriptionCtor, IlMethodRef copyrightCtor)
+        {
+            if (info == null) return;
+            void Register(IlMethodRef ctor, string? value)
+            {
+                if (ctor == null || string.IsNullOrEmpty(value)) return;
+                var blob = EncodeAttributeBlob(new object?[] { value }, new[] { TypeSymbol.String });
+                // parentRow=1（Assembly 行）、parentTag=0x0E（HasCustomAttribute tag：Assembly=14）
+                _customAttributes.Add(new IlCustomAttribute(ctor, blob, parentRow: 1, parentTag: 0x0E));
+            }
+
+            Register(companyCtor, info.CompanyName);
+            Register(productCtor, info.ProductName);
+            Register(descriptionCtor, info.FileDescription);
+            Register(versionCtor, info.AssemblyVersion ?? info.FileVersion);
+            Register(fileVersionCtor, info.FileVersion);
+            Register(copyrightCtor, info.Copyright);
+        }
 
         public uint GetOrAddUserString(string value)
         {
@@ -421,21 +472,17 @@ namespace Cocoa.CodeGen.Managed.Writer
             return stream.ToArray();
         }
 
-        /// <summary>DebuggableAttribute(bool, bool) 固定参数：prolog + 2 个 ELEMENT_TYPE_BOOLEAN(true)。</summary>
+        /// <summary>DebuggableAttribute(bool, bool)：prolog 0x0001 + 2 个裸 bool（各 1 字节 0/1，无 ELEMENT_TYPE 前缀——类型由 ctor 签名提供）
+        /// + numNamed=0x00。逐字节对照 csc 输出 [01 00 01 01 00 00]。</summary>
         public static byte[] EncodeDebuggableAttributeBlob()
         {
-            using var stream = new MemoryStream();
-            stream.WriteByte(0x01);
-            stream.WriteByte(0x00);
-            stream.WriteByte(0x02); // ELEMENT_TYPE_BOOLEAN
-            stream.WriteByte(0x01);
-            stream.WriteByte(0x02); // ELEMENT_TYPE_BOOLEAN
-            stream.WriteByte(0x01);
-            return stream.ToArray();
+            return new byte[] { 0x01, 0x00, 0x01, 0x01, 0x00, 0x00 };
         }
 
-        /// <summary>6e-M32 Tier-2：属性固定实参 blob（ECMA II.23.3）——prolog 0x0001 + 定长实参。
-        /// 支持字面量集 {string/i32/bool/char/f64}；枚举暂按 int32。named args 暂不支持。</summary>
+        /// <summary>属性固定实参 blob（ECMA II.23.3）——prolog 0x0001 + 定长实参 + numNamed=0。
+        /// 实参为裸值（无 ELEMENT_TYPE 前缀，类型由 ctor 签名提供；对照 System.Private.CoreLib
+        /// CustomAttributeEncodedArgument：bool GetU1/int32 GetI4/char GetU2/f64 GetR8/string SerString）。
+        /// 尾部 numNamed 是 GetI2() 的 2 字节。支持字面量集 {string/i32/bool/char/f64}；枚举暂按 int32。</summary>
         public static byte[] EncodeAttributeBlob(IReadOnlyList<object?> values, IReadOnlyList<TypeSymbol> types)
         {
             using var stream = new MemoryStream();
@@ -446,6 +493,8 @@ namespace Cocoa.CodeGen.Managed.Writer
                 EncodeAttributeArgument(stream, values[i], types[i]);
             }
 
+            stream.WriteByte(0x00); // numNamed 低位（GetI2 = 0）
+            stream.WriteByte(0x00); // numNamed 高位
             return stream.ToArray();
         }
 
@@ -453,42 +502,40 @@ namespace Cocoa.CodeGen.Managed.Writer
         {
             if (type == TypeSymbol.String)
             {
-                stream.WriteByte(0x0E); // ELEMENT_TYPE_STRING
                 var text = (string)value!;
-                var utf16 = text.SelectMany(c => new[] { (byte)c, (byte)(c >> 8) }).ToArray();
-                WriteCompressedInteger(stream, utf16.Length);
-                stream.Write(utf16, 0, utf16.Length);
-                stream.WriteByte(0x00); // null terminator byte
+                var utf8 = System.Text.Encoding.UTF8.GetBytes(text);
+                WriteCompressedInteger(stream, utf8.Length);
+                stream.Write(utf8, 0, utf8.Length);
             }
             else if (type == TypeSymbol.Int32)
             {
-                stream.WriteByte(0x08); // ELEMENT_TYPE_I4
-                stream.WriteByte((byte)(int)value!);
-                stream.WriteByte((byte)((int)value! >> 8));
-                stream.WriteByte((byte)((int)value! >> 16));
-                stream.WriteByte((byte)((int)value! >> 24));
+                WriteU32LittleEndian(stream, unchecked((uint)(int)value!));
             }
             else if (type == TypeSymbol.Boolean)
             {
-                stream.WriteByte(0x02); // ELEMENT_TYPE_BOOLEAN
                 stream.WriteByte((bool)value! ? (byte)1 : (byte)0);
             }
             else if (type == TypeSymbol.Char)
             {
-                stream.WriteByte(0x03); // ELEMENT_TYPE_CHAR
-                var c = (char)value!;
+                var c = (ushort)(char)value!;
                 stream.WriteByte((byte)c);
                 stream.WriteByte((byte)(c >> 8));
             }
             else if (type == TypeSymbol.Double)
             {
-                stream.WriteByte(0x0D); // ELEMENT_TYPE_R8
-                var bytes = BitConverter.GetBytes((double)value!);
-                stream.Write(bytes, 0, bytes.Length);
+                stream.Write(BitConverter.GetBytes((double)value!), 0, 8);
             }
             else
             {
                 throw new InvalidOperationException($"Unsupported attribute argument type {type}");
+            }
+        }
+
+        private static void WriteU32LittleEndian(Stream stream, uint value)
+        {
+            for (var i = 0; i < 4; i++)
+            {
+                stream.WriteByte((byte)(value >> (8 * i)));
             }
         }
 
@@ -648,16 +695,17 @@ namespace Cocoa.CodeGen.Managed.Writer
         // 序列化
         // ------------------------------------------------------------------
 
-        /// <summary>序列化结果：各流字节（表流/字符串/US/GUID/Blob），由 ManagedPEWriter 组装元数据根。</summary>
+        /// <summary>序列化结果：各流字节（表流/字符串/US/GUID/Blob/内嵌资源），由 ManagedPEWriter 组装元数据根。</summary>
         public sealed class MetadataBlobs
         {
-            public MetadataBlobs(byte[] tables, byte[] strings, byte[] us, byte[] guid, byte[] blob)
+            public MetadataBlobs(byte[] tables, byte[] strings, byte[] us, byte[] guid, byte[] blob, byte[] resources)
             {
                 Tables = tables;
                 Strings = strings;
                 Us = us;
                 Guid = guid;
                 Blob = blob;
+                Resources = resources;
             }
 
             public byte[] Tables { get; }
@@ -665,6 +713,9 @@ namespace Cocoa.CodeGen.Managed.Writer
             public byte[] Us { get; }
             public byte[] Guid { get; }
             public byte[] Blob { get; }
+
+            /// <summary>内嵌资源数据目录（CLR Resources 目录；ManifestResource.Offset 相对此起点，8 字节对齐）。</summary>
+            public byte[] Resources { get; }
         }
 
         public byte[] MvidBytes => _mvid.ToByteArray();
@@ -693,6 +744,7 @@ namespace Cocoa.CodeGen.Managed.Writer
             var typeSpecCount = _typeSpecs.Count;
             var customAttributeCount = _customAttributes.Count;
             var standAloneSigCount = _standAloneSigs.Count;
+            var manifestResourceCount = _manifestResources.Count;
 
             var moduleRefs = methodDefs.Where(m => m.DllName != null).Select(m => m.DllName!).Distinct().ToList();
             var moduleRefCount = moduleRefs.Count;
@@ -758,6 +810,7 @@ namespace Cocoa.CodeGen.Managed.Writer
             if (implMapCount > 0) SetValid(0x1C); // ImplMap
             SetValid(0x20); // Assembly（始终 1 行）
             if (assemblyRefCount > 0) SetValid(0x23); // AssemblyRef
+            if (manifestResourceCount > 0) SetValid(0x28); // ManifestResource
             writer.Write(valid);
 
             // Sorted bitmask（ECMA-335 II.24.2.6）：标记「要求排序」的表。取值与 ilasm/csc 一致
@@ -786,6 +839,7 @@ namespace Cocoa.CodeGen.Managed.Writer
             WriteRowCount(implMapCount);    // ImplMap
             WriteRowCount(1);               // Assembly
             WriteRowCount(assemblyRefCount);
+            WriteRowCount(manifestResourceCount); // ManifestResource
 
             void WriteRef(int value, bool isBig) { if (isBig) writer.Write((uint)value); else writer.Write((ushort)value); }
             void WriteStringRef(string value, bool isBig) => WriteRef(GetOrAddString(value), isBig);
@@ -1143,8 +1197,10 @@ namespace Cocoa.CodeGen.Managed.Writer
             }
 
             // ---- Assembly（1 行）----
+            var version = ParseAssemblyVersion();
             writer.Write((uint)0x0804); // HashAlgId = SHA1
-            writer.Write((ushort)1); writer.Write((ushort)0); writer.Write((ushort)0); writer.Write((ushort)0);
+            writer.Write((ushort)version.Major); writer.Write((ushort)version.Minor);
+            writer.Write((ushort)version.Build); writer.Write((ushort)version.Revision);
             writer.Write((uint)0); // Flags
             WriteRef(GetOrAddBlob(Array.Empty<byte>()), blobIsBig);
             WriteStringRef(_assemblyName, stringIsBig);
@@ -1164,12 +1220,45 @@ namespace Cocoa.CodeGen.Managed.Writer
                 WriteRef(GetOrAddBlob(Array.Empty<byte>()), blobIsBig); // HashValue
             }
 
+            // ---- ManifestResource（内嵌资源；行：Offset(u32) + Flags(u32) + Name(#Strings) + Implementation(coded)）----
+            // 列序权威：System.Reflection.Metadata 源码 ManifestResourceTableReader——OffsetOffset=0、FlagsOffset=4、
+            // NameOffset=8、ImplementationOffset=10。先前写成 Offset/Impl/Name/Flags 使读取器把 Flags 当 Name
+            // （name=1="ilres"）；Offset/Impl/Flags/Name 又把 Name 读成 Flags 高字节（空）。
+            // CLR 资源目录格式（对齐 csc）：每条 = u32 长度前缀 + 数据，条目 8 字节对齐；
+            // ManifestResource.Offset 指向该长度前缀起点（相对资源目录）。目录总长 8 对齐。
+            var resourcesBlob = new MemoryStream();
+            var resourceOffsets = new List<int>();
+            foreach (var manifest in _manifestResources)
+            {
+                while ((resourcesBlob.Position % 8) != 0) resourcesBlob.WriteByte(0);
+                resourceOffsets.Add((int)resourcesBlob.Position);
+                var len = manifest.Data.Length;
+                resourcesBlob.WriteByte((byte)len);
+                resourcesBlob.WriteByte((byte)(len >> 8));
+                resourcesBlob.WriteByte((byte)(len >> 16));
+                resourcesBlob.WriteByte((byte)(len >> 24));
+                resourcesBlob.Write(manifest.Data, 0, manifest.Data.Length);
+            }
+            while ((resourcesBlob.Position % 8) != 0) resourcesBlob.WriteByte(0);
+
+            // Implementation 为 2 位 coded index（File=0/AssemblyRef=1/ExportedType=2），列宽由
+            // max(File, AssemblyRef, ExportedType 行数) 决定——本实现 File/ExportedType 恒空，按 AssemblyRef 判宽。
+            var manifestImplIsBig = assemblyRefCount > (1 << 14);
+            for (var i = 0; i < _manifestResources.Count; i++)
+            {
+                var nameIndex = GetOrAddString(_manifestResources[i].Name);
+                writer.Write((uint)resourceOffsets[i]); // Offset（相对资源目录起点）
+                writer.Write((uint)0x1); // Flags: ManifestResourceAttributes.Public
+                WriteRef(nameIndex, stringIsBig); // Name
+                WriteRef(0, manifestImplIsBig); // Implementation = 0（资源位于本模块资源目录；2 位 coded）
+            }
+
             // 表流尾对齐
             writer.Write((byte)0);
             while (stream.Position % 4 != 0) writer.Write((byte)0);
 
             var guid = _mvid.ToByteArray();
-            return new MetadataBlobs(stream.ToArray(), _stringHeap.ToArray(), _usHeap.ToArray(), guid, _blobHeap.ToArray());
+            return new MetadataBlobs(stream.ToArray(), _stringHeap.ToArray(), _usHeap.ToArray(), guid, _blobHeap.ToArray(), resourcesBlob.ToArray());
         }
 
         private int CodedIndexAssemblyRef(IlAssemblyRef assemblyRef) => _assemblyRefIndex[assemblyRef];

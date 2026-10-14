@@ -43,19 +43,19 @@ namespace Cocoa.CodeAnalysis
         /// Core 不引用后端，发射能力经此委托接入）。volatile：注册发生在宿主启动、读取在编译线程（重构阶段 1a/A7）。
         /// 幂等：重复注册（同进程多宿主/多引擎实例）以首次为准，防全局覆写。
         /// </summary>
-        private static volatile Func<BoundProgram, string, string[], string, IlTarget, bool, ImmutableDictionary<object, string>?, bool, ImmutableArray<Diagnostic>>? _managedEmitter;
+        private static volatile Func<BoundProgram, string, string[], string, IlTarget, bool, ImmutableDictionary<object, string>?, bool, PeVersionInfo?, PeResourceOptions?, ImmutableArray<Diagnostic>>? _managedEmitter;
 
         /// <summary>native 后端发射委托（由 <c>Cocoa.CodeGen.Native</c> 经 <see cref="RegisterNativeEmitter"/> 注入，含后端专属校验）。幂等同上。</summary>
-        private static volatile Func<Compilation, string, string, TargetPlatform, ushort, PeVersionInfo?, ImmutableArray<Diagnostic>>? _nativeEmitter;
+        private static volatile Func<Compilation, string, string, TargetPlatform, ushort, PeResourceOptions?, ImmutableArray<Diagnostic>>? _nativeEmitter;
 
         /// <summary>注册 managed（dotnet/IL）后端发射实现（后端/宿主启动时调用；Core 自身不引用后端）。幂等。</summary>
-        public static void RegisterManagedEmitter(Func<BoundProgram, string, string[], string, IlTarget, bool, ImmutableDictionary<object, string>?, bool, ImmutableArray<Diagnostic>> emitter)
+        public static void RegisterManagedEmitter(Func<BoundProgram, string, string[], string, IlTarget, bool, ImmutableDictionary<object, string>?, bool, PeVersionInfo?, PeResourceOptions?, ImmutableArray<Diagnostic>> emitter)
         {
             Interlocked.CompareExchange(ref _managedEmitter, emitter, null);
         }
 
         /// <summary>注册 native 后端发射实现（后端/宿主启动时调用；Core 自身不引用后端）。幂等。</summary>
-        public static void RegisterNativeEmitter(Func<Compilation, string, string, TargetPlatform, ushort, PeVersionInfo?, ImmutableArray<Diagnostic>> emitter)
+        public static void RegisterNativeEmitter(Func<Compilation, string, string, TargetPlatform, ushort, PeResourceOptions?, ImmutableArray<Diagnostic>> emitter)
         {
             Interlocked.CompareExchange(ref _nativeEmitter, emitter, null);
         }
@@ -432,7 +432,7 @@ namespace Cocoa.CodeAnalysis
         public ImmutableArray<Diagnostic> Emit(string moduleName, IReadOnlyList<AssemblySymbol> references, string outputPath, IlTarget target, bool emitLibrary)
             => Emit(moduleName, references.Select(r => r.Display ?? r.Name).ToArray(), outputPath, target, emitLibrary);
 
-        public ImmutableArray<Diagnostic> Emit(string moduleName, string[] references, string outputPath, IlTarget target, bool emitLibrary)
+        public ImmutableArray<Diagnostic> Emit(string moduleName, string[] references, string outputPath, IlTarget target, bool emitLibrary, PeVersionInfo? versionInfo = null, PeResourceOptions? resourceOptions = null)
         {
             var parseDiagnostics = SyntaxTrees.SelectMany(st => st.Diagnostics);
 
@@ -467,7 +467,7 @@ namespace Cocoa.CodeAnalysis
 
             var backendDiagnostics = _managedEmitter == null
                 ? ImmutableArray.Create(Diagnostic.Error(ZeroLocation, "managed 后端未注册（Cocoa.CodeGen.Managed.Writer 未初始化）"))
-                : _managedEmitter(program, moduleName, ilReferences, outputPath, target, emitLibrary, program.CodAssemblies, false);
+                : _managedEmitter(program, moduleName, ilReferences, outputPath, target, emitLibrary, program.CodAssemblies, false, versionInfo, resourceOptions);
 
             // 成功路径也带上 GlobalScope 警告（using 未解析等），供 CLI 打印
             return diagnostics.Concat(backendDiagnostics).ToImmutableArray();
@@ -476,9 +476,10 @@ namespace Cocoa.CodeAnalysis
         /// <summary>
         /// 把程序直接生成为原生可执行文件，不依赖 .NET 运行时。
         /// 实现经 <see cref="RegisterNativeEmitter"/> 注入的 native 后端（Core 自身不引用后端）。
-        /// <paramref name="versionInfo"/> 非空时在产物内嵌 .rsrc 版本信息（VS_VERSIONINFO）——规避杀软误报。
+        /// <paramref name="resourceOptions"/> 非空时在产物内嵌 .rsrc 资源（版本信息 VS_VERSIONINFO / 图标 RT_ICON /
+        /// 通用 RT_RCDATA）——规避杀软误报 + explorer 显示应用图标。
         /// </summary>
-        public ImmutableArray<Diagnostic> EmitNative(string moduleName, string outputPath, TargetPlatform platform = default, ushort subsystem = 3 /* PeSubsystem.WindowsCui */, PeVersionInfo? versionInfo = null)
+        public ImmutableArray<Diagnostic> EmitNative(string moduleName, string outputPath, TargetPlatform platform = default, ushort subsystem = 3 /* PeSubsystem.WindowsCui */, PeResourceOptions? resourceOptions = null)
         {
             if (_nativeEmitter == null)
             {
@@ -498,7 +499,7 @@ namespace Cocoa.CodeAnalysis
                 return yieldDiagnostics;
             }
 
-            return _nativeEmitter(this, moduleName, outputPath, platform, subsystem, versionInfo);
+            return _nativeEmitter(this, moduleName, outputPath, platform, subsystem, resourceOptions);
         }
 
         /// <summary>C-2：含 `yield return`/`yield break` 的函数仅在解释器后端可执行（迭代器状态机未实现）。

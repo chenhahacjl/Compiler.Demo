@@ -19,6 +19,25 @@
 
 ---
 
+### 编译器：IL 产物程序集版本信息（Assembly 版本 + 程序集级 CustomAttribute）
+- **程序集版本 + 元数据属性**：`.coproj` 元数据（AssemblyVersion/FileVersion/Company/Product/Description/Copyright）→ `PeVersionInfo` → IL 产物 Assembly 表 Version 字段 + `AssemblyVersionAttribute`/`AssemblyFileVersionAttribute`/`AssemblyCompanyAttribute`/`AssemblyProductAttribute`/`AssemblyDescriptionAttribute`/`AssemblyCopyrightAttribute` 六个程序集级 CustomAttribute（右键「属性 → 详细信息」可见）。
+- **CustomAttribute blob 编码修正（对照 System.Private.CoreLib 反编译）**：值类型 FixedArg 为裸值（bool 1B / int32 4B / char 2B / f64 8B，无 ELEMENT_TYPE 前缀——类型由 ctor 签名提供）；string 为 SerString（压缩长度 + UTF-8，无尾 null）；blob 末尾统一追加 numNamed=0（GetI2 的 2 字节）。既有 `EncodeDebuggableAttributeBlob` 误带 `0x02` 前缀 + 缺 numNamed，导致整批 Assembly 属性反射解析崩溃——修正为 `01 00 01 01 00 00`（逐字节对照 csc）。
+- **自举侧同步**：`MetadataEncode.co` 的 `AttributeBlobHex`/`DebuggableBlobHex` 对齐新编码，string 改 UTF-8（`Utf8Blob`）；差分测试验证 C# 侧与自举侧一致。
+- 验证：新增 `IlAssemblyVersionMetadataTests`（反射读 Assembly 版本 + 6 个属性值）；`MetadataEncodeDifferential` 通过。
+
+---
+
+### 编译器：exe 图标 / 通用资源 / 内嵌资源（双后端）
+- **通用 .rsrc 构建器**：新增 `PeResourceData` + `ResourceSectionBuilder`——把多条资源（RT_VERSION / RT_ICON / RT_GROUP_ICON / RT_RCDATA 等）组装为三层资源目录树 + 叶子数据，替代只支持单一 RT_VERSION 的旧实现；`PeFileWriter` 按 DataEntry 偏移列表逐个回填 `.rsrc` 节 RVA。`VersionResourceBuilder` 重构为复用该构建器。
+- **exe 图标**：`ApplicationIcon`（`.coproj`，此前预留未消费）→ `IconResourceBuilder` 解析 `.ico`（ICONDIR）→ `RT_GROUP_ICON` + `RT_ICON[]` 嵌入 native `.rsrc`；dotnet 产物经 `ManagedPEWriter` 追加 `.rsrc` 节（win32 图标资源）。
+- **通用资源**：`<Resource Include="...">` → `RT_RCDATA` 嵌入 `.rsrc`（native 与 dotnet 产物）。
+- **内嵌资源**：`<EmbeddedResource Include="...">` → IL 产物 `ManifestResource` 表 + CLR Resources 目录（`u32` 长度前缀 + 数据，8 字节对齐；COR 头 Resources RVA/Size 指向），运行时 `Assembly.GetManifestResourceStream(文件名)` 读取。
+- **ManifestResource 表列序修正（对照 System.Reflection.Metadata 源码）**：行布局 `Offset(u32) + Flags(u32) + Name(#Strings) + Implementation(coded)`；`Implementation` coded index 宽按 File/AssemblyRef/ExportedType 行数判定（本实现恒 2 字节）。
+- **资源管线贯通**：`PeResourceOptions`（Core 侧载体：版本 + 图标路径 + RT_RCDATA + 内嵌资源）→ `Compilation.Emit`/`EmitNative` 可选参数 → 双后端；`ProjectBuilder.BuildResourceOptions` 从 `.coproj` 组装。
+- 验证：新增 `ResourceEmitTests`（native 图标树/RT_RCDATA 字节级、IL 内嵌资源 `GetManifestResourceStream` 读取回写）5 项；主套件全量 3297 通过；SelfHosting 既有失败（自举 binder `Type 'i32' doesn't exist`）与本增量无关（基线复现确认）。
+
+---
+
 ### IDE：VS/dotnet 风格发布布局（编译器 `./Compiler` + SDK `./SDK`）
 - **独立发布布局**：`tools/publish-ide.ps1` 把 `Cocoa.IDE` 发布为三件套——宿主 exe + `Compiler\`（编译器程序集 `Cocoa.*.dll`，排除 `Cocoa.IDE.dll`）+ `SDK\`（系统库 `System*.coa`），对齐 dotnet `host + sdk/` 与 VS 安装目录形态。
 - **编译器运行时加载**：`Program.cs` 注册 `AssemblyLoadContext.Default.Resolving` 钩子，启动时从 `./Compiler` 按名加载 `Cocoa.*` 编译器程序集；目录缺失（开发期）回退默认 BaseDirectory 解析——不破坏 `dotnet build` 直接运行。

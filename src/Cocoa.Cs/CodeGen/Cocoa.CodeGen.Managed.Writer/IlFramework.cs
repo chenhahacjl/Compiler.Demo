@@ -50,6 +50,14 @@ namespace Cocoa.CodeGen.Managed.Writer
             MemberInfoName = RequireMethod("System.Reflection.MemberInfo", "get_Name", Array.Empty<string>());
             // typeof(T) → ldtoken T; call Type::GetTypeFromHandle(RuntimeTypeHandle)
             TypeGetTypeFromHandle = RequireMethod("System.Type", "GetTypeFromHandle", new[] { "System.RuntimeTypeHandle" });
+
+            // 程序集级版本属性（右键属性/详细信息用）：.coproj 元数据 → Assembly CustomAttribute
+            AssemblyVersionAttributeCtor = RequireMethod("System.Reflection.AssemblyVersionAttribute", ".ctor", new[] { "System.String" });
+            AssemblyFileVersionAttributeCtor = RequireMethod("System.Reflection.AssemblyFileVersionAttribute", ".ctor", new[] { "System.String" });
+            AssemblyCompanyAttributeCtor = RequireMethod("System.Reflection.AssemblyCompanyAttribute", ".ctor", new[] { "System.String" });
+            AssemblyProductAttributeCtor = RequireMethod("System.Reflection.AssemblyProductAttribute", ".ctor", new[] { "System.String" });
+            AssemblyDescriptionAttributeCtor = RequireMethod("System.Reflection.AssemblyDescriptionAttribute", ".ctor", new[] { "System.String" });
+            AssemblyCopyrightAttributeCtor = RequireMethod("System.Reflection.AssemblyCopyrightAttribute", ".ctor", new[] { "System.String" });
             StringLastIndexOfChar = RequireMethod("System.String", "LastIndexOf", new[] { "System.Char" });
             StringSubstringFrom = RequireMethod("System.String", "Substring", new[] { "System.Int32" });
             ConsoleReadLine = RequireMethod("System.Console", "ReadLine", Array.Empty<string>());
@@ -130,6 +138,12 @@ namespace Cocoa.CodeGen.Managed.Writer
         /// <summary>6e-M19 M3-b：System.Type 只读属性（Type.Name 经 FullName 切分；Type.FullName 直取）。</summary>
         public IlMethodRef TypeGetFullName { get; }
         public IlMethodRef TypeGetTypeFromHandle { get; }
+        public IlMethodRef AssemblyVersionAttributeCtor { get; }
+        public IlMethodRef AssemblyFileVersionAttributeCtor { get; }
+        public IlMethodRef AssemblyCompanyAttributeCtor { get; }
+        public IlMethodRef AssemblyProductAttributeCtor { get; }
+        public IlMethodRef AssemblyDescriptionAttributeCtor { get; }
+        public IlMethodRef AssemblyCopyrightAttributeCtor { get; }
         public IlMethodRef StringLastIndexOfChar { get; }
         public IlMethodRef StringSubstringFrom { get; }
 

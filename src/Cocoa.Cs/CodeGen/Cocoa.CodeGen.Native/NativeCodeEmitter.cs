@@ -22,7 +22,7 @@ namespace Cocoa.CodeGen.Native
     /// </summary>
     internal sealed class NativeCodeEmitter
     {
-        public static void Emit(BoundProgram program, string moduleName, string outputPath, TargetPlatform platform, ushort subsystem, Cocoa.CodeAnalysis.PeVersionInfo? versionInfo = null)
+        public static void Emit(BoundProgram program, string moduleName, string outputPath, TargetPlatform platform, ushort subsystem, Cocoa.CodeAnalysis.PeResourceOptions? resourceOptions = null)
         {
             IAssembler a = platform.Arch == Architecture.X64
                 ? new X64Assembler()
@@ -50,8 +50,9 @@ namespace Cocoa.CodeGen.Native
             // M4a：数据段绝对地址槽 → .reloc（ASLR 下加载器同步修正 vtable 函数/名字指针）
             // M4：.cocoa 元数据节默认强制内嵌（设计稿：体积接受；无 strip 选项）
             var cocoaMetadata = new CocoaMetadataBuilder(emit.Symbols).Build();
-            // 版本资源（VS_VERSIONINFO → .rsrc）——规避杀软对无资源裸 PE 的启发式误报
-            var resources = versionInfo != null ? Cocoa.CodeGen.PE.VersionResourceBuilder.Build(versionInfo) : null;
+            // 资源集（版本 VS_VERSIONINFO / 图标 RT_GROUP_ICON+RT_ICON / 通用 RT_RCDATA → .rsrc）——
+            // 规避杀软对无资源裸 PE 的启发式误报；图标同时让 explorer 显示应用图标
+            var resources = Cocoa.CodeGen.PE.PeResourceSet.BuildRsrcSection(resourceOptions);
             PeFileWriter.Write(outputPath, code, a.GetData(), entryPointRva, result.Imports, platform.Arch, a.DataAbsoluteFixups, subsystem, cocoaMetadata, CollectExports(emit.Symbols, result, a), resources);
         }
 

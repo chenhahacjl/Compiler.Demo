@@ -22,9 +22,9 @@ namespace Cocoa.CodeGen.Managed.Writer
             Compilation.RegisterManagedEmitter(Emit);
         }
 
-        private static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath, IlTarget target, bool emitLibrary, ImmutableDictionary<object, string>? codAssemblies, bool publishPublicSurface)
+        private static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath, IlTarget target, bool emitLibrary, ImmutableDictionary<object, string>? codAssemblies, bool publishPublicSurface, Cocoa.CodeAnalysis.PeVersionInfo? versionInfo, Cocoa.CodeAnalysis.PeResourceOptions? resourceOptions)
         {
-            return IlEmitter.Emit(program, moduleName, references, outputPath, target, emitLibrary, codAssemblies, publishPublicSurface);
+            return IlEmitter.Emit(program, moduleName, references, outputPath, target, emitLibrary, codAssemblies, versionInfo, resourceOptions, publishPublicSurface);
         }
     }
 }

@@ -25,76 +25,25 @@ namespace Cocoa.CodeGen.PE
         private const uint VsFileTypeApp = 0x1;
         private const uint VsFileOsWindowsNt = 0x40004;
 
-        /// <summary>构造完整 .rsrc 节原始数据（含资源目录树）。null = 无版本信息时不生成节。</summary>
-        public static byte[]? Build(PeVersionInfo info)
+        /// <summary>构造完整 .rsrc 节（RT_VERSION/1/0409 → VS_VERSIONINFO）。null = 无版本信息时不生成。</summary>
+        public static ResourceSectionResult? Build(PeVersionInfo info)
         {
             if (info == null) return null;
 
-            var versionBlob = BuildVersionInfo(info);
+            var versionBlob = BuildVersionInfoBlob(info);
             if (versionBlob == null) return null;
 
-            return BuildResourceTree(versionBlob);
+            return ResourceSectionBuilder.Build(new[]
+            {
+                new PeResourceData(ResourceSectionBuilder.RtVersion, 1, ResourceSectionBuilder.DefaultLanguageId, versionBlob),
+            });
         }
 
-        /// <summary>资源目录树（RT_VERSION/1/0409 → DataEntry → 版本数据），DataEntry.OffsetToData 占位由调用方回填 .rsrc 节 RVA。</summary>
-        private static byte[] BuildResourceTree(byte[] versionData)
+        /// <summary>生成 VS_VERSIONINFO blob（供 PeResourceSet 合并到通用 .rsrc 构建器）。</summary>
+        public static byte[]? BuildVersionInfoBlob(PeVersionInfo info)
         {
-            // 偏移布局（单位为字节）：
-            //   root dir @0  (16B)          type dir @24 (16B)      lang dir @48 (16B)
-            //   root entry @16 (8B)         type entry @40 (8B)     lang entry @64 (8B)
-            //   DataEntry @72 (16B)
-            //   版本数据 @88
-            const int rootDir = 0;
-            const int rootEntry = 16;
-            const int typeDir = 24;
-            const int typeEntry = 40;
-            const int langDir = 48;
-            const int langEntry = 64;
-            const int dataEntry = 72;
-            const int dataOffset = 88;
-
-            var total = dataOffset + versionData.Length;
-            var blob = new byte[total];
-
-            // root directory: 0 named, 1 id entry
-            WriteUInt32(blob, rootDir + 0, 0);
-            WriteUInt32(blob, rootDir + 4, 0);
-            WriteUInt16(blob, rootDir + 8, 0);
-            WriteUInt16(blob, rootDir + 10, 0);
-            WriteUInt16(blob, rootDir + 12, 0);
-            WriteUInt16(blob, rootDir + 14, 1);
-            WriteUInt32(blob, rootEntry, (int)RtVersion);
-            WriteUInt32(blob, rootEntry + 4, (1 << 31) | typeDir);
-
-            // type directory (id name = 1): 0 named, 1 id
-            WriteUInt32(blob, typeDir + 0, 0);
-            WriteUInt32(blob, typeDir + 4, 0);
-            WriteUInt16(blob, typeDir + 8, 0);
-            WriteUInt16(blob, typeDir + 10, 0);
-            WriteUInt16(blob, typeDir + 12, 0);
-            WriteUInt16(blob, typeDir + 14, 1);
-            WriteUInt32(blob, typeEntry, 1);
-            WriteUInt32(blob, typeEntry + 4, (1 << 31) | langDir);
-
-            // language directory: 1 id entry (language id)
-            WriteUInt32(blob, langDir + 0, 0);
-            WriteUInt32(blob, langDir + 4, 0);
-            WriteUInt16(blob, langDir + 8, 0);
-            WriteUInt16(blob, langDir + 10, 0);
-            WriteUInt16(blob, langDir + 12, 0);
-            WriteUInt16(blob, langDir + 14, 1);
-            WriteUInt32(blob, langEntry, LanguageId);
-            // 叶子条目：OffsetToData 指向 IMAGE_RESOURCE_DATA_ENTRY，**不**置 DataIsDirectory 位（0x80000000）
-            WriteUInt32(blob, langEntry + 4, dataEntry);
-
-            // ImageResourceDataEntry: OffsetToData(占位0, 由 .rsrc 布局回填), Size, CodePage, Reserved
-            WriteUInt32(blob, dataEntry + 0, dataOffset);
-            WriteUInt32(blob, dataEntry + 4, versionData.Length);
-            WriteUInt32(blob, dataEntry + 8, 0);
-            WriteUInt32(blob, dataEntry + 12, 0);
-
-            Array.Copy(versionData, 0, blob, dataOffset, versionData.Length);
-            return blob;
+            if (info == null) return null;
+            return BuildVersionInfo(info);
         }
 
         /// <summary>生成 VS_VERSIONINFO blob。</summary>

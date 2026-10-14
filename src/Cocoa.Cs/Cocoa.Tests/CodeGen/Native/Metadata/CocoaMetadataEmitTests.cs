@@ -227,7 +227,7 @@ function Main(): i32
             var syntaxTree = SyntaxTree.Parse("function Main(): i32 { return 0 }");
             var compilation = Compilation.Create(syntaxTree);
             var exePath = GetExePath("cocoa-version", target);
-            var diags = compilation.EmitNative("cocoa-version", exePath, target, 3, new PeVersionInfo(
+            var resourceOptions = new PeResourceOptions(new PeVersionInfo(
                 CompanyName: "Acme Corp",
                 ProductName: "Version Probe",
                 FileDescription: "version resource probe",
@@ -235,6 +235,7 @@ function Main(): i32
                 ProductVersion: "2.0",
                 AssemblyName: "cocoa-version",
                 Copyright: "Copyright (c) 2026"));
+            var diags = compilation.EmitNative("cocoa-version", exePath, target, 3, resourceOptions);
             Assert.Empty(diags);
 
             var image = File.ReadAllBytes(exePath);

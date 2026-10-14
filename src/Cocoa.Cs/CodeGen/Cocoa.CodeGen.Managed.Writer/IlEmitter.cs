@@ -60,6 +60,9 @@ namespace Cocoa.CodeGen.Managed.Writer
         /// <summary>库产物（emitLibrary）：类型/方法统一按 public 发布（分发面即公共契约）。</summary>
         private bool _publishPublicSurface;
 
+        /// <summary>PE 资源选项（图标 / 通用 RT_RCDATA / IL 内嵌资源）→ 构建时嵌入。null = 无资源。</summary>
+        private readonly Cocoa.CodeAnalysis.PeResourceOptions? _resourceOptions;
+
         private readonly Dictionary<NamedTypeSymbol, IlTypeDef> _classTypeDefs = new Dictionary<NamedTypeSymbol, IlTypeDef>();
         private readonly Dictionary<FieldSymbol, IlFieldDef> _fieldDefs = new Dictionary<FieldSymbol, IlFieldDef>();
 
@@ -84,14 +87,23 @@ namespace Cocoa.CodeGen.Managed.Writer
         private static bool IsClosureEnvironmentClass(NamedTypeSymbol classType)
             => Cocoa.CodeAnalysis.Contracts.ClosureContract.IsEnvironmentClass(classType);
 
-        private IlEmitter(string moduleName, string[] references, ImmutableDictionary<object, string>? codAssemblies = null)
+        private IlEmitter(string moduleName, string[] references, ImmutableDictionary<object, string>? codAssemblies = null, Cocoa.CodeAnalysis.PeVersionInfo? versionInfo = null, Cocoa.CodeAnalysis.PeResourceOptions? resourceOptions = null)
         {
             _moduleName = moduleName;
             _codAssemblies = codAssemblies ?? ImmutableDictionary<object, string>.Empty;
+            _resourceOptions = resourceOptions;
             BuildCodOverloadGroups();
-            _metadata = new MetadataBuilder(moduleName, moduleName);
+            _metadata = new MetadataBuilder(moduleName, moduleName, versionInfo);
             _framework = new IlFramework(_metadata, references);
             _delegateShapes = new DelegateShapeCache(_metadata, _framework);
+            // 程序集级版本属性（右键属性 → 详细信息）
+            if (versionInfo != null)
+            {
+                _metadata.AddAssemblyVersionAttributes(versionInfo,
+                    _framework.AssemblyVersionAttributeCtor, _framework.AssemblyFileVersionAttributeCtor,
+                    _framework.AssemblyCompanyAttributeCtor, _framework.AssemblyProductAttributeCtor,
+                    _framework.AssemblyDescriptionAttributeCtor, _framework.AssemblyCopyrightAttributeCtor);
+            }
 
             // 顶层函数容器 TypeDef。名字用尖括号（非法标识符）杜绝与用户类同名冲突
             // （否则用户定义 `class Program` 时与默认 "Program" TypeDef 撞名 → BadImageFormatException）。
@@ -112,12 +124,17 @@ namespace Cocoa.CodeGen.Managed.Writer
 
         public static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath, IlTarget target, bool emitLibrary, ImmutableDictionary<object, string>? codAssemblies, bool publishPublicSurface = false)
         {
+            return Emit(program, moduleName, references, outputPath, target, emitLibrary, codAssemblies, versionInfo: null, resourceOptions: null, publishPublicSurface);
+        }
+
+        internal static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath, IlTarget target, bool emitLibrary, ImmutableDictionary<object, string>? codAssemblies, Cocoa.CodeAnalysis.PeVersionInfo? versionInfo, Cocoa.CodeAnalysis.PeResourceOptions? resourceOptions, bool publishPublicSurface = false)
+        {
             if (program.Diagnostics.HasErrors())
             {
                 return program.Diagnostics;
             }
 
-            var emitter = new IlEmitter(moduleName, references, codAssemblies);
+            var emitter = new IlEmitter(moduleName, references, codAssemblies, versionInfo, resourceOptions);
 
             return emitter.Emit(program, outputPath, target, emitLibrary, publishPublicSurface);
         }
@@ -384,7 +401,15 @@ namespace Cocoa.CodeGen.Managed.Writer
             _metadata.AddCustomAttribute(new IlCustomAttribute(_framework.DebuggableAttributeCtor, MetadataBuilder.EncodeDebuggableAttributeBlob(), parentRow: 1, parentTag: 0x0E, ctorRow: _metadata.GetMemberRefRow(_framework.DebuggableAttributeCtor), ctorTag: 3));
 
             var entryPointToken = program.MainFunction == null ? 0 : _metadata.BuildTokenMap()[_methods[program.MainFunction]];
-            var pe = ManagedPEWriter.Build(_moduleName, methods, bodies, _metadata, entryPointToken, target);
+
+            // IL 产物资源：win32 图标 / 通用 RT_RCDATA → .rsrc；内嵌资源 → ManifestResource（GetManifestResourceStream 读取）
+            var win32Resources = _resourceOptions != null ? Cocoa.CodeGen.PE.PeResourceSet.BuildWin32Only(_resourceOptions) : null;
+            foreach (var embedded in _resourceOptions?.EmbeddedResources ?? System.Array.Empty<Cocoa.CodeAnalysis.PeEmbeddedResource>())
+            {
+                _metadata.AddManifestResource(new Cocoa.Metadata.IlManifestResource(embedded.Name, embedded.Data));
+            }
+
+            var pe = ManagedPEWriter.Build(_moduleName, methods, bodies, _metadata, entryPointToken, target, win32Resources);
 
             File.WriteAllBytes(outputPath, pe);
             // 库（dll）不直接运行，不写 runtimeconfig；netcore exe 写。

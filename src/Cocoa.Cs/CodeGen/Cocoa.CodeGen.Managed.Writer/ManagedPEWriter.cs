@@ -62,7 +62,8 @@ namespace Cocoa.CodeGen.Managed.Writer
             IReadOnlyList<MethodBodyBlob> methodBodies,
             MetadataBuilder metadata,
             uint entryPointToken,
-            IlTarget target)
+            IlTarget target,
+            ResourceSectionResult? win32Resources = null)
         {
             // 6d-4：netfx（I386/PE32，AnyCPU）用 csc 同款节对齐 0x2000、.text 起始 0x2000；
             // netcore（AMD64）保持 0x1000/.text 0x1000。
@@ -127,10 +128,22 @@ namespace Cocoa.CodeGen.Managed.Writer
 
             WriteMetadataRoot(section, metadataOffset, streams);
 
+            // ---- 内嵌资源目录（CLR Resources；ManifestResource.Offset 相对此起点，8 字节对齐）----
+            var resourcesBlob = blobs.Resources;
+            while (section.Position % 8 != 0) section.WriteByte(0);
+            var resourcesOffsetInText = (int)section.Position;
+            var resourcesRva = (uint)(textRva + resourcesOffsetInText);
+            if (resourcesBlob.Length > 0)
+            {
+                section.Write(resourcesBlob, 0, resourcesBlob.Length);
+            }
+
+            var metadataSize = resourcesOffsetInText - metadataOffset;
             var sectionBytes = section.ToArray();
 
-            // ---- 回填 CLR 头 ----
-            WriteCorHeader(sectionBytes, corHeaderOffset, metadataRva, sectionBytes.Length - metadataOffset, entryPointToken);
+            // ---- 回填 CLR 头（含 Resources 目录 RVA/Size）----
+            WriteCorHeader(sectionBytes, corHeaderOffset, metadataRva, metadataSize, entryPointToken,
+                resourcesBlob.Length > 0 ? resourcesRva : 0u, (uint)resourcesBlob.Length);
 
             // ---- PE 壳 ----
             var directories = new List<(PeDataDirectoryEntry Entry, uint Rva, uint Size)>
@@ -172,6 +185,29 @@ namespace Cocoa.CodeGen.Managed.Writer
 
                 // .reloc：stub 的 jmp 操作数（64 位 AnyCPU 进程 FF 25 按 RIP 相对解码）需 HIGHLOW 重定位
                 AppendReloc(sections, directories, addressOfEntryPoint + 2);
+            }
+
+            // ---- .rsrc（win32 图标 / 通用 RT_RCDATA）：紧随既有节布局，DataEntry.OffsetToData 回填节 RVA ----
+            if (win32Resources != null && win32Resources.Blob.Length > 0)
+            {
+                var sectionAlignment = pe32 ? 0x2000u : 0x1000u;
+                var lastEnd = 0u;
+                foreach (var sect in sections)
+                {
+                    var end = sect.VirtualAddress + (uint)sect.RawData.Length;
+                    if (end > lastEnd) lastEnd = end;
+                }
+
+                var rsrcRva = PeBinary.Align(lastEnd, sectionAlignment);
+                var resourceBlob = (byte[])win32Resources.Blob.Clone();
+                foreach (var dataEntryOffset in win32Resources.DataEntryOffsets)
+                {
+                    var dataOffsetInBlob = (int)PeBinary.ReadUInt32(resourceBlob, dataEntryOffset);
+                    PeBinary.WriteUInt32(resourceBlob, dataEntryOffset, (int)(rsrcRva + (uint)dataOffsetInBlob));
+                }
+
+                directories.Add((PeDataDirectoryEntry.Resource, rsrcRva, (uint)resourceBlob.Length));
+                sections.Add(new PeSectionSpec(".rsrc", resourceBlob, rsrcRva, PeSectionCharacteristics.Data));
             }
 
             var config = pe32
@@ -332,7 +368,7 @@ namespace Cocoa.CodeGen.Managed.Writer
             return offset;
         }
 
-        private static void WriteCorHeader(byte[] section, int offset, uint metadataRva, int metadataSize, uint entryPointToken)
+        private static void WriteCorHeader(byte[] section, int offset, uint metadataRva, int metadataSize, uint entryPointToken, uint resourcesRva, uint resourcesSize)
         {
             using var stream = new MemoryStream(section);
             stream.Position = offset;
@@ -345,8 +381,8 @@ namespace Cocoa.CodeGen.Managed.Writer
             writer.Write((uint)metadataSize);      // MetaData Size
             writer.Write((uint)1);                 // Flags: COMIMAGE_FLAGS_ILONLY
             writer.Write(entryPointToken);         // EntryPointToken
-            writer.Write((uint)0);                 // Resources RVA
-            writer.Write((uint)0);                 // Resources Size
+            writer.Write(resourcesRva);            // Resources RVA
+            writer.Write(resourcesSize);           // Resources Size
             writer.Write((uint)0);                 // StrongNameSignature RVA
             writer.Write((uint)0);                 // StrongNameSignature Size
             writer.Write((uint)0);                 // CodeManagerTable

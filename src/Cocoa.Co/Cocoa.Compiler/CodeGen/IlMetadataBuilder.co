@@ -332,7 +332,7 @@ namespace Cocoa.CodeGen
             {
                 t = t + HexCodec.HexU16((1 << 5) | 0x0E)
                 t = t + HexCodec.HexU16((_debugCtorRow << 3) | 3)
-                t = t + HexCodec.HexU16(GetOrAddBlob("010002010201"))
+                t = t + HexCodec.HexU16(GetOrAddBlob("010001010000"))
             }
 
             // ---- StandAloneSig（局部变量签名；行 = #Blob 索引，2B small）----

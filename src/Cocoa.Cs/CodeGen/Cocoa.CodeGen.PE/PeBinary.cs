@@ -32,6 +32,14 @@ namespace Cocoa.CodeGen.PE
             bytes[offset + 3] = (byte)(value >> 24);
         }
 
+        public static uint ReadUInt32(byte[] bytes, int offset)
+        {
+            return (uint)(bytes[offset]
+                | (bytes[offset + 1] << 8)
+                | (bytes[offset + 2] << 16)
+                | (bytes[offset + 3] << 24));
+        }
+
         public static void WriteUInt64(byte[] bytes, int offset, long value)
         {
             for (var i = 0; i < 8; i++)

@@ -36,7 +36,7 @@ namespace Cocoa.CodeGen.PE
             return architecture == Architecture.X86 ? 0x400000 : 0x140000000;
         }
 
-        public static void Write(string outputPath, byte[] code, byte[] data, int entryPointRva, IReadOnlyList<PefileImport> imports, Architecture architecture, IReadOnlyList<int>? dataAbsoluteFixups = null, ushort subsystem = PeSubsystemWindowsCui, byte[]? cocoaMetadata = null, IReadOnlyList<PeExportEntry>? exports = null, byte[]? resources = null)
+        public static void Write(string outputPath, byte[] code, byte[] data, int entryPointRva, IReadOnlyList<PefileImport> imports, Architecture architecture, IReadOnlyList<int>? dataAbsoluteFixups = null, ushort subsystem = PeSubsystemWindowsCui, byte[]? cocoaMetadata = null, IReadOnlyList<PeExportEntry>? exports = null, ResourceSectionResult? resources = null)
         {
             var pe32 = architecture == Architecture.X86;
 
@@ -156,11 +156,10 @@ namespace Cocoa.CodeGen.PE
                 directories.Add((PeDataDirectoryEntry.Export, edataRva, (uint)exportBlob.Length));
             }
 
-            // .rsrc 资源节（版本信息 VS_VERSIONINFO）：紧随 .edata 之后布局。资源 blob 内
-            // DataEntry.OffsetToData（偏移 72）当前为镜像内偏移，须回填为 .rsrc 节 RVA + 数据偏移。
+            // .rsrc 资源节（版本信息/图标/通用资源）：紧随 .edata 之后布局。资源 blob 内
+            // 各 DataEntry.OffsetToData（节内偏移）须回填为 .rsrc 节 RVA + 数据偏移。
             uint rsrcRva = 0;
-            byte[] resourceBlob = Array.Empty<byte>();
-            if (resources != null && resources.Length > 0)
+            if (resources != null && resources.Blob.Length > 0)
             {
                 var afterEdata = (uint)Align(idataRva + importLayout.Blob.Length, SectionAlignment);
                 if (exportBlob.Length > 0) afterEdata = edataRva + (uint)Align(exportBlob.Length, SectionAlignment);
@@ -168,10 +167,14 @@ namespace Cocoa.CodeGen.PE
                 else if (relocBlob.Length > 0) afterEdata = relocRva + (uint)Align(relocBlob.Length, SectionAlignment);
 
                 rsrcRva = afterEdata;
-                resourceBlob = (byte[])resources.Clone();
-                // DataEntry 内相对数据区偏移固定为 88（见 VersionResourceBuilder）
-                var dataRvaInRsrc = (int)(rsrcRva + 88);
-                PeBinary.WriteUInt32(resourceBlob, 72, dataRvaInRsrc);
+                var resourceBlob = (byte[])resources.Blob.Clone();
+                // 每个 DataEntry.OffsetToData：节内偏移 → .rsrc 节 RVA + 数据偏移
+                foreach (var dataEntryOffset in resources.DataEntryOffsets)
+                {
+                    var dataOffsetInBlob = (int)PeBinary.ReadUInt32(resourceBlob, dataEntryOffset);
+                    PeBinary.WriteUInt32(resourceBlob, dataEntryOffset, (int)(rsrcRva + (uint)dataOffsetInBlob));
+                }
+
                 directories.Add((PeDataDirectoryEntry.Resource, rsrcRva, (uint)resourceBlob.Length));
                 sections.Add(new(".rsrc", resourceBlob, rsrcRva, PeSectionCharacteristics.Data));
             }

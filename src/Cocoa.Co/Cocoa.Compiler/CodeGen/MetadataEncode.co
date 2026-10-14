@@ -57,13 +57,16 @@ namespace Cocoa.CodeGen
             return 0
         }
 
-        /// <summary>DebuggableAttribute(bool, bool) 固定参数 blob：prolog + 2×ELEMENT_TYPE_BOOLEAN(true)。</summary>
+        /// <summary>DebuggableAttribute(bool, bool) 固定参数 blob：prolog + 2×裸 bool(1) + numNamed(0000)。
+        /// 逐字节对照 csc {01 00 01 01 00 00}（无 ELEMENT_TYPE 前缀，类型由 ctor 签名提供）。</summary>
         public static function DebuggableBlobHex(): string
         {
-            return "010002010201"
+            return "010001010000"
         }
 
-        /// <summary>6e-M32 Tier-2：属性固定实参 blob（ECMA II.23.3：prolog 0x0001 + 定长实参）。
+        /// <summary>6e-M32 Tier-2：属性固定实参 blob（ECMA II.23.3：prolog 0x0001 + 裸值实参 + numNamed 0000）。
+        /// 实参为裸值（无 ELEMENT_TYPE 前缀，类型由 ctor 签名提供；对照 System.Private.CoreLib
+        /// CustomAttributeEncodedArgument：bool GetU1/int32 GetI4/char GetU2/f64 GetR8/string SerString）。
         /// kinds ∈ {string,i32,bool,char,f64}；values：string=文本、i32=十进制串、bool="1"/"0"、
         /// char=十进制码点、f64=双精度位模式 hex（小端 16 位）。</summary>
         public static function AttributeBlobHex(kinds: string[], values: string[], count: i32): string
@@ -75,29 +78,29 @@ namespace Cocoa.CodeGen
                 let k = kinds[i]
                 if k == "string"
                 {
-                    h = h + "0e" + Utf16Blob(values[i])
+                    h = h + Utf8Blob(values[i])
                 }
                 else if k == "i32"
                 {
-                    h = h + "08" + HexCodec.HexU32(EvaluatorRuntime.ParseInt(values[i]))
+                    h = h + HexCodec.HexU32(EvaluatorRuntime.ParseInt(values[i]))
                 }
                 else if k == "bool"
                 {
-                    h = h + "02" + values[i]
+                    h = h + values[i]
                 }
                 else if k == "char"
                 {
-                    h = h + "03" + HexCodec.HexU16(EvaluatorRuntime.ParseInt(values[i]))
+                    h = h + HexCodec.HexU16(EvaluatorRuntime.ParseInt(values[i]))
                 }
                 else if k == "f64"
                 {
-                    h = h + "0d" + values[i]
+                    h = h + values[i]
                 }
 
                 i = i + 1
             }
 
-            return h
+            return h + "0000"
         }
 
         /// <summary>M5-a5 批 2：ECMA-335 类型签名（II.23.2.15 元素类型编码）。
@@ -232,8 +235,36 @@ namespace Cocoa.CodeGen
             return s.substring(start, len)
         }
 
-                /// <summary>#US 堆条目（ECMA-335 II.24.2.4）：压缩长度 = UTF-16 字节数 + 1（尾字节）+ UTF-16 + 尾字节。
-        /// 与 Utf16Blob（自定义属性 SerString，2n）不同——二者长度语义不同。</summary>
+                public static function Utf8Blob(s: string): string
+        {
+            var utf = ""
+            var i = 0
+            while i < s.Length
+            {
+                let u = i32(s[i])
+                if u < 0x80
+                {
+                    utf = utf + HexCodec.HexByte(u)
+                }
+                else if u < 0x800
+                {
+                    utf = utf + HexCodec.HexByte(0xC0 | (u >> 6)) + HexCodec.HexByte(0x80 | (u & 0x3F))
+                }
+                else
+                {
+                    utf = utf + HexCodec.HexByte(0xE0 | (u >> 12)) + HexCodec.HexByte(0x80 | ((u >> 6) & 0x3F)) + HexCodec.HexByte(0x80 | (u & 0x3F))
+                }
+
+                i = i + 1
+            }
+
+            // 自定义属性 SerString（ECMA II.23.3）：打包长度 = UTF-8 字节数 + UTF-8 字节（无尾 null；
+            // 对照 System.Private.CoreLib GetString() 用 Encoding.UTF8）。numNamed 由调用方追加。
+            return CompressedHex(utf.Length / 2) + utf
+        }
+
+        /// <summary>#US 堆条目（ECMA-335 II.24.2.4）：压缩长度 = UTF-16 字节数 + 1（尾字节）+ UTF-16 + 尾字节。
+        /// 与 Utf8Blob（自定义属性 SerString）不同——二者编码/长度语义不同。</summary>
         public static function UsBlobHex(s: string): string
         {
             var utf = ""
@@ -249,21 +280,6 @@ namespace Cocoa.CodeGen
             var len2 = utf.Length / 2
             if len2 < 1 { len2 = 1 }
             return CompressedHex(len2) + utf + "00"
-        }
-
-        public static function Utf16Blob(s: string): string
-        {
-            var utf = ""
-            var i = 0
-            while i < s.Length
-            {
-                let c = i32(s[i])
-                utf = utf + HexCodec.HexByte(c) + HexCodec.HexByte(c >> 8)
-                i = i + 1
-            }
-
-            // 自定义属性 SerString：压缩长度 = UTF-16 字节数（2n），后随 null 终止字节（对齐 C# EncodeAttributeBlob）。
-            return CompressedHex(utf.Length / 2) + utf + "00"
         }
 
         }

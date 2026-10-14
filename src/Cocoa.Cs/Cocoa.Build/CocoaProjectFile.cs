@@ -31,7 +31,9 @@ namespace Cocoa.Build
             ImmutableArray<string> sourcePatterns,
             ImmutableArray<string> references,
             ImmutableArray<string> imports,
-            ImmutableArray<ContentEntry> content)
+            ImmutableArray<ContentEntry> content,
+            ImmutableArray<string> resources,
+            ImmutableArray<string> embeddedResources)
         {
             FilePath = Path.GetFullPath(filePath);
             Directory = Path.GetDirectoryName(FilePath) ?? ".";
@@ -57,6 +59,8 @@ namespace Cocoa.Build
             References = references;
             Imports = imports;
             Content = content;
+            Resources = resources;
+            EmbeddedResources = embeddedResources;
         }
 
         public string FilePath { get; }
@@ -86,6 +90,12 @@ namespace Cocoa.Build
         public ImmutableArray<string> References { get; }
         public ImmutableArray<string> Imports { get; }
         public ImmutableArray<ContentEntry> Content { get; }
+
+        /// <summary>通用 PE 资源（`&lt;Resource Include=&quot;...&quot;&gt;`）：嵌入 .rsrc RT_RCDATA（native/IL 产物）。</summary>
+        public ImmutableArray<string> Resources { get; }
+
+        /// <summary>内嵌资源（`&lt;EmbeddedResource Include=&quot;...&quot;&gt;`）：IL 产物 ManifestResource，运行时 GetManifestResourceStream 访问。</summary>
+        public ImmutableArray<string> EmbeddedResources { get; }
 
         public static CocoaProjectFile Load(string path)
         {

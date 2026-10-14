@@ -21,11 +21,15 @@ namespace Cocoa.Build
             private readonly List<string> _references = new();
             private readonly List<string> _imports = new();
             private readonly List<ContentEntry> _content = new();
+            private readonly List<string> _resources = new();
+            private readonly List<string> _embeddedResources = new();
 
             public ImmutableArray<string> Sources => _sources.ToImmutableArray();
             public ImmutableArray<string> References => _references.ToImmutableArray();
             public ImmutableArray<string> Imports => _imports.ToImmutableArray();
             public ImmutableArray<ContentEntry> Content => _content.ToImmutableArray();
+            public ImmutableArray<string> Resources => _resources.ToImmutableArray();
+            public ImmutableArray<string> EmbeddedResources => _embeddedResources.ToImmutableArray();
 
             public string? Get(string key) => _values.TryGetValue(key, out var value) ? value : null;
 
@@ -65,6 +69,12 @@ namespace Cocoa.Build
                             }
 
                             _content.Add(new ContentEntry(item.Include, copy));
+                            break;
+                        case "Resource":
+                            _resources.Add(item.Include);
+                            break;
+                        case "EmbeddedResource":
+                            _embeddedResources.Add(item.Include);
                             break;
                     }
                 }
@@ -151,7 +161,9 @@ namespace Cocoa.Build
                 state.Sources,
                 state.References,
                 state.Imports,
-                state.Content);
+                state.Content,
+                state.Resources,
+                state.EmbeddedResources);
         }
 
         private static CocoaProjectMetadata BuildMetadata(State state)
