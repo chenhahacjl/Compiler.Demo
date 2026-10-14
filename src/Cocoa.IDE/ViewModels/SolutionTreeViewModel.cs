@@ -348,7 +348,7 @@ public partial class SolutionTreeViewModel : ObservableObject
             return false;
         }
 
-        if (reference.Output == ProjectOutputFormat.Exe)
+        if (reference.Output == ProjectOutputFormat.Executable)
         {
             error = $"'{reference.Name}' 是可执行项目，不能作为引用；请引用类库/程序集项目";
             return false;

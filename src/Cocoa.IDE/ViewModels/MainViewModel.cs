@@ -551,7 +551,7 @@ public partial class MainViewModel : ObservableObject
     public async Task RunNodeAsync(TreeNodeViewModel node)
     {
         var project = SolutionTree.ResolveProject(node);
-        if (project == null || project.Output != ProjectOutputFormat.Exe)
+        if (project == null || project.Output != ProjectOutputFormat.Executable)
         {
             Output.AppendLine("error: 该项目不是可执行项目");
             return;
@@ -610,7 +610,7 @@ public partial class MainViewModel : ObservableObject
 
     private void StartDebugFor(CocoaProjectFile project)
     {
-        if (project.Output != ProjectOutputFormat.Exe)
+        if (project.Output != ProjectOutputFormat.Executable)
         {
             Output.AppendLine($"error: '{project.Name}' 不是可执行项目");
             return;
@@ -719,14 +719,14 @@ public partial class MainViewModel : ObservableObject
         {
             var startup = SolutionTree.Projects.FirstOrDefault(p =>
                 string.Equals(p.FilePath, StartupProjectPath, StringComparison.OrdinalIgnoreCase));
-            if (startup is { Output: ProjectOutputFormat.Exe })
+            if (startup is { Output: ProjectOutputFormat.Executable })
                 return startup;
         }
 
         if (SolutionTree.CurrentSolution != null)
         {
             var executables = SolutionTree.Projects
-                .Where(p => p.Output == ProjectOutputFormat.Exe)
+                .Where(p => p.Output == ProjectOutputFormat.Executable)
                 .ToList();
             if (executables.Count == 1)
                 return executables[0];
@@ -739,7 +739,7 @@ public partial class MainViewModel : ObservableObject
 
         if (SolutionTree.CurrentProject != null)
         {
-            if (SolutionTree.CurrentProject.Output != ProjectOutputFormat.Exe)
+            if (SolutionTree.CurrentProject.Output != ProjectOutputFormat.Executable)
             {
                 Output.AppendLine("error: 当前项目不是可执行项目");
                 return null;

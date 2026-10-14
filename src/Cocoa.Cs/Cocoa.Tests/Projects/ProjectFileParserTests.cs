@@ -33,14 +33,14 @@ namespace Cocoa.Tests.Projects
 
             Assert.Equal("MyApp", project.AssemblyName);
             Assert.Equal("MyApp", project.Name);
-            Assert.Equal(ProjectOutputFormat.Dll, project.Output);
+            Assert.Equal(ProjectOutputFormat.Library, project.Output);
             Assert.Equal(CocoaTargetOs.Windows, project.TargetOs);
             Assert.Equal("x86", project.Platform);
             Assert.Equal("net48", project.DotnetRuntime);
             Assert.Equal(ProjectConfiguration.Release, project.Configuration);
             Assert.Equal("bin", project.OutputPath);
             Assert.Equal("MyApp.Program.Main", project.Entry);
-            Assert.Equal("Dll", project.Output.ToString());
+            Assert.Equal("Library", project.Output.ToString());
             Assert.Equal(new[] { "*.co" }, project.SourcePatterns);
             Assert.Equal(new[] { "../Libs/MyLib.coa" }, project.References);
             Assert.Equal(new[] { "kernel32.dll" }, project.Imports);
@@ -61,7 +61,7 @@ namespace Cocoa.Tests.Projects
 
             Assert.Equal("Greeter", project.Name);
             Assert.Equal("Greeter", project.AssemblyName);
-            Assert.Equal(ProjectOutputFormat.Exe, project.Output);
+            Assert.Equal(ProjectOutputFormat.Executable, project.Output);
             Assert.Equal(CocoaTargetOs.Windows, project.TargetOs);
             Assert.Equal("AnyCPU", project.Platform);
             Assert.Equal(ProjectConfiguration.Debug, project.Configuration);
@@ -181,7 +181,7 @@ namespace Cocoa.Tests.Projects
             var overrides = ProjectFileParser.ParseUserOverrides(text, "x.coproj.user");
 
             Assert.Equal("LocalName", overrides.AssemblyName);
-            Assert.Equal(ProjectOutputFormat.Dll, overrides.Output);
+            Assert.Equal(ProjectOutputFormat.Library, overrides.Output);
             Assert.Equal("x64", overrides.Platform);
             Assert.Equal("net9.0", overrides.TargetFramework);
             Assert.Equal(CocoaTargetOs.Linux, overrides.TargetOs);

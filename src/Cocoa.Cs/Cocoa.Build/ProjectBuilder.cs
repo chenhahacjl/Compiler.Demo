@@ -91,7 +91,7 @@ namespace Cocoa.Build
 
             // 动态链接（阶段 A2）：dotnet 后端消费 `.coa` 时以外部 dll 依赖接入（产物不内联库体）；
             // native 后端保持编译期合并（PE 静态链接）；cocoa 库产物自身不涉及
-            var linkCodDynamically = backend == CodeBackend.DotNet && format != ProjectOutputFormat.Cod;
+            var linkCodDynamically = backend == CodeBackend.DotNet && format != ProjectOutputFormat.Cocoa;
 
             var fingerprint = BuildCache.ComputeFingerprint(
                 expansion.Files,
@@ -126,7 +126,7 @@ namespace Cocoa.Build
                     ? Compilation.Create(references.ToArray(), linkCodDynamically, syntaxTrees)
                     : Compilation.Create(project.Entry, references.ToArray(), linkCodDynamically, syntaxTrees);
 
-                if (format == ProjectOutputFormat.Cod)
+                if (format == ProjectOutputFormat.Cocoa)
                 {
                     // `.coa` 语义层程序集：编译到 BoundProgram 即停（不走 IR/机器码/IL），后端无关。
                     // 托管 dll 不在此预生成——由消费方构建时按需生成（lazy，防派生产物被删后断链）
@@ -137,7 +137,7 @@ namespace Cocoa.Build
                 }
                 else if (backend == CodeBackend.Native)
                 {
-                    if (project.Output == ProjectOutputFormat.Dll)
+                    if (project.Output == ProjectOutputFormat.Library)
                     {
                         // 6e-M21：聚合解决方案（samples.cosln）中混有 dotnet-only 库项目——
                         // native 全量构建时跳过而非失败，保持一键体验
@@ -167,7 +167,7 @@ namespace Cocoa.Build
                         ? defaultRefs
                         : references.Concat(defaultRefs).Distinct().ToArray();
 
-                    var emitLibrary = project.Output == ProjectOutputFormat.Dll;
+                    var emitLibrary = project.Output == ProjectOutputFormat.Library;
                     if (!emitLibrary && target.Runtime == IlRuntime.NetCore)
                     {
                         // netcore 可执行：托管程序集产出 `<name>.dll`，另生成原生 apphost `<name>.exe`（SDK 标准布局），
@@ -219,7 +219,7 @@ namespace Cocoa.Build
             }
 
             // 6e-M24：XML documentation 输出（exe/library；`.coa` 已在 EmitCocoa 内写出）
-            if (format != ProjectOutputFormat.Cod)
+            if (format != ProjectOutputFormat.Cocoa)
             {
                 var docPath = options.DocOutput != null
                     ? outputFile + ".xml"
@@ -232,7 +232,7 @@ namespace Cocoa.Build
 
             // CopyLocal：把引用的 `.dll`/`.coa` 条件复制到输出目录（仿 VS 复制引用依赖；
             // 框架引用集由 IlReferenceResolver 在 Emit 时注入，天然排除）。`cocoa` 产物无运行期依赖，不复制。
-            if (format != ProjectOutputFormat.Cod)
+            if (format != ProjectOutputFormat.Cocoa)
             {
                 CopyReferencesToOutput(references, outputDirectory);
 

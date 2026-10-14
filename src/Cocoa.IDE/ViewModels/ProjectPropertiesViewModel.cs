@@ -16,7 +16,7 @@ public partial class ProjectPropertiesViewModel : ObservableObject
     public string ProjectDirectory { get; private set; } = "";
     public string DisplayName { get; private set; } = "项目属性";
 
-    public IReadOnlyList<string> OutputTypes { get; } = new[] { "Executable", "Library", "Cod" };
+    public IReadOnlyList<string> OutputTypes { get; } = new[] { "Executable", "Library", "Cocoa" };
     public IReadOnlyList<string> Platforms { get; } = new[] { "AnyCPU", "x86", "x64" };
     public IReadOnlyList<string> TargetOses { get; } = new[] { "Windows", "Linux" };
     public IReadOnlyList<string> Configurations { get; } = new[] { "Debug", "Release" };
@@ -56,8 +56,8 @@ public partial class ProjectPropertiesViewModel : ObservableObject
         AssemblyName = project.AssemblyName;
         OutputType = project.Output switch
         {
-            ProjectOutputFormat.Dll => "Library",
-            ProjectOutputFormat.Cod => "Cod",
+            ProjectOutputFormat.Library => "Library",
+            ProjectOutputFormat.Cocoa => "Cocoa",
             _ => "Executable",
         };
         Backend = project.Backend switch

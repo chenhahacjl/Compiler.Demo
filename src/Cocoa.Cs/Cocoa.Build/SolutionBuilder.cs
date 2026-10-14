@@ -182,7 +182,7 @@ namespace Cocoa.Build
         /// <summary>可被其它项目引用的产物路径：类库（dll）与 Cocoa 程序集（coa），不含可执行。</summary>
         private static string? GetReferenceableOutputPath(CocoaProjectFile project)
         {
-            if (project.Output is not (ProjectOutputFormat.Cod or ProjectOutputFormat.Dll))
+            if (project.Output is not (ProjectOutputFormat.Cocoa or ProjectOutputFormat.Library))
             {
                 return null;
             }

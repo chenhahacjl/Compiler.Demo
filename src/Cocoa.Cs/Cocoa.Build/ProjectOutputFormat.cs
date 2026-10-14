@@ -2,8 +2,8 @@ namespace Cocoa.Build
 {
     public enum ProjectOutputFormat
     {
-        Exe,
-        Dll,
-        Cod,
+        Executable,
+        Library,
+        Cocoa,
     }
 }

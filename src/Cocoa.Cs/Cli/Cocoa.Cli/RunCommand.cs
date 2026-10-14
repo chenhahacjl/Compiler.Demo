@@ -128,7 +128,7 @@ namespace Cocoa.Cli
                     }
 
                     var project = CocoaProjectFile.Load(fullPath);
-                    if (project.Output == ProjectOutputFormat.Exe)
+                    if (project.Output == ProjectOutputFormat.Executable)
                     {
                         executables.Add(Path.Combine(project.GetOutputDirectory(), project.GetDefaultOutputFileName()));
                     }
@@ -150,7 +150,7 @@ namespace Cocoa.Cli
             }
 
             var projectFile = CocoaProjectFile.Load(projectPath);
-            if (projectFile.Output != ProjectOutputFormat.Exe)
+            if (projectFile.Output != ProjectOutputFormat.Executable)
             {
                 Console.Error.WriteLine("error: cannot run a non-executable project");
                 return null;

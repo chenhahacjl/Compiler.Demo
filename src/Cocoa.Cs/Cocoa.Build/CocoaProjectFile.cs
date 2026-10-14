@@ -118,8 +118,8 @@ namespace Cocoa.Build
         {
             var extension = Output switch
             {
-                ProjectOutputFormat.Dll => ".dll",
-                ProjectOutputFormat.Cod => ".coa",
+                ProjectOutputFormat.Library => ".dll",
+                ProjectOutputFormat.Cocoa => ".coa",
                 _ => ".exe",
             };
 

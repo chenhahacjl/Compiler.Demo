@@ -209,9 +209,9 @@ namespace Cocoa.Build
         {
             return text.ToLowerInvariant() switch
             {
-                "executable" => ProjectOutputFormat.Exe,
-                "library" => ProjectOutputFormat.Dll,
-                "cocoa" => ProjectOutputFormat.Cod,
+                "executable" => ProjectOutputFormat.Executable,
+                "library" => ProjectOutputFormat.Library,
+                "cocoa" => ProjectOutputFormat.Cocoa,
                 _ => throw new ProjectFileFormatException($"invalid OutputType '{text}'. Expected: executable, library, cocoa", line),
             };
         }
