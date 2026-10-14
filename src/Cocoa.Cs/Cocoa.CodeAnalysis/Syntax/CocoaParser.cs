@@ -323,6 +323,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                         var pattern = ParsePattern();
                         left = new IsExpressionSyntax(_syntaxTree, left, isKeyword, null, pattern);
                     }
+                    // 列表模式：is [1, 2, 3] / is [1, .., 3] / is []
+                    else if (Current.Kind == SyntaxKind.OpenBracketToken)
+                    {
+                        var pattern = ParsePattern();
+                        left = new IsExpressionSyntax(_syntaxTree, left, isKeyword, null, pattern);
+                    }
                     else
                     {
                         // 类型测试：is TypeName
@@ -1294,6 +1300,13 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return ParsePropertyPattern();
             }
 
+            // 列表模式：is [1, 2, 3] / is [1, .., 3] / is [] / is [..]
+            if (Current.Kind == SyntaxKind.OpenBracketToken)
+            {
+                var listPattern = ParseListPattern();
+                return ParsePatternRest(listPattern);
+            }
+
             // not 模式：is not null / is not 0
             if (Current.Kind == SyntaxKind.NotKeyword)
             {
@@ -1370,6 +1383,48 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             var closeBrace = MatchToken(SyntaxKind.CloseBraceToken);
             return new PropertyPatternSyntax(_syntaxTree, openBrace, subpatterns.ToImmutable(), closeBrace);
+        }
+
+        /// <summary>列表模式：`[p1, p2, ..]` / `[p1, .., p2]` / `[]` / `[..rest]`。
+        /// `..` 用 RangeExpressionSyntax 标记（Right 可含 slice 声明变量名，暂缓绑定）。</summary>
+        private PatternSyntax ParseListPattern()
+        {
+            var openBracket = MatchToken(SyntaxKind.OpenBracketToken);
+            var elements = ImmutableArray.CreateBuilder<SyntaxNode>();
+
+            while (Current.Kind != SyntaxKind.CloseBracketToken && Current.Kind != SyntaxKind.EndOfFileToken)
+            {
+                if (Current.Kind == SyntaxKind.DotDotToken)
+                {
+                    // `..` 或 `..rest`：rest 为标识符（声明变量）或模式（暂只收标识符）
+                    var dotDot = NextToken();
+                    SyntaxNode? right = null;
+                    if (Current.Kind == SyntaxKind.IdentifierToken)
+                    {
+                        var identifier = NextToken();
+                        right = new NameExpressionSyntax(_syntaxTree, identifier);
+                    }
+                    else if (Current.Kind == SyntaxKind.ConstantPattern || Current.Kind == SyntaxKind.NumberToken ||
+                             Current.Kind == SyntaxKind.StringToken || Current.Kind == SyntaxKind.NullKeyword)
+                    {
+                        right = (SyntaxNode)ParsePattern();
+                    }
+
+                    elements.Add(new RangeExpressionSyntax(_syntaxTree, null, dotDot, (ExpressionSyntax?)right));
+                }
+                else
+                {
+                    elements.Add(ParsePattern());
+                }
+
+                if (Current.Kind == SyntaxKind.CommaToken)
+                {
+                    NextToken();
+                }
+            }
+
+            var closeBracket = MatchToken(SyntaxKind.CloseBracketToken);
+            return new ListPatternSyntax(_syntaxTree, openBracket, elements.ToImmutable(), closeBracket);
         }
 
         /// <summary>

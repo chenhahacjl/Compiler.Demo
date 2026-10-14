@@ -235,6 +235,7 @@ ColonToken,               // :
         OrKeyword = 216, // or 模式组合关键字
         NotKeyword = 217, // not 模式取反关键字
         PropertySubpattern = 218, // 属性子模式：Name: pattern
+        ListPattern = 252, // 列表模式：expr is [1, 2, 3] / [1, .., 3]（C# 11；显式值避免漂移）
         UsingStatement = 219, // using 语句：using (var x = expr) { body }
         DotDotToken = 220, // .. 范围运算符
         RangeExpression = 221, // 范围表达式：1..3 / 1.. / ..3 / ..

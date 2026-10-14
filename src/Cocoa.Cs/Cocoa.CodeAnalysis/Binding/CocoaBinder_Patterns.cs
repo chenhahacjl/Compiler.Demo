@@ -104,6 +104,12 @@ namespace Cocoa.CodeAnalysis.Binding
                 return BindWhenPattern(syntax, operand, whenPattern);
             }
 
+            // 列表模式：expr is [1, 2, 3] / expr is [1, .., 3] / expr is []（C# 11）
+            if (syntax.Pattern is CoreSyntax.ListPatternSyntax listPattern)
+            {
+                return BindListPattern(syntax, operand, listPattern);
+            }
+
             // 回退：类型测试（旧路径）
             if (syntax.TypeName != null)
             {
@@ -111,6 +117,117 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundErrorExpression(syntax);
+        }
+
+        /// <summary>列表模式降级为复合布尔表达式（三后端零新增发射）：长度约束 + 逐元素相等。
+        /// `[]` → len == 0；`[v1, v2]` → len == N &amp;&amp; e[0] == v1 &amp;&amp; ...；`[v1, .., v2]` →
+        /// len &gt;= 2 &amp;&amp; e[0] == v1 &amp;&amp; e[last] == v2（`..` 表示"零或多个任意元素"）。
+        /// operand 须为数组（含 string 走索引 char，暂仅数组）。</summary>
+        private BoundExpression BindListPattern(CoreSyntax.SyntaxNode syntax, BoundExpression operand, CoreSyntax.ListPatternSyntax listPattern)
+        {
+            if (operand.Type == TypeSymbol.Error)
+            {
+                return new BoundErrorExpression(syntax);
+            }
+
+            if (operand.Type.ElementType == null)
+            {
+                _diagnostics.ReportError(syntax.Location, $"列表模式 '[...]' 的操作数必须是数组类型。");
+                return new BoundErrorExpression(syntax);
+            }
+
+            var elementType = operand.Type.ElementType;
+            var length = new BoundMemberAccessExpression(syntax, TypeSymbol.Int32, operand, "Length", null);
+
+            // 分离固定元素与 slice 标记（RangeExpressionSyntax 含 ..）
+            var fixedElements = new System.Collections.Generic.List<CoreSyntax.SyntaxNode>();
+            var sliceIndex = -1;
+            for (var i = 0; i < listPattern.Elements.Length; i++)
+            {
+                if (listPattern.Elements[i] is CoreSyntax.RangeExpressionSyntax)
+                {
+                    sliceIndex = i;
+                }
+                else
+                {
+                    fixedElements.Add(listPattern.Elements[i]);
+                }
+            }
+
+            BoundExpression? condition = null;
+
+            if (sliceIndex < 0)
+            {
+                // 无 ..：长度精确匹配元素数
+                var lenEquals = BoundNodeFactory.Binary(syntax, length, CoreSyntax.SyntaxKind.EqualsEqualsToken,
+                    new BoundLiteralExpression(syntax, fixedElements.Count));
+                condition = lenEquals;
+            }
+            else
+            {
+                // 有 ..：长度 >= 固定元素数（.. 吞掉其余）
+                var minLength = fixedElements.Count;
+                var lenAtLeast = BoundNodeFactory.Binary(syntax, length, CoreSyntax.SyntaxKind.GreaterOrEqualsToken,
+                    new BoundLiteralExpression(syntax, minLength));
+                condition = lenAtLeast;
+            }
+
+            // 逐个固定元素匹配：e[i] == patternValue（i 相对开头）；slice 之后的元素用从尾部倒数索引
+            var fixedCount = fixedElements.Count;
+            for (var n = 0; n < fixedCount; n++)
+            {
+                // 该固定元素的实际下标：slice 之前 = n；slice 之后 = length - (固定元素总数 - n)
+                BoundExpression index;
+                if (sliceIndex < 0 || n < sliceIndex)
+                {
+                    index = new BoundLiteralExpression(syntax, n);
+                }
+                else
+                {
+                    var back = fixedCount - n;
+                    index = new BoundBinaryExpression(syntax, length,
+                        BoundBinaryOperator.Bind(CoreSyntax.SyntaxKind.MinusToken, TypeSymbol.Int32, TypeSymbol.Int32)!,
+                        new BoundLiteralExpression(syntax, back));
+                }
+
+                var elementAccess = new BoundElementAccessExpression(syntax, elementType, operand, index);
+                var elementValue = BindPatternValue(syntax, fixedElements[n], elementType);
+                if (elementValue == null)
+                {
+                    return new BoundErrorExpression(syntax);
+                }
+
+                var equality = BoundNodeFactory.Binary(syntax, elementAccess, CoreSyntax.SyntaxKind.EqualsEqualsToken, elementValue);
+                condition = condition == null
+                    ? equality
+                    : new BoundBinaryExpression(syntax, condition,
+                        BoundBinaryOperator.Bind(CoreSyntax.SyntaxKind.AmpersandAmpersandToken, TypeSymbol.Boolean, TypeSymbol.Boolean)!,
+                        equality);
+            }
+
+            return condition ?? new BoundLiteralExpression(syntax, true);
+        }
+
+        /// <summary>把列表模式中的元素（常量/声明/嵌套模式）绑定为与元素类型可比较的表达式。
+        /// 常量模式 → 字面量；声明模式 → 类型测试（暂返回恒 true + 忽略变量）；其余 → 递归 is 模式。</summary>
+        private BoundExpression? BindPatternValue(CoreSyntax.SyntaxNode syntax, CoreSyntax.SyntaxNode pattern, TypeSymbol elementType)
+        {
+            if (pattern is CoreSyntax.ConstantPatternSyntax constantPattern)
+            {
+                var value = BindExpression((CoreSyntax.ExpressionSyntax)constantPattern.Expression);
+                return BindConversion(value.Syntax.Location, value, elementType);
+            }
+
+            if (pattern is CoreSyntax.DeclarationPatternSyntax declPattern)
+            {
+                // 列表元素声明变量绑定暂不展开——匹配语义等价"元素类型测试"（type 匹配即 true）
+                return new BoundLiteralExpression(syntax, true);
+            }
+
+            // 嵌套模式元素（关系/逻辑等）暂不支持列表上下文——报诊断。
+            _diagnostics.ReportError(syntax.Location,
+                "列表模式元素暂仅支持常量/声明模式（`[1, 2]` 或 `[x: i32]`）。");
+            return null;
         }
 
         private BoundExpression BindLogicalPattern(CoreSyntax.SyntaxNode syntax, BoundExpression operand, CoreSyntax.LogicalPatternSyntax logicalPattern)

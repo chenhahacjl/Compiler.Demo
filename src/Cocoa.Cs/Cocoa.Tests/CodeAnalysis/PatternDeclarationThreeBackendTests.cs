@@ -2,6 +2,7 @@ using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.Targeting;
+using Cocoa.Tests.CodeAnalysis.Emit.Native;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -214,6 +215,87 @@ function Main(): i32
             var compilation = Compilation.Create(SyntaxTree.Parse(src));
             var diagnostics = compilation.EmitNative("t", Path.Combine(Path.GetTempPath(), "cocoa-pat-rej-" + name + ".exe"), new TargetPlatform(TargetOS.Windows, Architecture.X64));
             Assert.Contains(diagnostics, d => d.IsError && d.Message.Contains("声明模式"));
+        }
+
+        // ------------------------------------------------------------------
+        // 列表模式（C# 11）：expr is [1, 2, 3] / expr is [1, .., 3] / expr is [] / expr is [..]
+        // 绑定降级为复合布尔（长度约束 + 逐元素相等），三后端零新增发射。
+        // ------------------------------------------------------------------
+
+        private const string ListPatternProgram = @"using System
+
+function Main(): i32
+{
+    var a = [1, 2, 3]
+    var empty: i32[] = []
+    var r = 0
+    if a is [1, 2, 3] { r = r + 1 }
+    if a is [1, .., 3] { r = r + 2 }
+    if a is [] { r = r + 4 }
+    if empty is [] { r = r + 8 }
+    if a is [1, ..] { r = r + 16 }
+    if a is [..] { r = r + 32 }
+    Console.WriteLine(r)
+    return 0
+}";
+
+        private const string ListPatternExpected = "59\n";
+
+        [Fact]
+        public void Evaluator_ListPattern()
+        {
+            var original = Console.Out;
+            try
+            {
+                using var writer = new StringWriter();
+                Console.SetOut(writer);
+                var compilation = Compilation.Create("Main", References(), SyntaxTree.Parse(ListPatternProgram));
+                var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+                Assert.True(!result.Diagnostics.HasErrors(), string.Join("\n", result.Diagnostics.Select(d => d.Message)));
+                Assert.Equal(ListPatternExpected, writer.ToString().Replace("\r\n", "\n"));
+            }
+            finally
+            {
+                Console.SetOut(original);
+            }
+        }
+
+        [Fact]
+        public void IlE2e_ListPattern()
+        {
+            var dir = Path.Combine(Path.GetTempPath(), "cocoa-pattern", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            var exePath = Path.Combine(dir, "listpat.exe");
+            var compilation = Compilation.Create("Main", References(), SyntaxTree.Parse(ListPatternProgram));
+            var diagnostics = compilation.Emit("listpat", References(), exePath, IlTarget.Parse("net9.0"));
+            Assert.Empty(string.Join("\n", diagnostics));
+            var psi = new ProcessStartInfo("dotnet", $"\"{exePath}\"") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+            using var process = Process.Start(psi)!;
+            using var output = new MemoryStream();
+            var outputTask = process.StandardOutput.BaseStream.CopyToAsync(output);
+            using var errReader = process.StandardError;
+            var errTask = errReader.ReadToEndAsync();
+            Assert.True(process.WaitForExit(20000));
+            outputTask.Wait();
+            var stdout = Encoding.UTF8.GetString(output.ToArray()).Replace("\r\n", "\n").Replace("\r", "\n");
+            Assert.True(process.ExitCode == 0, "exit=" + process.ExitCode + " stderr=" + errTask.Result.Replace("\n", " | "));
+            Assert.Equal(ListPatternExpected, stdout);
+        }
+
+        [Theory]
+        [InlineData("windows-x64")]
+        [InlineData("windows-x86")]
+        public void NativeE2e_ListPattern(string target)
+        {
+            var dir = Path.Combine(Path.GetTempPath(), "cocoa-pattern", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            var exePath = Path.Combine(dir, "listpat-" + target + ".exe");
+            TargetPlatform.TryParse(target, out var platform);
+            var compilation = Compilation.Create("Main", References(), SyntaxTree.Parse(ListPatternProgram));
+            var diagnostics = compilation.EmitNative("listpatsdk", exePath, platform);
+            Assert.Empty(string.Join("\n", diagnostics));
+            var stdout = NativeEmitTests.Run(exePath);
+            Assert.Equal(ListPatternExpected, stdout.Replace("\r\n", "\n").Replace("\r", "\n"));
         }
     }
 }
