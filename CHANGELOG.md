@@ -10,6 +10,15 @@
 
 ## 未发布（2026-10-14）
 
+### 语言特性：列表模式切片变量 `..rest` ✅
+- **`[p1, ..rest, p3]` 切片变量绑定**（C# 11 slice designator）：模式匹配成功时把中段（`..` 吞掉的元素）绑定为新数组 `rest`。语法解析早已收 `..rest`（`RangeExpressionSyntax.Right`），本批补上绑定语义。
+- **实现零新增发射**：复用既有惰性三元（三端短路）+ `CopyRange` 合成调用（三端已有 Array.Copy/SliceArray）+ 赋值节点。因三端 `&&` 均为急切求值，切片副作用不能挂布尔链尾（长度不足时 count 为负 → 越界），用 `cond ? (rest = CopyRange(...)) != null : false` 隔离——仅匹配时求值切片。
+- 长度不足不匹配时切片不求值（惰性短路），rest 保持默认；`[..rest]` 绑定整数组、`[1, ..rest]` 绑定尾部、`[..rest, 3]` 绑定头部之外。
+- IL 端 `CollectExpressionLocals` 补 `BoundAssignmentExpression`（表达式内引入的 rest 局部占槽，对齐声明模式变量）。
+- 测试：`PatternDeclarationThreeBackendTests.ListRest_*` 4 例（Evaluator/IL/native 端到端 + 长度不足不越界）；全量回归 3288 通过。
+
+---
+
 ### 语言特性：反射面子集补 `System.Type.GetMethods()` ✅
 - **`Type.GetMethods(): string[]`**——宿主反射面的方法名投影。解释器（CLR `Type.GetMethods(BindingFlags.Instance|Public|NonPublic|Static)`）与 IL（`callvirt GetMethods` + 名字循环投影到 `string[]`）两端闭环；native 无宿主类型表（Type 值为 vtable 记录指针）登记为覆盖缺口，`EvaluatorTypeInfo`（用户类）返回空数组。
 - **元数据签名登记修复**：`ResolveMethodRef` 对返回/参数类型补 `RegisterSignatureTypeRef`（含 SzArray 元素），`ResolveClassType` 递归重解析数组元素——否则数组元素（如 `MethodInfo`）保留 reader 的 null-scope TypeRef，写出 ResolutionScope=0（当前模块），CLR 无法匹配成员签名（`MissingMethodException`）。

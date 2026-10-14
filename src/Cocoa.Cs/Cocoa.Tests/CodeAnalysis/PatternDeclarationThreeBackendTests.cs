@@ -297,5 +297,106 @@ function Main(): i32
             var stdout = NativeEmitTests.Run(exePath);
             Assert.Equal(ListPatternExpected, stdout.Replace("\r\n", "\n").Replace("\r", "\n"));
         }
+
+        // ------------------------------------------------------------------
+        // 列表模式切片变量 `..rest`：匹配时把中段绑定为新数组（C# 11 slice designator）。
+        // 实现走惰性三元（三端短路）+ CopyRange 合成调用，仅匹配时求值切片。
+        // ------------------------------------------------------------------
+
+        private const string ListRestProgram = @"using System
+
+function Main(): i32
+{
+    var a = [1, 2, 3, 4, 5]
+    var r = 0
+    if a is [1, ..rest, 5] {
+        if rest.Length == 3 { if rest[0] == 2 { if rest[2] == 4 { r = r + 1 } } }
+    }
+    if a is [1, ..middle] {
+        if middle.Length == 4 { r = r + 2 }
+    }
+    if a is [..all] {
+        if all.Length == 5 { r = r + 4 }
+    }
+    Console.WriteLine(r)
+    return 0
+}";
+
+        private const string ListRestExpected = "7\n";
+
+        [Fact]
+        public void Evaluator_ListRest_SliceBinding()
+        {
+            var original = Console.Out;
+            try
+            {
+                using var writer = new StringWriter();
+                Console.SetOut(writer);
+                var compilation = Compilation.Create("Main", References(), SyntaxTree.Parse(ListRestProgram));
+                var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+                Assert.True(!result.Diagnostics.HasErrors(), string.Join("\n", result.Diagnostics.Select(d => d.Message)));
+                Assert.Equal(ListRestExpected, writer.ToString().Replace("\r\n", "\n"));
+            }
+            finally
+            {
+                Console.SetOut(original);
+            }
+        }
+
+        [Fact]
+        public void IlE2e_ListRest_SliceBinding()
+        {
+            var dir = Path.Combine(Path.GetTempPath(), "cocoa-pattern", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            var exePath = Path.Combine(dir, "listrest.exe");
+            var compilation = Compilation.Create("Main", References(), SyntaxTree.Parse(ListRestProgram));
+            var diagnostics = compilation.Emit("listrest", References(), exePath, IlTarget.Parse("net9.0"));
+            Assert.Empty(string.Join("\n", diagnostics));
+            var psi = new ProcessStartInfo("dotnet", $"\"{exePath}\"") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+            using var process = Process.Start(psi)!;
+            using var output = new MemoryStream();
+            var outputTask = process.StandardOutput.BaseStream.CopyToAsync(output);
+            using var errReader = process.StandardError;
+            var errTask = errReader.ReadToEndAsync();
+            Assert.True(process.WaitForExit(20000));
+            outputTask.Wait();
+            var stdout = Encoding.UTF8.GetString(output.ToArray()).Replace("\r\n", "\n").Replace("\r", "\n");
+            Assert.True(process.ExitCode == 0, "exit=" + process.ExitCode + " stderr=" + errTask.Result.Replace("\n", " | "));
+            Assert.Equal(ListRestExpected, stdout);
+        }
+
+        [Theory]
+        [InlineData("windows-x64")]
+        [InlineData("windows-x86")]
+        public void NativeE2e_ListRest_SliceBinding(string target)
+        {
+            var dir = Path.Combine(Path.GetTempPath(), "cocoa-pattern", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            var exePath = Path.Combine(dir, "listrest-" + target + ".exe");
+            TargetPlatform.TryParse(target, out var platform);
+            var compilation = Compilation.Create("Main", References(), SyntaxTree.Parse(ListRestProgram));
+            var diagnostics = compilation.EmitNative("listrestsdk", exePath, platform);
+            Assert.Empty(string.Join("\n", diagnostics));
+            var stdout = NativeEmitTests.Run(exePath);
+            Assert.Equal(ListRestExpected, stdout.Replace("\r\n", "\n").Replace("\r", "\n"));
+        }
+
+        [Fact]
+        public void Bind_ListRest_NonMatch_NoCrash()
+        {
+            // 长度不足时切片不应求值（惰性三元短路）：`[1, ..rest, 3]` 对 `[1]` 长度不足 → 整体 false，不越界。
+            var source = @"using System
+
+function Main(): i32
+{
+    var a = [1]
+    if a is [1, ..rest, 3] { return 1 }
+    return 0
+}";
+            var compilation = Compilation.Create("Main", References(), SyntaxTree.Parse(source));
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+            Assert.False(result.Diagnostics.HasErrors(), string.Join("\n", result.Diagnostics.Select(d => d.Message)));
+            Assert.Equal(0, Assert.IsType<int>(result.Value));
+        }
     }
 }

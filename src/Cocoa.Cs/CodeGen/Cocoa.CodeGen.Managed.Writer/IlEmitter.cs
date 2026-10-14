@@ -1071,6 +1071,17 @@ namespace Cocoa.CodeGen.Managed.Writer
                     CollectExpressionLocals(conditional.WhenTrue, localTypes);
                     CollectExpressionLocals(conditional.WhenFalse, localTypes);
                     break;
+
+                case BoundAssignmentExpression assignment:
+                    // 列表模式切片变量 `..rest`：rest 在条件表达式内作为赋值目标出现，
+                    // 非声明语句，须在此占槽（对齐 BoundDeclarationPattern 的表达式内引入）。
+                    if (assignment.Variable is LocalVariableSymbol)
+                    {
+                        DeclareLocal(assignment.Variable, localTypes);
+                    }
+
+                    CollectExpressionLocals(assignment.Expression, localTypes);
+                    break;
             }
         }
 

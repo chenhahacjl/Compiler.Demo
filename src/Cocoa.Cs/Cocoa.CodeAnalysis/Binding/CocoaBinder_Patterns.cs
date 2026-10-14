@@ -139,14 +139,22 @@ namespace Cocoa.CodeAnalysis.Binding
             var elementType = operand.Type.ElementType;
             var length = new BoundMemberAccessExpression(syntax, TypeSymbol.Int32, operand, "Length", null);
 
-            // 分离固定元素与 slice 标记（RangeExpressionSyntax 含 ..）
+            // 分离固定元素与 slice 标记（RangeExpressionSyntax 含 ..）；`..rest` 捕获 rest 变量名
             var fixedElements = new System.Collections.Generic.List<CoreSyntax.SyntaxNode>();
             var sliceIndex = -1;
+            string? restName = null;
+            CoreSyntax.SyntaxNode? restSyntax = null;
             for (var i = 0; i < listPattern.Elements.Length; i++)
             {
-                if (listPattern.Elements[i] is CoreSyntax.RangeExpressionSyntax)
+                if (listPattern.Elements[i] is CoreSyntax.RangeExpressionSyntax range)
                 {
                     sliceIndex = i;
+                    // `..rest`：rest 为标识符（解析层仅把标识符/常量收进 Right）；命名切片捕获其余元素
+                    if (range.Right is CoreSyntax.NameExpressionSyntax restNameExpression)
+                    {
+                        restName = restNameExpression.IdentifierToken.Text ?? "";
+                        restSyntax = range.Right;
+                    }
                 }
                 else
                 {
@@ -203,6 +211,38 @@ namespace Cocoa.CodeAnalysis.Binding
                     : new BoundBinaryExpression(syntax, condition,
                         BoundBinaryOperator.Bind(CoreSyntax.SyntaxKind.AmpersandAmpersandToken, TypeSymbol.Boolean, TypeSymbol.Boolean)!,
                         equality);
+            }
+
+            if (restName != null && restName.Length > 0)
+            {
+                // C# 11 列表模式切片变量：`[p1, ..rest, p3]` 匹配时把中间段绑定为 rest（新数组）。
+                // 三端 `&&` 均急切求值，不能把切片副作用挂链尾（长度不足时 count 为负 → 越界），
+                // 故用惰性三元（三端都短路）把"匹配条件 → 切片赋值"隔离开：
+                //   rest = CopyRange(operand, prefixCount, len - prefixCount - suffixCount)
+                //   result = cond ? (rest = slice) != null : false
+                // （CopyRange 恒非 null，`!= null` 是恒真包装，保住 cond 的布尔语义。）
+                var restVariable = new LocalVariableSymbol(restName, isReadOnly: false,
+                    TypeSymbol.ArrayOf(elementType), constant: null);
+                if (!_scope.TryDeclareVariable(restVariable))
+                {
+                    _diagnostics.ReportSymbolAlreadyDeclared(restSyntax!.Location, restName);
+                }
+
+                var prefixCount = sliceIndex;                 // slice 之前的固定元素数
+                var suffixCount = fixedCount - sliceIndex;    // slice 之后的固定元素数
+                var sliceCount = BoundNodeFactory.Binary(syntax, length, CoreSyntax.SyntaxKind.MinusToken,
+                    new BoundLiteralExpression(syntax, fixedCount));
+
+                var sliceCall = new BoundCallExpression(syntax,
+                    GetCopyRangeMethod(syntax, elementType),
+                    ImmutableArray.Create<BoundExpression>(operand,
+                        new BoundLiteralExpression(syntax, prefixCount), sliceCount));
+
+                var restAssignment = BoundNodeFactory.Assignment(syntax, restVariable, sliceCall);
+                var notNull = BoundNodeFactory.Binary(syntax, restAssignment,
+                    CoreSyntax.SyntaxKind.BangEqualsToken, new BoundLiteralExpression(syntax, null!));
+                return BoundNodeFactory.Conditional(syntax, condition ?? new BoundLiteralExpression(syntax, true),
+                    notNull, new BoundLiteralExpression(syntax, false));
             }
 
             return condition ?? new BoundLiteralExpression(syntax, true);
