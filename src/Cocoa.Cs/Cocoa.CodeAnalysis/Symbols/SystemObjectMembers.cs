@@ -26,6 +26,8 @@ namespace Cocoa.CodeAnalysis.Symbols
             new BuiltinSpec(BuiltinKind.TypeIsClass, "get_IsClass", TypeSymbol.Boolean, System.Array.Empty<(string, TypeSymbol)>()),
             new BuiltinSpec(BuiltinKind.TypeIsValueType, "get_IsValueType", TypeSymbol.Boolean, System.Array.Empty<(string, TypeSymbol)>()),
             new BuiltinSpec(BuiltinKind.TypeGetMethods, "GetMethods", TypeSymbol.ArrayOf(TypeSymbol.String), System.Array.Empty<(string, TypeSymbol)>()),
+            new BuiltinSpec(BuiltinKind.TypeGetMethod, "GetMethod", TypeSymbol.String, new (string Name, TypeSymbol Type)[] { ("name", TypeSymbol.String) }),
+            new BuiltinSpec(BuiltinKind.TypeHasMethod, "HasMethod", TypeSymbol.Boolean, new (string Name, TypeSymbol Type)[] { ("name", TypeSymbol.String) }),
         };
 
         private static bool _initialized;
@@ -63,6 +65,12 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>Type.GetMethods(): string[]（实例/静态方法名字符串数组，反射面简化子集）。</summary>
         public static readonly FunctionSymbol TypeGetMethods = CreateInstance(BuiltinKind.TypeGetMethods);
 
+        /// <summary>Type.GetMethod(name): string（按精确名返回规范方法名，未找到空串；宿主反射面简化子集）。</summary>
+        public static readonly FunctionSymbol TypeGetMethod = CreateInstance(BuiltinKind.TypeGetMethod);
+
+        /// <summary>Type.HasMethod(name): bool（精确名方法存在性检查，全可见性）。</summary>
+        public static readonly FunctionSymbol TypeHasMethod = CreateInstance(BuiltinKind.TypeHasMethod);
+
         /// <summary>
         /// 向 SystemObject/SystemType 单例注入成员面（幂等）。须先于类成员绑定调用，
         /// 保证用户类 override 解析与成员沿链上溯可见。SystemType 继承 SystemObject（Type 值可用 ToString/GetType 等）。
@@ -99,6 +107,8 @@ namespace Cocoa.CodeAnalysis.Symbols
             type.AddMethod(TypeIsClass);
             type.AddMethod(TypeIsValueType);
             type.AddMethod(TypeGetMethods);
+            type.AddMethod(TypeGetMethod);
+            type.AddMethod(TypeHasMethod);
         }
 
         /// <summary>是否为 Object/Type 内建单例（`.coa` 序列化跳过 cls 壳与方法回填的判据）。</summary>
@@ -119,6 +129,8 @@ namespace Cocoa.CodeAnalysis.Symbols
             BuiltinKind.TypeIsClass => TypeIsClass,
             BuiltinKind.TypeIsValueType => TypeIsValueType,
             BuiltinKind.TypeGetMethods => TypeGetMethods,
+            BuiltinKind.TypeGetMethod => TypeGetMethod,
+            BuiltinKind.TypeHasMethod => TypeHasMethod,
             _ => null,
         };
 
@@ -145,7 +157,9 @@ namespace Cocoa.CodeAnalysis.Symbols
                                  kind != BuiltinKind.TypeFullName &&
                                  kind != BuiltinKind.TypeIsClass &&
                                  kind != BuiltinKind.TypeIsValueType &&
-                                 kind != BuiltinKind.TypeGetMethods;
+                                 kind != BuiltinKind.TypeGetMethods &&
+                                 kind != BuiltinKind.TypeGetMethod &&
+                                 kind != BuiltinKind.TypeHasMethod;
             return function;
         }
 

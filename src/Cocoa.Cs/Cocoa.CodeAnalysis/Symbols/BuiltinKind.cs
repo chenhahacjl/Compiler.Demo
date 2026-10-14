@@ -80,5 +80,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         TypeIsClass,
         TypeIsValueType,
         TypeGetMethods,
+        TypeGetMethod,
+        TypeHasMethod,
     }
 }

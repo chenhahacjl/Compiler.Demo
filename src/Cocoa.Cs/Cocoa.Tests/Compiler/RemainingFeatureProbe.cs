@@ -735,6 +735,65 @@ namespace Cocoa.Tests.Compiler
             Assert.True(row.Backends.HasFlag(Cocoa.CodeAnalysis.Symbols.BuiltinBackend.Il));
             Assert.False(string.IsNullOrWhiteSpace(row.GapReason));
         }
+
+        [Fact]
+        public void Reflection_GetMethodHasMethod_IlChain()
+        {
+            // C-1 反射子集增量交付：Type.HasMethod(name)/GetMethod(name)。
+            // 不直调 BCL GetMethod(string)（重载/继承歧义抛 AmbiguousMatchException），
+            // 走 GetMethods 名字数组 + Array.IndexOf 扫描（与 GetMethods 同素材、歧义安全）。
+            var r = RunMain(
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var t = typeof(i32)" + Nl +
+                "    var has = t.HasMethod(\"ToString\")" + Nl +
+                "    var name = t.GetMethod(\"ToString\")" + Nl +
+                "    var missingHas = t.HasMethod(\"NoSuchMethodXyz\")" + Nl +
+                "    var missingName = t.GetMethod(\"NoSuchMethodXyz\")" + Nl +
+                "    if !has { return 1 }" + Nl +
+                "    if name != \"ToString\" { return 2 }" + Nl +
+                "    if missingHas { return 3 }" + Nl +
+                "    if missingName != \"\" { return 4 }" + Nl +
+                "    return 0" + Nl +
+                "}", "ReflectGetMethod");
+
+            Assert.Equal(0, r);
+        }
+
+        [Fact]
+        public void Reflection_GetMethodHasMethod_Interpreter()
+        {
+            var syntaxTree = SyntaxTree.Parse(
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var t = typeof(i32)" + Nl +
+                "    var has = t.HasMethod(\"ToString\")" + Nl +
+                "    var name = t.GetMethod(\"ToString\")" + Nl +
+                "    var missingHas = t.HasMethod(\"NoSuchMethodXyz\")" + Nl +
+                "    var missingName = t.GetMethod(\"NoSuchMethodXyz\")" + Nl +
+                "    if !has { return 1 }" + Nl +
+                "    if name != \"ToString\" { return 2 }" + Nl +
+                "    if missingHas { return 3 }" + Nl +
+                "    if missingName != \"\" { return 4 }" + Nl +
+                "    return 0" + Nl +
+                "}");
+            var result = Compilation.Create("Main", References, syntaxTree).Evaluate(
+                new Dictionary<Cocoa.CodeAnalysis.Symbols.VariableSymbol, object>());
+            Assert.False(result.Diagnostics.HasErrors(), string.Join("; ", result.Diagnostics.Select(d => d.Message)));
+            Assert.Equal(0, Assert.IsType<int>(result.Value));
+        }
+
+        [Fact]
+        public void Reflection_GetMethodHasMethod_NativeGapDeclared()
+        {
+            foreach (var kind in new[] { Cocoa.CodeAnalysis.Symbols.BuiltinKind.TypeGetMethod, Cocoa.CodeAnalysis.Symbols.BuiltinKind.TypeHasMethod })
+            {
+                var row = Cocoa.CodeAnalysis.Symbols.BuiltinCoverage.Get(kind);
+                Assert.NotNull(row);
+                Assert.False(row!.Backends.HasFlag(Cocoa.CodeAnalysis.Symbols.BuiltinBackend.Native));
+                Assert.True(row.Backends.HasFlag(Cocoa.CodeAnalysis.Symbols.BuiltinBackend.Evaluator));
+                Assert.True(row.Backends.HasFlag(Cocoa.CodeAnalysis.Symbols.BuiltinBackend.Il));
+                Assert.False(string.IsNullOrWhiteSpace(row.GapReason));
+            }
+        }
         // ------------------------------------------------------------------
         // 无语法证据的项（用最接近的 C# 形式试探；解析失败即证实该形态不被支持）
         // ------------------------------------------------------------------

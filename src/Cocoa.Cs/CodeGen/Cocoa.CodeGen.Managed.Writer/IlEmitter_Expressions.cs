@@ -1130,64 +1130,49 @@ namespace Cocoa.CodeGen.Managed.Writer
                         EmitExpression(il, node.Expression);
                         il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.TypeIsValueType);
                         return;
-                    case BuiltinKind.TypeGetMethods:
+                    case BuiltinKind.TypeHasMethod:
                     {
-                        // Type.GetMethods(BindingFlags) → MethodInfo[] → string[]（名字投影）
-                        // 栈/局部管理：srcArr(MethodInfo[]) / dstArr(string[]) / i
-                        var srcLocal = AllocateSyntheticTemporaryLocal((node, "gm-src"), node.Type);
-                        var dstLocal = AllocateSyntheticTemporaryLocal((node, "gm-dst"), TypeSymbol.ArrayOf(TypeSymbol.String));
-                        var iLocal = AllocateSyntheticTemporaryLocal((node, "gm-i"), TypeSymbol.Int32);
-
-                        // src = receiver.GetMethods(flags)
-                        EmitExpression(il, node.Expression);
-                        il.Emit(IlOpCodeTable.Get("Ldc_I4"), (int)System.Reflection.BindingFlags.Instance
-                            | (int)System.Reflection.BindingFlags.Public
-                            | (int)System.Reflection.BindingFlags.NonPublic
-                            | (int)System.Reflection.BindingFlags.Static);
-                        il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.TypeGetMethods);
-                        il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)srcLocal);
-
-                        // dst = new string[src.Length]
-                        il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)srcLocal);
-                        il.Emit(IlOpCodeTable.Get("Ldlen"));
-                        il.Emit(IlOpCodeTable.Get("Conv_I4"));
-                        il.Emit(IlOpCodeTable.Get("Newarr"), OperandForTypeToken(ToIlType(TypeSymbol.String)));
-                        il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)dstLocal);
-
-                        // i = 0
-                        il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));
-                        il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)iLocal);
-
-                        var loop = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
-                        var end = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
-
-                        il.Emit(loop);
-                        // i < src.Length → 继续；否则（i >= len）→ end
-                        il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)iLocal);
-                        il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)srcLocal);
-                        il.Emit(IlOpCodeTable.Get("Ldlen"));
-                        il.Emit(IlOpCodeTable.Get("Conv_I4"));
-                        il.Emit(IlOpCodeTable.Get("Clt"));
-                        il.Emit(IlOpCodeTable.Get("Brfalse"), end);
-                        // dst[i] = src[i].get_Name()
-                        il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)dstLocal);
-                        il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)iLocal);
-                        il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)srcLocal);
-                        il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)iLocal);
-                        il.Emit(IlOpCodeTable.Get("Ldelem_Ref"));
-                        il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.MemberInfoName);
-                        il.Emit(IlOpCodeTable.Get("Stelem_Ref"));
-                        // i++
-                        il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)iLocal);
-                        il.Emit(IlOpCodeTable.Get("Ldc_I4_1"));
-                        il.Emit(IlOpCodeTable.Get("Add"));
-                        il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)iLocal);
-                        il.Emit(IlOpCodeTable.Get("Br"), loop);
-
-                        il.Emit(end);
-                        il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)dstLocal);
+                        // names = receiver.GetMethods(flags) → string[]；found = Array.IndexOf(names, arg) >= 0
+                        // 与 GetMethods 同素材（不直调 BCL GetMethod(string)——重载/继承歧义抛 AmbiguousMatchException）
+                        var namesLocal = EmitTypeGetMethodsNamesProjection(il, node.Expression, node);
+                        var foundLocal = AllocateSyntheticTemporaryLocal((node, "hm-found"), TypeSymbol.Boolean);
+                        var argLocal = AllocateSyntheticTemporaryLocal((node, "hm-arg"), TypeSymbol.String);
+                        EmitExpression(il, node.Arguments[0]);
+                        il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)argLocal);
+                        il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)namesLocal);
+                        il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)argLocal);
+                        il.Emit(IlOpCodeTable.Get("Call"), _framework.ArrayIndexOfString);
+                        il.Emit(IlOpCodeTable.Get("Ldc_I4_M1"));
+                        il.Emit(IlOpCodeTable.Get("Cgt"));
+                        il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)foundLocal);
+                        il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)foundLocal);
                         return;
                     }
+                    case BuiltinKind.TypeGetMethod:
+                    {
+                        // names = receiver.GetMethods(flags) → string[]；命中返回 arg，未命中返回 ""（歧义安全，同 GetMethods）
+                        var namesLocal = EmitTypeGetMethodsNamesProjection(il, node.Expression, node);
+                        var argLocal = AllocateSyntheticTemporaryLocal((node, "gm1-arg"), TypeSymbol.String);
+                        EmitExpression(il, node.Arguments[0]);
+                        il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)argLocal);
+                        il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)namesLocal);
+                        il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)argLocal);
+                        il.Emit(IlOpCodeTable.Get("Call"), _framework.ArrayIndexOfString);
+                        il.Emit(IlOpCodeTable.Get("Ldc_I4_M1"));
+                        il.Emit(IlOpCodeTable.Get("Cgt"));
+                        var found = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
+                        var end = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
+                        il.Emit(IlOpCodeTable.Get("Brfalse"), end);
+                        il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)argLocal);
+                        il.Emit(IlOpCodeTable.Get("Br"), found);
+                        il.Emit(end);
+                        il.Emit(IlOpCodeTable.Get("Ldstr"), "");
+                        il.Emit(found);
+                        return;
+                    }
+                    case BuiltinKind.TypeGetMethods:
+                        il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)EmitTypeGetMethodsNamesProjection(il, node.Expression, node));
+                        return;
                 }
             }
 
@@ -1432,6 +1417,65 @@ namespace Cocoa.CodeGen.Managed.Writer
             }
 
             throw new System.Exception($"Unexpected member call {node.Identifier}");
+        }
+
+        /// <summary>投影 receiver.GetMethods(flags) → string[]（名字数组），返回承装目标的局部槽号。
+        /// 栈/局部管理：srcArr / dstArr / i。HasMethod/GetMethod 复用同素材做歧义安全扫描
+        /// （不直调 BCL GetMethod(string)——重载/继承歧义抛 AmbiguousMatchException）。</summary>
+        private int EmitTypeGetMethodsNamesProjection(IlAssembler il, BoundExpression receiverNode, object key)
+        {
+            var srcLocal = AllocateSyntheticTemporaryLocal((key, "gm-src"), TypeSymbol.ArrayOf(TypeSymbol.Object));
+            var dstLocal = AllocateSyntheticTemporaryLocal((key, "gm-dst"), TypeSymbol.ArrayOf(TypeSymbol.String));
+            var iLocal = AllocateSyntheticTemporaryLocal((key, "gm-i"), TypeSymbol.Int32);
+
+            // src = receiver.GetMethods(flags)
+            EmitExpression(il, receiverNode);
+            il.Emit(IlOpCodeTable.Get("Ldc_I4"), (int)System.Reflection.BindingFlags.Instance
+                | (int)System.Reflection.BindingFlags.Public
+                | (int)System.Reflection.BindingFlags.NonPublic
+                | (int)System.Reflection.BindingFlags.Static);
+            il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.TypeGetMethods);
+            il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)srcLocal);
+
+            // dst = new string[src.Length]
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)srcLocal);
+            il.Emit(IlOpCodeTable.Get("Ldlen"));
+            il.Emit(IlOpCodeTable.Get("Conv_I4"));
+            il.Emit(IlOpCodeTable.Get("Newarr"), OperandForTypeToken(ToIlType(TypeSymbol.String)));
+            il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)dstLocal);
+
+            // i = 0
+            il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));
+            il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)iLocal);
+
+            var loop = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
+            var end = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
+
+            il.Emit(loop);
+            // i < src.Length → 继续；否则（i >= len）→ end
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)iLocal);
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)srcLocal);
+            il.Emit(IlOpCodeTable.Get("Ldlen"));
+            il.Emit(IlOpCodeTable.Get("Conv_I4"));
+            il.Emit(IlOpCodeTable.Get("Clt"));
+            il.Emit(IlOpCodeTable.Get("Brfalse"), end);
+            // dst[i] = src[i].get_Name()
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)dstLocal);
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)iLocal);
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)srcLocal);
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)iLocal);
+            il.Emit(IlOpCodeTable.Get("Ldelem_Ref"));
+            il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.MemberInfoName);
+            il.Emit(IlOpCodeTable.Get("Stelem_Ref"));
+            // i++
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)iLocal);
+            il.Emit(IlOpCodeTable.Get("Ldc_I4_1"));
+            il.Emit(IlOpCodeTable.Get("Add"));
+            il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)iLocal);
+            il.Emit(IlOpCodeTable.Get("Br"), loop);
+
+            il.Emit(end);
+            return dstLocal;
         }
 
         private void EmitMemberAssignmentExpression(IlAssembler il, BoundMemberAssignmentExpression node)

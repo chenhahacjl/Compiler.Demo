@@ -42,8 +42,11 @@ namespace Cocoa.CodeGen.Managed.Writer
             // C-1 反射子集：System.Type 反射面（IsClass/IsValueType 标量 getter，无重载歧义）
             TypeIsClass = RequireMethod("System.Type", "get_IsClass", Array.Empty<string>());
             TypeIsValueType = RequireMethod("System.Type", "get_IsValueType", Array.Empty<string>());
-            // C-1 反射子集：GetMethods() → MethodInfo[]（Bind 反射投影时用），MemberInfo.Name getter
+            // C-1 反射子集：GetMethods() → MethodInfo[]（Bind 反射投影时用），MemberInfo.Name getter；
+            // HasMethod/GetMethod 不直调 BCL GetMethod(string)（重载/继承歧义抛 AmbiguousMatchException），
+            // 走 GetMethods 名字数组 + Array.IndexOf 扫描（与 GetMethods 同素材，名字集合一致）。
             TypeGetMethods = RequireMethod("System.Type", "GetMethods", new[] { "System.Reflection.BindingFlags" });
+            ArrayIndexOfString = RequireMethod("System.Array", "IndexOf", new[] { "System.Array", "System.Object" });
             MemberInfoName = RequireMethod("System.Reflection.MemberInfo", "get_Name", Array.Empty<string>());
             // typeof(T) → ldtoken T; call Type::GetTypeFromHandle(RuntimeTypeHandle)
             TypeGetTypeFromHandle = RequireMethod("System.Type", "GetTypeFromHandle", new[] { "System.RuntimeTypeHandle" });
@@ -134,6 +137,7 @@ namespace Cocoa.CodeGen.Managed.Writer
         public IlMethodRef TypeIsClass { get; }
         public IlMethodRef TypeIsValueType { get; }
         public IlMethodRef TypeGetMethods { get; }
+        public IlMethodRef ArrayIndexOfString { get; }
         public IlMethodRef MemberInfoName { get; }
         public IlMethodRef ConsoleReadLine { get; }
         public IlMethodRef ConsoleWriteLine { get; }

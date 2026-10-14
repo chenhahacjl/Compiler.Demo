@@ -354,6 +354,28 @@ namespace Cocoa.CodeGen.Interpreter
 
                     return System.Array.Empty<string>();
                 }
+                case BuiltinKind.TypeHasMethod:
+                {
+                    if (receiver is System.Type clrHasMethod)
+                    {
+                        var nameForHasMethod = (string)EvaluateExpression(node.Arguments[0])!;
+                        return System.Array.IndexOf(AllMethodNames(clrHasMethod), nameForHasMethod) >= 0;
+                    }
+
+                    return false;
+                }
+                case BuiltinKind.TypeGetMethod:
+                {
+                    if (receiver is System.Type clrGetMethod)
+                    {
+                        var nameForGetMethod = (string)EvaluateExpression(node.Arguments[0])!;
+                        return System.Array.IndexOf(AllMethodNames(clrGetMethod), nameForGetMethod) >= 0
+                            ? nameForGetMethod
+                            : "";
+                    }
+
+                    return "";
+                }
                 default:
                     throw new Exception($"Unexpected builtin kind {kind}");
             }
@@ -365,6 +387,17 @@ namespace Cocoa.CodeGen.Interpreter
             EvaluatorTypeInfo info => info.FullName,
             _ => throw new Exception($"Unexpected type value {receiver}"),
         };
+
+        /// <summary>宿主 CLR Type 的全可见性方法名数组（HasMethod/GetMethod 精确名判定的共享素材；
+        /// 与 GetMethods 同素材，保证三后端名字集合一致。CLR 无按名+flags 的歧义安全查询，
+        /// 故用 Array.IndexOf 而非 GetMethod——重载/继承时会抛 AmbiguousMatchException）。</summary>
+        private static string[] AllMethodNames(System.Type clrType)
+        {
+            return clrType.GetMethods(
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public
+                    | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+                .Select(m => m.Name).ToArray();
+        }
 
         // ------------------------------------------------------ 6e-M19 M3-c：OOP 运行时簿记
 

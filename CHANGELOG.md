@@ -14,7 +14,8 @@
 - **`Type.GetMethods(): string[]`**——宿主反射面的方法名投影。解释器（CLR `Type.GetMethods(BindingFlags.Instance|Public|NonPublic|Static)`）与 IL（`callvirt GetMethods` + 名字循环投影到 `string[]`）两端闭环；native 无宿主类型表（Type 值为 vtable 记录指针）登记为覆盖缺口，`EvaluatorTypeInfo`（用户类）返回空数组。
 - **元数据签名登记修复**：`ResolveMethodRef` 对返回/参数类型补 `RegisterSignatureTypeRef`（含 SzArray 元素），`ResolveClassType` 递归重解析数组元素——否则数组元素（如 `MethodInfo`）保留 reader 的 null-scope TypeRef，写出 ResolutionScope=0（当前模块），CLR 无法匹配成员签名（`MissingMethodException`）。
 - **解释器 `typeof` 对齐**：`ClrTypeOf` 按 `SpecialType` 把 Cocoa 物理简写（`i32`/`f64`/...）映射宿主类型——此前 `typeof(i32)` 落到 `typeof(object)`，系解释器与 IL 的行为分叉。
-- 测试：`RemainingFeatureProbe.Reflection_GetMethods_IlChain` / `_Interpreter` / `_NativeGapDeclared` 3 例；全量回归通过。
+- **`HasMethod(name): bool` / `GetMethod(name): string`**（本批追加）：精确名存在性检查 / 规范名取回（未命中 `false`/`""`）。实现走 `GetMethods` 名字数组 + `Array.IndexOf` 扫描——直调 BCL `Type.GetMethod(string, flags)` 对重载/继承方法抛 `AmbiguousMatchException`（Int32.ToString 多重重载实证），扫描与既有 GetMethods 同素材、歧义安全。IL 端投影循环抽取为共享 helper（三 case 复用）；native 同为覆盖缺口。
+- 测试：`RemainingFeatureProbe.Reflection_GetMethods_*` 3 例 + `Reflection_GetMethodHasMethod_*` 3 例；全量回归 3283 通过。
 
 ---
 
