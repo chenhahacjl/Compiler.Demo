@@ -507,7 +507,7 @@ function Main(): i32
 **新增编译器前提（提交 A）**——阶段 5 用 lambda 在**库外**组合界面，暴露并修复三处编译器缺口：
 1. `.coa` 函数类型零参数反解：写侧零参写作 `fnty{;void}`，读侧误把空首段当类型解析 → 跳过空段（`CoaSerializer.Resolve.cs`）。
 2. `.coa` 方法虚/抽象/重写/密封位缺失 → 跨库派生 `override` 解析失败。`fn` 段新增 `virt:/abs:/ovr:/seal:`（旧文件缺省 false 兼容；`CoaSerializer.Symbols.cs`/`Read.cs`）。
-3. 闭包环境类两处：同一宿主函数多个 lambda 捕获同名变量 → 环境类重复字段（`AddField` 去重）；lambda 体入 `functionBodies` 时未 Lower（结构化 `if` 使 IL/native 抛错）→ 补 `Lowerer.Lower`。（`CocoaBinder.Expressions.cs`/`CocoaBinder.cs`，并按漂移护栏同步 `CSharpBinder.*`。）
+3. 闭包环境类两处：同一宿主函数多个 lambda 捕获同名变量 → 环境类重复字段（`AddField` 去重）；lambda 体入 `functionBodies` 时未 Lower（结构化 `if` 使 IL/native 抛错）→ 补 `Lowerer.Lower`。（`CocoaBinder.Expressions.cs`/`CocoaBinder.cs`；注：原"漂移护栏同步 CSharpBinder.*"随 2026-09-13 去 C# 方言已撤销。）
 
 **声明式层（提交 B）**：`Declarative.co`（`UIView.Body(gui)` 虚方法 + `Ui.VStack/HStack/Group/Panel/Render`）；`ImGui.BeginHorizontal/EndHorizontal` 与 `ImGuiWindow.Horizontal`（水平布局：`ImGuiLayout.ItemSize` 水平分支）；`UiCoreTests.ImGui_Declarative_Evaluator`（UIView 子类 + 嵌套 lambda：文本计数与同行断言）。示例 `samples/Samples/UI/DeclarativeUI`。
 

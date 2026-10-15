@@ -69,6 +69,7 @@
 | UI 无回调轮询架构（DefWindowProc 地址 + PeekMessage + GetAsyncKeyState，规避 WNDPROC） | 用户，2026-09-08 | [plan/UI库规划.md](plan/UI库规划.md) §6/§12 A5 |
 | UI 前置编译器增强：native extern 参数上限 7→12+；`.coa` 序列化门禁扩展（带属性实例类/含 body 静态类） | 用户，2026-09-08 | [plan/UI库规划.md](plan/UI库规划.md) §8/§12 A6 |
 | 去 C# 方言：仅保留 .co（删除 Cocoa.Dialects.CSharp，104 文件 ~920KB 整前端双份/漂移测试；Language 中间层后续塌缩） | 用户，2026-09-13 | [plan/自举实施计划.md](plan/自举实施计划.md) §5 |
+| `.coproj` 目标属性设计定稿：Backend 三分（native/managed-fx/managed-net）、`Arch`（anycpu/x86/x64）、四维 IlTarget、TFM 必填/组内校验、target-aware SDK、ARM 抽象层预留 | 用户评审，2026-10-15 | [plan/coproj目标属性设计.md](plan/coproj目标属性设计.md) |
 
 ## 5. 维护约定
 

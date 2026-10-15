@@ -3,7 +3,15 @@
 
 > 状态：🧭 定稿（S-7 修订 2026-10-11 + 拆分实施已完成）· 取代 docs-dev 旧稿 CIR设计.md / IR设计.md / HIR与LIR格式设计.md
 > 前置阅读：[docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md)（架构总览与演进）、[docs-dev/README](../README.md)（分类索引）
-> 本文裁决：**双前端全量拆分（CO/C# 各自 Lexer/Parser/SyntaxKind/节点类/Binder/Lower）+ 双层 IR（HIR 共享合并点 / LIR native 私有）**；`.coa` 为 HIR 的双向持久化。
+>
+> ## ⚠️ 文档修订声明（2026-10-15）
+> **本文早期的"双前端全量拆分（CO/C# 各自前端）"方案已废弃**（`Cocoa.Dialects.CSharp`/`CSharpParser`/`CSharpBinder`/`Cocoa.Core.CSharp` 已于 2026-09-13 整体删除，现行仅 `.co` 单一 Cocoa 方言，编译器单装配件 `Cocoa.CodeAnalysis`，见 [docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md) v4.0）。
+> 下文正文（决策脉络/实施状态含 `CocoaParser`/`CSharpParser`/双语法/双 Binder 等）属**历史叙事，仅作改造脉络参考，勿按此查找现行代码**。
+> **现行有效结论仅保留三层 IR 语义**（2026-10-11 S-7 定稿，已落地）：
+> - **HIR** = 绑定后未降级树（for/while/if 保留，`.coa` 持久化）
+> - **MIR** = Lowerer（Hir→Mir）输出 goto 化规范树（`program.Functions` 契约，**不落盘**，`CanonicalIr.Verify` 校验）
+> - **LIR** = 3 地址码（native 私有，数据节点全族 `Lir*`）
+> IR 分层的现行权威描述以本声明与 [docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md) 为准。
 > **S-7 定稿（2026-10-11，原 `HIR与LIR格式设计.md` 并入）**：三层语义与命名——**HIR** = 绑定后未降级树（for/while/if 保留，`.coa` 持久化）；**MIR** = Lowerer（Hir→Mir）输出 goto 化规范树（`program.Functions` 契约，**不落盘**）；**LIR** = 3 地址码（native 私有，数据节点全族 `Lir*`）。原方案约定 ".coa 存 goto-only + `.ll` dump" 被修正为：**`.coa` 存结构化 HIR（保留 if/while/for）**，存储层与 MIR 分离；`.coa` Version 硬升级至 3 读取侧拒绝 v1/v2 的决策记录见下正文。
 
 ## 实施状态（2026-09-02 更新）
@@ -321,18 +329,14 @@ FUNCTION main (p0)
 > 标 ✅ 为已落地（2026-09-02）；未标为待续。
 
 ```
-Cocoa.Core（共享层，类比 .NET CIL/BCL）
-  Text / Diagnostic / Symbols / Compilation 抽象 ✅（Compilation 子类已迁语言库，Core 留抽象）
-  Bound 树(HIR/MIR) + Lowering(Hir→Mir) + MirToLir + Cod + IL/Native 发射 + PEFile ✅
-  Green/Red 树基础设施（RawKind:int）✅（SyntaxNode.Kind 经抽象 RawKind 具名）
-  （共享 Binder / 共享 Lexer / 共享 75 节点类 已删除）✅
-Cocoa.Core.Cocoa
-  CocoaLexer ✅ / CocoaParser（产出语言节点）✅ / CocoaSyntaxKind ✅ / 75 节点类 ✅
-  / CocoaBinder ✅（C 风格 for 脱糖 + forrange 绑定）/ CocoaCompilation ✅ / CocoaGreenNodeFactory ✅
-Cocoa.Core.CSharp
-  CSharpLexer ✅ / CSharpParser（产出语言节点）✅ / CSharpSyntaxKind ✅ / 74 节点类 ✅
-  / CSharpBinder ✅（C 风格 for 脱糖）/ CSharpCompilation ✅ / CSharpGreenNodeFactory ✅
-coc / csc（各自引用独立前端）
+Cocoa.CodeAnalysis（编译器单装配件，2026-09-15 定名，曾 Cocoa.Compiler / Cocoa.Core）
+  Syntax（CocoaLexer/CocoaParser/CocoaSyntaxKind/节点类）✅
+  Binder / Bound 树(HIR/MIR) + Lowering(Hir→Mir + CanonicalIr.Verify) + MirToLir ✅
+  Symbols / Compilation / Serialization(.coa 存 HIR) / Diagnostic / Authoring ✅
+三后端（消费 MIR 规范树）：
+  Cocoa.CodeGen.Native + Cocoa.CodeGen.Managed.Writer(IL) + Cocoa.CodeGen.Interpreter(Evaluator) ✅
+cocoa / cocoa-repl（单 CLI 入口）
 ```
+> ⛔ 历史（废弃）形态：`Cocoa.Core.Cocoa` / `Cocoa.Core.CSharp` 双前端项目布局（2026-09-13 前）勿按此查找。
 
-**一句话**：双前端（CO/C# 全量独立）+ 双层 IR（HIR 共享合并点 + LIR native 私有）的编译器架构改造；核心产出是前端 token/节点/Binder/Lower 的彻底语言化拆分，以及 IR 层的净化与新 LIR 改造。前端全量拆分（SyntaxKind/Lexer/节点类/SyntaxFacts/Binder/Compilation/Parser 产出语言节点）已落库，方言构造收口（S-6）已完成：共享 Core 默认 Cocoa 语法、CO 双形态 for（C 风格 + forrange）、C# 仅 C 风格 for，不建语言专属 Lower。
+**一句话（现行）**：单语言（`.co` Cocoa）+ 三层 IR（HIR 共享合并点、MIR 规范树三后端共享、LIR native 私有）的编译器架构；前端（Lexer/Parser/Binder/Lowerer）单实现，IR 为分水岭——语言特性写一次（语义层）即三后端获得。前端"双语言拆分"为废弃史，详见本文件头部修订声明。

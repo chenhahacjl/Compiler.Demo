@@ -1,13 +1,15 @@
 # Cocoa 编译器架构 — 总览与演进
 
-> 版本：v4.0
-> 日期：2026-10-07
+> 版本：v4.1
+> 日期：2026-10-15
 > 状态：✅ 生效
 >
 > **去 C# 方言（2026-09-13）**：C# 方言（`.cs`）与双前端（`CSharpParser`/`CSharpBinder`/`Cocoa.Core.CSharp`）
 > 已整体移除，仅保留 `.co`（Cocoa）单语言；**编译器单装配件更名 `Cocoa.CodeAnalysis`（2026-09-15，曾 `Cocoa.Compiler`）**。
-> 本文 v4.0 同步当前工程名与阶段 8 自举验证状态。现行工程结构与命名空间映射以 [`CODING.md`](../CODING.md) 为准；
-> 分层细节与实施状态以 [`docs-dev/plan/IR分层与格式设计.md`](../docs-dev/plan/IR分层与格式设计.md) 为准。
+> 本文 v4.1 同步目标模型（`Backend` 三分 / `Arch` / 四维 IlTarget）设计定稿与工程结构演进方向。
+> 现行工程结构与命名空间映射以 [`CODING.md`](../CODING.md) 为准；
+> 分层细节与实施状态以 [`docs-dev/plan/IR分层与格式设计.md`](../docs-dev/plan/IR分层与格式设计.md) 为准；
+> 目标属性设计定稿见 [`docs-dev/plan/coproj目标属性设计.md`](../docs-dev/plan/coproj目标属性设计.md)。
 
 ---
 
@@ -15,13 +17,14 @@
 
 ```
 .co 源码 → Lexer → Parser → Binder → Lowerer → 后端
-  ├─ Native：BoundTree → LIR（三地址码）→ IAssembler(x86/x64) → 自研 PE（纯零依赖）
+  ├─ Native：BoundTree → LIR（三地址码）→ IAssembler(x86/x64) → IObjectWriter(PE/ELF) → 目标文件
   ├─ IL：    BoundTree → IlEmitter → 自研 ECMA-335 编码器 + 元数据 + 托管 PE
   └─ Evaluator / REPL：直接求值（调试器复用）
 ```
 
 - 前端（Lexer/Parser/Binder/Lowerer）单语言单实现，三后端共用；**IR 为分水岭**——语言特性写一次（语义层）即三后端获得。
 - `.coa` = 语义层（HIR）双向持久化，编译期合并，native/IL 通用；跨语言互操作锚 = 规范 IR（§八）。
+- **目标层（演进中）**：`Cocoa.Targeting` 为目标模型事实源——`TargetOS`/`Arch`/`TargetTriple`/三分 `CodeBackend`/`IlTarget` 四维；native 侧 `IAbiDescriptor`（WinX64/SysV）、`IPlatformRuntime`、`IObjectWriter`（PE/ELF）为后续 ABI 去平台化、平台运行时抽取、ELF 产物落地预留接口（详见 [`coproj目标属性设计.md`](../docs-dev/plan/coproj目标属性设计.md)）。
 
 ## 二、工程与依赖
 
@@ -30,8 +33,10 @@
 - `Cocoa.CodeAnalysis`（ns `Cocoa.CodeAnalysis`）：**编译器单装配件**，前端 + 绑定 + 降级 + 序列化 + Authoring。
 - `Cocoa.Metadata`（ns `Cocoa.Metadata`）：共享元数据层——IL 结构模型（IlTypes/IlOpCode/IlMetadataModel）+ 外部程序集元数据读取（MetadataReader/AssemblyReader）。前端与 IL 后端共用，与后端工程隔离。
 - `Cocoa.CodeGen.{Managed.Writer, PE, Native.Lir, Native, Interpreter}`：IL / PE / Native / 解释器后端。
-- `Cocoa.Build`：项目系统；`Cocoa.Cli`（AssemblyName `cocoa`）+ `Cocoa.Cli.Repl`：CLI 与 REPL；`Cocoa.Targeting`：目标常量。
+- `Cocoa.Build`：项目系统；`Cocoa.Cli`（AssemblyName `cocoa`）+ `Cocoa.Cli.Repl`：CLI 与 REPL；`Cocoa.Targeting`：目标常量（演进为目标模型事实源）。
 - 依赖方向严格单向；后端**反向引用** `Cocoa.CodeAnalysis` 消费 `BoundProgram`，Core 不引用后端（§六）。
+
+> **工程结构演进方向（定稿待实施）**：目录重组为 4 分类（`Core/` `CodeGen/` `Tools/` `Tests/`，17 项目恒 2 级深度）；`Cocoa.CodeAnalysis.Text`→`Cocoa.Text`、`Cocoa.Metadata`→`Cocoa.IlMetadata`、`Cocoa.CodeGen.Managed.Writer`→`Cocoa.CodeGen.Managed`、`Native.Lir` 降为 `Native/Lir/`；`Cocoa.Targeting` 承载 `TargetTriple/Cpu/IAbiDescriptor/IPlatformRuntime/IObjectWriter`。详见 [`coproj目标属性设计.md`](../docs-dev/plan/coproj目标属性设计.md) 与执行计划。
 
 ## 三、后端与运行时
 
@@ -56,6 +61,7 @@
 - `.coproj` / `.cosln` SDK-style XML（`<Project Version="1">` / `<Solution Version="1">`，`PropertyGroup` + `ItemGroup` + `Condition`，`System.Xml.Linq` 解析 → 条件求值 → 终态模型）；`<Language>` 仅 `Cocoa`。
 - `cocoa new/list/add reference/remove reference/build/run/clean/-i` 单二进制 CLI。
 - 增量构建 = SHA-256 哈希缓存命中跳过；编译序 = `<Reference>` 依赖图拓扑 + 环检测。
+- **目标属性模型（定稿待实施）**：`Backend` 三分（`native`/`managed-fx`/`managed-net`，显式必填）；`Arch`（`anycpu`/`x86`/`x64`，原 `Platform`）；`TargetOS`、`Prefer32Bit`、`RuntimeIdentifier` 组内校验，零跨后端特例。详见 [`coproj目标属性设计.md`](../docs-dev/plan/coproj目标属性设计.md) 与校验矩阵。
 
 ## 六、代码模式要点
 
@@ -101,5 +107,6 @@
 
 - 工程结构 / 命名映射 / 流程：[`CODING.md`](../CODING.md)
 - 分层细节与实施状态：[`docs-dev/plan/IR分层与格式设计.md`](../docs-dev/plan/IR分层与格式设计.md)
+- 目标属性设计定稿：[`docs-dev/plan/coproj目标属性设计.md`](../docs-dev/plan/coproj目标属性设计.md)
 - 自举缺口与实施主线：[`docs-dev/plan/自举缺口分析.md`](../docs-dev/plan/自举缺口分析.md) · [`docs-dev/plan/自举实施计划.md`](../docs-dev/plan/自举实施计划.md)
 - 决策索引（ADR）：[`docs-dev/README.md`](../docs-dev/README.md) §4
