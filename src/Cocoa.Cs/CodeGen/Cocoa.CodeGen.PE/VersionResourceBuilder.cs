@@ -96,11 +96,13 @@ namespace Cocoa.CodeGen.PE
             return buf;
         }
 
-        /// <summary>StringFileInfo 子块：头 + "StringFileInfo\0" + StringTable。</summary>
+        /// <summary>StringFileInfo 子块：头 + "StringFileInfo\0" + StringTable。
+        /// 布局（MSDN VERSIONINFO）：头(6) + key(UTF-16 含 NUL) + 对齐到 4，随后 StringTable。
+        /// 注意 headerLen 必须与拷贝偏移一致（先前 +2+2 使 wLength 声明比实际多 4，严格工具按 wLength 遍历错位读不到字符串）。</summary>
         private static byte[] BuildStringFileInfo(byte[] stringTable)
         {
             var key = Encoding.Unicode.GetBytes("StringFileInfo\0");
-            var headerLen = 6 + key.Length + 2 + 2; // 键串（UTF-16 含 NUL）+ 4 字节对齐产区
+            var headerLen = Align4(6 + key.Length);
             var payloadLen = Align4(stringTable.Length);
             var wLen = Align4(headerLen + payloadLen);
             var buf = new byte[wLen];
@@ -108,8 +110,7 @@ namespace Cocoa.CodeGen.PE
             WriteUInt16(buf, 2, 0);   // wValueLength = 0
             WriteUInt16(buf, 4, 1);   // wType = text
             key.CopyTo(buf, 6);
-            // buffer 默认 0，头后即 4 对齐；写入 StringTable
-            Array.Copy(stringTable, 0, buf, Align4(6 + key.Length), stringTable.Length);
+            Array.Copy(stringTable, 0, buf, headerLen, stringTable.Length);
             return buf;
         }
 
