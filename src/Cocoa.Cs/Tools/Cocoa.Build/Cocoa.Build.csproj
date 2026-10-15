@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Cocoa.Build</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Collections.Immutable" Version="9.0.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+<ProjectReference Include="..\..\Core\Cocoa.CodeAnalysis\Cocoa.CodeAnalysis.csproj" />
+<ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.Managed.Writer\Cocoa.CodeGen.Managed.Writer.csproj" />
+<ProjectReference Include="..\..\Core\Cocoa.Targeting\Cocoa.Targeting.csproj" />
+  </ItemGroup>
+
+
+  <PropertyGroup>
+    <!-- Nullable 妫樿疆锛?.3锛夛細鏈」鐩皻鏈竻闆讹紝娌跨敤鍘嬪埗锛涙竻闆跺悗鍒犻櫎鏈粍鍗冲彲绾冲叆妫樿疆 -->
+    <NoWarn>$(NoWarn);CS8600;CS8602;CS8603;CS8604;CS8605;CS8618;CS8620;CS8625</NoWarn>
+  </PropertyGroup></Project>

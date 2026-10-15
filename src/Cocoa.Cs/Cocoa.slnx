@@ -2,9 +2,11 @@
   <Folder Name="/Solution Items/">
     <File Path="Directory.Build.props" />
   </Folder>
-  <Project Path="Cocoa.Targeting/Cocoa.Targeting.csproj" />
-  <Folder Name="/Compiler/">
-    <Project Path="Cocoa.CodeAnalysis/Cocoa.CodeAnalysis.csproj" />
+  <Folder Name="/Core/">
+    <Project Path="Core/Cocoa.Targeting/Cocoa.Targeting.csproj" />
+    <Project Path="Core/Cocoa.CodeAnalysis/Cocoa.CodeAnalysis.csproj" />
+    <Project Path="Core/Cocoa.CodeAnalysis.Text/Cocoa.CodeAnalysis.Text.csproj" />
+    <Project Path="Core/Cocoa.Metadata/Cocoa.Metadata.csproj" />
   </Folder>
   <Folder Name="/CodeGen/">
     <Project Path="CodeGen/Cocoa.CodeGen.Managed.Writer/Cocoa.CodeGen.Managed.Writer.csproj" />
@@ -12,18 +14,16 @@
     <Project Path="CodeGen/Cocoa.CodeGen.Native.Lir/Cocoa.CodeGen.Native.Lir.csproj" />
     <Project Path="CodeGen/Cocoa.CodeGen.Native/Cocoa.CodeGen.Native.csproj" />
     <Project Path="CodeGen/Cocoa.CodeGen.Interpreter/Cocoa.CodeGen.Interpreter.csproj" />
+    <Project Path="CodeGen/Cocoa.CodeGen.Elf/Cocoa.CodeGen.Elf.csproj" />
   </Folder>
-  <Folder Name="/Metadata/">
-    <Project Path="Cocoa.Metadata/Cocoa.Metadata.csproj" />
+  <Folder Name="/Tools/">
+    <Project Path="Tools/Cli/Cocoa.Cli/Cocoa.Cli.csproj" />
+    <Project Path="Tools/Cli/Cocoa.Cli.Repl/Cocoa.Cli.Repl.csproj" />
+    <Project Path="Tools/Cocoa.Build/Cocoa.Build.csproj" />
+    <Project Path="Tools/Cocoa.Engine/Cocoa.Engine.csproj" />
   </Folder>
-  <Folder Name="/Cli/">
-    <Project Path="Cli/Cocoa.Cli/Cocoa.Cli.csproj" />
-    <Project Path="Cli/Cocoa.Cli.Repl/Cocoa.Cli.Repl.csproj" />
+  <Folder Name="/Tests/">
+    <Project Path="Tests/Cocoa.Tests/Cocoa.Tests.csproj" />
+    <Project Path="Tests/Cocoa.Tests.SelfHosting/Cocoa.Tests.SelfHosting.csproj" />
   </Folder>
-  <Folder Name="/Engine/">
-    <Project Path="Cocoa.Engine/Cocoa.Engine.csproj" />
-  </Folder>
-  <Project Path="Cocoa.Build/Cocoa.Build.csproj" />
-  <Project Path="Cocoa.Tests/Cocoa.Tests.csproj" />
-  <Project Path="Cocoa.Tests.SelfHosting/Cocoa.Tests.SelfHosting.csproj" />
 </Solution>

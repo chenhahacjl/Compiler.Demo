@@ -1,0 +1,9 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Cocoa.CodeGen.Elf</RootNamespace>
+    <!-- linux-x64 ELF 瀵硅薄鍐欏嚭锛坓libc 鍔ㄦ€侀摼鎺ワ級銆俆3 闃舵瀹炵幇锛欵lfObjectWriter 绛夈€?         绌哄３鍏堣锛岄伩鍏嶇洰褰曠粨鏋勪簩娆¤皟鏁淬€?-->
+  </PropertyGroup>
+  <ItemGroup>
+<ProjectReference Include="..\..\Core\Cocoa.Targeting\Cocoa.Targeting.csproj" />
+  </ItemGroup>
+</Project>

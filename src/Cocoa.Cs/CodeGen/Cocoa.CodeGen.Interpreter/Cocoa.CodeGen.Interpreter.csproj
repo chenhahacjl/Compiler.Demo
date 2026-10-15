@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <RootNamespace>Cocoa.CodeGen.Interpreter</RootNamespace>
@@ -9,8 +9,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Cocoa.CodeAnalysis.Text\Cocoa.CodeAnalysis.Text.csproj" />
-    <ProjectReference Include="..\..\Cocoa.CodeAnalysis\Cocoa.CodeAnalysis.csproj" />
+<ProjectReference Include="..\..\Core\Cocoa.CodeAnalysis.Text\Cocoa.CodeAnalysis.Text.csproj" />
+<ProjectReference Include="..\..\Core\Cocoa.CodeAnalysis\Cocoa.CodeAnalysis.csproj" />
   </ItemGroup>
 
 

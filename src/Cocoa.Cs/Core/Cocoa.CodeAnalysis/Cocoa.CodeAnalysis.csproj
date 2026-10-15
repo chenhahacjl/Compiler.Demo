@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Cocoa.CodeAnalysis</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Collections.Immutable" Version="9.0.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+<ProjectReference Include="..\..\Core\Cocoa.CodeAnalysis.Text\Cocoa.CodeAnalysis.Text.csproj" />
+<ProjectReference Include="..\..\Core\Cocoa.Targeting\Cocoa.Targeting.csproj" />
+<ProjectReference Include="..\..\Core\Cocoa.Metadata\Cocoa.Metadata.csproj" />
+  </ItemGroup>
+
+
+</Project>
