@@ -176,8 +176,9 @@ namespace Cocoa.Cli
             CodeBackend? backend = backendText switch
             {
                 null => null,
-                "dotnet" => CodeBackend.DotNet,
                 "native" => CodeBackend.Native,
+                "managed-fx" => CodeBackend.ManagedFx,
+                "managed-net" => CodeBackend.ManagedNet,
                 _ => (CodeBackend?)null,
             };
             if (backendText != null && backend == null)

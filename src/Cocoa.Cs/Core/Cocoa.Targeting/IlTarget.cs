@@ -11,21 +11,31 @@ namespace Cocoa.Targeting
     }
 
     /// <summary>
-    /// dotnet 后端目标：由 TFM 解析（net9.0 → NetCore 9.0；net40~net48 → NetFx 4.x，默认 net48）。
+    /// dotnet 后端目标：Runtime × Version × Cpu × Prefer32Bit 四维正交。
+    /// - TFM 解析（net9.0 → NetCore 9.0；net40~net48 → NetFx 4.x，默认 net48）决定 Runtime/Version；
+    /// - Cpu 默认 AnyCPU（PE32 + ILONLY，运行时决定位数）；x86/x64 为显式架构；
+    /// - Prefer32Bit 仅 AnyCPU 生效（COR20 32BITPREFERRED）。
     /// 决定引用程序集、runtimeconfig.json、宿主机制（netfx 直接运行 / netcore 走原生 apphost 或 dotnet host）。
     /// </summary>
     public sealed class IlTarget
     {
-        private IlTarget(IlRuntime runtime, Version version)
+        private IlTarget(IlRuntime runtime, Version version, Cpu cpu, bool prefer32Bit)
         {
             Runtime = runtime;
             Version = version;
+            Cpu = cpu;
+            Prefer32Bit = prefer32Bit;
         }
 
         public IlRuntime Runtime { get; }
         public Version Version { get; }
+        public Cpu Cpu { get; }
+        public bool Prefer32Bit { get; }
 
         public bool IsNetFx => Runtime == IlRuntime.NetFx;
+
+        /// <summary>PE32 与否：AnyCPU 与 x86 均为 PE32；x64 为 PE32+。取代旧 IsNetFx 兼任架构的判定。</summary>
+        public bool IsPe32 => Cpu != Cpu.X64;
 
         public string Tfm => Runtime == IlRuntime.NetCore ? $"net{Version.Major}.{Version.Minor}" : $"net{Version.Major}{Version.Minor}";
 
@@ -62,18 +72,24 @@ namespace Cocoa.Targeting
             if (dotIndex < 0 && versionText.Length == 2 && int.TryParse(versionText, out var fxMinor))
             {
                 // net40~net48：.NET Framework，CLR v4.0.30319
-                target = new IlTarget(IlRuntime.NetFx, new Version(4, 0));
+                target = new IlTarget(IlRuntime.NetFx, new Version(4, 0), Cpu.AnyCPU, false);
                 return true;
             }
 
             if (dotIndex > 0 && int.TryParse(majorText, out var major) &&
                 int.TryParse(versionText.Substring(dotIndex + 1), out var minor))
             {
-                target = new IlTarget(IlRuntime.NetCore, new Version(major, minor));
+                target = new IlTarget(IlRuntime.NetCore, new Version(major, minor), Cpu.AnyCPU, false);
                 return true;
             }
 
             return false;
+        }
+
+        /// <summary>用显式 Cpu/Prefer32Bit 派生目标（Runtime/Version 已定）。</summary>
+        public IlTarget With(Cpu? cpu = null, bool? prefer32Bit = null)
+        {
+            return new IlTarget(Runtime, Version, cpu ?? Cpu, prefer32Bit ?? Prefer32Bit);
         }
 
         /// <summary>netcore 运行时用的 runtimeconfig.json（framework-dependent）。netfx 不写。</summary>

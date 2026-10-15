@@ -63,7 +63,7 @@ function Main()
     Console.WriteLine(""hello "" + name)
 }");
 
-            var (exitCode, stdout, stderr) = Run($"\"{sourcePath}\" -b dotnet -o \"{outputPath}\"");
+            var (exitCode, stdout, stderr) = Run($"\"{sourcePath}\" -b managed-net -o \"{outputPath}\"");
             Assert.True(exitCode == 0, $"CLI failed with exit {exitCode}: {stderr}");
             Assert.Contains(outputPath, stdout);
             Assert.True(File.Exists(outputPath));

@@ -116,7 +116,7 @@ namespace Cocoa.Tests.Compiler
             // Copyright 缺省 "Copyright (c) <当前年份>"（native .rsrc 与 IL 程序集属性共用 BuildPeVersionInfo 缺省）。
             var projectPath = CreateProject("empty-metadata", "App", "function Main() { Console.WriteLine(1) }");
 
-            var build = Run($"build \"{projectPath}\" -b dotnet --dotnet-runtime net9.0");
+            var build = Run($"build \"{projectPath}\" -b managed-net --dotnet-runtime net9.0");
             Assert.Equal(0, build.ExitCode);
 
             // netcore 可执行产出 `<name>.dll`（项目目录，无 OutputPath 时默认）
@@ -141,7 +141,7 @@ namespace Cocoa.Tests.Compiler
         {
             var projectPath = CreateProject("backend-switch", "App", "function Main() { Console.WriteLine(1) }");
 
-            var dotnetBuild = Run($"build \"{projectPath}\" -b dotnet");
+            var dotnetBuild = Run($"build \"{projectPath}\" -b managed-net");
             Assert.Equal(0, dotnetBuild.ExitCode);
             Assert.DoesNotContain("up to date", dotnetBuild.Stdout);
 
@@ -150,7 +150,7 @@ namespace Cocoa.Tests.Compiler
             Assert.DoesNotContain("up to date", nativeBuild.Stdout);
             Assert.Contains("'App' is up to date (native)", Run($"build \"{projectPath}\" -b native").Stdout);
 
-            var dotnetAgain = Run($"build \"{projectPath}\" -b dotnet");
+            var dotnetAgain = Run($"build \"{projectPath}\" -b managed-net");
             Assert.Equal(0, dotnetAgain.ExitCode);
             Assert.DoesNotContain("up to date", dotnetAgain.Stdout);
         }
@@ -467,7 +467,7 @@ namespace MyLib
 
         [Theory]
         [InlineData("native")]
-        [InlineData("dotnet")]
+        [InlineData("managed-net")]
         public void Build_CodReference_Consume_Runs(string backend)
         {
             var (libDir, appDir) = CreateCodLibraryAndApp("cod-consume-" + backend, backend);
@@ -478,7 +478,7 @@ namespace MyLib
             Assert.Equal(0, libResult.ExitCode);
             Assert.True(File.Exists(Path.Combine(libDir, "Lib.coa")));
 
-            var appArgs = backend == "native" ? $"build \"{appProject}\" -b native" : $"build \"{appProject}\" -b dotnet --dotnet-runtime net9.0";
+            var appArgs = backend == "native" ? $"build \"{appProject}\" -b native" : $"build \"{appProject}\" -b managed-net --dotnet-runtime net9.0";
             var appResult = Run(appArgs);
             Assert.Equal(0, appResult.ExitCode);
 
@@ -495,11 +495,11 @@ namespace MyLib
         [Fact]
         public void Build_CodReference_CopiedToOutput()
         {
-            var (libDir, appDir) = CreateCodLibraryAndApp("copylocal-cod", "dotnet");
+            var (libDir, appDir) = CreateCodLibraryAndApp("copylocal-cod", "managed-net");
             var libResult = Run($"build \"{Path.Combine(libDir, "Lib.coproj")}\"");
             Assert.Equal(0, libResult.ExitCode);
 
-            var appResult = Run($"build \"{Path.Combine(appDir, "App.coproj")}\" -b dotnet --dotnet-runtime net9.0");
+            var appResult = Run($"build \"{Path.Combine(appDir, "App.coproj")}\" -b managed-net --dotnet-runtime net9.0");
             Assert.Equal(0, appResult.ExitCode);
             Assert.True(File.Exists(Path.Combine(appDir, "Lib.coa")), "Lib.coa 应复制到 app 输出目录");
         }
@@ -531,11 +531,11 @@ namespace MyLib
                 "  <ItemGroup>\n    <Source Include=\"*.co\" />\n    <Reference Include=\"../Lib/Lib.dll\" />\n  </ItemGroup>\n" +
                 "</Project>\n");
 
-            var libResult = Run($"build \"{Path.Combine(libDir, "Lib.coproj")}\" -b dotnet");
+            var libResult = Run($"build \"{Path.Combine(libDir, "Lib.coproj")}\" -b managed-net");
             Assert.Equal(0, libResult.ExitCode);
             Assert.True(File.Exists(Path.Combine(libDir, "Lib.dll")));
 
-            var appResult = Run($"build \"{Path.Combine(appDir, "App.coproj")}\" -b dotnet --dotnet-runtime net9.0");
+            var appResult = Run($"build \"{Path.Combine(appDir, "App.coproj")}\" -b managed-net --dotnet-runtime net9.0");
             Assert.Equal(0, appResult.ExitCode);
             Assert.True(File.Exists(Path.Combine(appDir, "Lib.dll")), "Lib.dll 应复制到 app 输出目录");
         }

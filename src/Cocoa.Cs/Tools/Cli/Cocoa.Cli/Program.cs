@@ -220,9 +220,9 @@ namespace Cocoa.Cli
 
                 target = parsed;
 
-                if (backend != CodeBackend.DotNet)
+                if (backend == CodeBackend.Native)
                 {
-                    Console.Error.WriteLine("warning: --dotnet-runtime is only used with -b dotnet and was ignored");
+                    Console.Error.WriteLine("warning: --dotnet-runtime is only used with -b managed(-net) and was ignored");
                     target = null;
                 }
             }
@@ -287,7 +287,7 @@ namespace Cocoa.Cli
             // 绑定期带引用（供 using 命名空间解析/外部类型解析；6e-M15）
             // 动态链接（阶段 B/C，对齐 ProjectBuilder.cs:92）：dotnet 后端默认链路——`.coa` 库成员经外部
             // dll 依赖接入（产物不内联库体）；native 保持编译期合并。裸 CLI 与 cocoa build 从此语义一致。
-            var useDynamicLink = backend == CodeBackend.DotNet;
+            var useDynamicLink = backend is not CodeBackend.Native;
             var compilation = Compilation.Create(referencePaths.ToArray(), useDynamicLink, syntaxTrees.ToArray());
 
             ImmutableArray<Diagnostic> diagnostics;
@@ -413,9 +413,10 @@ namespace Cocoa.Cli
         {
             return text switch
             {
-                null => CodeBackend.DotNet,
-                "dotnet" => CodeBackend.DotNet,
+                null => CodeBackend.ManagedNet,
                 "native" => CodeBackend.Native,
+                "managed-fx" => CodeBackend.ManagedFx,
+                "managed-net" => CodeBackend.ManagedNet,
                 _ => null
             };
         }

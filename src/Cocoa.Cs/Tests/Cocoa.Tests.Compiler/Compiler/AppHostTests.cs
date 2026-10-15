@@ -132,7 +132,7 @@ namespace Cocoa.Tests.Compiler
         public void Build_NetCore_ProducesApphostLayout()
         {
             var projectDir = CreateProject("netcore-layout", "Hello", "function Main() { Console.WriteLine(\"hello apphost\") }");
-            var (exitCode, stdout, stderr) = RunCli($"build \"{projectDir}\" -b dotnet --dotnet-runtime net9.0");
+            var (exitCode, stdout, stderr) = RunCli($"build \"{projectDir}\" -b managed-net --dotnet-runtime net9.0");
             Assert.True(exitCode == 0, $"build failed ({exitCode}). stdout=[{stdout}] stderr=[{stderr}]");
 
             var root = Path.GetDirectoryName(projectDir)!;
@@ -162,7 +162,7 @@ namespace Cocoa.Tests.Compiler
         public void Build_NetCore_ArgsPassthrough()
         {
             var projectDir = CreateProject("netcore-args", "ArgsApp", "function Main(args: string[]) { Console.WriteLine(args.Length) Console.WriteLine(args[0]) Console.WriteLine(args[1]) }");
-            var (exitCode, stdout, stderr) = RunCli($"build \"{projectDir}\" -b dotnet --dotnet-runtime net9.0");
+            var (exitCode, stdout, stderr) = RunCli($"build \"{projectDir}\" -b managed-net --dotnet-runtime net9.0");
             Assert.True(exitCode == 0, $"build failed ({exitCode}). stdout=[{stdout}] stderr=[{stderr}]");
 
             var exePath = Path.Combine(Path.GetDirectoryName(projectDir)!, "ArgsApp.exe");

@@ -71,7 +71,7 @@ namespace Cocoa.Tests.Compiler
             var sourcePath = Path.Combine(root, "app.co");
             File.WriteAllText(sourcePath, source);
             outputPath = Path.Combine(root, outputName);
-            var runtime = backend == "dotnet" ? " --dotnet-runtime net9.0" : "";
+            var runtime = backend == "managed-net" ? " --dotnet-runtime net9.0" : "";
             var (exitCode, stdout, stderr) = InvokeCli($"\"{sourcePath}\" -o \"{outputPath}\" -b {backend}{runtime}");
             Assert.True(exitCode == 0, $"build failed ({exitCode}). stdout=[{stdout}] stderr=[{stderr}]");
             return outputPath;
@@ -134,7 +134,7 @@ namespace Cocoa.Tests.Compiler
         {
             var exe = BuildCli(
                 "function Main(args: string[]) {\nConsole.WriteLine(args.Length)\nConsole.WriteLine(args[0])\nConsole.WriteLine(args[1])\n}",
-                "dotnet",
+                "managed-net",
                 "mainargs-dotnet.exe",
                 out _);
             // netcore 产物含原生 apphost：直接运行（不经 dotnet 前缀）
@@ -162,7 +162,7 @@ namespace Cocoa.Tests.Compiler
         {
             var exe = BuildCli(
                 "function Main(args: string[]) {\nConsole.WriteLine(args.Length)\nConsole.WriteLine(args[0])\n}",
-                "dotnet",
+                "managed-net",
                 "mainargs-quoted-dotnet.exe",
                 out _);
             var output = RunOutput(exe, "\"hello world\"");
@@ -187,7 +187,7 @@ namespace Cocoa.Tests.Compiler
                 $"  <PropertyGroup Label=\"Build\">\n    <OutputPath>.</OutputPath>\n  </PropertyGroup>\n" +
                 $"  <ItemGroup>\n    <Source Include=\"App.co\" />\n  </ItemGroup>\n" +
                 $"</Project>\n");
-            var runtime = backend == "dotnet" ? " --dotnet-runtime net9.0" : "";
+            var runtime = backend == "managed-net" ? " --dotnet-runtime net9.0" : "";
             var (exitCode, stdout, stderr) = InvokeCli($"build \"{projectPath}\" --no-incremental -b {backend}{runtime}");
             Assert.True(exitCode == 0, $"build failed ({exitCode}). stdout=[{stdout}] stderr=[{stderr}]");
             exePath = Path.Combine(appDir, "App.exe");
@@ -214,7 +214,7 @@ namespace Cocoa.Tests.Compiler
         {
             BuildProject(
                 "function run(args: string[]) {\nConsole.WriteLine(args.Length)\nConsole.WriteLine(args[0])\n}\nfunction Main() {\nConsole.WriteLine(99)\n}",
-                "dotnet",
+                "managed-net",
                 "entry-dotnet",
                 "run",
                 out var exe);
@@ -230,7 +230,7 @@ namespace Cocoa.Tests.Compiler
         {
             BuildProject(
                 "namespace My.App { public class Program { public static function Main() { Console.WriteLine(7) } } }",
-                "dotnet",
+                "managed-net",
                 "entry-qualified",
                 "My.App.Program.Main",
                 out var exe);

@@ -199,9 +199,10 @@ namespace Cocoa.Build
             if (string.IsNullOrWhiteSpace(text)) return null;
             return text.ToLowerInvariant() switch
             {
-                "managed" or "dotnet" => CodeBackend.DotNet,
                 "native" => CodeBackend.Native,
-                _ => throw new ProjectFileFormatException($"invalid Backend '{text}'. Expected: managed, native"),
+                "managed-fx" => CodeBackend.ManagedFx,
+                "managed-net" => CodeBackend.ManagedNet,
+                _ => throw new ProjectFileFormatException($"invalid Backend '{text}'. Expected: native, managed-fx, managed-net"),
             };
         }
 

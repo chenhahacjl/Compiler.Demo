@@ -94,7 +94,7 @@ namespace Cocoa.Build
 
             // 动态链接（阶段 A2）：dotnet 后端消费 `.coa` 时以外部 dll 依赖接入（产物不内联库体）；
             // native 后端保持编译期合并（PE 静态链接）；cocoa 库产物自身不涉及
-            var linkCodDynamically = backend == CodeBackend.DotNet && format != ProjectOutputFormat.Cocoa;
+            var linkCodDynamically = backend.IsManaged() && format != ProjectOutputFormat.Cocoa;
 
             var fingerprint = BuildCache.ComputeFingerprint(
                 expansion.Files,

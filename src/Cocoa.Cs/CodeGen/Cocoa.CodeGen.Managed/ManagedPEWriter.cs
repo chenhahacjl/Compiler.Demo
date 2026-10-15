@@ -141,9 +141,9 @@ namespace Cocoa.CodeGen.Managed.Writer
             var metadataSize = resourcesOffsetInText - metadataOffset;
             var sectionBytes = section.ToArray();
 
-            // ---- 回填 CLR 头（含 Resources 目录 RVA/Size）----
+            // ---- 回填 CLR 头（含 Resources 目录 RVA/Size；COR20 Flags 按 Cpu/Prefer32Bit）----
             WriteCorHeader(sectionBytes, corHeaderOffset, metadataRva, metadataSize, entryPointToken,
-                resourcesBlob.Length > 0 ? resourcesRva : 0u, (uint)resourcesBlob.Length);
+                resourcesBlob.Length > 0 ? resourcesRva : 0u, (uint)resourcesBlob.Length, target);
 
             // ---- PE 壳 ----
             var directories = new List<(PeDataDirectoryEntry Entry, uint Rva, uint Size)>
@@ -156,9 +156,13 @@ namespace Cocoa.CodeGen.Managed.Writer
                 new PeSectionSpec(".text", sectionBytes, textRva, 0x60000020), // Read|Execute|Code
             };
 
-            var pe32 = target.IsNetFx;
+            // PE 形态（PE32/PE32+）由 Cpu 决定（AnyCPU/x86 → PE32；x64 → PE32+），
+            // 与 netfx/netcore 布局（mscoree 宿主）正交——netfx 固定 AnyCPU/x86（PE32），
+            // netcore 默认 AnyCPU（PE32），x64 显式时才 PE32+。
+            var pe32 = target.IsPe32;
+            var isNetFxLayout = target.IsNetFx;
             var addressOfEntryPoint = 0u;
-            if (target.IsNetFx)
+            if (isNetFxLayout)
             {
                 // netfx：导入表（描述符+INT+hint/name）内嵌 .text（csc 同款），IAT 槽前置 .text（外部 IAT）。
                 var blobBaseRva = (uint)(textRva + sectionBytes.Length);
@@ -210,10 +214,12 @@ namespace Cocoa.CodeGen.Managed.Writer
                 sections.Add(new PeSectionSpec(".rsrc", resourceBlob, rsrcRva, PeSectionCharacteristics.Data));
             }
 
-            var config = pe32
+            PeImageConfig config;
+            if (isNetFxLayout)
+            {
                 // 6d-4 netfx：csc 同款布局（节对齐 0x2000、OS/子系统 4.0、SizeOfHeaders 0x200）；
                 // ASLR（0x8540）开，.reloc 节已提供重定位。
-                ? new PeImageConfig(PeMachine.I386, NetFxImageBase, 3, 0x8540, addressOfEntryPoint)
+                config = new PeImageConfig(PeMachine.I386, NetFxImageBase, 3, 0x8540, addressOfEntryPoint)
                 {
                     SectionAlignment = 0x2000,
                     FileAlignment = 0x200,
@@ -223,13 +229,29 @@ namespace Cocoa.CodeGen.Managed.Writer
                     MajorSubsystemVersion = 4,
                     MinorSubsystemVersion = 0,
                     FileCharacteristicsOverride = (ushort)(PeFileCharacteristics.ExecutableImage | PeFileCharacteristics.Machine32Bit),
-                }
-                : new PeImageConfig(PeMachine.AMD64, 0x140000000UL, 3, 0x8540, 0)
+                };
+            }
+            else if (pe32)
+            {
+                // netcore + AnyCPU/x86：PE32（I386），标准 netcore 布局
+                config = new PeImageConfig(PeMachine.I386, 0x400000UL, 3, 0x8540, 0)
+                {
+                    SectionAlignment = 0x1000,
+                    FileAlignment = 0x200,
+                    SizeOfHeaders = 0x400,
+                    FileCharacteristicsOverride = (ushort)(PeFileCharacteristics.ExecutableImage | PeFileCharacteristics.Machine32Bit),
+                };
+            }
+            else
+            {
+                // netcore + x64：PE32+
+                config = new PeImageConfig(PeMachine.AMD64, 0x140000000UL, 3, 0x8540, 0)
                 {
                     SectionAlignment = 0x1000,
                     FileAlignment = 0x200,
                     SizeOfHeaders = 0x400,
                 };
+            }
 
             return PeImageBuilder.Build(config, sections, directories, (ushort)(pe32 ? PeFileCharacteristics.Machine32Bit : 0));
         }
@@ -368,18 +390,26 @@ namespace Cocoa.CodeGen.Managed.Writer
             return offset;
         }
 
-        private static void WriteCorHeader(byte[] section, int offset, uint metadataRva, int metadataSize, uint entryPointToken, uint resourcesRva, uint resourcesSize)
+        private static void WriteCorHeader(byte[] section, int offset, uint metadataRva, int metadataSize, uint entryPointToken, uint resourcesRva, uint resourcesSize, IlTarget target)
         {
             using var stream = new MemoryStream(section);
             stream.Position = offset;
             var writer = new BinaryWriter(stream);
+
+            // COR20 Flags（COMIMAGE_FLAGS）：ILONLY 恒置；x86 加 32BITREQUIRED；Prefer32Bit(anycpu) 加 32BITPREFERRED。
+            const uint CorIlOnly = 0x0001;
+            const uint Cor32BitRequired = 0x0002;
+            const uint Cor32BitPreferred = 0x00020000;
+            var flags = CorIlOnly;
+            if (target.Cpu == Cpu.X86) flags |= Cor32BitRequired;
+            if (target.Prefer32Bit) flags |= Cor32BitPreferred;
 
             writer.Write((uint)CorHeaderSize);     // cb
             writer.Write((ushort)2);               // MajorRuntimeVersion
             writer.Write((ushort)5);               // MinorRuntimeVersion
             writer.Write(metadataRva);             // MetaData RVA
             writer.Write((uint)metadataSize);      // MetaData Size
-            writer.Write((uint)1);                 // Flags: COMIMAGE_FLAGS_ILONLY
+            writer.Write(flags);                   // Flags
             writer.Write(entryPointToken);         // EntryPointToken
             writer.Write(resourcesRva);            // Resources RVA
             writer.Write(resourcesSize);           // Resources Size

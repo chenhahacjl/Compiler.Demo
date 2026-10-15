@@ -60,7 +60,7 @@ namespace MyLib
 
             // 2. 消费方构建：按需生成并部署 Lib.Managed.dll + System.Core.Managed.dll
             var appProject = Path.Combine(appDir, "App.coproj");
-            var appBuild = CliTestRunner.Run($"build \"{appProject}\" -b dotnet --dotnet-runtime net9.0", root);
+            var appBuild = CliTestRunner.Run($"build \"{appProject}\" -b managed-net --dotnet-runtime net9.0", root);
             Assert.True(appBuild.ExitCode == 0, $"app build failed: {appBuild.Stdout}{appBuild.Stderr}");
             Assert.True(File.Exists(Path.Combine(appDir, "App.exe")));
             Assert.True(File.Exists(Path.Combine(appDir, "Lib.Managed.dll")), "用户库托管 dll 应按需生成");
@@ -78,7 +78,7 @@ namespace MyLib
                 File.Delete(dll + ".stamp");
             }
 
-            var rebuild = CliTestRunner.Run($"build \"{appProject}\" -b dotnet --dotnet-runtime net9.0", root);
+            var rebuild = CliTestRunner.Run($"build \"{appProject}\" -b managed-net --dotnet-runtime net9.0", root);
             Assert.Equal(0, rebuild.ExitCode);
             Assert.True(File.Exists(Path.Combine(appDir, "Lib.Managed.dll")), "误删后应自动再生");
             Assert.True(File.Exists(Path.Combine(appDir, "System.Core.Managed.dll")), "系统库 dll 误删后应自动再生");
@@ -106,7 +106,7 @@ namespace MyLib
         [Fact]
         public void Closure_BareCli_UnifiedDynamicLink_DeploysManagedDlls()
         {
-            // 阶段 6 并轨 Step C：裸 CLI（cocoa file.co -b dotnet）与 cocoa build 统一动态链接——
+            // 阶段 6 并轨 Step C：裸 CLI（cocoa file.co -b managed-net）与 cocoa build 统一动态链接——
             // 产物依赖系统托管 dll（不内联库体），运行期布局 = apphost + app.dll + X.Managed.dll。
             // 闭包经统一链路求值，回归"裸 CLI 只测内联单 dll"的盲区。
             var dir = CliTestRunner.NewTempDir("closure-cli");
@@ -120,7 +120,7 @@ function Main(): i32
 }
 ");
 
-            var build = CliTestRunner.Run("\"Main.co\" -b dotnet -o app.exe", dir);
+            var build = CliTestRunner.Run("\"Main.co\" -b managed-net -o app.exe", dir);
             Assert.True(build.ExitCode == 0, $"bare cli build failed: {build.Stdout}{build.Stderr}");
 
             Assert.True(File.Exists(Path.Combine(dir, "System.Core.Managed.dll")), "系统库托管 dll 应按需生成（统一动态链接）");

@@ -225,7 +225,7 @@ namespace Cocoa.Tests.Compiler
             var runDir = Path.Combine(GetTempDir(), Guid.NewGuid().ToString("N"));
             CopyDirectory(FindTutorialDir(), runDir);
 
-            var arg = $"build \"{Path.Combine(runDir, "samples.cosln")}\" -b dotnet --dotnet-runtime {dotnetRuntime}";
+            var arg = $"build \"{Path.Combine(runDir, "samples.cosln")}\" -b managed-net --dotnet-runtime {dotnetRuntime}";
             var first = RunCli(arg);
             Assert.True(first.ExitCode == 0, $"first netfx build failed: {first.Stdout}{first.Stderr}");
 
@@ -250,7 +250,7 @@ namespace Cocoa.Tests.Compiler
         {
             // 样例 coproj 默认 dotnetRuntime = net48（netfx）；netcore 分支需显式覆盖回 net9.0。
             // netcore 产物含原生 apphost：直接运行（双击等价）。
-            var runDir = Build(backend: "dotnet", dotnetRuntime: "net9.0")!;
+            var runDir = Build(backend: "managed-net", dotnetRuntime: "net9.0")!;
             AssertBlocks(RunDirectExe, runDir);
             AssertFunctionsEntry(RunDirectExe, runDir);
         }
@@ -284,7 +284,7 @@ namespace Cocoa.Tests.Compiler
         [Fact]
         public void Golden_DotNet_LibrariesAndClasses_Snapshot()
         {
-            var runDir = Build(backend: "dotnet", dotnetRuntime: "net9.0")!;
+            var runDir = Build(backend: "managed-net", dotnetRuntime: "net9.0")!;
 
             // .coa 库消费（编译期 IR 合并）：Add/Mul/Factorial/enum 判定/字符串拼接
             AssertExeOutput(RunDirectExe, SampleExe(runDir, "Libraries/CodLibrary/app"),

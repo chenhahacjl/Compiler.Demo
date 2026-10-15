@@ -59,7 +59,7 @@ namespace Cocoa.Tests.Compiler
             Assert.True(File.Exists(Path.Combine(libA, "LibA.coa")));
 
             var appProject = Path.Combine(appDir, "App.coproj");
-            var appBuild = CliTestRunner.Run($"build \"{appProject}\" -b dotnet --dotnet-runtime net9.0", root);
+            var appBuild = CliTestRunner.Run($"build \"{appProject}\" -b managed-net --dotnet-runtime net9.0", root);
             Assert.True(appBuild.ExitCode == 0, $"app build failed: {appBuild.Stdout}{appBuild.Stderr}");
             Assert.True(File.Exists(Path.Combine(appDir, "App.exe")));
             Assert.True(File.Exists(Path.Combine(appDir, "LibA.Managed.dll")), "LibA 托管 dll 应按需生成");

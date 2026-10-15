@@ -97,7 +97,7 @@ function Main(): void
             Assert.Contains("envcap:1", libText);
 
             var appProject = Path.Combine(appDir, "App.coproj");
-            var appBuild = CliTestRunner.Run($"build \"{appProject}\" -b dotnet --dotnet-runtime net9.0", root);
+            var appBuild = CliTestRunner.Run($"build \"{appProject}\" -b managed-net --dotnet-runtime net9.0", root);
             Assert.True(appBuild.ExitCode == 0, $"app build failed: {appBuild.Stdout}{appBuild.Stderr}");
             Assert.True(File.Exists(Path.Combine(appDir, "App.exe")));
             Assert.True(File.Exists(Path.Combine(appDir, "ClosureLib.Managed.dll")), "库托管 dll 应按需生成（捕获闭包宿主）");

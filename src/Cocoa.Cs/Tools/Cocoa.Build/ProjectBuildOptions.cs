@@ -5,7 +5,7 @@ namespace Cocoa.Build
 {
     public sealed class ProjectBuildOptions
     {
-        public const CodeBackend DefaultBackend = CodeBackend.DotNet;
+        public const CodeBackend DefaultBackend = CodeBackend.ManagedNet;
 
         public ProjectOutputFormat? FormatOverride { get; set; }
         public string? PlatformOverride { get; set; }
