@@ -38,6 +38,7 @@ namespace Cocoa.Tests.Projects
                 "<Project Version=\"1\">\n" +
                 "  <PropertyGroup Label=\"Language\"><Language>Cocoa</Language></PropertyGroup>\n" +
                 "  <PropertyGroup Label=\"Assembly\"><AssemblyName>" + name + "</AssemblyName></PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Target\"><Backend>native</Backend><Platform>x64</Platform></PropertyGroup>\n" +
                 "  <PropertyGroup Label=\"Build\"><Configuration>Debug</Configuration><OutputPath>out</OutputPath></PropertyGroup>\n" +
                 "  <ItemGroup>\n" +
                 "    <Source Include=\"*.co\" />\n" +

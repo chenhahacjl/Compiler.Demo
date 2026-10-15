@@ -12,7 +12,7 @@ namespace Cocoa.Tests.Compiler
                 "<Project Version=\"1\">\n" +
                 "  <PropertyGroup Label=\"Language\">\n    <Language>Cocoa</Language>\n  </PropertyGroup>\n" +
                 "  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>App</AssemblyName>\n  </PropertyGroup>\n" +
-                "  <PropertyGroup Label=\"Target\">\n    <Platform>x64</Platform>\n    <TargetFramework>net48</TargetFramework>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Target\">\n    <Platform>x64</Platform>\n    <Backend>native</Backend>\n  </PropertyGroup>\n" +
                 "  <PropertyGroup Label=\"Output\">\n    <OutputType>Executable</OutputType>\n  </PropertyGroup>\n" +
                 "  <PropertyGroup Label=\"Build\">\n    <OutputPath>out</OutputPath>\n  </PropertyGroup>\n" +
                 "  <ItemGroup>\n    <Source Include=\"*.co\" />\n  </ItemGroup>\n" +

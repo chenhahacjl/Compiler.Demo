@@ -21,7 +21,80 @@ namespace Cocoa.Build
         {
             var format = options.FormatOverride ?? project.Output;
 
-            var backend = options.Backend ?? project.Backend ?? ProjectBuildOptions.DefaultBackend;
+            var projectTfm = options.DotnetRuntimeOverride ?? project.DotnetRuntime;
+
+            // Backend 缺省：按 TargetFramework 推断（net4x → managed-fx；net5+ → managed-net）
+            var backend = options.Backend ?? project.Backend
+                ?? InferBackend(projectTfm);
+
+            // 有效 Cpu：CLI --platform 覆盖优先（校验与消费均基于此）
+            var effectiveCpu = project.Cpu;
+            if (!string.IsNullOrEmpty(options.PlatformOverride))
+            {
+                effectiveCpu = options.PlatformOverride.ToLowerInvariant() switch
+                {
+                    "x86" => Cpu.X86,
+                    "x64" => Cpu.X64,
+                    "anycpu" => Cpu.AnyCPU,
+                    _ => project.Cpu,
+                };
+            }
+
+            // T0a 校验矩阵：目标组合非法即编译期报错（组内校验，零跨后端特例）
+            // .coa 库（format==Cocoa）为语义层产物，后端/架构无关，跳过 target 校验。
+            var isCoaLibrary = format == ProjectOutputFormat.Cocoa;
+            if (!isCoaLibrary && backend == CodeBackend.Native)
+            {
+                if (effectiveCpu == Cpu.AnyCPU)
+                {
+                    messageWriter.WriteLine("error: Arch 'AnyCPU' cannot be used with the native backend; specify x86 or x64");
+                    return ProjectBuildResult.Failed;
+                }
+
+                if (project.Prefer32Bit)
+                {
+                    messageWriter.WriteLine("error: Prefer32Bit is only valid for managed backends with Arch 'AnyCPU'");
+                    return ProjectBuildResult.Failed;
+                }
+            }
+            else if (!isCoaLibrary)
+            {
+                if (string.IsNullOrEmpty(projectTfm))
+                {
+                    messageWriter.WriteLine($"error: TargetFramework is required for the {backend.ToString().ToLowerInvariant()} backend (net40~net48 for managed-fx, net5+ for managed-net)");
+                    return ProjectBuildResult.Failed;
+                }
+
+                if (!IlTarget.TryParse(projectTfm, out var parsedTfm))
+                {
+                    messageWriter.WriteLine($"error: invalid TargetFramework '{projectTfm}'. Expected net40~net48 (managed-fx) or net5+ (managed-net)");
+                    return ProjectBuildResult.Failed;
+                }
+
+                if (backend == CodeBackend.ManagedFx && parsedTfm.Runtime != IlRuntime.NetFx)
+                {
+                    messageWriter.WriteLine($"error: managed-fx requires TargetFramework net40~net48, got '{projectTfm}'");
+                    return ProjectBuildResult.Failed;
+                }
+
+                if (backend == CodeBackend.ManagedNet && parsedTfm.Runtime != IlRuntime.NetCore)
+                {
+                    messageWriter.WriteLine($"error: managed-net requires TargetFramework net5+ (e.g. net9.0), got '{projectTfm}'");
+                    return ProjectBuildResult.Failed;
+                }
+
+                if (backend == CodeBackend.ManagedFx && effectiveCpu == Cpu.X64)
+                {
+                    messageWriter.WriteLine("error: managed-fx does not support Arch 'x64'; use anycpu or x86");
+                    return ProjectBuildResult.Failed;
+                }
+
+                if (project.Prefer32Bit && effectiveCpu != Cpu.AnyCPU)
+                {
+                    messageWriter.WriteLine("error: Prefer32Bit is only valid with Arch 'AnyCPU'");
+                    return ProjectBuildResult.Failed;
+                }
+            }
 
             // T3：`<TreatWarningsAsErrors>` 把构建告警（模式未命中 / [imports] / Content 未命中 + 诊断 Warning 级）升级为错误
             var warningsAsErrors = project.TreatWarningsAsErrors;
@@ -84,7 +157,7 @@ namespace Cocoa.Build
             var optionTokens = new[]
             {
                 $"format={format}",
-                $"platform={options.PlatformOverride ?? project.Platform}",
+                $"platform={options.PlatformOverride ?? effectiveCpu.ToString()}",
                 $"backend={backend}",
                 $"configuration={options.ConfigurationOverride ?? project.Configuration}",
                 $"output={outputFile}",
@@ -154,7 +227,7 @@ namespace Cocoa.Build
                         return new ProjectBuildResult(success: true, upToDate: false);
                     }
 
-                    if (!TryParseTargetPlatform(options.PlatformOverride, project.Platform, out var platform, out var platformError))
+                    if (!TryParseTargetPlatform(options.PlatformOverride, effectiveCpu.ToString(), out var platform, out var platformError))
                     {
                         messageWriter.WriteLine($"error: {platformError}");
                         return ProjectBuildResult.Failed;
@@ -565,6 +638,26 @@ namespace Cocoa.Build
             var destinationInfo = new FileInfo(destination);
             return sourceInfo.Length != destinationInfo.Length
                 || sourceInfo.LastWriteTimeUtc != destinationInfo.LastWriteTimeUtc;
+        }
+
+        /// <summary>按 TargetFramework 推断后端：net4x → managed-fx，net5+ → managed-net；native/空 TFM 时返回 native 缺省。</summary>
+        private static CodeBackend InferBackend(string? targetFramework)
+        {
+            if (!string.IsNullOrEmpty(targetFramework))
+            {
+                var t = targetFramework.ToLowerInvariant();
+                if (t.StartsWith("net4", StringComparison.Ordinal))
+                {
+                    return CodeBackend.ManagedFx;
+                }
+
+                if (t.StartsWith("net", StringComparison.Ordinal) && IlTarget.TryParse(targetFramework, out _))
+                {
+                    return CodeBackend.ManagedNet;
+                }
+            }
+
+            return CodeBackend.ManagedNet;
         }
 
         /// <summary>解析 native 目标平台：`x86`/`x64`。`AnyCPU`（默认或缺省）须显式 `--platform`。</summary>

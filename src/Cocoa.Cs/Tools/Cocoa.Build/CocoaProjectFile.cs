@@ -15,7 +15,7 @@ namespace Cocoa.Build
             ProjectOutputFormat output,
             CodeBackend? backend,
             CocoaTargetOs targetOs,
-            string platform,
+            Cpu cpu,
             bool prefer32Bit,
             string? entry,
             string? targetFramework,
@@ -42,7 +42,7 @@ namespace Cocoa.Build
             Output = output;
             Backend = backend;
             TargetOs = targetOs;
-            Platform = platform;
+            Cpu = cpu;
             Prefer32Bit = prefer32Bit;
             Entry = entry;
             DotnetRuntime = targetFramework;
@@ -73,7 +73,7 @@ namespace Cocoa.Build
         public CodeBackend? Backend { get; }
 
         public CocoaTargetOs TargetOs { get; }
-        public string Platform { get; }
+        public Cpu Cpu { get; }
         public bool Prefer32Bit { get; }
         public string? Entry { get; }
         public string? DotnetRuntime { get; }

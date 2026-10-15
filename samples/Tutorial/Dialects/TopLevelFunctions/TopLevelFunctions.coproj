@@ -6,7 +6,7 @@
     <AssemblyName>TopLevelFunctions</AssemblyName>
   </PropertyGroup>
   <PropertyGroup Label="Target">
-    <Platform>x64</Platform>
+    <Platform>anycpu</Platform>
     <TargetFramework>net48</TargetFramework>
   </PropertyGroup>
   <PropertyGroup Label="Output">

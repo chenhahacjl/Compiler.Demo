@@ -184,6 +184,7 @@ namespace Cocoa.Tests.Compiler
             CopyDirectory(FindTutorialDir(), runDir);
 
             var arg = $"build \"{Path.Combine(runDir, "samples.cosln")}\" -b {backend}"
+                + (backend == "native" ? " --platform x64" : "")
                 + (dotnetRuntime == null ? "" : $" --dotnet-runtime {dotnetRuntime}");
             var first = RunCli(arg);
             Assert.True(File.Exists(BlockExe(runDir, "HelloWorld")), $"tutorial blocks missing after build: {first.Stdout}{first.Stderr}");
@@ -225,7 +226,7 @@ namespace Cocoa.Tests.Compiler
             var runDir = Path.Combine(GetTempDir(), Guid.NewGuid().ToString("N"));
             CopyDirectory(FindTutorialDir(), runDir);
 
-            var arg = $"build \"{Path.Combine(runDir, "samples.cosln")}\" -b managed-net --dotnet-runtime {dotnetRuntime}";
+            var arg = $"build \"{Path.Combine(runDir, "samples.cosln")}\" -b managed-fx --dotnet-runtime {dotnetRuntime}";
             var first = RunCli(arg);
             Assert.True(first.ExitCode == 0, $"first netfx build failed: {first.Stdout}{first.Stderr}");
 

@@ -141,7 +141,7 @@ namespace Cocoa.Tests.Compiler
         {
             var projectPath = CreateProject("backend-switch", "App", "function Main() { Console.WriteLine(1) }");
 
-            var dotnetBuild = Run($"build \"{projectPath}\" -b managed-net");
+            var dotnetBuild = Run($"build \"{projectPath}\" -b managed-net --dotnet-runtime net9.0");
             Assert.Equal(0, dotnetBuild.ExitCode);
             Assert.DoesNotContain("up to date", dotnetBuild.Stdout);
 
@@ -150,7 +150,7 @@ namespace Cocoa.Tests.Compiler
             Assert.DoesNotContain("up to date", nativeBuild.Stdout);
             Assert.Contains("'App' is up to date (native)", Run($"build \"{projectPath}\" -b native").Stdout);
 
-            var dotnetAgain = Run($"build \"{projectPath}\" -b managed-net");
+            var dotnetAgain = Run($"build \"{projectPath}\" -b managed-net --dotnet-runtime net9.0");
             Assert.Equal(0, dotnetAgain.ExitCode);
             Assert.DoesNotContain("up to date", dotnetAgain.Stdout);
         }
@@ -212,6 +212,7 @@ namespace Cocoa.Tests.Compiler
   </PropertyGroup>
   <PropertyGroup Label=""Target"">
     <Platform>x64</Platform>
+    <Backend>native</Backend>
   </PropertyGroup>
   <PropertyGroup Label=""Output"">
     <OutputType>Executable</OutputType>
@@ -292,6 +293,10 @@ namespace Cocoa.Tests.Compiler
   </PropertyGroup>
   <PropertyGroup Label=""Assembly"">
     <AssemblyName>{name}</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label=""Target"">
+    <Platform>x64</Platform>
+    <Backend>native</Backend>
   </PropertyGroup>
   <PropertyGroup Label=""Output"">
     <OutputType>Executable</OutputType>
@@ -531,7 +536,7 @@ namespace MyLib
                 "  <ItemGroup>\n    <Source Include=\"*.co\" />\n    <Reference Include=\"../Lib/Lib.dll\" />\n  </ItemGroup>\n" +
                 "</Project>\n");
 
-            var libResult = Run($"build \"{Path.Combine(libDir, "Lib.coproj")}\" -b managed-net");
+            var libResult = Run($"build \"{Path.Combine(libDir, "Lib.coproj")}\" -b managed-net --dotnet-runtime net9.0");
             Assert.Equal(0, libResult.ExitCode);
             Assert.True(File.Exists(Path.Combine(libDir, "Lib.dll")));
 

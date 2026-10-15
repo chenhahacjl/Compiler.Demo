@@ -138,17 +138,35 @@ namespace Cocoa.Build
                 throw new ProjectFileFormatException("<ItemGroup> requires at least one <Source Include .../>");
             }
 
+            // Backend：显式声明或按 TargetFramework 推断（net4x→fx，net5+→net）
+            var backend = ParseBackend(state.Get("Backend"));
+            var targetFramework = state.Get("TargetFramework");
+            if (backend == null)
+            {
+                if (!string.IsNullOrEmpty(targetFramework) && targetFramework.ToLowerInvariant().StartsWith("net4", StringComparison.Ordinal))
+                {
+                    backend = CodeBackend.ManagedFx;
+                }
+                else if (!string.IsNullOrEmpty(targetFramework) && !targetFramework.ToLowerInvariant().StartsWith("net4", StringComparison.Ordinal))
+                {
+                    backend = CodeBackend.ManagedNet;
+                }
+            }
+
+            // Arch 键（兼容旧 Platform 键）：normalize 为 Cpu 枚举
+            var archText = state.Get("Arch") ?? state.Get("Platform") ?? "AnyCPU";
+
             return new CocoaProjectFile(
                 filePath,
                 fileName,
                 assemblyName,
                 ParseOutput(state.Get("OutputType") ?? "Executable"),
-                ParseBackend(state.Get("Backend")),
+                backend,
                 ParseTargetOs(state.Get("TargetOS") ?? "Windows"),
-                ProjectFileParser.ValidatePlatform(state.Get("Platform") ?? "AnyCPU", 0),
+                ParseCpu(archText),
                 ParseBool(state.Get("Prefer32Bit") ?? "false"),
                 state.Get("StartupObject"),
-                state.Get("TargetFramework"),
+                targetFramework,
                 ParseConfiguration(state.Get("Configuration") ?? "Debug"),
                 state.Get("OutputPath"),
                 state.Get("Subsystem"),
@@ -213,6 +231,17 @@ namespace Cocoa.Build
                 "windows" => CocoaTargetOs.Windows,
                 "linux" => CocoaTargetOs.Linux,
                 _ => throw new ProjectFileFormatException($"invalid TargetOS '{text}'. Expected: windows, linux"),
+            };
+        }
+
+        private static Cpu ParseCpu(string text)
+        {
+            return text.ToLowerInvariant() switch
+            {
+                "anycpu" => Cpu.AnyCPU,
+                "x86" => Cpu.X86,
+                "x64" => Cpu.X64,
+                _ => throw new ProjectFileFormatException($"invalid Arch '{text}'. Expected: anycpu, x86, x64"),
             };
         }
 
