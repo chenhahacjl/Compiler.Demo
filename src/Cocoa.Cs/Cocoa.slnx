@@ -22,7 +22,9 @@
     <Project Path="Tools/Cocoa.Engine/Cocoa.Engine.csproj" />
   </Folder>
   <Folder Name="/Tests/">
-    <Project Path="Tests/Cocoa.Tests/Cocoa.Tests.csproj" />
+    <Project Path="Tests/Cocoa.Tests.CodeAnalysis/Cocoa.Tests.CodeAnalysis.csproj" />
+    <Project Path="Tests/Cocoa.Tests.CodeGen/Cocoa.Tests.CodeGen.csproj" />
+    <Project Path="Tests/Cocoa.Tests.Compiler/Cocoa.Tests.Compiler.csproj" />
     <Project Path="Tests/Cocoa.Tests.SelfHosting/Cocoa.Tests.SelfHosting.csproj" />
   </Folder>
 </Solution>

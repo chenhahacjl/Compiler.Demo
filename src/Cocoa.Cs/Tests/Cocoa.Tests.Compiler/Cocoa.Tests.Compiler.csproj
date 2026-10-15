@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <IsPackable>false</IsPackable>
+    <RootNamespace>Cocoa.Tests.Compiler</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.9.4" />
@@ -13,19 +14,19 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="System.Reflection.Metadata" Version="9.0.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Core\Cocoa.Text\Cocoa.Text.csproj" />
     <ProjectReference Include="..\..\Core\Cocoa.CodeAnalysis\Cocoa.CodeAnalysis.csproj" />
-    <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.Managed\Cocoa.CodeGen.Managed.csproj" />
     <ProjectReference Include="..\..\Core\Cocoa.IlMetadata\Cocoa.IlMetadata.csproj" />
-    <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.Native\Cocoa.CodeGen.Native.csproj" />
     <ProjectReference Include="..\..\Core\Cocoa.Targeting\Cocoa.Targeting.csproj" />
-    <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.Interpreter\Cocoa.CodeGen.Interpreter.csproj" />
+    <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.PE\Cocoa.CodeGen.PE.csproj" />
+    <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.Managed\Cocoa.CodeGen.Managed.csproj" />
+    <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.Native\Cocoa.CodeGen.Native.csproj" />
     <ProjectReference Include="..\..\Tools\Cocoa.Build\Cocoa.Build.csproj" />
     <ProjectReference Include="..\..\Tools\Cli\Cocoa.Cli\Cocoa.Cli.csproj" />
     <ProjectReference Include="..\..\Tools\Cocoa.Engine\Cocoa.Engine.csproj" />
+    <ProjectReference Include="..\Cocoa.Tests.CodeGen\Cocoa.Tests.CodeGen.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
