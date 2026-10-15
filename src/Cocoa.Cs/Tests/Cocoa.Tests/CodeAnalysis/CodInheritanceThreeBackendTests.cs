@@ -9,6 +9,8 @@ using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using Cocoa.CodeGen.Native;
 using Cocoa.Targeting;
 using Xunit;

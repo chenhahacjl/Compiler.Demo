@@ -2,6 +2,8 @@ using System.Reflection;
 using System.Collections.Immutable;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using Cocoa.CodeGen.Managed.Writer;
 using Cocoa.Targeting;
 

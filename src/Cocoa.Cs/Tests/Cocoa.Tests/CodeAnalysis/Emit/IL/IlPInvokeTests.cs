@@ -9,7 +9,7 @@ using Cocoa.Targeting;
 using Xunit;
 
 using Cocoa.CodeGen.Managed.Writer;
-using Cocoa.Metadata;
+using Cocoa.IlMetadata;
 namespace Cocoa.Tests.CodeAnalysis.Emit.IL
 {
     public class IlPInvokeTests

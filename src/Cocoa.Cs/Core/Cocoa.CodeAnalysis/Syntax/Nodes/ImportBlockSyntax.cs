@@ -1,8 +1,9 @@
 using System.Collections.Immutable;
+using Cocoa.CodeAnalysis.Syntax.Green;
 
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Nodes
 {
     /// <summary>
     /// import 块节点：`import kernel32.dll { static extern ... }`（类成员，6e-M17 Step 4）。

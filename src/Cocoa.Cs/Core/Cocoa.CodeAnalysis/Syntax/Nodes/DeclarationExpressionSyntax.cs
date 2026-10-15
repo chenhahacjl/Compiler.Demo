@@ -1,6 +1,7 @@
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Green;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Nodes
 {
     /// <summary>
     /// 声明表达式：`var v`（out var 内联声明的实参位，6e-M23 后续切片）。

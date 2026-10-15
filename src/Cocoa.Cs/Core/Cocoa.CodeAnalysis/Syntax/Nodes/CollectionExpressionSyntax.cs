@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
+using Cocoa.CodeAnalysis.Syntax.Green;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Nodes
 {
     /// <summary>
     /// 集合表达式：`[1, 2, 3]` / `[..a, 4]`（C# 12）。绑定阶段降级为数组创建——

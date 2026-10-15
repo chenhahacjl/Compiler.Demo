@@ -5,7 +5,9 @@ using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Bound;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
-using Cocoa.CodeAnalysis.Text;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
+using Cocoa.Text;
 using Cocoa.CodeGen.Interpreter;
 using Xunit;
 

@@ -1,8 +1,9 @@
 using System.Collections.Immutable;
+using Cocoa.CodeAnalysis.Syntax.Green;
 
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Nodes
 {
     /// <summary>
     /// 事件声明（6e-M22 C5+）：`event Click: (Object, string) -&gt; void`（.co）； `event Action&lt;...&gt; Click;`（.cs）。

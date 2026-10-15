@@ -1,6 +1,8 @@
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using System;
 using System.Collections.Generic;
 using System.IO;

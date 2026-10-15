@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <RootNamespace>Cocoa.CodeAnalysis</RootNamespace>
@@ -9,9 +9,9 @@
   </ItemGroup>
 
   <ItemGroup>
-<ProjectReference Include="..\..\Core\Cocoa.CodeAnalysis.Text\Cocoa.CodeAnalysis.Text.csproj" />
+<ProjectReference Include="..\..\Core\Cocoa.Text\Cocoa.Text.csproj" />
 <ProjectReference Include="..\..\Core\Cocoa.Targeting\Cocoa.Targeting.csproj" />
-<ProjectReference Include="..\..\Core\Cocoa.Metadata\Cocoa.Metadata.csproj" />
+<ProjectReference Include="..\..\Core\Cocoa.IlMetadata\Cocoa.IlMetadata.csproj" />
   </ItemGroup>
 
 

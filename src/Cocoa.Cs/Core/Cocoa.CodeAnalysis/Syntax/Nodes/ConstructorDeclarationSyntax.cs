@@ -1,8 +1,9 @@
 using System.Collections.Immutable;
+using Cocoa.CodeAnalysis.Syntax.Green;
 
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Nodes
 {
     /// <summary>
     /// 构造函数节点：`public constructor(x: int, y: int) : base(...) { ... }`

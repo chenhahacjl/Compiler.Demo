@@ -1,4 +1,4 @@
-using Cocoa.Metadata;
+using Cocoa.IlMetadata;
 using Cocoa.CodeAnalysis.Symbols;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;

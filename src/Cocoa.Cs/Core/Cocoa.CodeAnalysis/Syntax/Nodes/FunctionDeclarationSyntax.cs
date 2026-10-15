@@ -1,8 +1,9 @@
 using System.Collections.Immutable;
+using Cocoa.CodeAnalysis.Syntax.Green;
 
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Nodes
 {
     public sealed partial class FunctionDeclarationSyntax : MemberSyntax
     {

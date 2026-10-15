@@ -1,8 +1,9 @@
 using System.Collections.Immutable;
+using Cocoa.CodeAnalysis.Syntax.Green;
 
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Nodes
 {
     /// <summary>
     /// 泛型类型参数列表（6e-M20）：`&lt;T, U&gt;`；delegate 处支持型变 `&lt;in T, out U&gt;`。

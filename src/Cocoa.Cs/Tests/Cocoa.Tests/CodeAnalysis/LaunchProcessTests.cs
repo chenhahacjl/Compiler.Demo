@@ -7,6 +7,8 @@ using Cocoa.CodeAnalysis;
 using Cocoa.CodeGen.Native;
 using Cocoa.Targeting;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using Xunit;
 
 namespace Cocoa.Tests.CodeAnalysis

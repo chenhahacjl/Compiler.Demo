@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <AssemblyName>cocoa</AssemblyName>
@@ -7,7 +7,7 @@
   <ItemGroup>
 <ProjectReference Include="..\..\..\Core\Cocoa.CodeAnalysis\Cocoa.CodeAnalysis.csproj" />
 <ProjectReference Include="..\..\..\CodeGen\Cocoa.CodeGen.PE\Cocoa.CodeGen.PE.csproj" />
-<ProjectReference Include="..\..\..\CodeGen\Cocoa.CodeGen.Managed.Writer\Cocoa.CodeGen.Managed.Writer.csproj" />
+<ProjectReference Include="..\..\..\CodeGen\Cocoa.CodeGen.Managed\Cocoa.CodeGen.Managed.csproj" />
 <ProjectReference Include="..\..\..\CodeGen\Cocoa.CodeGen.Native\Cocoa.CodeGen.Native.csproj" />
 <ProjectReference Include="..\..\..\Core\Cocoa.Targeting\Cocoa.Targeting.csproj" />
 <ProjectReference Include="..\..\..\CodeGen\Cocoa.CodeGen.Interpreter\Cocoa.CodeGen.Interpreter.csproj" />

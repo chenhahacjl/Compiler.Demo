@@ -1,6 +1,7 @@
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Green;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Nodes
 {
     /// <summary>
     /// Lambda 表达式（6e-M22 C2）：`(x: int, y: int) =&gt; expr | { ... }`、`() => expr` 等。

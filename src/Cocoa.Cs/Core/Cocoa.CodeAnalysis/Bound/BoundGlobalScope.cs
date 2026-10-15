@@ -1,5 +1,5 @@
 using Cocoa.CodeAnalysis.Symbols;
-using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Binder;
 using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Bound
@@ -42,8 +42,8 @@ namespace Cocoa.CodeAnalysis.Bound
 
         /// <summary>
         /// 运算符重载查找表——跨 binder 实例共享：声明期 binder 填入，函数体绑定期（另一个 binder 实例）查询。
-        /// 放在 global scope 而非 binder 实例上，是因为体绑定遍与声明遍不共用 <see cref="Binding.CocoaBinder"/> 实例。
+        /// 放在 global scope 而非 binder 实例上，是因为体绑定遍与声明遍不共用 <see cref="Binder.CocoaBinder"/> 实例。
         /// </summary>
-        public Binding.OperatorRegistry Operators { get; init; } = new Binding.OperatorRegistry();
+        public Binder.OperatorRegistry Operators { get; init; } = new Binder.OperatorRegistry();
     }
 }

@@ -3,6 +3,8 @@ using Cocoa.CodeAnalysis.Bound;
 using Cocoa.CodeAnalysis.Contracts;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using Cocoa.Targeting;
 using System;
 using System.Collections.Generic;

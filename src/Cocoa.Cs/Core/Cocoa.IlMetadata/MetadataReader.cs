@@ -1,0 +1,142 @@
+using Cocoa.IlMetadata; using System; using System.Collections.Generic; using System.IO; using System.Text;  
+ 
+ namespace Cocoa.IlMetadata 
+ { 
+     /// <summary>
+    /// ECMA-335 元数据读取器（最小子集）：解析 references 程序集，
+    /// 按「类型 FullName + 方法名 + 参数类型名」查找方法，产出 IL 引用（IlTypeRef/IlAssemblyRef/签名类型）。
+    /// </summary>
+    public sealed class MetadataReader
+    {
+        private readonly List<AssemblyReader> _assemblies = new List<AssemblyReader>();
+
+        public MetadataReader(string[] references)
+        {
+            foreach (var reference in references)
+            {
+                try
+                {
+                    _assemblies.Add(new AssemblyReader(reference));
+                }
+                catch (BadImageFormatException)
+                {
+                    _assemblies.Add(AssemblyReader.Empty);
+                }
+            }
+        }
+
+        /// <summary>按 FullName（命名空间.名称）查找类型，返回其 TypeRef 描述。</summary>
+        public IlTypeRef? FindType(string fullName, IIlRefIssuer builder)
+        {
+            foreach (var assembly in _assemblies)
+            {
+                var scope = assembly.FindTypeDef(fullName);
+                if (scope != null)
+                {
+                    var assemblyRef = builder.DefineAssemblyRef(scope.AssemblyName, scope.Version, scope.PublicKeyOrToken, scope.Culture, scope.Flags);
+                    var dot = fullName.LastIndexOf('.');
+                    var ns = dot < 0 ? "" : fullName.Substring(0, dot);
+                    var name = dot < 0 ? fullName : fullName.Substring(dot + 1);
+                    return builder.DefineTypeRef(assemblyRef, ns, name);
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>读取引用程序集中类型的定义（public 字段/方法签名）。</summary>
+        public ResolvedTypeInfo? FindTypeInfo(string fullName)
+        {
+            foreach (var assembly in _assemblies)
+            {
+                var result = assembly.FindTypeInfo(fullName);
+                if (result != null)
+                {
+                    return result;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>任一引用程序集中是否存在命名空间（类型命名空间 == ns 或在其下；6e-M15 using 解析警告用）。</summary>
+        public bool NamespaceExists(string namespaceName)
+        {
+            foreach (var assembly in _assemblies)
+            {
+                if (assembly.ContainsNamespace(namespaceName))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>按「类型 FullName + 方法名 + 参数类型 FullName 列表」查找方法；<paramref name="returnTypeName"/> 非空时按返回类型消歧。</summary>
+        public ResolvedMethodInfo? FindMethod(string typeFullName, string methodName, string[] parameterTypeNames, IIlRefIssuer builder, string? returnTypeName = null)
+        {
+            foreach (var assembly in _assemblies)
+            {
+                var result = assembly.FindMethod(typeFullName, methodName, parameterTypeNames, returnTypeName);
+                if (result != null)
+                {
+                    var declaringType = FindType(typeFullName, builder);
+                    if (declaringType == null)
+                    {
+                        return null;
+                    }
+
+                    var parameterTypes = new List<IlType>(result.ParameterTypes.Count);
+                    foreach (var parameterType in result.ParameterTypes)
+                    {
+                        if (parameterType.Kind == IlTypeKind.Class)
+                        {
+                            var resolved = FindType(parameterType.Reference!.FullName, builder);
+                            parameterTypes.Add(resolved == null ? parameterType : IlType.Class(resolved, parameterType.IsValueType));
+                        }
+                        else if (parameterType.Kind == IlTypeKind.SzArray)
+                        {
+                            parameterTypes.Add(IlType.SzArrayOf(parameterType.ElementType!));
+                        }
+                        else
+                        {
+                            parameterTypes.Add(parameterType);
+                        }
+                    }
+
+                    return new ResolvedMethodInfo(declaringType, methodName, result.ReturnType, parameterTypes, result.IsStatic);
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>按「类型 FullName + 字段名」查找 public 字段（facade 值类型字段重定向：Vector3.X 等）。</summary>
+        public ResolvedFieldInfo? FindField(string typeFullName, string fieldName, IIlRefIssuer builder)
+        {
+            foreach (var assembly in _assemblies)
+            {
+                var result = assembly.FindFieldInstance(typeFullName, fieldName);
+                if (result != null)
+                {
+                    var declaringType = FindType(typeFullName, builder);
+                    if (declaringType == null)
+                    {
+                        return null;
+                    }
+
+                    var fieldType = result.Type.Kind == IlTypeKind.Class
+                        ? (FindType(result.Type.Reference!.FullName, builder) is { } resolved
+                            ? IlType.Class(resolved, result.Type.IsValueType)
+                            : result.Type)
+                        : result.Type;
+
+                    return new ResolvedFieldInfo(declaringType, fieldName, fieldType, result.IsPublic);
+                }
+            }
+
+            return null;
+        }
+    } 
+ } 

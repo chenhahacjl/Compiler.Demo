@@ -1,12 +1,14 @@
 using Cocoa.CodeAnalysis;
 using Cocoa.Targeting;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using Xunit;
 
-using Cocoa.Metadata;
+using Cocoa.IlMetadata;
 using Cocoa.CodeGen.Managed.Writer;
 namespace Cocoa.Tests.CodeAnalysis.Emit.IL
 {

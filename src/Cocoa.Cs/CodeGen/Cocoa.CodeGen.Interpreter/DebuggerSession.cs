@@ -1,9 +1,9 @@
 using System.Collections.Immutable;
 using Cocoa.CodeAnalysis;
-using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Binder;
 using Cocoa.CodeAnalysis.Bound;
 using Cocoa.CodeAnalysis.Symbols;
-using Cocoa.CodeAnalysis.Text;
+using Cocoa.Text;
 
 namespace Cocoa.CodeGen.Interpreter
 {

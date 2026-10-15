@@ -1,8 +1,9 @@
 using System.Collections.Generic;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using System.Collections.Immutable;
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Nodes
 {
     /// <summary>
     /// 列表模式（C# 11）：`expr is [1, 2, 3]` / `expr is [1, .., 3]` / `expr is []` / `expr is [..]`。

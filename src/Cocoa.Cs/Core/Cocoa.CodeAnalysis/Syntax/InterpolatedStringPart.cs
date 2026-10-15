@@ -1,3 +1,5 @@
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
 namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>

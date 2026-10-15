@@ -1,6 +1,8 @@
 using System.Linq;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeGen.Native;
 using Cocoa.CodeGen.Native.Metadata;

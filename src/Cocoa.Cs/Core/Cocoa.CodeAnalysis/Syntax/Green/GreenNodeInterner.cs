@@ -1,8 +1,9 @@
 using System;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Green
 {
     /// <summary>
     /// 绿节点 DAG 规范化（2.1）：进程内无状态、会话级（每 SyntaxTree 一棵）intern 池——

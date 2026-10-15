@@ -1,4 +1,6 @@
-using Cocoa.CodeAnalysis.Text;
+using Cocoa.Text;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using System.Collections.Generic;
 
 namespace Cocoa.CodeAnalysis.Syntax

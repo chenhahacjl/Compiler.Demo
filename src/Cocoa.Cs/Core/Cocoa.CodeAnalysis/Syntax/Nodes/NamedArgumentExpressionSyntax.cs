@@ -1,6 +1,7 @@
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Green;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Nodes
 {
     /// <summary>
     /// 命名参数（语言后置件）：实参位 `名: 值`。绑定按形参名把实参重排到对应位置。

@@ -1,6 +1,8 @@
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
-using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
+using Cocoa.CodeAnalysis.Binder;
 using System;
 using System.Collections.Generic;
 
@@ -45,13 +47,13 @@ namespace Cocoa.CodeAnalysis.Bound
 
         /// <summary>
         /// 内建运算符语义符号（对齐 Roslyn <c>CommonCreateBuiltinOperator</c>，语义视图）：
-        /// 经 <see cref="Binding.BuiltInOperators"/> 按签名合成 `op_*` 方法符号，供反射/诊断/重载解析
+        /// 经 <see cref="Binder.BuiltInOperators"/> 按签名合成 `op_*` 方法符号，供反射/诊断/重载解析
         /// 候选比较；无用户对应运算符的 kind（引用相等/?? 等）返回 null。发射仍按 <see cref="Kind"/> 直分派。
         /// </summary>
         public FunctionSymbol? BuiltinOperatorSymbol =>
             UserDefinedMethod == null
-                ? Binding.BuiltInOperators.CreateOperatorSymbol(
-                    new Binding.BinaryOperatorSignature(Kind, LeftType, RightType, ResultType))
+                ? Binder.BuiltInOperators.CreateOperatorSymbol(
+                    new Binder.BinaryOperatorSignature(Kind, LeftType, RightType, ResultType))
                 : null;
 
         /// <summary>
@@ -71,7 +73,7 @@ namespace Cocoa.CodeAnalysis.Bound
         /// <summary>查询内建二元签名（委托 <see cref="BuiltInOperators"/> 规则表），命中构造对应对象返回。</summary>
         private static BoundBinaryOperator? LookupBuiltIn(BoundBinaryOperatorKind kind, TypeSymbol leftType, TypeSymbol rightType)
         {
-            var signature = Binding.BuiltInOperators.GetSignature(kind, leftType, rightType);
+            var signature = Binder.BuiltInOperators.GetSignature(kind, leftType, rightType);
             if (signature == null)
             {
                 return null;

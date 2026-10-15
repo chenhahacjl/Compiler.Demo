@@ -4,7 +4,9 @@ using Cocoa.CodeGen.Managed.Writer;
 using Cocoa.CodeGen.Interpreter;
 using Cocoa.CodeGen.Native;
 using Cocoa.CodeAnalysis.Syntax;
-using Cocoa.CodeAnalysis.Text;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
+using Cocoa.Text;
 using System.Collections.Immutable;
 
 namespace Cocoa.Cli

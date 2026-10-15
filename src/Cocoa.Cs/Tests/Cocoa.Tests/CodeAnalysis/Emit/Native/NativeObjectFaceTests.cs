@@ -1,6 +1,8 @@
 using System.Collections.Immutable;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using Xunit;
 
 namespace Cocoa.Tests.CodeAnalysis.Emit.Native

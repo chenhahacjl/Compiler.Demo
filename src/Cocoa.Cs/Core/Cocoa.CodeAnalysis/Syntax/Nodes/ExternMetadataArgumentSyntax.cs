@@ -1,7 +1,8 @@
 using System.Collections.Generic;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Nodes
 {
     /// <summary>extern 元数据键值对：`key = value`（如 `entry = MessageBoxA` / `charset = ansi`）。</summary>
     public sealed partial class ExternMetadataArgumentSyntax : SyntaxNode

@@ -1,8 +1,9 @@
 using System.Collections.Generic;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using System.Collections.Immutable;
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Nodes
 {
     /// <summary>
     /// extern 元数据子句：`extern(entry = MessageBoxA, charset = ansi)`（括号可选，命名键值，逗号分隔）。

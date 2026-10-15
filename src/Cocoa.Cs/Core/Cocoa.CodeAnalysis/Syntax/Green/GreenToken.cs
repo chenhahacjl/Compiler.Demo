@@ -1,7 +1,8 @@
 using System.Collections.Immutable;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
 using System.IO;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Green
 {
     /// <summary>绿 Token（不可变；含前后 trivia）。</summary>
     public sealed class GreenToken : GreenNode

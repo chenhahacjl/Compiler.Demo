@@ -1,7 +1,9 @@
-﻿using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
-using Cocoa.CodeAnalysis.Text;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
+using Cocoa.Text;
 using Cocoa.Targeting;
 using System;
 using System.Collections.Generic;

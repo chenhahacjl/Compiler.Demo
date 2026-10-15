@@ -6,12 +6,14 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Cocoa.CodeAnalysis;
-using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Binder;
 using Cocoa.CodeAnalysis.Bound;
 using Cocoa.CodeGen.Native;
 using Cocoa.Targeting;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using Cocoa.Tests.CodeAnalysis.Emit.IL;
 using Xunit;
 

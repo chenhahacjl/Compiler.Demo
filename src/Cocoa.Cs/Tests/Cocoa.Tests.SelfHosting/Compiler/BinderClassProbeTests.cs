@@ -1,6 +1,8 @@
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -100,12 +102,12 @@ function F(): i32 { return 5 }";
 
             var esc = source.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n");
             var driverSource = $@"using Cocoa.CodeAnalysis.Syntax
-using Cocoa.CodeAnalysis.Binding
+using Cocoa.CodeAnalysis.Binder
 using System
 
 function Main(): i32
 {{
-    let binder = Cocoa.CodeAnalysis.Binding.Binder.Create(""{esc}"")
+    let binder = Cocoa.CodeAnalysis.Binder.Binder.Create(""{esc}"")
     binder.BindCompilationUnit()
     System.Console.WriteLine(""D:"" + string(binder.DiagnosticCount()))
     System.Console.WriteLine(""C:"" + string(binder.GetClassCount()))

@@ -5,6 +5,8 @@ using System.Reflection;
 using System.Text;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using Cocoa.CodeGen.PE;
 using Cocoa.Targeting;
 using Xunit;

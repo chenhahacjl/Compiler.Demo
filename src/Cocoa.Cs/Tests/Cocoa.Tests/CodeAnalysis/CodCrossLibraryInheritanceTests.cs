@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using Cocoa.Targeting;
 using Xunit;
 

@@ -5,13 +5,12 @@
   <Folder Name="/Core/">
     <Project Path="Core/Cocoa.Targeting/Cocoa.Targeting.csproj" />
     <Project Path="Core/Cocoa.CodeAnalysis/Cocoa.CodeAnalysis.csproj" />
-    <Project Path="Core/Cocoa.CodeAnalysis.Text/Cocoa.CodeAnalysis.Text.csproj" />
-    <Project Path="Core/Cocoa.Metadata/Cocoa.Metadata.csproj" />
+    <Project Path="Core/Cocoa.Text/Cocoa.Text.csproj" />
+    <Project Path="Core/Cocoa.IlMetadata/Cocoa.IlMetadata.csproj" />
   </Folder>
   <Folder Name="/CodeGen/">
-    <Project Path="CodeGen/Cocoa.CodeGen.Managed.Writer/Cocoa.CodeGen.Managed.Writer.csproj" />
+    <Project Path="CodeGen/Cocoa.CodeGen.Managed/Cocoa.CodeGen.Managed.csproj" />
     <Project Path="CodeGen/Cocoa.CodeGen.PE/Cocoa.CodeGen.PE.csproj" />
-    <Project Path="CodeGen/Cocoa.CodeGen.Native.Lir/Cocoa.CodeGen.Native.Lir.csproj" />
     <Project Path="CodeGen/Cocoa.CodeGen.Native/Cocoa.CodeGen.Native.csproj" />
     <Project Path="CodeGen/Cocoa.CodeGen.Interpreter/Cocoa.CodeGen.Interpreter.csproj" />
     <Project Path="CodeGen/Cocoa.CodeGen.Elf/Cocoa.CodeGen.Elf.csproj" />

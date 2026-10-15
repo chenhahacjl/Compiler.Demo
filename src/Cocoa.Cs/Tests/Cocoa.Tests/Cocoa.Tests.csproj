@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
@@ -16,12 +16,11 @@
     <PackageReference Include="System.Reflection.Metadata" Version="9.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Core\Cocoa.CodeAnalysis.Text\Cocoa.CodeAnalysis.Text.csproj" />
+    <ProjectReference Include="..\..\Core\Cocoa.Text\Cocoa.Text.csproj" />
     <ProjectReference Include="..\..\Core\Cocoa.CodeAnalysis\Cocoa.CodeAnalysis.csproj" />
-    <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.Managed.Writer\Cocoa.CodeGen.Managed.Writer.csproj" />
-    <ProjectReference Include="..\..\Core\Cocoa.Metadata\Cocoa.Metadata.csproj" />
+    <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.Managed\Cocoa.CodeGen.Managed.csproj" />
+    <ProjectReference Include="..\..\Core\Cocoa.IlMetadata\Cocoa.IlMetadata.csproj" />
     <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.Native\Cocoa.CodeGen.Native.csproj" />
-    <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.Native.Lir\Cocoa.CodeGen.Native.Lir.csproj" />
     <ProjectReference Include="..\..\Core\Cocoa.Targeting\Cocoa.Targeting.csproj" />
     <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.Interpreter\Cocoa.CodeGen.Interpreter.csproj" />
     <ProjectReference Include="..\..\Tools\Cocoa.Build\Cocoa.Build.csproj" />

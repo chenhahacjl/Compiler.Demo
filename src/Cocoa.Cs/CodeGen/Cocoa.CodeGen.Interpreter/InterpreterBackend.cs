@@ -1,5 +1,5 @@
 using Cocoa.CodeAnalysis;
-using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Binder;
 using Cocoa.CodeAnalysis.Bound;
 using Cocoa.CodeAnalysis.Symbols;
 
@@ -31,7 +31,7 @@ namespace Cocoa.CodeGen.Interpreter
 
         /// <summary>
         /// 注册/移除引擎回调（M3，Co→C#）：syscall 声明的函数名 → C# Delegate。
-        /// 实例表由引擎持有（隔离），此处登记目录供 <see cref="Cocoa.CodeAnalysis.Binding.CocoaBinder"/>
+        /// 实例表由引擎持有（隔离），此处登记目录供 <see cref="Cocoa.CodeAnalysis.Binder.CocoaBinder"/>
         /// syscall 绑定放行与 Evaluator 求值分派。
         /// </summary>
         public static void RegisterCallback(string name, Delegate handler)

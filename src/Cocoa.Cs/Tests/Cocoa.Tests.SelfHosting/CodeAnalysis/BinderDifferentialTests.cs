@@ -2,6 +2,8 @@ using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Bound;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using System;
 using System.Collections.Immutable;
 using System.IO;
@@ -441,7 +443,7 @@ namespace Cocoa.Tests.CodeAnalysis
 
         private static string BinderMainSource(string embedded)
         {
-            return "using Cocoa.CodeAnalysis.Binding\nusing System\n\nfunction Main(): i32\n{\n    let b = Cocoa.CodeAnalysis.Binding.Binder.Create(\"" + embedded + "\")\n    b.BindCompilationUnit()\n    System.Console.WriteLine(b.DescribeSymbols())\n    var i = 0\n    while i < b.DiagnosticCount()\n    {\n        System.Console.WriteLine(b.DiagnosticAt(i))\n        i = i + 1\n    }\n\n    System.Console.WriteLine(\"#BOUND\")\n    System.Console.WriteLine(b.DescribeBoundTrees())\n    return 0\n}";
+            return "using Cocoa.CodeAnalysis.Binder\nusing System\n\nfunction Main(): i32\n{\n    let b = Cocoa.CodeAnalysis.Binder.Binder.Create(\"" + embedded + "\")\n    b.BindCompilationUnit()\n    System.Console.WriteLine(b.DescribeSymbols())\n    var i = 0\n    while i < b.DiagnosticCount()\n    {\n        System.Console.WriteLine(b.DiagnosticAt(i))\n        i = i + 1\n    }\n\n    System.Console.WriteLine(\"#BOUND\")\n    System.Console.WriteLine(b.DescribeBoundTrees())\n    return 0\n}";
         }
 
         private static string[] References() => new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location };

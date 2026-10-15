@@ -1,4 +1,4 @@
-using Cocoa.CodeAnalysis.Text;
+using Cocoa.Text;
 using System.Collections.Immutable;
 using System.Text;
 

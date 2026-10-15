@@ -1,8 +1,9 @@
 using System.Collections.Immutable;
+using Cocoa.CodeAnalysis.Syntax.Green;
 
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Nodes
 {
     /// <summary>
     /// 鎺ュ彛瀹氫箟鑺傜偣锛歚public interface IEnumerable&lt;T&gt;: IBase where T: class { ... }`锛堟垚鍛樹负鏃犳柟娉曚綋鐨勫嚱鏁扮鍚嶄笌灞炴€ц闂櫒锛夈€?

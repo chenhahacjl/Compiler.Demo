@@ -5,6 +5,8 @@ using Cocoa.CodeGen.Native;
 using Cocoa.CodeGen.PE;
  using Cocoa.Targeting;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using Xunit;
 using Xunit.Abstractions;
 

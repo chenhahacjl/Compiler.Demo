@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
+using Cocoa.CodeAnalysis.Syntax.Green;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Nodes
 {
     /// <summary>
     /// with 表达式：`expr with { 成员 = 值, ... }`（C# 9，record 非破坏复制）。

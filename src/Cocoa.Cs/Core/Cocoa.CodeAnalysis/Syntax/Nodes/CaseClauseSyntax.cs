@@ -1,6 +1,7 @@
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Green;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Nodes
 {
     /// <summary>case 子句：`case 常量 [when 条件] : 体`（支持 `case 1: case 2:` 叠标）。</summary>
     public sealed partial class CaseClauseSyntax : SwitchSectionSyntax

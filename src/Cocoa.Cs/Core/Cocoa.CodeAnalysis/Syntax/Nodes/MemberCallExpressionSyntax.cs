@@ -1,6 +1,7 @@
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Green;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Nodes
 {
     /// <summary>
     /// 成员方法调用表达式语法：`s.substring(1, 3)` / 泛型显式实参 `list.Map&lt;int&gt;(f)`（6e-M20）。

@@ -3,6 +3,8 @@ using Cocoa.CodeGen.Native;
 using Cocoa.Targeting;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using Cocoa.Tests.CodeAnalysis.Emit.IL;
 using System;
 using System.Collections.Generic;

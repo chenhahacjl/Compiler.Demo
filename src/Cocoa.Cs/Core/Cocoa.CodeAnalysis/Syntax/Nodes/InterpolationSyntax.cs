@@ -1,6 +1,7 @@
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Green;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Nodes
 {
     /// <summary>插值洞 <c>{expr[, alignment][: format]}</c>。</summary>
     public sealed partial class InterpolationSyntax : InterpolatedStringContentSyntax

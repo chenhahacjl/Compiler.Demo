@@ -1,8 +1,9 @@
 using System.Collections.Generic;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using System.Collections.Immutable;
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Nodes
 {
     /// <summary>
     /// 属性模式：expr is { Length: > 0 } / expr is { Name: "hello", Age: > 18 }

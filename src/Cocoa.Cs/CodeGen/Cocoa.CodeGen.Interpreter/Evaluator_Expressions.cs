@@ -1,6 +1,6 @@
-using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Binder;
 using Cocoa.CodeAnalysis.Bound;
-using Binding = Cocoa.CodeAnalysis.Binding;
+using Binding = Cocoa.CodeAnalysis.Binder;
 using Symbols = Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Symbols;
 using System.Collections.Immutable;

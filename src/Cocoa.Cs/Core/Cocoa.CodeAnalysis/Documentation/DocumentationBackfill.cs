@@ -1,6 +1,8 @@
 using Cocoa.CodeAnalysis.Documentation;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using System.Linq;
 
 namespace Cocoa.CodeAnalysis.Documentation

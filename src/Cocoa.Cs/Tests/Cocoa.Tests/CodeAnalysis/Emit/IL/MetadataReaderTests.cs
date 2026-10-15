@@ -1,7 +1,7 @@
 
 using Xunit;
 
-using Cocoa.Metadata;
+using Cocoa.IlMetadata;
 using Cocoa.CodeGen.Managed.Writer;
 namespace Cocoa.Tests.CodeAnalysis.Emit.IL
 {

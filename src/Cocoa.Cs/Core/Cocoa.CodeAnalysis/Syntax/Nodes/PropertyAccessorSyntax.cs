@@ -1,8 +1,9 @@
 using System.Collections.Immutable;
+using Cocoa.CodeAnalysis.Syntax.Green;
 
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Nodes
 {
     /// <summary>
     /// 灞炴€ц闂櫒锛歚get { ... }` / `set { ... }`锛坄;` = 鑷姩锛夛紝鍙甫鍙鎬т慨楗扮锛坄private set;`锛夈€?

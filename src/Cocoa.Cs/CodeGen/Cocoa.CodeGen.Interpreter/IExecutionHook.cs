@@ -1,6 +1,6 @@
 using Cocoa.CodeAnalysis.Bound;
 using Cocoa.CodeAnalysis.Symbols;
-using Cocoa.CodeAnalysis.Text;
+using Cocoa.Text;
 using System;
 using System.Collections.Generic;
 

@@ -1,6 +1,7 @@
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Green;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Nodes
 {
     /// <summary>插值字符串中的字面量文本段（合成 StringToken，Value 为已处理转义后的文本）。</summary>
     public sealed partial class InterpolatedStringTextSyntax : InterpolatedStringContentSyntax

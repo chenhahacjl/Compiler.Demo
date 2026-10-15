@@ -1,10 +1,12 @@
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Syntax;
-using Cocoa.CodeAnalysis.Text;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
+using Cocoa.Text;
 using System.CodeDom.Compiler;
 using System.Diagnostics;
 
-namespace Cocoa.CodeAnalysis.Text
+namespace Cocoa.Text
 {
     public static class TextWriterExtensions
     {

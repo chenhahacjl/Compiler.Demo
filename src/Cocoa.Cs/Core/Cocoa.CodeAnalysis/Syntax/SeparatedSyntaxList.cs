@@ -1,4 +1,6 @@
 using System.Collections;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Syntax

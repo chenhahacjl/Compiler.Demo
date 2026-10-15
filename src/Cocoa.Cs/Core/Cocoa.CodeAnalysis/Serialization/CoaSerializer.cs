@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis.Serialization.CoaFormat;
+using Cocoa.CodeAnalysis.Serialization.CoaFormat;
 using System.Collections.Immutable;
 using System.IO;
 

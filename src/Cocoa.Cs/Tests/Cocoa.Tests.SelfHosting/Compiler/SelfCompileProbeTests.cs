@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis;
 using Cocoa.Targeting;
 using System;
 using System.IO;

@@ -1,6 +1,8 @@
-﻿using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -247,7 +249,7 @@ namespace Cocoa.Tests.Compiler
         private static string BuildDriverSource()
         {
             var sb = new StringBuilder();
-            sb.Append("using Cocoa.CodeAnalysis.Syntax\nusing Cocoa.CodeAnalysis.Binding\nusing System\n\nfunction Main(): i32\n{\n");
+            sb.Append("using Cocoa.CodeAnalysis.Syntax\nusing Cocoa.CodeAnalysis.Binder\nusing System\n\nfunction Main(): i32\n{\n");
 
             for (var i = 0; i < LexerCorpus.Length; i++)
             {
@@ -318,7 +320,7 @@ namespace Cocoa.Tests.Compiler
                 "function PrintSymbols(marker: string, src: string): void\n" +
                 "{\n" +
                 "    System.Console.WriteLine(marker)\n" +
-                "    let b = Cocoa.CodeAnalysis.Binding.Binder.Create(src)\n" +
+                "    let b = Cocoa.CodeAnalysis.Binder.Binder.Create(src)\n" +
                 "    b.BindCompilationUnit()\n" +
                 "    System.Console.Write(b.DescribeSymbols())\n" +
                 "    var d = 0\n" +
@@ -331,7 +333,7 @@ namespace Cocoa.Tests.Compiler
                 "function PrintDiags(marker: string, src: string): void\n" +
                 "{\n" +
                 "    System.Console.WriteLine(marker)\n" +
-                "    let b = Cocoa.CodeAnalysis.Binding.Binder.Create(src)\n" +
+                "    let b = Cocoa.CodeAnalysis.Binder.Binder.Create(src)\n" +
                 "    b.BindCompilationUnit()\n" +
                 "    var d = 0\n" +
                 "    while d < b.DiagnosticCount()\n" +
@@ -343,14 +345,14 @@ namespace Cocoa.Tests.Compiler
                 "function PrintBound(marker: string, src: string): void\n" +
                 "{\n" +
                 "    System.Console.WriteLine(marker)\n" +
-                "    let b = Cocoa.CodeAnalysis.Binding.Binder.Create(src)\n" +
+                "    let b = Cocoa.CodeAnalysis.Binder.Binder.Create(src)\n" +
                 "    b.BindCompilationUnit()\n" +
                 "    System.Console.Write(b.DescribeBoundTrees())\n" +
                 "}\n\n" +
                 "function PrintInterp(marker: string, src: string): void\n" +
                 "{\n" +
                 "    System.Console.WriteLine(marker)\n" +
-                "    let b = Cocoa.CodeAnalysis.Binding.Binder.Create(src)\n" +
+                "    let b = Cocoa.CodeAnalysis.Binder.Binder.Create(src)\n" +
                 "    b.BindCompilationUnit()\n" +
                 "    let interp = Cocoa.CodeGen.InterpreterBackend.FromBinder(b)\n" +
                 "    let value = interp.EvaluateMain()\n" +
@@ -478,7 +480,7 @@ namespace Cocoa.Tests.Compiler
             var sb = new StringBuilder();
             sb.Append("// 自举测试：Binder 符号/诊断/绑定树黄金串（阶段 7 增量五 M5-b0）——由 GoldenGenerator 捕获自举侧输出生成，勿手改。\n");
             sb.Append("// 15 符号语料（DescribeSymbols）+ 9 无效语料（诊断行）+ 13 bound 语料（DescribeBoundTrees）。\n\n");
-            sb.Append("using Cocoa.CodeAnalysis.Syntax\nusing Cocoa.CodeAnalysis.Binding\n\n");
+            sb.Append("using Cocoa.CodeAnalysis.Syntax\nusing Cocoa.CodeAnalysis.Binder\n\n");
             sb.Append("namespace Cocoa.CodeAnalysis.Tests\n{\n");
             sb.Append("    class BinderGoldenTests\n    {\n");
             sb.Append("        public static function Run(r: TestRunner): void\n        {\n");
@@ -562,7 +564,7 @@ namespace Cocoa.Tests.Compiler
             var sb = new StringBuilder();
             sb.Append("// 自举测试：Interpreter 求值黄金串（阶段 7 增量五 M5-a1）——由 GoldenGenerator 捕获自举侧输出生成，勿手改。\n");
             sb.Append("// 13 条 bound 语料 → `返回值[\\n输出]` 逐字节比对（对齐 C# Evaluator 语义）。\n\n");
-            sb.Append("using Cocoa.CodeAnalysis.Syntax\nusing Cocoa.CodeAnalysis.Binding\nusing Cocoa.CodeGen\n\n");
+            sb.Append("using Cocoa.CodeAnalysis.Syntax\nusing Cocoa.CodeAnalysis.Binder\nusing Cocoa.CodeGen\n\n");
             sb.Append("namespace Cocoa.CodeAnalysis.Tests\n{\n");
             sb.Append("    class InterpreterGoldenTests\n    {\n");
             sb.Append("        public static function Run(r: TestRunner): void\n        {\n");

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
-using Cocoa.Metadata;
+using Cocoa.IlMetadata;
 using Xunit;
 using Xunit.Abstractions;
 

@@ -1,7 +1,8 @@
 using System.Collections.Immutable;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Green
 {
     /// <summary>
     /// Cocoa 缁库啋绫诲瀷鍖栫孩鑺傜偣宸ュ巶锛圫-5 P2-4 闅忚縼璇█搴擄級锛氭寜 <see cref="GreenNode.RawKind"/> 娲惧彂鍒拌瑷€鑺傜偣绫汇€?

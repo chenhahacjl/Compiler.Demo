@@ -1,0 +1,1758 @@
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.IO;
+using System.Linq;
+using Cocoa.CodeAnalysis.Binder;
+using Cocoa.CodeAnalysis.Bound;
+using Cocoa.IlMetadata;
+using Cocoa.CodeAnalysis.Symbols;
+using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
+
+using Cocoa.CodeAnalysis;
+
+
+namespace Cocoa.CodeGen.Managed.Writer
+{
+    /// <summary>
+    /// IL 路径发射器：绑定树 → 自研 IL 组件（IlAssembler/MetadataBuilder/ManagedPEWriter）。
+    /// 发射语义与原 Mono.Cecil 实现一致（表达式/语句 → IL 指令序列）。
+    /// </summary>
+    internal sealed partial class IlEmitter
+    {
+        private void EmitBuiltinCall(IlAssembler il, FunctionSymbol function, ImmutableArray<BoundExpression> arguments)
+        {
+            if (function.BuiltinKind == BuiltinKind.Random)
+            {
+                // 6d-4：Random.get_Shared 是 .NET 6+ API，mscorlib 没有；改用 new Random() 双运行时兼容。
+                il.Emit(IlOpCodeTable.Get("Newobj"), _framework.RandomCtor);
+                foreach (var argument in arguments)
+                {
+                    EmitExpression(il, argument);
+                }
+
+                il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.RandomNext);
+                return;
+            }
+
+            if (function.BuiltinKind is BuiltinKind.StringFromBytes or BuiltinKind.StringToBytes)
+            {
+                // receiver（Encoding.UTF8）必须先于参数压栈：stack = [utf8, arg]
+                var getUtf8 = _framework.ResolveMethod("System.Text.Encoding", "get_UTF8", Array.Empty<string>());
+                if (getUtf8 == null) throw new Exception("System.Text.Encoding.UTF8 not found in framework references");
+                il.Emit(IlOpCodeTable.Get("Call"), getUtf8);
+            }
+
+            foreach (var argument in arguments)
+            {
+                EmitExpression(il, argument);
+            }
+
+            switch (function.BuiltinKind)
+            {
+                case BuiltinKind.WriteLine:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ConsoleWriteLine);
+                    break;
+                case BuiltinKind.Write:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ConsoleWrite);
+                    break;
+                case BuiltinKind.ReadLine:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ConsoleReadLine);
+                    break;
+                case BuiltinKind.ReadKey:
+                    // Console.ReadKey(intercept) → ConsoleKeyInfo（struct 栈值）→ box 后 callvirt get_KeyChar → char
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ConsoleReadKey);
+                    il.Emit(IlOpCodeTable.Get("Box"), _framework.ConsoleKeyInfoType);
+                    il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.ConsoleKeyInfoKeyChar);
+                    break;
+                case BuiltinKind.Sleep:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ThreadSleep);
+                    break;
+                case BuiltinKind.TickCount:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.EnvironmentTickCount);
+                    break;
+                case BuiltinKind.Exit:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.EnvironmentExit);
+                    break;
+                case BuiltinKind.Sqrt:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.MathSqrt);
+                    break;
+                case BuiltinKind.Beep:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ConsoleBeep);
+                    break;
+                case BuiltinKind.DoubleToString:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToStringDouble);
+                    break;
+                case BuiltinKind.StringFromChars:
+                    // 6e-G7 ③a：new string(char[])
+                    il.Emit(IlOpCodeTable.Get("Newobj"), _framework.StringCtorCharArray);
+                    break;
+                case BuiltinKind.Sha256Hash:
+                {
+                    // 6e-G7 ⑤a：惰性引用（ResolveMethod 按需反射）接入 SHA256.HashData
+                    var m = _framework.ResolveMethod("System.Security.Cryptography.SHA256", "HashData", new[] { "System.Byte[]" });
+                    if (m == null) throw new Exception("System.Security.Cryptography.SHA256.HashData not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
+                case BuiltinKind.FileReadAllText:
+                {
+                    var m = _framework.ResolveMethod("System.IO.File", "ReadAllText", new[] { "System.String" });
+                    if (m == null) throw new Exception("System.IO.File.ReadAllText not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
+                case BuiltinKind.StringFromBytes:
+                {
+                    var getString = _framework.ResolveMethod("System.Text.Encoding", "GetString", new[] { "System.Byte[]" });
+                    if (getString == null) throw new Exception("System.Text.Encoding.GetString(byte[]) not found");
+                    il.Emit(IlOpCodeTable.Get("Callvirt"), getString);
+                    break;
+                }
+                case BuiltinKind.StringToBytes:
+                {
+                    var getBytes = _framework.ResolveMethod("System.Text.Encoding", "GetBytes", new[] { "System.String" });
+                    if (getBytes == null) throw new Exception("System.Text.Encoding.GetBytes(string) not found");
+                    il.Emit(IlOpCodeTable.Get("Callvirt"), getBytes);
+                    break;
+                }
+                case BuiltinKind.FileWriteAllText:
+                {
+                    var m = _framework.ResolveMethod("System.IO.File", "WriteAllText", new[] { "System.String", "System.String" });
+                    if (m == null) throw new Exception("System.IO.File.WriteAllText not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
+                case BuiltinKind.FileReadAllBytes:
+                {
+                    var m = _framework.ResolveMethod("System.IO.File", "ReadAllBytes", new[] { "System.String" });
+                    if (m == null) throw new Exception("System.IO.File.ReadAllBytes not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
+                case BuiltinKind.FileWriteAllBytes:
+                {
+                    var m = _framework.ResolveMethod("System.IO.File", "WriteAllBytes", new[] { "System.String", "System.Byte[]" });
+                    if (m == null) throw new Exception("System.IO.File.WriteAllBytes not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
+                case BuiltinKind.FileOpen:
+                case BuiltinKind.FileSize:
+                case BuiltinKind.FileSeek:
+                case BuiltinKind.FileTell:
+                case BuiltinKind.FileRead:
+                case BuiltinKind.FileWrite:
+                case BuiltinKind.FileClose:
+                {
+                    // 低层句柄原语仅供 native / Evaluator SDK body；IL 走 System.IO.FileStream facade 直连 BCL。
+                    // 模块（System.Core.Managed.dll）整体编译时这些方法体仍须可发射——桩成 NotSupportedException，杜绝实际调用。
+                    var ctor = _framework.ResolveMethod("System.NotSupportedException", ".ctor", Array.Empty<string>());
+                    if (ctor == null) throw new Exception("System.NotSupportedException..ctor() not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Newobj"), ctor);
+                    il.Emit(IlOpCodeTable.Get("Throw"));
+                    break;
+                }
+                case BuiltinKind.FileExists:
+                {
+                    var m = _framework.ResolveMethod("System.IO.File", "Exists", new[] { "System.String" });
+                    if (m == null) throw new Exception("System.IO.File.Exists not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
+                case BuiltinKind.GetEnvironmentVariable:
+                {
+                    var m = _framework.ResolveMethod("System.Environment", "GetEnvironmentVariable", new[] { "System.String" });
+                    if (m == null) { var stub = _framework.ResolveMethod("System.NotSupportedException", ".ctor", Array.Empty<string>()); il.Emit(IlOpCodeTable.Get("Newobj"), stub); il.Emit(IlOpCodeTable.Get("Throw")); break; }
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
+                case BuiltinKind.GetCurrentDirectory:
+                {
+                    var m = _framework.ResolveMethod("System.Environment", "get_CurrentDirectory", Array.Empty<string>());
+                    if (m == null) { var stub = _framework.ResolveMethod("System.NotSupportedException", ".ctor", Array.Empty<string>()); il.Emit(IlOpCodeTable.Get("Newobj"), stub); il.Emit(IlOpCodeTable.Get("Throw")); break; }
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
+                case BuiltinKind.FileDelete:
+                {
+                    var m = _framework.ResolveMethod("System.IO.File", "Delete", new[] { "System.String" });
+                    if (m == null) throw new Exception("System.IO.File.Delete not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
+                case BuiltinKind.FileCopy:
+                {
+                    // 与 stdlib 2 参形态 Copy(src, dst) 匹配（无 overwrite；目标已存在则抛 IOException）。
+                    // 此前误解析 3 参 Copy(string,string,bool) 而只压 2 实参 → 栈欠载 InvalidProgramException。
+                    var m = _framework.ResolveMethod("System.IO.File", "Copy", new[] { "System.String", "System.String" });
+                    if (m == null) throw new Exception("System.IO.File.Copy not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
+                case BuiltinKind.DirectoryExists:
+                {
+                    var m = _framework.ResolveMethod("System.IO.Directory", "Exists", new[] { "System.String" });
+                    if (m == null) throw new Exception("System.IO.Directory.Exists not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
+                case BuiltinKind.CreateDirectory:
+                {
+                    var m = _framework.ResolveMethod("System.IO.Directory", "CreateDirectory", new[] { "System.String" });
+                    if (m == null) { var stub = _framework.ResolveMethod("System.NotSupportedException", ".ctor", Array.Empty<string>()); il.Emit(IlOpCodeTable.Get("Newobj"), stub); il.Emit(IlOpCodeTable.Get("Throw")); break; }
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    il.Emit(IlOpCodeTable.Get("Pop")); // BCL 返回 DirectoryInfo；builtin 为 void，弹出保持栈平衡
+                    break;
+                }
+                case BuiltinKind.SetCurrentDirectory:
+                {
+                    var m = _framework.ResolveMethod("System.Environment", "SetCurrentDirectory", new[] { "System.String" });
+                    if (m == null) { var stub = _framework.ResolveMethod("System.NotSupportedException", ".ctor", Array.Empty<string>()); il.Emit(IlOpCodeTable.Get("Newobj"), stub); il.Emit(IlOpCodeTable.Get("Throw")); break; }
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
+                case BuiltinKind.GetExecutablePath:
+                {
+                    // AppContext.BaseDirectory 作为可执行文件路径的近似
+                    var m = _framework.ResolveMethod("System.AppContext", "get_BaseDirectory", Array.Empty<string>());
+                    if (m == null) { var stub = _framework.ResolveMethod("System.NotSupportedException", ".ctor", Array.Empty<string>()); il.Emit(IlOpCodeTable.Get("Newobj"), stub); il.Emit(IlOpCodeTable.Get("Throw")); break; }
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
+                case BuiltinKind.LaunchProcess:
+                {
+                    // ProcessStartInfo(string fileName) ctor — consumes 'path' from stack
+                    var psiCtor = _framework.ResolveMethod("System.Diagnostics.ProcessStartInfo", ".ctor", new[] { "System.String" });
+                    if (psiCtor == null) throw new Exception("ProcessStartInfo.ctor not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Newobj"), psiCtor);
+                    // stack: [..., psi]
+
+                    // dup → set_Arguments(args)
+                    il.Emit(IlOpCodeTable.Get("Dup"));
+                    var setArgs = _framework.ResolveMethod("System.Diagnostics.ProcessStartInfo", "set_Arguments", new[] { "System.String" });
+                    if (setArgs == null) throw new Exception("ProcessStartInfo.set_Arguments not found");
+                    il.Emit(IlOpCodeTable.Get("Call"), setArgs);
+                    // stack: [..., psi]
+
+                    // dup → set_WorkingDirectory(workdir)
+                    il.Emit(IlOpCodeTable.Get("Dup"));
+                    var setWorkdir = _framework.ResolveMethod("System.Diagnostics.ProcessStartInfo", "set_WorkingDirectory", new[] { "System.String" });
+                    if (setWorkdir == null) throw new Exception("ProcessStartInfo.set_WorkingDirectory not found");
+                    il.Emit(IlOpCodeTable.Get("Call"), setWorkdir);
+                    // stack: [..., psi]
+
+                    // dup → set_UseShellExecute(false)
+                    il.Emit(IlOpCodeTable.Get("Dup"));
+                    var setUseShell = _framework.ResolveMethod("System.Diagnostics.ProcessStartInfo", "set_UseShellExecute", new[] { "System.Boolean" });
+                    if (setUseShell == null) throw new Exception("ProcessStartInfo.set_UseShellExecute not found");
+                    il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));
+                    il.Emit(IlOpCodeTable.Get("Call"), setUseShell);
+                    // stack: [..., psi]
+
+                    // Process.Start(ProcessStartInfo) → Process
+                    var start = _framework.ResolveMethod("System.Diagnostics.Process", "Start", new[] { "System.Diagnostics.ProcessStartInfo" });
+                    if (start == null) throw new Exception("Process.Start not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), start);
+                    // stack: [..., proc]
+
+                    // dup → WaitForExit()
+                    il.Emit(IlOpCodeTable.Get("Dup"));
+                    var waitForExit = _framework.ResolveMethod("System.Diagnostics.Process", "WaitForExit", Array.Empty<string>());
+                    if (waitForExit == null) throw new Exception("Process.WaitForExit not found");
+                    il.Emit(IlOpCodeTable.Get("Call"), waitForExit);
+                    // stack: [..., proc]
+
+                    // proc.get_ExitCode()
+                    var getExitCode = _framework.ResolveMethod("System.Diagnostics.Process", "get_ExitCode", Array.Empty<string>());
+                    if (getExitCode == null) throw new Exception("Process.ExitCode not found");
+                    il.Emit(IlOpCodeTable.Get("Call"), getExitCode);
+                    // stack: [..., exitCode]
+
+                    // proc.Dispose()
+                    var dispose = _framework.ResolveMethod("System.Diagnostics.Process", "Dispose", Array.Empty<string>());
+                    if (dispose != null)
+                        il.Emit(IlOpCodeTable.Get("Call"), dispose);
+
+                    break;
+                }
+
+                // 6e-M19 M2-c：System.Object 静态方法（Object.Equals(a,b) / Object.ReferenceEquals(a,b)，参数 any→object）
+                case BuiltinKind.ObjectStaticEquals:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ObjectEquals);
+                    break;
+                case BuiltinKind.ObjectReferenceEquals:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ObjectReferenceEquals);
+                    break;
+                case BuiltinKind.CopyRange:
+                {
+                    // N1：(source: T[], start: i32, count: i32) → T[]
+                    // 进 case 时栈 = [src, start, count]（switch 前统一压参）。
+                    // dst = new T[count]; Array.Copy(src, start, dst, 0, count); → dst
+                    var elementType = function.ReturnType.ElementType ?? TypeSymbol.Error;
+                    var countLocal = AllocateSyntheticTemporaryLocal((function, "count"), TypeSymbol.Int32);
+                    var dstLocal = AllocateSyntheticTemporaryLocal((function, "dst"), function.ReturnType);
+
+                    il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)countLocal);            // [src, start]
+
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)countLocal);
+                    if (IsReferenceElement(elementType))
+                    {
+                        il.Emit(IlOpCodeTable.Get("Newarr"), OperandForTypeToken(ToIlType(elementType)));
+                    }
+                    else
+                    {
+                        il.Emit(IlOpCodeTable.Get("Newarr"), _framework.RequireType(PrimitiveArrayElementTypeName(elementType)));
+                    }
+                    il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)dstLocal);              // [src, start]
+
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)dstLocal);              // [src, start, dst]
+                    il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));                             // [src, start, dst, 0]
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)countLocal);            // [src, start, dst, 0, count]
+
+                    var arrayCopy = _framework.FindMethod("System.Array", "Copy",
+                        new[] { "System.Array", "System.Int32", "System.Array", "System.Int32", "System.Int32" });
+                    if (arrayCopy == null) throw new Exception("System.Array.Copy(Array,int,Array,int,int) not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), arrayCopy);                      // []
+
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)dstLocal);              // [dst]
+                    break;
+                }
+                case BuiltinKind.SelfIntrospect:
+                    // IL 产物无 .cocoa 节（仅 native 内嵌）——恒 false
+                    il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));
+                    break;
+                default:
+                    throw new InvalidOperationException($"IL 后端未实现内建原语 {function.BuiltinKind}；覆盖登记见 BuiltinCoverage");
+            }
+        }
+
+        private void EmitConversionExpression(IlAssembler il, BoundConversionExpression node)
+        {
+            // 6e-M22 委托真实类型化：fnty 值 → 具名 delegate（true CLR 委托实例）
+            if (node.Type is NamedTypeSymbol { TypeKind: TypeKind.Delegate } delegateType &&
+                node.Expression is BoundFunctionValueExpression innerDelegateValue)
+            {
+                EmitDelegateValueConstruction(il, innerDelegateValue, delegateType);
+                return;
+            }
+
+            EmitExpression(il, node.Expression);
+
+            // 6e-M19 M5-a：null 字面量 → 引用型（类/接口/string/数组/any）——栈上已是 ldnull，直通
+            if (node.Expression.Type == TypeSymbol.Null)
+            {
+                return;
+            }
+
+            // decimal/half（非 IL 基元）：转换经 System.Convert（装箱 + To<X>），避免 op_Explicit 按返回类型重载歧义
+            if (node.Expression.Type == TypeSymbol.Decimal || node.Type == TypeSymbol.Decimal ||
+                node.Expression.Type == TypeSymbol.Float16 || node.Type == TypeSymbol.Float16)
+            {
+                EmitDecimalHalfConversion(il, node.Expression.Type, node.Type);
+                return;
+            }
+
+            // 6e-M21 Phase 4：数值↔数值系统化转换（含 char/enum 源），命中即返回
+            if (TryEmitNumericConversion(il, node.Expression.Type, node.Type))
+            {
+                return;
+            }
+
+            // nint/nuint（原生整型，平台自适应）转换：对齐 IL native int 语义（ELEMENT_TYPE_I/U）
+            if (node.Expression.Type == TypeSymbol.NativeInt32 || node.Expression.Type == TypeSymbol.NativeUInt32 ||
+                node.Type == TypeSymbol.NativeInt32 || node.Type == TypeSymbol.NativeUInt32)
+            {
+                EmitNativeIntConversion(il, node.Expression.Type, node.Type);
+                return;
+            }
+
+            if (node.Expression.Type == TypeSymbol.Char && node.Type == TypeSymbol.String)
+            {
+                var type = _framework.RequireType("System.Char");
+                il.Emit(IlOpCodeTable.Get("Box"), type);
+                il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToString);
+                return;
+            }
+
+            if (node.Expression.Type == TypeSymbol.UInt8 && node.Type == TypeSymbol.Int32)
+            {
+                // 栈上同为 4 字节，无需指令
+                return;
+            }
+
+            if (node.Expression.Type == TypeSymbol.Int32 && node.Type == TypeSymbol.UInt8)
+            {
+                // 无符号字节截断，与 C# (byte)300 == 44 语义一致
+                il.Emit(IlOpCodeTable.Get("Conv_U1"));
+                return;
+            }
+
+            if (node.Expression.Type == TypeSymbol.Int32 && node.Type == TypeSymbol.Double ||
+                node.Expression.Type == TypeSymbol.UInt8 && node.Type == TypeSymbol.Double)
+            {
+                il.Emit(IlOpCodeTable.Get("Conv_R8"));
+                return;
+            }
+
+            if (node.Expression.Type == TypeSymbol.Int64 && node.Type == TypeSymbol.Double)
+            {
+                il.Emit(IlOpCodeTable.Get("Conv_R8"));
+                return;
+            }
+
+            if (node.Expression.Type == TypeSymbol.Double && node.Type == TypeSymbol.Int64)
+            {
+                // 与 C# 一致：截断取整
+                il.Emit(IlOpCodeTable.Get("Conv_I8"));
+                return;
+            }
+
+            if (node.Expression.Type is NamedTypeSymbol { TypeKind: TypeKind.Enum } && node.Type == TypeSymbol.Int64 ||
+                node.Expression.Type == TypeSymbol.UInt8 && node.Type == TypeSymbol.Int64 ||
+                node.Expression.Type == TypeSymbol.Char && node.Type == TypeSymbol.Int64)
+            {
+                il.Emit(IlOpCodeTable.Get("Conv_I8"));
+                return;
+            }
+
+            if (node.Expression.Type == TypeSymbol.Int32 && node.Type == TypeSymbol.Int64)
+            {
+                // 符号扩展（C# int→long 隐式）
+                il.Emit(IlOpCodeTable.Get("Conv_I8"));
+                return;
+            }
+
+            if (node.Expression.Type == TypeSymbol.Int64 && node.Type == TypeSymbol.Int32)
+            {
+                il.Emit(IlOpCodeTable.Get("Conv_I4"));
+                return;
+            }
+
+            if (node.Expression.Type == TypeSymbol.Int64 && node.Type == TypeSymbol.UInt8)
+            {
+                il.Emit(IlOpCodeTable.Get("Conv_U1"));
+                return;
+            }
+
+            if (node.Expression.Type == TypeSymbol.Int64 && node.Type == TypeSymbol.Char)
+            {
+                il.Emit(IlOpCodeTable.Get("Conv_U2"));
+                return;
+            }
+
+            if (node.Expression.Type == TypeSymbol.Int64 && node.Type == TypeSymbol.String)
+            {
+                il.Emit(IlOpCodeTable.Get("Box"), _framework.RequireType("System.Int64"));
+                il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToString);
+                return;
+            }
+
+            // 6e-M21 Phase 7：其余数值类型 → string（装箱 + Convert.ToString）
+            if ((node.Expression.Type.IsInteger && node.Expression.Type != TypeSymbol.Boolean) &&
+                !node.Expression.Type.IsPlaceholder128 && node.Type == TypeSymbol.String)
+            {
+                var boxedName = node.Expression.Type == TypeSymbol.Int8 ? "System.SByte"
+                    : node.Expression.Type == TypeSymbol.Int16 ? "System.Int16"
+                    : node.Expression.Type == TypeSymbol.UInt16 ? "System.UInt16"
+                    : node.Expression.Type == TypeSymbol.UInt32 ? "System.UInt32"
+                    : "System.UInt64";
+                il.Emit(IlOpCodeTable.Get("Box"), _framework.RequireType(boxedName));
+                il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToString);
+                return;
+            }
+
+            if (node.Expression.Type == TypeSymbol.Float && node.Type == TypeSymbol.String)
+            {
+                il.Emit(IlOpCodeTable.Get("Box"), _framework.RequireType("System.Single"));
+                il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToString);
+                return;
+            }
+
+            if (node.Expression.Type == TypeSymbol.String && node.Type == TypeSymbol.Int64)
+            {
+                il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToInt64);
+                return;
+            }
+
+            if (node.Expression.Type == TypeSymbol.Double && node.Type == TypeSymbol.Int32)
+            {
+                il.Emit(IlOpCodeTable.Get("Conv_I4"));
+                return;
+            }
+
+            if (node.Expression.Type == TypeSymbol.Double && node.Type == TypeSymbol.UInt8)
+            {
+                il.Emit(IlOpCodeTable.Get("Conv_U1"));
+                return;
+            }
+
+            if (node.Expression.Type == TypeSymbol.Double && node.Type == TypeSymbol.String)
+            {
+                il.Emit(IlOpCodeTable.Get("Box"), _framework.RequireType("System.Double"));
+                il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToString);
+                return;
+            }
+
+            if (node.Expression.Type == TypeSymbol.Char && node.Type == TypeSymbol.Int32 ||
+                node.Expression.Type == TypeSymbol.Int32 && node.Type == TypeSymbol.Char ||
+                node.Expression.Type is NamedTypeSymbol { TypeKind: TypeKind.Enum } && node.Type == TypeSymbol.Int32 ||
+                node.Expression.Type == TypeSymbol.Int32 && node.Type is NamedTypeSymbol { TypeKind: TypeKind.Enum })
+            {
+                // 栈上同为 4 字节，无需指令
+                return;
+            }
+
+            if (node.Expression.Type is NamedTypeSymbol fromClass && node.Type is NamedTypeSymbol toClass)
+            {
+                if (toClass.IsInterface &&
+                    (fromClass == toClass || fromClass.IsBaseOf(toClass) || fromClass.GetAllInterfaces().Contains(toClass)))
+                {
+                    // 类/接口 → 其实现的接口（含继承链）：引用转换，栈上引用不变
+                    return;
+                }
+
+                if (fromClass.IsInterface &&
+                    (toClass.IsBaseOf(fromClass) || toClass.GetAllInterfaces().Contains(fromClass)))
+                {
+                    // 接口 → 类：显式向下引用转换（castclass）
+                    il.Emit(IlOpCodeTable.Get("Castclass"), ToIlType(toClass));
+                    return;
+                }
+
+                if (!toClass.IsInterface && toClass.IsBaseOf(fromClass))
+                {
+                    // 派生类 → 基类（6e-M19 M2-c 方向修正）：引用转换，栈上引用不变
+                    return;
+                }
+
+                if (!fromClass.IsInterface && !toClass.IsInterface && fromClass.IsBaseOf(toClass))
+                {
+                    // 基类 → 派生类：显式向下引用转换（castclass）
+                    il.Emit(IlOpCodeTable.Get("Castclass"), ToIlType(toClass));
+                    return;
+                }
+            }
+
+            EmitBoxIfValueType(il, node.Expression.Type);
+
+            if (node.Type == TypeSymbol.Object || node.Type == NamedTypeSymbol.SystemObject)
+            {
+                // Done：EmitBoxIfValueType 已对值类型 box；引用类型（string/类）已是引用（object）。
+                // object 多态装箱目标——栈上已是 object，无需附加指令。
+            }
+            else if (node.Type == TypeSymbol.Boolean)
+            {
+                il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToBoolean);
+            }
+            else if (node.Type == TypeSymbol.Int32)
+            {
+                il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToInt32);
+            }
+            else if (node.Type == TypeSymbol.String)
+            {
+                il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToString);
+            }
+            else
+            {
+                throw new System.Exception($"Unexpected conversion from {node.Expression.Type} to {node.Type}");
+            }
+        }
+
+        /// <summary>nint/nuint（原生整型）转换发射——IL native int（ELEMENT_TYPE_I/U）语义。
+        /// int/long→nint = conv.i（符号扩展到平台宽）；uint/ulong→nuint = conv.u；native↔整型按位宽发 conv.i4/i8/u4/u8。</summary>
+        private void EmitNativeIntConversion(IlAssembler il, TypeSymbol from, TypeSymbol to)
+        {
+            if (to == from)
+            {
+                return;
+            }
+
+            // to 为原生整型：int/long/nuint → nint = conv.i；uint/ulong/nint → nuint = conv.u
+            if (to == TypeSymbol.NativeInt32)
+            {
+                il.Emit(IlOpCodeTable.Get("Conv_I"));
+                return;
+            }
+
+            if (to == TypeSymbol.NativeUInt32)
+            {
+                il.Emit(IlOpCodeTable.Get("Conv_U"));
+                return;
+            }
+
+            if (from == TypeSymbol.NativeInt32)
+            {
+                if (to == TypeSymbol.Int64)
+                {
+                    il.Emit(IlOpCodeTable.Get("Conv_I8"));
+                    return;
+                }
+
+                if (to == TypeSymbol.Int32)
+                {
+                    il.Emit(IlOpCodeTable.Get("Conv_I4"));
+                    return;
+                }
+
+                if (to == TypeSymbol.UInt32)
+                {
+                    il.Emit(IlOpCodeTable.Get("Conv_U4"));
+                    return;
+                }
+
+                if (to == TypeSymbol.UInt64)
+                {
+                    il.Emit(IlOpCodeTable.Get("Conv_U8"));
+                    return;
+                }
+            }
+
+            if (from == TypeSymbol.NativeUInt32)
+            {
+                if (to == TypeSymbol.UInt64)
+                {
+                    il.Emit(IlOpCodeTable.Get("Conv_U8"));
+                    return;
+                }
+
+                if (to == TypeSymbol.UInt32)
+                {
+                    il.Emit(IlOpCodeTable.Get("Conv_U4"));
+                    return;
+                }
+
+                if (to == TypeSymbol.Int32)
+                {
+                    il.Emit(IlOpCodeTable.Get("Conv_I4"));
+                    return;
+                }
+
+                if (to == TypeSymbol.Int64)
+                {
+                    il.Emit(IlOpCodeTable.Get("Conv_I8"));
+                    return;
+                }
+            }
+
+            throw new System.Exception($"Unexpected native-int conversion from {from} to {to}");
+        }
+
+        /// <summary>值类型（bool/int/long/char/byte/double/短整型/浮点/枚举）→ 装箱为 System.Object 参数。</summary>
+        private void EmitBoxIfValueType(IlAssembler il, TypeSymbol type)
+        {
+            var boxed = BoxedTypeName(type);
+            if (boxed == null)
+            {
+                return;
+            }
+
+            il.Emit(IlOpCodeTable.Get("Box"), _framework.RequireType(boxed));
+        }
+
+        /// <summary>值类型装箱用 corlib 类型全名（isinst/box 需要 TypeRef；基元 ToIlType 返回内联元素类型不可作 token）。</summary>
+        private static string? BoxedTypeName(TypeSymbol type)
+        {
+            if (type == TypeSymbol.Boolean) return "System.Boolean";
+            if (type == TypeSymbol.Int32) return "System.Int32";
+            if (type == TypeSymbol.Int64) return "System.Int64";
+            if (type == TypeSymbol.Char) return "System.Char";
+            if (type == TypeSymbol.UInt8) return "System.Byte";
+            if (type == TypeSymbol.Int8) return "System.SByte";
+            if (type == TypeSymbol.Int16) return "System.Int16";
+            if (type == TypeSymbol.UInt16) return "System.UInt16";
+            if (type == TypeSymbol.UInt32) return "System.UInt32";
+            if (type == TypeSymbol.UInt64) return "System.UInt64";
+            if (type == TypeSymbol.Float) return "System.Single";
+            if (type == TypeSymbol.Double) return "System.Double";
+            if (type == TypeSymbol.Decimal) return "System.Decimal";
+            if (type == TypeSymbol.Float16) return "System.Half";
+            if (type is NamedTypeSymbol { TypeKind: TypeKind.Enum }) return "System.Int32";
+            return null;
+        }
+
+        private void EmitFormatExpression(IlAssembler il, BoundFormatExpression node)
+        {
+            var format = "{" + 0;
+            if (node.Width != null)
+            {
+                format += "," + node.Width;
+            }
+
+            if (node.Format != null)
+            {
+                format += ":" + node.Format;
+            }
+
+            format += "}";
+
+            il.Emit(IlOpCodeTable.Get("Ldstr"), format);
+            EmitExpression(il, node.Value);
+            EmitBoxIfValueType(il, node.Value.Type);
+            il.Emit(IlOpCodeTable.Get("Call"), _framework.StringFormat);
+        }
+
+        private void EmitArrayCreationExpression(IlAssembler il, BoundArrayCreationExpression node)
+        {
+            EmitExpression(il, node.Length);
+
+            var elementType = node.Type.ElementType!;
+            if (IsReferenceElement(elementType))
+            {
+                // 6e-M22 C5+ 多播事件：类/delegate/函数类型元素数组 —— 类走 TypeDef/TypeRef，
+                // 泛型实例化（Func\`N）经 TypeSpec 表注册后回填 token。
+                il.Emit(IlOpCodeTable.Get("Newarr"), OperandForTypeToken(ToIlType(elementType)));
+            }
+            else
+            {
+                il.Emit(IlOpCodeTable.Get("Newarr"), _framework.RequireType(PrimitiveArrayElementTypeName(elementType)));
+            }
+
+            // 含运行时 spread（`[..a, 4]`）→ 元素写入需运行下标 + System.Array.Copy 段拷贝。
+            if (node.Initializers.Any(i => i is BoundArraySpreadExpression))
+            {
+                EmitArrayCreationWithSpread(il, node, elementType);
+                return;
+            }
+
+            for (var i = 0; i < node.Initializers.Length; i++)
+            {
+                il.Emit(IlOpCodeTable.Get("Dup"));
+                il.Emit(IlOpCodeTable.Get("Ldc_I4"), i);
+                EmitExpression(il, node.Initializers[i]);
+                EmitElementStore(il, elementType);
+            }
+        }
+
+        /// <summary>含运行时 spread 的数组创建：newarr → 目标 local；逐元素/逐段填充；ldloc 返回。
+        /// 普通元素 stelem[t_]（t_++）；spread 用 Array.Copy(source, 0, target, t_, len)（t_ += len）。
+        /// 与 CopyRange 的 System.Array.Copy(Array,int,Array,int,int) 复用同一框架引用。</summary>
+        private void EmitArrayCreationWithSpread(IlAssembler il, BoundArrayCreationExpression node, TypeSymbol elementType)
+        {
+            var targetLocal = AllocateSyntheticTemporaryLocal(node, node.Type);
+            var indexLocal = AllocateSyntheticTemporaryLocal((node, "coll-index"), TypeSymbol.Int32);
+
+            il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)targetLocal);   // newarr → target
+            il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));
+            il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)indexLocal);    // t = 0
+
+            foreach (var initializer in node.Initializers)
+            {
+                if (initializer is BoundArraySpreadExpression spread)
+                {
+                    // [..src]：src→local；len = ldloc src → ldlen；Array.Copy(src, 0, target, t, len)；t += len
+                    var srcLocal = AllocateSyntheticTemporaryLocal((node, "coll-src", initializer), node.Type);
+                    var srcLengthLocal = AllocateSyntheticTemporaryLocal((node, spread), TypeSymbol.Int32);
+
+                    EmitExpression(il, spread.Array);
+                    il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)srcLocal);            // []
+
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)srcLocal);            // [src]
+                    il.Emit(IlOpCodeTable.Get("Ldlen"));
+                    il.Emit(IlOpCodeTable.Get("Conv_I4"));
+                    il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)srcLengthLocal);      // []
+
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)srcLocal);            // param1 sourceArray
+                    il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));              // sourceIndex=0
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)targetLocal); // dst
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)indexLocal);  // dstStart=t
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)srcLengthLocal); // count=len
+
+                    var arrayCopy = _framework.FindMethod("System.Array", "Copy",
+                        new[] { "System.Array", "System.Int32", "System.Array", "System.Int32", "System.Int32" });
+                    if (arrayCopy == null) throw new Exception("System.Array.Copy(Array,int,Array,int,int) not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), arrayCopy);       // []
+
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)indexLocal);
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)srcLengthLocal);
+                    il.Emit(IlOpCodeTable.Get("Add"));
+                    il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)indexLocal); // t += len
+                }
+                else
+                {
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)targetLocal);
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)indexLocal);
+                    EmitExpression(il, initializer);
+                    EmitElementStore(il, elementType);
+
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)indexLocal);
+                    il.Emit(IlOpCodeTable.Get("Ldc_I4_1"));
+                    il.Emit(IlOpCodeTable.Get("Add"));
+                    il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)indexLocal); // t += 1
+                }
+            }
+
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)targetLocal);
+        }
+
+        /// <summary>InlineType 操作数（Newarr 等）：泛型实例化必须注册为 TypeSpec（其 .Reference 指向的是
+        /// 泛型定义 TypeRef，直接回填会得到错误 token）；TypeDef/TypeRef 直用；String 标记型映射框架 TypeRef。</summary>
+        private object OperandForTypeToken(IlType type)
+        {
+            if (type.Kind == IlTypeKind.GenericInst)
+            {
+                return _metadata.DefineTypeSpec(type);
+            }
+
+            if (type.TypeDef != null || type.Reference != null)
+            {
+                return type;
+            }
+
+            if (type.Kind == IlTypeKind.String)
+            {
+                return _framework.RequireType("System.String");
+            }
+
+            return _metadata.DefineTypeSpec(type);
+        }
+
+        /// <summary>基元值类型元素的 Newarr 框架类型名（enum 按 int32 表示）。</summary>
+        private string PrimitiveArrayElementTypeName(TypeSymbol elementType)
+        {
+            return elementType switch
+            {
+                _ when elementType == TypeSymbol.Int32 => "System.Int32",
+                _ when elementType == TypeSymbol.UInt32 => "System.UInt32",
+                _ when elementType == TypeSymbol.Int64 => "System.Int64",
+                _ when elementType == TypeSymbol.UInt64 => "System.UInt64",
+                _ when elementType == TypeSymbol.Char => "System.Char",
+                _ when elementType == TypeSymbol.UInt8 => "System.Byte",
+                _ when elementType == TypeSymbol.Float => "System.Single", // 6e-M25：f32[] 支持
+                _ when elementType == TypeSymbol.Double => "System.Double",
+                _ when elementType == TypeSymbol.Boolean => "System.Boolean",
+                _ when elementType is NamedTypeSymbol { TypeKind: TypeKind.Enum } => "System.Int32",
+                _ => throw new System.NotSupportedException($"Array of '{elementType}' is not yet supported by the IL emitter."),
+            };
+        }
+
+        /// <summary>引用型元素判定：非基元值类型（含函数类型 / delegate 类 / 用户类 / string / 数组 / Object/any）一律按 ref 存取。</summary>
+        private static bool IsReferenceElement(TypeSymbol elementType)
+        {
+            if (elementType == TypeSymbol.Boolean || elementType == TypeSymbol.UInt8 || elementType == TypeSymbol.Int8 ||
+                elementType == TypeSymbol.Int16 || elementType == TypeSymbol.UInt16 ||
+                elementType == TypeSymbol.Int32 || elementType == TypeSymbol.UInt32 ||
+                elementType == TypeSymbol.Int64 || elementType == TypeSymbol.UInt64 ||
+                elementType == TypeSymbol.Char || elementType == TypeSymbol.Float || elementType == TypeSymbol.Double)
+            {
+                return false;
+            }
+
+            if (elementType is NamedTypeSymbol { TypeKind: TypeKind.Enum })
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private void EmitElementAccessExpression(IlAssembler il, BoundElementAccessExpression node)
+        {
+            EmitExpression(il, node.Target);
+            EmitExpression(il, node.Index);
+
+            if (node.Target.Type == TypeSymbol.String)
+            {
+                il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.StringChars);
+                return;
+            }
+
+            if (IsReferenceElement(node.Type))
+            {
+                // 6e-M22 C5+ 多播事件：函数值/delegate/类元素数组按引用加载
+                il.Emit(IlOpCodeTable.Get("Ldelem_Ref"));
+            }
+            else if (node.Type == TypeSymbol.Char)
+            {
+                il.Emit(IlOpCodeTable.Get("Ldelem_U2"));
+            }
+            else if (node.Type == TypeSymbol.Double)
+            {
+                il.Emit(IlOpCodeTable.Get("Ldelem_R8"));
+            }
+            else if (node.Type == TypeSymbol.Float)
+            {
+                il.Emit(IlOpCodeTable.Get("Ldelem_R4")); // 6e-M25：f32[]
+            }
+            else if (node.Type == TypeSymbol.Int64)
+            {
+                il.Emit(IlOpCodeTable.Get("Ldelem_I8"));
+            }
+            else if (node.Type == TypeSymbol.Boolean || node.Type == TypeSymbol.UInt8)
+            {
+                il.Emit(IlOpCodeTable.Get("Ldelem_U1"));
+            }
+            else if (node.Type.ElementType != null)
+            {
+                throw new System.NotSupportedException("Jagged arrays are not yet supported by the IL emitter.");
+            }
+            else
+            {
+                il.Emit(IlOpCodeTable.Get("Ldelem_I4"));
+            }
+        }
+
+        private void EmitElementAssignmentExpression(IlAssembler il, BoundElementAssignmentExpression node)
+        {
+            var temporaryLocal = AllocateTemporaryLocal(node);
+
+            EmitExpression(il, node.Target.Target);
+            EmitExpression(il, node.Target.Index);
+            EmitExpression(il, node.Expression);
+            il.Emit(IlOpCodeTable.Get("Dup"));
+            il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)temporaryLocal);
+            EmitElementStore(il, node.Type);
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)temporaryLocal);
+        }
+
+        private int AllocateTemporaryLocal(BoundExpression node, TypeSymbol? typeOverride = null)
+        {
+            if (!_temporaryLocalIndices.TryGetValue(node, out var index))
+            {
+                index = _currentFunctionLocals!.Count;
+                _temporaryLocalIndices.Add(node, index);
+                _currentFunctionLocals.Add(ToIlType(typeOverride ?? node.Type));
+            }
+
+            return index;
+        }
+
+        /// <summary>N1：非 BoundExpression 键的合成临时槽（builtin 发射内部用）；键须调用点唯一。</summary>
+        private int AllocateSyntheticTemporaryLocal(object key, TypeSymbol type)
+        {
+            if (!_syntheticTemporaryLocalIndices.TryGetValue(key, out var index))
+            {
+                index = _currentFunctionLocals!.Count;
+                _syntheticTemporaryLocalIndices.Add(key, index);
+                _currentFunctionLocals.Add(ToIlType(type));
+            }
+
+            return index;
+        }
+
+        private static void EmitElementStore(IlAssembler il, TypeSymbol elementType)
+        {
+            if (IsReferenceElement(elementType))
+            {
+                // 6e-M22 C5+ 多播事件：函数值/delegate/类元素数组按引用存储
+                il.Emit(IlOpCodeTable.Get("Stelem_Ref"));
+            }
+            else if (elementType == TypeSymbol.Boolean || elementType == TypeSymbol.UInt8)
+            {
+                il.Emit(IlOpCodeTable.Get("Stelem_I1"));
+            }
+            else if (elementType == TypeSymbol.Char)
+            {
+                il.Emit(IlOpCodeTable.Get("Stelem_I2"));
+            }
+            else if (elementType == TypeSymbol.Double)
+            {
+                il.Emit(IlOpCodeTable.Get("Stelem_R8"));
+            }
+            else if (elementType == TypeSymbol.Float)
+            {
+                il.Emit(IlOpCodeTable.Get("Stelem_R4")); // 6e-M25：f32[]
+            }
+            else if (elementType == TypeSymbol.Int64)
+            {
+                il.Emit(IlOpCodeTable.Get("Stelem_I8"));
+            }
+            else if (elementType.ElementType != null)
+            {
+                throw new System.NotSupportedException("Jagged arrays are not yet supported by the IL emitter.");
+            }
+            else
+            {
+                il.Emit(IlOpCodeTable.Get("Stelem_I4"));
+            }
+        }
+
+        /// <summary>
+        /// struct 字段访问/赋值取址（6e-M26 值语义）：把值类型接收者压为托管指针——
+        /// 变量 → ldarga/ldloca；this → ldarga.0；嵌套字段 → 递归取址 + ldflda。
+        /// 仅支持可寻址 lvalue（MVP：局部/参数/this/字段链）。
+        /// </summary>
+        private void EmitValueTypeReceiverAddress(IlAssembler il, BoundExpression target)
+        {
+            switch (target)
+            {
+                case BoundVariableExpression variable:
+                    if (variable.Variable is ParameterSymbol parameter)
+                    {
+                        var argIndex = parameter.Ordinal + (_currentMethodIsInstance ? 1 : 0);
+                        il.Emit(IlOpCodeTable.Get("Ldarga"), (ushort)argIndex);
+                    }
+                    else
+                    {
+                        il.Emit(IlOpCodeTable.Get("Ldloca"), (ushort)_locals[variable.Variable]);
+                    }
+
+                    return;
+
+                case BoundThisExpression:
+                    // struct 实例方法：this 已是托管指针（Point&），直接加载即可（不可 ldarga，否则变 Point&*）
+                    il.Emit(IlOpCodeTable.Get("Ldarg"), (ushort)0);
+                    return;
+
+                case BoundMemberAccessExpression member when member.Field != null:
+                    EmitValueTypeReceiverAddress(il, member.Target);
+                    il.Emit(IlOpCodeTable.Get("Ldflda"), _fieldToken(member.Field));
+                    return;
+
+                default:
+                    throw new System.Exception($"struct 字段访问的接收者必须可寻址：{target.Kind}");
+            }
+        }
+
+        /// <summary>
+        /// <c>?.</c> 空条件访问（<c>a?.B</c>）：<c>a</c> 为 null 时整体结果为 null，
+        /// 否则取 <c>a.B</c>。
+        ///
+        /// 此前**只有词法 + 解析 + 绑定 + 求值器**这条链是通的
+        /// （词法 <c>QuestionDotToken</c>、<c>ConditionalAccessExpressionSyntax</c>、
+        /// <c>BindConditionalAccessExpression</c>、<c>EvaluateConditionalAccessExpression</c>），
+        /// **唯独 IL 发射器没有对应分支**——所以走 Emit 的路径（也就是探针里的
+        /// <c>RunMain</c>）会失败，而走求值器看不出问题。这类"某一层独缺"的缺口
+        /// 靠端到端试错很难定位，按层查（绑定/求值/发射各 grep 一次）最快。
+        ///
+        /// 发射形态：接收者求值一次存局部槽 → 非 null 走访问路径 → 汇合处留 null。
+        /// 必须**只求值一次**接收者（`a?.F()` 若求值两次会有副作用重复）。
+        /// </summary>
+        private void EmitConditionalAccessExpression(IlAssembler il, BoundConditionalAccessExpression node)
+        {
+            var slot = AllocateTemporaryLocal(node, node.Expression.Type);
+            var nullBranch = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
+            var end = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
+
+            EmitExpression(il, node.Expression);
+            il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)slot);
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)slot);
+            il.Emit(IlOpCodeTable.Get("Brfalse"), nullBranch);
+
+            EmitExpression(il, node.WhenNotNull);
+            il.Emit(IlOpCodeTable.Get("Br"), end);
+
+            il.Emit(nullBranch);
+            il.Emit(IlOpCodeTable.Get("Ldnull"));
+
+            il.Emit(end);
+        }
+
+        private void EmitMemberAccessExpression(IlAssembler il, BoundMemberAccessExpression node)
+        {            if (node.Field != null && node.Field.IsStatic)
+            {
+                il.Emit(IlOpCodeTable.Get("Ldsfld"), _fieldToken(node.Field));
+                return;
+            }
+
+            if (node.Field != null)
+            {
+                if (node.Field.ContainingClass!.IsValueType)
+                {
+                    EmitValueTypeReceiverAddress(il, node.Target);
+                }
+                else
+                {
+                    EmitExpression(il, node.Target);
+                }
+
+                il.Emit(IlOpCodeTable.Get("Ldfld"), _fieldToken(node.Field));
+                return;
+            }
+
+            // 非字段成员访问（如数组 Length、string 属性）：接收者须先入栈
+            EmitExpression(il, node.Target);
+
+            if (node.Target.Type == TypeSymbol.String)
+            {
+                il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.StringLength);
+                return;
+            }
+
+            il.Emit(IlOpCodeTable.Get("Ldlen"));
+        }
+
+        private void EmitMemberCallExpression(IlAssembler il, BoundMemberCallExpression node)
+        {
+            var isStatic = node.Method != null && node.Method.IsStatic;
+
+            // 6e-M19 M2-c：System.Object 实例方法（receiver 在栈上，值类型先装箱）→ mscorlib callvirt；
+            // 用户类 override 经 CLR callvirt 天然虚分派；base.Method() 用 Call 直调基类实现（防虚分派回 override）
+            if (node.Method?.BuiltinKind != null && !isStatic)
+            {
+                var objectCallOp = node.IsBase ? "Call" : "Callvirt";
+                switch (node.Method.BuiltinKind.Value)
+                {
+                    case BuiltinKind.ObjectToString:
+                        EmitExpression(il, node.Expression);
+                        EmitBoxIfValueType(il, node.Expression.Type);
+                        il.Emit(IlOpCodeTable.Get(objectCallOp), _framework.ObjectToString);
+                        return;
+                    case BuiltinKind.ObjectGetHashCode:
+                        EmitExpression(il, node.Expression);
+                        EmitBoxIfValueType(il, node.Expression.Type);
+                        il.Emit(IlOpCodeTable.Get(objectCallOp), _framework.ObjectGetHashCode);
+                        return;
+                    case BuiltinKind.ObjectEquals:
+                        EmitExpression(il, node.Expression);
+                        EmitBoxIfValueType(il, node.Expression.Type);
+                        EmitExpression(il, node.Arguments[0]);
+                        EmitBoxIfValueType(il, node.Arguments[0].Type);
+                        il.Emit(IlOpCodeTable.Get(objectCallOp), _framework.ObjectEqualsInstance);
+                        return;
+                    case BuiltinKind.ObjectGetType:
+                        // GetType 非虚：base./this. 语义一致
+                        EmitExpression(il, node.Expression);
+                        EmitBoxIfValueType(il, node.Expression.Type);
+                        il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.ObjectGetType);
+                        return;
+
+                    // 6e-M19 M3-b：System.Type 只读属性（receiver 为 CLR Type 引用，无装箱）。
+                    // Name = FullName.Substring(FullName.LastIndexOf('.')+1)——无点时 -1+1=0 回退全名
+                    case BuiltinKind.TypeName:
+                        EmitExpression(il, node.Expression);
+                        il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.TypeGetFullName);
+                        il.Emit(IlOpCodeTable.Get("Dup"));
+                        il.Emit(IlOpCodeTable.Get("Ldc_I4_S"), (sbyte)'.');
+                        il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.StringLastIndexOfChar);
+                        il.Emit(IlOpCodeTable.Get("Ldc_I4_1"));
+                        il.Emit(IlOpCodeTable.Get("Add"));
+                        il.Emit(IlOpCodeTable.Get("Call"), _framework.StringSubstringFrom);
+                        return;
+                    case BuiltinKind.TypeFullName:
+                        EmitExpression(il, node.Expression);
+                        il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.TypeGetFullName);
+                        return;
+                    case BuiltinKind.TypeIsClass:
+                        EmitExpression(il, node.Expression);
+                        il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.TypeIsClass);
+                        return;
+                    case BuiltinKind.TypeIsValueType:
+                        EmitExpression(il, node.Expression);
+                        il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.TypeIsValueType);
+                        return;
+                    case BuiltinKind.TypeHasMethod:
+                    {
+                        // names = receiver.GetMethods(flags) → string[]；found = Array.IndexOf(names, arg) >= 0
+                        // 与 GetMethods 同素材（不直调 BCL GetMethod(string)——重载/继承歧义抛 AmbiguousMatchException）
+                        var namesLocal = EmitTypeGetMethodsNamesProjection(il, node.Expression, node);
+                        var foundLocal = AllocateSyntheticTemporaryLocal((node, "hm-found"), TypeSymbol.Boolean);
+                        var argLocal = AllocateSyntheticTemporaryLocal((node, "hm-arg"), TypeSymbol.String);
+                        EmitExpression(il, node.Arguments[0]);
+                        il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)argLocal);
+                        il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)namesLocal);
+                        il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)argLocal);
+                        il.Emit(IlOpCodeTable.Get("Call"), _framework.ArrayIndexOfString);
+                        il.Emit(IlOpCodeTable.Get("Ldc_I4_M1"));
+                        il.Emit(IlOpCodeTable.Get("Cgt"));
+                        il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)foundLocal);
+                        il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)foundLocal);
+                        return;
+                    }
+                    case BuiltinKind.TypeGetMethod:
+                    {
+                        // names = receiver.GetMethods(flags) → string[]；命中返回 arg，未命中返回 ""（歧义安全，同 GetMethods）
+                        var namesLocal = EmitTypeGetMethodsNamesProjection(il, node.Expression, node);
+                        var argLocal = AllocateSyntheticTemporaryLocal((node, "gm1-arg"), TypeSymbol.String);
+                        EmitExpression(il, node.Arguments[0]);
+                        il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)argLocal);
+                        il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)namesLocal);
+                        il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)argLocal);
+                        il.Emit(IlOpCodeTable.Get("Call"), _framework.ArrayIndexOfString);
+                        il.Emit(IlOpCodeTable.Get("Ldc_I4_M1"));
+                        il.Emit(IlOpCodeTable.Get("Cgt"));
+                        var found = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
+                        var end = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
+                        il.Emit(IlOpCodeTable.Get("Brfalse"), end);
+                        il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)argLocal);
+                        il.Emit(IlOpCodeTable.Get("Br"), found);
+                        il.Emit(end);
+                        il.Emit(IlOpCodeTable.Get("Ldstr"), "");
+                        il.Emit(found);
+                        return;
+                    }
+                    case BuiltinKind.TypeGetMethods:
+                        il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)EmitTypeGetMethodsNamesProjection(il, node.Expression, node));
+                        return;
+                }
+            }
+
+            if (node.Method?.BuiltinKind != null)
+            {
+                // syscall 静态方法调用：复用内置函数分发（如 System.Runtime.Runtime.Print → Console.WriteLine）
+                EmitBuiltinCall(il, node.Method, node.Arguments);
+                return;
+            }
+
+            // facade 类成员调用：降级到 BCL（非泛型 → FindMethod；泛型实例化 → 直构 MemberRef）。
+            // 实例性以“方法首参是否为 this 形参”判定（对齐 TryEmitFacadeBclCall；值类型接收者用托管指针 + Call）。
+            // 必须在本方法统一的 receiver/参数发射之前处理，避免重复压栈导致栈不平衡。
+            if (node.Method != null)
+            {
+                var cc = node.Method.ContainingClass;
+                if (cc != null && IsFacadeRedirect(cc))
+                {
+                    // 实例性判断：MemberCall 的 receiver 在 node.Expression，实参不含 this。
+                    // 降级 facade 实例方法已静态化（IsStatic=true）但 Parameters[0] 仍为 this（IsThisParameter）；
+                    // 保留真实例的同类 facade（FileStream._h）方法 IsStatic=false 且形参表无 this——两种都要视为实例调用。
+                    var isInstance = !node.Method.IsStatic ||
+                        (node.Method.Parameters.Length > 0 && node.Method.Parameters[0].IsThisParameter);
+                    var receiver = isInstance ? node.Expression : null;
+                    var paramTypes = GetFacadeArgumentIlTypes(node.Method, isInstance, node.Arguments).Select(t => t.FullName).ToArray();
+                    IlMethodRef? methodRef;
+
+                    InstantiatedTypeSymbol? instType = cc as InstantiatedTypeSymbol
+                        ?? (receiver?.Type as InstantiatedTypeSymbol);
+                    if (instType != null)
+                    {
+                        methodRef = ResolveFacadeGenericMethodRef(instType, node.Method, node.Arguments, isInstance);
+                    }
+                    else
+                    {
+                        methodRef = _framework.FindMethod(FacadeBclFullName(cc), node.Identifier, paramTypes);
+                    }
+
+                    if (methodRef != null)
+                    {
+                        if (isInstance)
+                        {
+                            EmitFacadeInstanceReceiver(il, receiver!);
+                        }
+
+                        foreach (var a in node.Arguments)
+                        {
+                            EmitExpression(il, a);
+                        }
+
+                        var callOp = !isInstance || (receiver != null && IsValueTypeSymbol(receiver.Type)) ? "Call" : "Callvirt";
+                        il.Emit(IlOpCodeTable.Get(callOp), methodRef);
+                        if (FacadeBclReturnsValueWhileVoid(cc, node.Method))
+                        {
+                            il.Emit(IlOpCodeTable.Get("Pop"));
+                        }
+                        return;
+                    }
+                    // 未找到 BCL 对应（Cocoa 独有成员）→ 回退下方 Cocoa 体发射
+                }
+            }
+
+            if (!isStatic)
+            {
+                // 阶段 2c：用户 struct 实例方法接收者需地址（ldloca/ldflda），非值副本
+                if (node.Method != null &&
+                    node.Method.ContainingClass is NamedTypeSymbol { IsValueType: true, SpecialType: global::Cocoa.CodeAnalysis.Symbols.SpecialType.None })
+                {
+                    EmitValueTypeReceiverAddress(il, node.Expression);
+                }
+                else
+                {
+                    EmitExpression(il, node.Expression);
+                }
+            }
+
+            foreach (var argument in node.Arguments)
+            {
+                EmitExpression(il, argument);
+            }
+
+            // 动态链接（阶段 A3）：cod 容器类静态方法 → MemberRef 外部调用
+            if (node.Method != null)
+            {
+                // 6e-M35：库 extern（import P/Invoke）调用点按需声明 MethodDef+ImplMap——仅被调用时才入发射集，
+                // 避免所有 System.Core extern 无条件进消费端 ImplMap
+                if (node.Method.IsExtern && node.Method.DllName != null && !_methods.ContainsKey(node.Method))
+                {
+                    if (node.Method.ContainingClass != null && !_classTypeDefs.ContainsKey(node.Method.ContainingClass))
+                    {
+                        var owner = node.Method.ContainingClass;
+                        var typeDef = new IlTypeDef(owner.Name, owner.Namespace, null, isPublic: _publishPublicSurface || owner.Visibility == Cocoa.CodeAnalysis.Symbols.Visibility.Public)
+                        {
+                            IsAbstract = owner.IsAbstract,
+                            IsSealed = owner.IsSealed,
+                            IsInterface = owner.IsInterface,
+                            IsValueType = owner.IsValueType,
+                        };
+                        _classTypeDefs.Add(owner, typeDef);
+                        _metadata.AddTypeDef(typeDef);
+                    }
+
+                    EmitFunctionDeclaration(node.Method);
+                }
+
+                if (_codAssemblies.TryGetValue(node.Method, out var codAssembly))
+                {
+                    il.Emit(IlOpCodeTable.Get("Call"), CodMethodRef(node.Method, codAssembly));
+                    return;
+                }
+
+                // 6f：同类 facade（FileStream 等）成员 — 直链 BCL 同全名类型实例成员（Callvirt）
+                if (node.Method.ContainingClass is NamedTypeSymbol { IsFacadeClass: true, FacadeThisType: null } facadeOwner)
+                {
+                    var facadeParamNames = new string[node.Arguments.Length];
+                    for (var i = 0; i < node.Arguments.Length; i++)
+                    {
+                        facadeParamNames[i] = ToIlType(node.Arguments[i].Type).FullName;
+                    }
+
+                    var facadeMethodRef = _framework.FindMethod(facadeOwner.FullName, node.Identifier, facadeParamNames);
+                    if (facadeMethodRef == null && facadeOwner.FullName == "System.IO.FileStream")
+                    {
+                        // Close/Dispose 未在 FileStream 就地声明（归属基类 System.IO.Stream / IDisposable）
+                        facadeMethodRef = _framework.FindMethod("System.IO.Stream", node.Identifier, facadeParamNames);
+                        if (facadeMethodRef == null && node.Identifier == "Dispose")
+                        {
+                            facadeMethodRef = _framework.FindMethod("System.IO.Stream", "Close", facadeParamNames);
+                        }
+                    }
+
+                    if (facadeMethodRef == null && facadeOwner.FullName == "System.Console")
+                    {
+                        facadeMethodRef = node.Identifier switch
+                        {
+                            "WriteLine" => _framework.ConsoleWriteLine,
+                            "Write" => _framework.ConsoleWrite,
+                            "ReadLine" => _framework.ConsoleReadLine,
+                            "ReadKey" => _framework.ConsoleReadKey,
+                            "Beep" => _framework.ConsoleBeep,
+                            _ => null
+                        };
+                        if (facadeMethodRef != null)
+                        {
+                            foreach (var boxArg in node.Arguments)
+                            {
+                                if (IsValueTypeSymbol(boxArg.Type))
+                                {
+                                    il.Emit(IlOpCodeTable.Get("Box"), _framework.RequireType(ToIlType(boxArg.Type).FullName!));
+                                }
+                            }
+
+                            il.Emit(IlOpCodeTable.Get("Call"), facadeMethodRef);
+                            return;
+                        }
+                    }
+
+                    if (facadeMethodRef == null)
+                    {
+                        throw new System.Exception($"facade 成员 {facadeOwner.FullName}.{node.Identifier} 未在 BCL 找到。");
+                    }
+
+                    il.Emit(IlOpCodeTable.Get("Callvirt"), facadeMethodRef);
+                    return;
+                }
+
+                if (node.Method.ContainingClass!.IsExternal)
+                {
+                    var parameterNames = new string[node.Arguments.Length];
+                    for (var i = 0; i < node.Arguments.Length; i++)
+                    {
+                        parameterNames[i] = ToIlType(node.Arguments[i].Type).FullName;
+                    }
+
+                    var methodRef = _framework.FindMethod(node.Method.ContainingClass.FullName, node.Identifier, parameterNames);
+                    if (methodRef == null)
+                    {
+                        throw new System.Exception($"外部方法 {node.Method.ContainingClass.FullName}.{node.Identifier} 未找到。");
+                    }
+
+                    il.Emit(IlOpCodeTable.Get("Callvirt"), methodRef);
+                    return;
+                }
+
+                // 静态方法：call；base.Method()：非虚 call；struct 实例方法：非虚 call；实例方法：callvirt 虚分派
+                var instanceMethod = node.Method!;
+                var op = isStatic || node.IsBase ||
+                         node.Method.ContainingClass is NamedTypeSymbol { IsValueType: true, SpecialType: global::Cocoa.CodeAnalysis.Symbols.SpecialType.None }
+                    ? "Call"
+                    : "Callvirt";
+                // cod 库容器方法（System.IDisposable.Dispose / System.Index.FromEnd / System.Array.GetValue 等）：
+                // 不作 TypeDef/MethodDef，调用点按容器类型 TypeRef 直联 BCL MemberRef。
+                // 仅当容器类型已在 BCL 引用中定义且方法可解析时才走此路径。
+                if (instanceMethod.ContainingClass is { ContainingLibrary: not null }
+                    && !_methods.ContainsKey(instanceMethod)
+                    && _framework.TypeExistsInReferences(instanceMethod.ContainingClass.FullName))
+                {
+                    var libraryParamNames = new string[instanceMethod.Parameters.Length];
+                    for (var i = 0; i < instanceMethod.Parameters.Length; i++)
+                    {
+                        libraryParamNames[i] = ToIlType(instanceMethod.Parameters[i].Type).FullName;
+                    }
+
+                    var libraryMemberRef = _framework.FindMethod(instanceMethod.ContainingClass.FullName, instanceMethod.Name, libraryParamNames);
+                    // BCL 属性访问器回退：Cocoa `GetCurrentDirectory()` → BCL `get_CurrentDirectory` 属性
+                    if (libraryMemberRef == null && instanceMethod.Name.Length > 3)
+                    {
+                        if (instanceMethod.Name.StartsWith("Get", StringComparison.Ordinal))
+                            libraryMemberRef = _framework.FindMethod(instanceMethod.ContainingClass.FullName, "get_" + instanceMethod.Name.Substring(3), libraryParamNames);
+                        else if (instanceMethod.Name.StartsWith("Set", StringComparison.Ordinal))
+                            libraryMemberRef = _framework.FindMethod(instanceMethod.ContainingClass.FullName, "set_" + instanceMethod.Name.Substring(3), libraryParamNames);
+                    }
+                    if (libraryMemberRef != null)
+                    {
+                        il.Emit(IlOpCodeTable.Get(op), libraryMemberRef);
+                        return;
+                    }
+                    // BCL 中未找到该方法（Runtime.Floor 等 Cocoa 独有方法）→ 回退到 Cocoa 体发射
+                }
+
+                // System.String 实例方法（IndexOf/LastIndexOf/StartsWith 等）：string 无 TypeDef/方法体，
+                // 调用点直链 BCL 同名方法。
+                if (node.Expression.Type == TypeSymbol.String && !_methods.ContainsKey(instanceMethod))
+                {
+                    var stringParams = instanceMethod.Parameters.Select(p => ToIlType(p.Type).FullName).ToArray();
+                    var stringMethodRef = _framework.FindMethod("System.String", instanceMethod.Name, stringParams);
+                    if (stringMethodRef != null)
+                    {
+                        il.Emit(IlOpCodeTable.Get("Callvirt"), stringMethodRef);
+                        return;
+                    }
+                }
+
+                il.Emit(IlOpCodeTable.Get(op), _methods[instanceMethod]);
+                return;
+            }
+
+            if (node.Expression.Type == TypeSymbol.String && node.Identifier == "substring")
+            {
+                il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.StringSubstring);
+                return;
+            }
+
+            throw new System.Exception($"Unexpected member call {node.Identifier}");
+        }
+
+        /// <summary>投影 receiver.GetMethods(flags) → string[]（名字数组），返回承装目标的局部槽号。
+        /// 栈/局部管理：srcArr / dstArr / i。HasMethod/GetMethod 复用同素材做歧义安全扫描
+        /// （不直调 BCL GetMethod(string)——重载/继承歧义抛 AmbiguousMatchException）。</summary>
+        private int EmitTypeGetMethodsNamesProjection(IlAssembler il, BoundExpression receiverNode, object key)
+        {
+            var srcLocal = AllocateSyntheticTemporaryLocal((key, "gm-src"), TypeSymbol.ArrayOf(TypeSymbol.Object));
+            var dstLocal = AllocateSyntheticTemporaryLocal((key, "gm-dst"), TypeSymbol.ArrayOf(TypeSymbol.String));
+            var iLocal = AllocateSyntheticTemporaryLocal((key, "gm-i"), TypeSymbol.Int32);
+
+            // src = receiver.GetMethods(flags)
+            EmitExpression(il, receiverNode);
+            il.Emit(IlOpCodeTable.Get("Ldc_I4"), (int)System.Reflection.BindingFlags.Instance
+                | (int)System.Reflection.BindingFlags.Public
+                | (int)System.Reflection.BindingFlags.NonPublic
+                | (int)System.Reflection.BindingFlags.Static);
+            il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.TypeGetMethods);
+            il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)srcLocal);
+
+            // dst = new string[src.Length]
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)srcLocal);
+            il.Emit(IlOpCodeTable.Get("Ldlen"));
+            il.Emit(IlOpCodeTable.Get("Conv_I4"));
+            il.Emit(IlOpCodeTable.Get("Newarr"), OperandForTypeToken(ToIlType(TypeSymbol.String)));
+            il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)dstLocal);
+
+            // i = 0
+            il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));
+            il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)iLocal);
+
+            var loop = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
+            var end = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
+
+            il.Emit(loop);
+            // i < src.Length → 继续；否则（i >= len）→ end
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)iLocal);
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)srcLocal);
+            il.Emit(IlOpCodeTable.Get("Ldlen"));
+            il.Emit(IlOpCodeTable.Get("Conv_I4"));
+            il.Emit(IlOpCodeTable.Get("Clt"));
+            il.Emit(IlOpCodeTable.Get("Brfalse"), end);
+            // dst[i] = src[i].get_Name()
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)dstLocal);
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)iLocal);
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)srcLocal);
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)iLocal);
+            il.Emit(IlOpCodeTable.Get("Ldelem_Ref"));
+            il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.MemberInfoName);
+            il.Emit(IlOpCodeTable.Get("Stelem_Ref"));
+            // i++
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)iLocal);
+            il.Emit(IlOpCodeTable.Get("Ldc_I4_1"));
+            il.Emit(IlOpCodeTable.Get("Add"));
+            il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)iLocal);
+            il.Emit(IlOpCodeTable.Get("Br"), loop);
+
+            il.Emit(end);
+            return dstLocal;
+        }
+
+        private void EmitMemberAssignmentExpression(IlAssembler il, BoundMemberAssignmentExpression node)
+        {
+            // 临时局部按字段类型分配（表达式可为 null 字面量——TypeSymbol.Null 无 IL 映射；槽语义 = 存入字段的值）
+            var temporaryLocal = AllocateTemporaryLocal(node, node.Field.Type);
+
+            if (node.Field.IsStatic)
+            {
+                EmitExpression(il, node.Expression);
+                il.Emit(IlOpCodeTable.Get("Dup"));
+                il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)temporaryLocal);
+                il.Emit(IlOpCodeTable.Get("Stsfld"), _fieldDefs[node.Field]);
+                il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)temporaryLocal);
+                return;
+            }
+
+            if (node.Field.ContainingClass!.IsValueType)
+            {
+                EmitValueTypeReceiverAddress(il, node.Target);
+                EmitExpression(il, node.Expression);
+                il.Emit(IlOpCodeTable.Get("Dup"));
+                il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)temporaryLocal);
+                il.Emit(IlOpCodeTable.Get("Stfld"), _fieldToken(node.Field));
+                il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)temporaryLocal);
+                return;
+            }
+
+            EmitExpression(il, node.Target);
+            EmitExpression(il, node.Expression);
+            il.Emit(IlOpCodeTable.Get("Dup"));
+            il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)temporaryLocal);
+            il.Emit(IlOpCodeTable.Get("Stfld"), _fieldToken(node.Field));
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)temporaryLocal);
+        }
+
+        private void EmitObjectCreationExpression(IlAssembler il, BoundObjectCreationExpression node)
+        {
+            var classType = (NamedTypeSymbol)node.Type;
+
+            // 内建 System.Object（new object()）：编译器单例无 .ctor 符号，直链 BCL Object::.ctor
+            // （N1：lock 语句 `var gate = new object()` 的持有对象——native 已有对应特例）
+            if (classType.IsSystemObjectRoot)
+            {
+                var objectCtor = _framework.FindMethod("System.Object", ".ctor", System.Array.Empty<string>());
+                if (objectCtor == null)
+                {
+                    throw new System.Exception("System.Object..ctor 未在 BCL 找到。");
+                }
+
+                il.Emit(IlOpCodeTable.Get("Newobj"), objectCtor);
+                return;
+            }
+
+            // facade 类构造：重定向到 BCL .ctor（泛型直构 MemberRef）
+            if (IsFacadeRedirect(classType))
+            {
+                var ctorRef = ResolveFacadeCtor(classType, node.Arguments);
+                if (ctorRef != null)
+                {
+                    foreach (var argument in node.Arguments)
+                    {
+                        EmitExpression(il, argument);
+                    }
+
+                    il.Emit(IlOpCodeTable.Get("Newobj"), ctorRef);
+                    return;
+                }
+            }
+
+            if (classType.IsValueType)
+            {
+                // 6e-M26 值语义：临时局部 + ldloca + call .ctor + ldloc（非 newobj）
+                var tempLocal = AllocateTemporaryLocal(node, classType);
+                il.Emit(IlOpCodeTable.Get("Ldloca"), (ushort)tempLocal);
+                foreach (var argument in node.Arguments)
+                {
+                    EmitExpression(il, argument);
+                }
+
+                var vtCtor = node.Constructor ?? classType.GetMethod(classType.Name);
+                if (vtCtor == null)
+                {
+                    throw new System.Exception($"struct {classType.Name} has no constructor.");
+                }
+
+                il.Emit(IlOpCodeTable.Get("Call"), _methods[vtCtor]);
+                il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)tempLocal);
+                return;
+            }
+
+            foreach (var argument in node.Arguments)
+            {
+                EmitExpression(il, argument);
+            }
+
+            if (_codAssemblies.TryGetValue(classType, out var codObjectAssembly))
+            {
+                // 6e-Step D-b：动态链接 + cod 普通实例类 → Newobj MemberRef（库托管 dll 宿主 TypeRef）
+                var codCtor = node.Constructor ?? classType.GetMethod(classType.Name);
+                if (codCtor == null)
+                {
+                    throw new System.Exception($"cod 类型 {classType.Name} 无构造函数。");
+                }
+
+                il.Emit(IlOpCodeTable.Get("Newobj"), CodMethodRef(codCtor, codObjectAssembly));
+                return;
+            }
+
+            if (classType.IsFacadeClass && classType.FacadeThisType == null)
+            {
+                // 6f：同类 facade（FileStream 等）：IL newobj 直链 BCL 同全名类型的实例构造器
+                var parameterNames = new string[node.Arguments.Length];
+                for (var i = 0; i < node.Arguments.Length; i++)
+                {
+                    parameterNames[i] = ToIlType(node.Arguments[i].Type).FullName;
+                }
+
+                // 6f：SDK `FileStream(path)` 无 BCL 单参重载 → 映射 FileStream(path, FileMode.Open)
+                if (classType.FullName == "System.IO.FileStream" && node.Arguments.Length == 1)
+                {
+                    il.Emit(IlOpCodeTable.Get("Ldc_I4"), 3); // FileMode.Open == 3
+                    parameterNames = new[] { "System.String", "System.IO.FileMode" };
+                }
+
+                var facadeCtor = _framework.FindMethod(classType.FullName, ".ctor", parameterNames);
+                if (facadeCtor == null)
+                {
+                    throw new System.Exception($"facade 类型 {classType.FullName} 的构造函数 (.ctor) 未在 BCL 找到。");
+                }
+
+                il.Emit(IlOpCodeTable.Get("Newobj"), facadeCtor);
+                return;
+            }
+
+            if (classType.IsExternal)
+            {
+                var parameterNames = new string[node.Arguments.Length];
+                for (var i = 0; i < node.Arguments.Length; i++)
+                {
+                    parameterNames[i] = ToIlType(node.Arguments[i].Type).FullName;
+                }
+
+                var ctorRef = _framework.FindMethod(classType.FullName, ".ctor", parameterNames);
+                if (ctorRef == null)
+                {
+                    throw new System.Exception($"外部类型 {classType.FullName} 的构造函数未找到。");
+                }
+
+                il.Emit(IlOpCodeTable.Get("Newobj"), ctorRef);
+                return;
+            }
+
+            // cod 库类已在 BCL 引用中定义且无本地 TypeDef（构造函数不发射）：直连 BCL MemberRef。
+            // （MemoryStream/StreamWriter 等真实 Cocoa body 类已入 TypeDef 表 → 跳过，走下方 _methods[ctor]）
+            var ctor = node.Constructor ?? classType.GetMethod(classType.Name);
+            if (ctor != null && classType.ContainingLibrary != null
+                && _framework.TypeExistsInReferences(classType.FullName)
+                && !_methods.ContainsKey(ctor))
+            {
+                var parameterNames = new string[node.Arguments.Length];
+                for (var i = 0; i < node.Arguments.Length; i++)
+                {
+                    parameterNames[i] = ToIlType(node.Arguments[i].Type).FullName;
+                }
+
+                var ctorRef = _framework.FindMethod(classType.FullName, ".ctor", parameterNames);
+                if (ctorRef != null)
+                {
+                    il.Emit(IlOpCodeTable.Get("Newobj"), ctorRef);
+                    return;
+                }
+            }
+
+            if (ctor == null)
+            {
+                throw new System.Exception($"Class {classType.Name} has no constructor.");
+            }
+
+            il.Emit(IlOpCodeTable.Get("Newobj"), _methods[ctor]);
+        }
+
+        private void EmitThisExpression(IlAssembler il, BoundThisExpression node)
+        {
+            // this 恒为 arg.0：引用类型=对象引用(O)；struct 实例方法=托管指针(Point&)（调用端按 ref 传参）
+            il.Emit(IlOpCodeTable.Get("Ldarg"), (ushort)0);
+        }
+
+        private readonly Dictionary<(string asm, string type, string name), IlFieldRef> _codFieldRefs =
+            new Dictionary<(string, string, string), IlFieldRef>();
+
+        /// <summary>6e-Step D-b：cod 类的字段 token——本地 TypeDef 用 _fieldDefs；cod 类走库 dll 宿主 TypeRef 的 FieldRef。
+        /// 6e-M31：facade 类型字段（映射到 BCL）→ BCL 同名 FieldRef（ldfld/stfld/ldsfld 目标）。</summary>
+        private object _fieldToken(FieldSymbol field)
+        {
+            var owner = field.ContainingClass;
+            if (owner != null && _codAssemblies.TryGetValue(owner, out var asm))
+            {
+                var cacheKey = (asm, owner.Namespace + "." + owner.Name, field.Name);
+                if (!_codFieldRefs.TryGetValue(cacheKey, out var reference))
+                {
+                    reference = _metadata.DefineFieldRef(CodTypeRef(asm, owner.Namespace, owner.Name), field.Name, ToIlType(field.Type));
+                    _codFieldRefs[cacheKey] = reference;
+                }
+
+                return reference;
+            }
+
+            if (owner != null && owner.IsFacadeClass)
+            {
+                var facadeFieldRef = _framework.FindField(FacadeBclFullName(owner), field.Name);
+                if (facadeFieldRef != null)
+                {
+                    return facadeFieldRef;
+                }
+            }
+
+            return _fieldDefs[field];
+        }
+
+        private void EmitConstructorChainExpression(IlAssembler il, BoundConstructorChainExpression node)
+        {
+            // 6e-M19 M2-c：链到内建 System.Object（无 .ctor 符号）——0 参 no-op，CLR newobj 已隐式调 object::.ctor
+            if (node.Constructor == null)
+            {
+                return;
+            }
+
+            // this(arg0) + args → call 基类/本类 .ctor
+            il.Emit(IlOpCodeTable.Get("Ldarg"), (ushort)0);
+            foreach (var argument in node.Arguments)
+            {
+                EmitExpression(il, argument);
+            }
+
+            var target = node.Constructor;
+            if (target.ContainingClass!.IsExternal)
+            {
+                var parameterNames = new string[node.Arguments.Length];
+                for (var i = 0; i < node.Arguments.Length; i++)
+                {
+                    parameterNames[i] = ToIlType(node.Arguments[i].Type).FullName;
+                }
+
+                var methodRef = _framework.FindMethod(target.ContainingClass.FullName, ".ctor", parameterNames);
+                if (methodRef == null)
+                {
+                    throw new System.Exception($"外部构造函数 {target.ContainingClass.FullName} 未找到。");
+                }
+
+                il.Emit(IlOpCodeTable.Get("Call"), methodRef);
+                return;
+            }
+
+            // 6e-M25：facade 基类 .ctor 链（class MyError extends Exception → call System.Exception::.ctor）
+            if (IsFacadeRedirect(target.ContainingClass!))
+            {
+                var methodRef = ResolveFacadeCtor(target.ContainingClass!, node.Arguments);
+                if (methodRef == null)
+                {
+                    throw new System.Exception($"facade 构造函数 {target.ContainingClass.FullName} 未找到。");
+                }
+
+                il.Emit(IlOpCodeTable.Get("Call"), methodRef);
+                return;
+            }
+
+            // 6e-M25：跨库基类 .ctor 链（System.UI.WindowHandle extends System.Core.Handle → call Handle::.ctor）
+            if (_codAssemblies.TryGetValue(target, out var codAssembly))
+            {
+                il.Emit(IlOpCodeTable.Get("Call"), CodMethodRef(target, codAssembly));
+                return;
+            }
+
+            il.Emit(IlOpCodeTable.Get("Call"), _methods[target]);
+        }
+    }
+}

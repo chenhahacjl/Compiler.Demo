@@ -1,7 +1,8 @@
 using System.Collections.Immutable;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
 using System.IO;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Green
 {
     /// <summary>带子节点的复合绿节点（通用实现：存槽位数组，可容纳 null 占位槽）。</summary>
     public sealed class GreenNodeWithChildren : GreenNode

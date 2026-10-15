@@ -1,7 +1,8 @@
 using System.Collections.Immutable;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
 using System.IO;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Green
 {
     /// <summary>
     /// 语法绿节点（Phase 4：不可变、无父链、无引用，可跨树共享；对应 Roslyn

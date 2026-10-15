@@ -1,12 +1,14 @@
-﻿using System;
+using System;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using Cocoa.CodeAnalysis;
-using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Binder;
 using Cocoa.CodeAnalysis.Bound;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using Xunit;
 using Xunit.Abstractions;
 

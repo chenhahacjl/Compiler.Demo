@@ -1,6 +1,8 @@
-﻿using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -136,7 +138,7 @@ namespace Cocoa.Tests.Compiler
         private static string BuildDriverSource()
         {
             var sb = new StringBuilder();
-            sb.Append("using Cocoa.CodeAnalysis.Syntax\nusing Cocoa.CodeAnalysis.Binding\nusing Cocoa.CodeGen\nusing System\n\n");
+            sb.Append("using Cocoa.CodeAnalysis.Syntax\nusing Cocoa.CodeAnalysis.Binder\nusing Cocoa.CodeGen\nusing System\n\n");
             sb.Append("function Main(): i32\n{\n");
             for (var i = 0; i < GoldenGenerator.BinderBoundCorpus.Length; i++)
             {
@@ -148,7 +150,7 @@ namespace Cocoa.Tests.Compiler
                 "function PrintInterp(marker: string, src: string): void\n" +
                 "{\n" +
                 "    System.Console.WriteLine(marker)\n" +
-                "    let b = Cocoa.CodeAnalysis.Binding.Binder.Create(src)\n" +
+                "    let b = Cocoa.CodeAnalysis.Binder.Binder.Create(src)\n" +
                 "    b.BindCompilationUnit()\n" +
                 "    let interp = Cocoa.CodeGen.InterpreterBackend.FromBinder(b)\n" +
                 "    let value = interp.EvaluateMain()\n" +

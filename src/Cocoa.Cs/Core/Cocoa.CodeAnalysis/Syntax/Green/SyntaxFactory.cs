@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax.Green
 {
     /// <summary>
     /// 语法工厂：程序化构造绿树（对齐 Roslyn <see cref="Microsoft.CodeAnalysis.SyntaxFactory"/>）。

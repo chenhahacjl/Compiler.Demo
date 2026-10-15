@@ -2,6 +2,8 @@ using System.Collections.Immutable;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using Cocoa.CodeGen.Interpreter;
 using Cocoa.CodeGen.Managed.Writer;
 
@@ -40,7 +42,7 @@ namespace Cocoa.Engine
 
             // 引擎回调绑定放行（进程级静态，docs/嵌入式引擎API.md §10 已知边界）：syscall 声明
             // 未命中内置表时，回调此委托裁决是否为引擎注册回调（命中则不再报 SyscallFunctionUnknown）。
-            Cocoa.CodeAnalysis.Binding.CocoaBinder.SyscallCallbackResolver = InterpreterBackend.HasCallback;
+            Cocoa.CodeAnalysis.Binder.CocoaBinder.SyscallCallbackResolver = InterpreterBackend.HasCallback;
         }
 
         public CocoaEngine(EngineOptions options)

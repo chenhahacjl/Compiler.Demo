@@ -1,9 +1,9 @@
-using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Binder;
 using Cocoa.CodeAnalysis.Bound;
-using Binding = Cocoa.CodeAnalysis.Binding;
+using Binding = Cocoa.CodeAnalysis.Binder;
 using Symbols = Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Symbols;
-using Cocoa.CodeAnalysis.Text;
+using Cocoa.Text;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;

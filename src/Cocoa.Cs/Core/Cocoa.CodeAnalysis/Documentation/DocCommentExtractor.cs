@@ -4,6 +4,8 @@ using System.Collections.Immutable;
 using System.Text;
 using System.Text.RegularExpressions;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
 
 namespace Cocoa.CodeAnalysis.Documentation
 {

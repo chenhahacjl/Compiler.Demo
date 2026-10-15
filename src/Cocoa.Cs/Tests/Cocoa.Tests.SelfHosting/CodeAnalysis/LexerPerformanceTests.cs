@@ -2,6 +2,8 @@ using Cocoa.CodeAnalysis;
 using Cocoa.Targeting;
 using Cocoa.CodeGen.Native;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics;

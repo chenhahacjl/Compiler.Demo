@@ -1,4 +1,4 @@
-using Cocoa.CodeAnalysis.Text;
+using Cocoa.Text;
 
 namespace Cocoa.CodeAnalysis.Authoring
 {

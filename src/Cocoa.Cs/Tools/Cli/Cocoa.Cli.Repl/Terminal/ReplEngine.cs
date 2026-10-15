@@ -6,7 +6,9 @@ using System.Threading;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Authoring;
 using Cocoa.CodeAnalysis.Syntax;
-using Cocoa.CodeAnalysis.Text;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
+using Cocoa.Text;
 
 namespace Cocoa.Cli.Repl;
 

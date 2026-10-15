@@ -1,6 +1,8 @@
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
-using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Syntax.Green;
+using Cocoa.CodeAnalysis.Binder;
 using System;
 using System.Collections.Generic;
 
@@ -39,8 +41,8 @@ namespace Cocoa.CodeAnalysis.Bound
         /// <summary>内建一元运算符语义符号（语义视图，供反射/诊断/重载解析；发射仍按 kind 直分派）。</summary>
         public FunctionSymbol? BuiltinOperatorSymbol =>
             UserDefinedMethod == null
-                ? Binding.BuiltInOperators.CreateOperatorSymbol(
-                    new Binding.UnaryOperatorSignature(Kind, OperandType, ResultType))
+                ? Binder.BuiltInOperators.CreateOperatorSymbol(
+                    new Binder.UnaryOperatorSignature(Kind, OperandType, ResultType))
                 : null;
 
         /// <summary>
@@ -58,7 +60,7 @@ namespace Cocoa.CodeAnalysis.Bound
 
         private static BoundUnaryOperator? LookupBuiltIn(BoundUnaryOperatorKind kind, TypeSymbol operandType)
         {
-            var signature = Binding.BuiltInOperators.GetSignature(kind, operandType);
+            var signature = Binder.BuiltInOperators.GetSignature(kind, operandType);
             if (signature == null)
             {
                 return null;
