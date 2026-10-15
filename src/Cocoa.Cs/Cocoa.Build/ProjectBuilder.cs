@@ -270,12 +270,18 @@ namespace Cocoa.Build
             return new ProjectBuildResult(success: true, upToDate: false);
         }
 
-        /// <summary>从项目元数据构建 PE 版本信息（native .rsrc / IL Assembly 属性）；文件版本缺省取 1.0。</summary>
+        /// <summary>从项目元数据构建 PE 版本信息（native .rsrc / IL Assembly 属性）。
+        /// 缺省值：文件/程序集版本 1.0.0.0、Product = 程序集名、Copyright = "Copyright (c) 年份"。</summary>
         private static PeVersionInfo BuildPeVersionInfo(CocoaProjectFile project)
         {
             var metadata = project.Metadata;
-            var fileVersion = string.IsNullOrWhiteSpace(metadata.FileVersion) ? "1.0" : metadata.FileVersion;
+            var fileVersion = string.IsNullOrWhiteSpace(metadata.FileVersion) ? "1.0.0.0" : metadata.FileVersion;
             var assemblyVersion = string.IsNullOrWhiteSpace(metadata.AssemblyVersion) ? fileVersion : metadata.AssemblyVersion;
+            var copyright = metadata.Copyright;
+            if (string.IsNullOrWhiteSpace(copyright))
+            {
+                copyright = "Copyright (c) " + DateTime.Now.Year;
+            }
 
             return new PeVersionInfo(
                 CompanyName: metadata.Company ?? "",
@@ -285,7 +291,7 @@ namespace Cocoa.Build
                 ProductVersion: assemblyVersion,
                 AssemblyVersion: assemblyVersion,
                 AssemblyName: project.AssemblyName,
-                Copyright: metadata.Copyright ?? "");
+                Copyright: copyright);
         }
 
         /// <summary>

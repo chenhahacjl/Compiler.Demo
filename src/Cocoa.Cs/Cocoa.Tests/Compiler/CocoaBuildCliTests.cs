@@ -110,6 +110,33 @@ namespace Cocoa.Tests.Compiler
         }
 
         [Fact]
+        public void Build_Project_EmptyMetadata_Defaults_VersionProductCopyright()
+        {
+            // 空元数据 .coproj：Product 缺省 = 程序集名、FileVersion/AssemblyVersion 缺省 1.0.0.0、
+            // Copyright 缺省 "Copyright (c) <当前年份>"（native .rsrc 与 IL 程序集属性共用 BuildPeVersionInfo 缺省）。
+            var projectPath = CreateProject("empty-metadata", "App", "function Main() { Console.WriteLine(1) }");
+
+            var build = Run($"build \"{projectPath}\" -b dotnet --dotnet-runtime net9.0");
+            Assert.Equal(0, build.ExitCode);
+
+            // netcore 可执行产出 `<name>.dll`（项目目录，无 OutputPath 时默认）
+            var managedDll = Path.Combine(Path.GetDirectoryName(projectPath)!, "App.dll");
+            Assert.True(File.Exists(managedDll), $"managed dll not found at '{managedDll}'. stdout=[{build.Stdout}]");
+
+            var asm = System.Reflection.Assembly.LoadFile(managedDll);
+            Assert.Equal(new Version(1, 0, 0, 0), asm.GetName().Version);
+
+            var attrs = asm.GetCustomAttributesData().ToDictionary(a => a.AttributeType.Name);
+            Assert.Equal("App", byValue(attrs, "AssemblyProductAttribute"));
+            Assert.Equal("1.0.0.0", byValue(attrs, "AssemblyVersionAttribute"));
+            Assert.Equal("1.0.0.0", byValue(attrs, "AssemblyFileVersionAttribute"));
+            Assert.Equal("Copyright (c) " + DateTime.Now.Year, byValue(attrs, "AssemblyCopyrightAttribute"));
+
+            static string byValue(System.Collections.Generic.Dictionary<string, System.Reflection.CustomAttributeData> d, string name)
+                => (string)d[name].ConstructorArguments[0].Value!;
+        }
+
+        [Fact]
         public void Build_Project_BackendSwitch_Invalidates()
         {
             var projectPath = CreateProject("backend-switch", "App", "function Main() { Console.WriteLine(1) }");
