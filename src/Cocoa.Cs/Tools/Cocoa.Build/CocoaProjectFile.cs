@@ -14,7 +14,7 @@ namespace Cocoa.Build
             string? assemblyName,
             ProjectOutputFormat output,
             CodeBackend? backend,
-            CocoaTargetOs targetOs,
+            TargetOS targetOs,
             Cpu cpu,
             bool prefer32Bit,
             string? entry,
@@ -72,7 +72,7 @@ namespace Cocoa.Build
         /// <summary>代码生成后端（null = 用构建默认，即托管 DotNet）。</summary>
         public CodeBackend? Backend { get; }
 
-        public CocoaTargetOs TargetOs { get; }
+        public TargetOS TargetOs { get; }
         public Cpu Cpu { get; }
         public bool Prefer32Bit { get; }
         public string? Entry { get; }

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Cocoa.Build;
+using Cocoa.Targeting;
 using Xunit;
 
 namespace Cocoa.Tests.Projects
@@ -34,7 +35,7 @@ namespace Cocoa.Tests.Projects
             Assert.Equal("MyApp", project.AssemblyName);
             Assert.Equal("MyApp", project.Name);
             Assert.Equal(ProjectOutputFormat.Library, project.Output);
-            Assert.Equal(CocoaTargetOs.Windows, project.TargetOs);
+            Assert.Equal(TargetOS.Windows, project.TargetOs);
             Assert.Equal("X86", project.Cpu.ToString());
             Assert.Equal("net48", project.DotnetRuntime);
             Assert.Equal(ProjectConfiguration.Release, project.Configuration);
@@ -62,7 +63,7 @@ namespace Cocoa.Tests.Projects
             Assert.Equal("Greeter", project.Name);
             Assert.Equal("Greeter", project.AssemblyName);
             Assert.Equal(ProjectOutputFormat.Executable, project.Output);
-            Assert.Equal(CocoaTargetOs.Windows, project.TargetOs);
+            Assert.Equal(TargetOS.Windows, project.TargetOs);
             Assert.Equal("AnyCPU", project.Cpu.ToString());
             Assert.Equal(ProjectConfiguration.Debug, project.Configuration);
             Assert.Null(project.DotnetRuntime);
@@ -184,7 +185,7 @@ namespace Cocoa.Tests.Projects
             Assert.Equal(ProjectOutputFormat.Library, overrides.Output);
             Assert.Equal("x64", overrides.Platform);
             Assert.Equal("net9.0", overrides.TargetFramework);
-            Assert.Equal(CocoaTargetOs.Linux, overrides.TargetOs);
+            Assert.Equal(TargetOS.Linux, overrides.TargetOs);
             Assert.Equal(ProjectConfiguration.Release, overrides.Configuration);
             Assert.Equal("local-bin", overrides.OutputPath);
         }

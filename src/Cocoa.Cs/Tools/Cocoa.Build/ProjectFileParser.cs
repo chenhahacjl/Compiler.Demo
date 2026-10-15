@@ -7,6 +7,8 @@ using System.Linq;
 using System.Xml;
 using System.Xml.Linq;
 
+using Cocoa.Targeting;
+
 namespace Cocoa.Build
 {
     /// <summary>SDK-style XML 项目/解决方案文件解析器。</summary>
@@ -264,12 +266,12 @@ namespace Cocoa.Build
             };
         }
 
-        internal static CocoaTargetOs ParseTargetOs(string text, int line)
+        internal static TargetOS ParseTargetOs(string text, int line)
         {
             return text.ToLowerInvariant() switch
             {
-                "windows" => CocoaTargetOs.Windows,
-                "linux" => CocoaTargetOs.Linux,
+                "windows" => TargetOS.Windows,
+                "linux" => TargetOS.Linux,
                 _ => throw new ProjectFileFormatException($"invalid TargetOS '{text}'. Expected: windows, linux", line),
             };
         }

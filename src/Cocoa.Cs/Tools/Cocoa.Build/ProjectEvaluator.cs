@@ -106,6 +106,10 @@ namespace Cocoa.Build
                 }
             }
 
+            // 2.5 派生变量注入（供条件组/项组 Condition 引用）：
+            //     $(TargetTriple) = {os}-{cpu}（如 windows-x64）；$(Runtime) = fx | net | <空>（native）
+            InjectDerivedVariables(state);
+
             // 3. 条件属性组（含 `== ''` 守卫）与所有项组
             foreach (var group in spec.PropertyGroups)
             {
@@ -224,12 +228,12 @@ namespace Cocoa.Build
             };
         }
 
-        private static CocoaTargetOs ParseTargetOs(string text)
+        private static TargetOS ParseTargetOs(string text)
         {
             return text.ToLowerInvariant() switch
             {
-                "windows" => CocoaTargetOs.Windows,
-                "linux" => CocoaTargetOs.Linux,
+                "windows" => TargetOS.Windows,
+                "linux" => TargetOS.Linux,
                 _ => throw new ProjectFileFormatException($"invalid TargetOS '{text}'. Expected: windows, linux"),
             };
         }
@@ -243,6 +247,23 @@ namespace Cocoa.Build
                 "x64" => Cpu.X64,
                 _ => throw new ProjectFileFormatException($"invalid Arch '{text}'. Expected: anycpu, x86, x64"),
             };
+        }
+
+        /// <summary>派生变量注入：$(TargetTriple) = {os}-{cpu}；$(Runtime) = fx|net|<空>（native）。供 Condition 引用（在无条件属性组之后、条件组求值之前调用）。</summary>
+        private static void InjectDerivedVariables(State state)
+        {
+            var os = (state.Get("TargetOS") ?? "Windows").ToLowerInvariant();
+            var arch = (state.Get("Arch") ?? state.Get("Platform") ?? "anycpu").ToLowerInvariant();
+            state.Set("TargetTriple", $"{os}-{arch}");
+            state.Set("Runtime", RuntimeToken(state.Get("TargetFramework")));
+        }
+
+        private static string RuntimeToken(string? targetFramework)
+        {
+            if (string.IsNullOrEmpty(targetFramework)) return "";
+            return targetFramework.ToLowerInvariant().StartsWith("net4", StringComparison.Ordinal)
+                ? "fx"
+                : "net";
         }
 
         private static ProjectConfiguration ParseConfiguration(string text)
