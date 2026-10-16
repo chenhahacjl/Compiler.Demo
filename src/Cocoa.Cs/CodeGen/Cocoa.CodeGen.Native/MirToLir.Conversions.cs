@@ -10,6 +10,7 @@ using Cocoa.CodeAnalysis.Syntax.Nodes;
 using Cocoa.CodeAnalysis.Syntax.Green;
 
 using Cocoa.CodeAnalysis;
+using Cocoa.Targeting;
 
 
 using Cocoa.CodeGen.Native.Lir;
@@ -321,6 +322,18 @@ namespace Cocoa.CodeGen.Native
             for (var i = 0; i < count; i++)
             {
                 Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(i), LirOperand.Reg(values[i])));
+            }
+
+            // T3：Linux kernel32 shim 重定向——GetTickCount/Sleep/Beep/ExitProcess 落到运行时 syscall
+            // 实现（零导入）；未命中继续走 DLL 导入（Linux 侧在 NativeBackend 校验被拒）。
+            var shimName = _os == TargetOS.Linux
+                ? PlatformDllResolver.LinuxKernel32Shim(function.EntryPoint ?? function.Name)
+                : null;
+            if (shimName != null)
+            {
+                var shimResult = function.ReturnType == TypeSymbol.Void ? null : AllocateRegister(TypeOf(function.ReturnType));
+                Add(instructions, new LirInstruction(LirOpCode.Call, shimResult, LirOperand.Runtime(shimName), LirOperand.Constant(count)));
+                return shimResult ?? VoidResult();
             }
 
             var import = new LirImport(function.DllName!, function.EntryPoint ?? function.Name, function.CallingConvention == CallingConvention.Cdecl);

@@ -30,6 +30,7 @@ namespace Cocoa.CodeGen.Native
     {
         private readonly BoundProgram _program;
         private readonly bool _isX64;
+        private readonly TargetOS _os;
         private readonly LirVirtualRegisterAllocator _allocator = new();
         private readonly LirProgram _irProgram;
 
@@ -70,6 +71,7 @@ namespace Cocoa.CodeGen.Native
         {
             _program = program;
             _isX64 = platform.Arch == Architecture.X64;
+            _os = platform.OS;
             _irProgram = new LirProgram(program.MainFunction!.Name);
         }
 

@@ -338,10 +338,29 @@ namespace Cocoa.CodeGen.Native
             var popNext = NewLabel();
             var haveChars = NewLabel();
 
-            var n = NewReg(4);
+            // 逐字节读至 '\n'（行语义，对齐 Windows ReadConsoleW；管道下不会一次吞多行）或 EOF/上限
             var inBuf = NewPtr();
             LeaData(inBuf, _linuxInBuf);
-            LinuxSyscall(n, __NR_read, 3, C(8, 0), inBuf, C(8, 0x2000));
+            var n = NewReg(4);
+            Const(n, 0);
+            var readLoop = NewLabel();
+            var readDone = NewLabel();
+            Mark(readLoop);
+            var oneByte = NewPtr();
+            Mov(oneByte, inBuf);
+            Add(oneByte, oneByte, n);
+            var got = NewReg(4);
+            LinuxSyscall(got, __NR_read, 3, C(8, 0), oneByte, C(8, 1));
+            Cmp(got, 1);
+            Jcc(LirCond.NotEqual, readDone); // EOF/错误 → 结束
+            var rb = NewReg(4);
+            Load(rb, oneByte, 0, 1);
+            Cmp(rb, 0x0A);
+            Jcc(LirCond.Equal, readDone);
+            AddI(n, n, 1);
+            Cmp(n, 0x2000);
+            Jcc(LirCond.Below, readLoop);
+            Mark(readDone);
             Cmp(n, 0);
             Jcc(LirCond.LessOrEqual, fail);
 

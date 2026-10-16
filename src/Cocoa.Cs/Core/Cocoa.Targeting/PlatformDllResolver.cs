@@ -22,5 +22,23 @@ namespace Cocoa.Targeting
                 _ => logicalDll,
             };
         }
+
+        /// <summary>
+        /// T3：Linux kernel32 符号 → 运行时 rt 函数名 shim（零导入重定向）。
+        /// 语言层 `import kernel32.dll { ... }` 声明与运行时既有 syscall 实现同语义（签名一致）时，
+        /// extern 调用直接落到运行时函数（rt:TickCount/rt:Sleep/rt:Beep/rt:ExitProcess），不进导入表。
+        /// 未命中返回 null（Linux 侧仍编译期拒绝）。
+        /// </summary>
+        public static string? LinuxKernel32Shim(string symbol)
+        {
+            return symbol switch
+            {
+                "GetTickCount" or "GetTickCount64" => "TickCount",
+                "Sleep" => "Sleep",
+                "Beep" => "Beep",
+                "ExitProcess" => "ExitProcess",
+                _ => null,
+            };
+        }
     }
 }

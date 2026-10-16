@@ -19,7 +19,7 @@
 
 | 属性 | 类型 | 可选值 | 默认 | 说明 |
 |---|---|---|---|---|
-| `TargetOS` | enum | `windows` · `linux` | `windows` | native+linux 当前报错（T3 ELF 启用）；与 `Cocoa.Targeting.TargetOs` 合并，删 `Cocoa.Build.CocoaTargetOs` |
+| `TargetOS` | enum | `windows` · `linux` | `windows` | 决定 PE/ELF 文件格式；native+linux 自 T3 起启用（最小可执行 ELF：控制台链 + kernel32 四符号 shim） |
 | `Arch` | enum | `anycpu` · `x86` · `x64` | `anycpu` | 原 `Platform` 更名；决定 `Cpu{AnyCPU,X86,X64}`。native 下 `anycpu` 报错（须显式 `--arch x86/x64`） |
 
 ### B. 生产链（显式必填）
@@ -89,7 +89,7 @@
 |---|---|---|
 | 任意 | `Backend` 值缺省 | 报错，提示三选一（T0c 提供迁移路径） |
 | native | `Arch=anycpu` | 报错 |
-| native | `TargetOS=linux` | 报错（T3 启用前） |
+| native | `TargetOS=linux` | T3 起启用（ELF ET_EXEC；仅 x64；支持面见 T3.3 文档） |
 | native | `TargetFramework` 非空 | 组外无关（不报、不读） |
 | managed-fx | `TargetFramework` ∉ net40~48 | 报错 |
 | managed-fx | `RuntimeIdentifier` 非空 | 报错（fx 无 apphost 概念） |

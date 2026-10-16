@@ -69,6 +69,34 @@ function Main()
         [Fact]
         public void LinuxNative_Extern_IsRejected()
         {
+            // kernel32 非 shim 符号（CreateFileW）在 Linux 编译期拒绝。
+            var syntaxTree = SyntaxTree.Parse(@"using System
+
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function CreateFileW(name: string): i32
+            extern()
+    }
+}
+
+function Main()
+{
+    var t = Kernel32.CreateFileW(""a"")
+    Console.WriteLine(t)
+}");
+            var compilation = Compilation.Create(syntaxTree);
+            var outputPath = OutputPath("extern-rejected");
+            var diagnostics = compilation.EmitNative("extern-rejected", outputPath, new TargetPlatform(TargetOS.Linux, Architecture.X64));
+            Assert.False(diagnostics.IsEmpty);
+            Assert.Contains(diagnostics, d => d.Message.Contains("extern"));
+        }
+
+        [Fact]
+        public void LinuxNative_ShimExtern_Compiles()
+        {
+            // kernel32 四符号 shim（GetTickCount/Sleep/Beep/ExitProcess）在 Linux 零导入编译通过。
             var syntaxTree = SyntaxTree.Parse(@"using System
 
 class Kernel32
@@ -77,6 +105,8 @@ class Kernel32
     {
         static stdcall function GetTickCount(): i32
             extern()
+        static stdcall function Sleep(ms: i32): void
+            extern()
     }
 }
 
@@ -84,12 +114,15 @@ function Main()
 {
     var t = Kernel32.GetTickCount()
     Console.WriteLine(t)
+    Kernel32.Sleep(10)
 }");
             var compilation = Compilation.Create(syntaxTree);
-            var outputPath = OutputPath("extern-rejected");
-            var diagnostics = compilation.EmitNative("extern-rejected", outputPath, new TargetPlatform(TargetOS.Linux, Architecture.X64));
-            Assert.False(diagnostics.IsEmpty);
-            Assert.Contains(diagnostics, d => d.Message.Contains("extern"));
+            var outputPath = OutputPath("shim-extern");
+            var diagnostics = compilation.EmitNative("shim-extern", outputPath, new TargetPlatform(TargetOS.Linux, Architecture.X64));
+            Assert.True(diagnostics.IsEmpty, string.Join("\n", System.Linq.Enumerable.Select(diagnostics, d => d.Message)));
+
+            var bytes = System.IO.File.ReadAllBytes(outputPath);
+            Assert.Equal(new byte[] { 0x7F, (byte)'E', (byte)'L', (byte)'F' }, new[] { bytes[0], bytes[1], bytes[2], bytes[3] });
         }
     }
 }

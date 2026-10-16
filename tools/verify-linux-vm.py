@@ -5,7 +5,10 @@ Deterministic paramiko-based verification: sftp upload + exec chmod & run; the E
 exit code propagates to this script's exit code. No Windows OpenSSH askpass/console flakiness.
 
 Usage:
-    python tools\\verify-linux-vm.py <elf-path>
+    python tools\\verify-linux-vm.py <elf-path> [input-text]
+
+Optional second arg = text fed to the ELF's stdin (for interactive samples like GuessNumber,
+e.g. '1\n50\nn\n'); the stdin is then closed (EOF) so non-interactive ELFs still exit promptly.
 
 Env overrides: COCOA_VM_HOST (default 192.168.200.139), COCOA_VM_USER (default root),
 COCOA_VM_PASS (default 123456). Requires `pip install paramiko`.
@@ -16,13 +19,14 @@ import sys
 import uuid
 
 def main() -> int:
-    if len(sys.argv) != 2:
-        print("usage: verify-linux-vm.py <elf-path>")
+    if len(sys.argv) not in (2, 3):
+        print("usage: verify-linux-vm.py <elf-path> [input-text]")
         return 1
     elf = os.path.abspath(sys.argv[1])
     if not os.path.isfile(elf):
         print(f"error: {elf} not found")
         return 1
+    stdin_text = sys.argv[2] if len(sys.argv) == 3 else ""
 
     host = os.environ.get("COCOA_VM_HOST", "192.168.200.139")
     user = os.environ.get("COCOA_VM_USER", "root")
@@ -41,7 +45,9 @@ def main() -> int:
         sftp.close()
 
         stdin, stdout, stderr = client.exec_command(f"chmod +x {remote}; {remote}")
-        # 仅关闭 stdin 写半（EOF）：即使产物含 Console.ReadLine，也不会因等输入挂死；
+        if stdin_text:
+            stdin.write(stdin_text.encode("utf-8"))
+        # 关闭 stdin 写半（EOF）：即使产物含 Console.ReadLine，也不会因等输入挂死；
         # 不能 close()（会连同 stdout/stderr 通道一起关，远端被 SIGHUP）。
         stdin.channel.shutdown_write()
         out = stdout.read().decode("utf-8", "replace")

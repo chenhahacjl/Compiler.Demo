@@ -101,15 +101,17 @@ namespace Cocoa.CodeGen.Native
                 return 1;
             }
 
-            // T3：linux 目标零导入（裸 syscall 运行时）——extern（DLL 导入）面未实现，编译期明确拒绝。
+            // T3：linux 目标零导入（裸 syscall 运行时）——仅 kernel32 四符号（GetTickCount/Sleep/Beep/ExitProcess）
+            // 经 shim 映射到运行时实现；其余 extern（DLL 导入）编译期明确拒绝。
             if (platform.OS == TargetOS.Linux)
             {
-                var externFunction = program.Functions.Keys.FirstOrDefault(f => f.IsExtern);
-                if (externFunction != null)
+                var unsupportedExtern = program.Functions.Keys.FirstOrDefault(f =>
+                    f.IsExtern && PlatformDllResolver.LinuxKernel32Shim(f.EntryPoint ?? f.Name) == null);
+                if (unsupportedExtern != null)
                 {
-                    var location = externFunction.Declaration?.GetDeclarationNameLocation()
+                    var location = unsupportedExtern.Declaration?.GetDeclarationNameLocation()
                                    ?? new TextLocation(compilation.SyntaxTrees[0].Text, new TextSpan(0, 0));
-                    diagnostics = ImmutableArray.Create(Diagnostic.Error(location, $"linux-x64 目标暂不支持 extern（DLL）导入：'{externFunction.Name}'（T3 最小交付）。"));
+                    diagnostics = ImmutableArray.Create(Diagnostic.Error(location, $"linux-x64 目标暂不支持 extern（DLL）导入：'{unsupportedExtern.Name}'（仅 kernel32 GetTickCount/Sleep/Beep/ExitProcess shim 可用，T3）。"));
                     return 1;
                 }
             }
