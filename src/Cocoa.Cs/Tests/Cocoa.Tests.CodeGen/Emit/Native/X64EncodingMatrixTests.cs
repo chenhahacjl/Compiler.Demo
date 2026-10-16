@@ -4,7 +4,7 @@ using Cocoa.CodeGen.Native.Assembler;
 using Cocoa.CodeGen.Native.Assembler.X64;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.Emit.Native
+namespace Cocoa.Tests.CodeGen.Emit.Native
 {
     /// <summary>
     /// P1 表驱动编码矩阵：从 X64EncodingTable 表条目自动生成逐字节断言（表项对拍）。

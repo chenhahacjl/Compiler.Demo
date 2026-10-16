@@ -7,7 +7,7 @@ using Cocoa.CodeAnalysis.Syntax.Nodes;
 using Cocoa.CodeAnalysis.Syntax.Green;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.Emit.Native
+namespace Cocoa.Tests.CodeGen.Emit.Native
 {
     public class NativeSourceEmitTests
     {

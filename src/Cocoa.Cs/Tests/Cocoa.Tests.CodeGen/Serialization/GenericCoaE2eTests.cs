@@ -14,10 +14,10 @@ using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Syntax.Nodes;
 using Cocoa.CodeAnalysis.Syntax.Green;
-using Cocoa.Tests.CodeAnalysis.Emit.IL;
+using Cocoa.Tests.CodeGen.Emit.IL;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.CocoaAssembly
+namespace Cocoa.Tests.CodeGen.Serialization
 {
     /// <summary>
     /// G7 用户泛型库端到端：泛型定义经 .coa 携带（gcls/tpar/fld/fn+开放体）→ 消费方实例化单态化 ×三后端。

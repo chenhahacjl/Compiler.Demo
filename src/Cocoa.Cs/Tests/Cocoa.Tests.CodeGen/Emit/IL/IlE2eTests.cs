@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using Cocoa.Targeting;
 using Xunit;
-namespace Cocoa.Tests.CodeAnalysis.Emit.IL
+namespace Cocoa.Tests.CodeGen.Emit.IL
 {
     public class IlE2eTests
     {

@@ -10,7 +10,7 @@ using Cocoa.CodeAnalysis.Syntax.Green;
 using Cocoa.Targeting;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.Emit.IL
+namespace Cocoa.Tests.CodeGen.Emit.IL
 {
     /// <summary>
     /// 运算符重载三后端封板（4.5）：声明 → 绑定回落（OperatorRegistry）→ 三后端发射，

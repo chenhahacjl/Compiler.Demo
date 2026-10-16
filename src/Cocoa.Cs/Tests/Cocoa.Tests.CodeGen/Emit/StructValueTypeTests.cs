@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.Emit
+namespace Cocoa.Tests.CodeGen.Emit
 {
     /// <summary>
     /// 6e-M26：struct 值类型（IL 值语义）——创建/字段读写/按值传参/返回/默认零值。

@@ -12,7 +12,7 @@ using System.IO;
 using System.Text;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.Contracts
+namespace Cocoa.Tests.CodeGen.Contracts
 {
     /// <summary>
     /// byref 语义契约（3.1）：copy-in/copy-out 装箱语义三后端一致。

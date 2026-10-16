@@ -10,7 +10,7 @@ using Cocoa.CodeAnalysis.Syntax.Nodes;
 using Cocoa.CodeAnalysis.Syntax.Green;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.Emit.Native
+namespace Cocoa.Tests.CodeGen.Emit.Native
 {
     /// <summary>
     /// Phase 2 COCOA_DUMP_IR 断言测试：锁 LIR 归并形态。

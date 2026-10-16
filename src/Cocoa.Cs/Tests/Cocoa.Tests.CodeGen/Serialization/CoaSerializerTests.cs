@@ -14,7 +14,7 @@ using System.Text;
 using System.Collections.Immutable;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.CocoaAssembly
+namespace Cocoa.Tests.CodeGen.Serialization
 {
     /// <summary>
     /// cod 库相关测试串行集合：成员测试会改写进程级 COCOA_STDLIB 并 Reset stdlib，
@@ -1099,7 +1099,7 @@ function Main(): void
             var nativeExe = Path.Combine(dir, "app-native-x64.exe");
             var nativeDiagnostics = nativeCompilation.EmitNative("app-native", nativeExe, platform);
             Assert.Empty(nativeDiagnostics.Select(d => d.Message));
-            var stdout = Cocoa.Tests.CodeAnalysis.Emit.Native.NativeEmitTests.Run(nativeExe);
+            var stdout = Cocoa.Tests.CodeGen.Emit.Native.NativeEmitTests.Run(nativeExe);
             Assert.Equal("10", stdout.Replace("\r\n", "\n").Replace("\r", "\n").Trim());
         }
     }

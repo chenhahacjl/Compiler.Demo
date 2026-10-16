@@ -11,7 +11,7 @@ using Cocoa.CodeAnalysis.Syntax.Nodes;
 using Cocoa.CodeAnalysis.Syntax.Green;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.Emit.Native
+namespace Cocoa.Tests.CodeGen.Emit.Native
 {
     /// <summary>
     /// 数值类型全集冒烟（6e-M21 Phase 6）：i8/i16/u16/u32/u64/f32 的算术、无符号语义、

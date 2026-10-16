@@ -10,7 +10,7 @@ using Cocoa.CodeAnalysis.Syntax.Nodes;
 using Cocoa.CodeAnalysis.Syntax.Green;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.Emit.Native
+namespace Cocoa.Tests.CodeGen.Emit.Native
 {
     /// <summary>
     /// Native 路径 import 消费 e2e（阶段 6c-1）：用户 extern 经多 DLL 导入表 + 启动 stub 解析，

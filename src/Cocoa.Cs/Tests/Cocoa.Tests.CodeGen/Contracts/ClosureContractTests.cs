@@ -13,7 +13,7 @@ using System.IO;
 using System.Text;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.Contracts
+namespace Cocoa.Tests.CodeGen.Contracts
 {
     /// <summary>
     /// 闭包捕获语义契约（3.1）：捕获变量堆存储规范三后端一致。

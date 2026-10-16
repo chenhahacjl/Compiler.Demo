@@ -5,7 +5,7 @@ using Cocoa.CodeAnalysis.Syntax.Nodes;
 using Cocoa.CodeAnalysis.Syntax.Green;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.Emit.Native
+namespace Cocoa.Tests.CodeGen.Emit.Native
 {
     /// <summary>
     /// 6e-M19 M4：native 对象模型落地——Object 成员面（ToString/GetHashCode/Equals/GetType +

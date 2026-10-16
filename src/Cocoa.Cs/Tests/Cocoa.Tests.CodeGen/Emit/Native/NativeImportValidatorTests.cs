@@ -6,7 +6,7 @@ using Cocoa.CodeAnalysis.Syntax.Green;
 using Cocoa.Targeting;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.Emit.Native
+namespace Cocoa.Tests.CodeGen.Emit.Native
 {
     /// <summary>
     /// 9d：NativeImportValidator 签名自检（生成期失败快，不产运行期坏 exe）。

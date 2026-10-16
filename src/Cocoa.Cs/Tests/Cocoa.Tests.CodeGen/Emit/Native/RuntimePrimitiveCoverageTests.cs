@@ -2,7 +2,7 @@ using Cocoa.CodeGen.Native;
 using Cocoa.Targeting;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.Emit.Native
+namespace Cocoa.Tests.CodeGen.Emit.Native
 {
     /// <summary>
     /// 运行时原语一致性锁（3.4）：<see cref="RuntimeFunctionEmitter"/> 新增发射原语而忘记登记声明表时，

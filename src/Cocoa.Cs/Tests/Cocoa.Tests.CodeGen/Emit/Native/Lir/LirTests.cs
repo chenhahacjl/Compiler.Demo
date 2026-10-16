@@ -4,7 +4,7 @@ using Cocoa.CodeGen.PE;
 using Cocoa.CodeGen.Native.Lir;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.Emit.Native.Lir
+namespace Cocoa.Tests.CodeGen.Emit.Native.Lir
 {
     public class LirVirtualRegisterTests
     {

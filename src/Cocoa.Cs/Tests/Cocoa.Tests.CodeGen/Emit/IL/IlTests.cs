@@ -5,7 +5,7 @@ using Xunit;
 
 using Cocoa.CodeGen.Managed.Writer;
 using Cocoa.IlMetadata;
-namespace Cocoa.Tests.CodeAnalysis.Emit.IL
+namespace Cocoa.Tests.CodeGen.Emit.IL
 {
     public class IlAssemblerTests
     {

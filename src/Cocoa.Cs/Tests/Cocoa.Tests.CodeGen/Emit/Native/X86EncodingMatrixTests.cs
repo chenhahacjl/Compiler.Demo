@@ -5,7 +5,7 @@ using Cocoa.CodeGen.Native.Assembler.X64;
 using Cocoa.CodeGen.Native.Assembler.X86;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.Emit.Native
+namespace Cocoa.Tests.CodeGen.Emit.Native
 {
     /// <summary>
     /// X86Assembler 编码字节矩阵（P6：x86 表驱动对称锁定）。

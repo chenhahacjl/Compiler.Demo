@@ -8,7 +8,7 @@ using Cocoa.CodeGen.Native;
 using Cocoa.Targeting;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.Emit.Native
+namespace Cocoa.Tests.CodeGen.Emit.Native
 {
     /// <summary>
     /// M2：native「发射后符号快照」公开出口验收——存活类（new 可达 + 基类链）与实际发射函数集。

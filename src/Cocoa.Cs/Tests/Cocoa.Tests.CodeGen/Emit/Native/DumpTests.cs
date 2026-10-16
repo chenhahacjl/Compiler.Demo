@@ -10,7 +10,7 @@ using Cocoa.CodeAnalysis.Syntax.Green;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Cocoa.Tests.CodeAnalysis.Emit.Native
+namespace Cocoa.Tests.CodeGen.Emit.Native
 {
     public class DumpTests
     {

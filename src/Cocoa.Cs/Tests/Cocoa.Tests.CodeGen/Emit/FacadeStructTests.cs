@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Threading;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.Emit
+namespace Cocoa.Tests.CodeGen.Emit
 {
     /// <summary>
     /// 6e-M26 Phase3：facade struct —— 映射 CO struct 到 BCL 值类型

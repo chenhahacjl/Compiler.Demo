@@ -10,7 +10,7 @@ using Cocoa.CodeAnalysis.Syntax.Nodes;
 using Cocoa.CodeAnalysis.Syntax.Green;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.Emit.Native
+namespace Cocoa.Tests.CodeGen.Emit.Native
 {
     /// <summary>
     /// 原生发射管线冒烟（4.4：旧 RuntimeEmitterX64/X86 白盒测试迁 LIR 生产管线）。

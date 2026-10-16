@@ -1,7 +1,7 @@
 using Cocoa.CodeGen.Native.Assembler.X64;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.Emit.Native
+namespace Cocoa.Tests.CodeGen.Emit.Native
 {
     public class X64AssemblerTests
     {

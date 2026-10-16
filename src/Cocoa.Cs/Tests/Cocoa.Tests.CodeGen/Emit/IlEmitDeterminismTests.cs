@@ -5,7 +5,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.Emit
+namespace Cocoa.Tests.CodeGen.Emit
 {
     /// <summary>
     /// IL 发射确定性回归：同一源码在进程内多次编译，产出的 dll 必须逐字节一致。

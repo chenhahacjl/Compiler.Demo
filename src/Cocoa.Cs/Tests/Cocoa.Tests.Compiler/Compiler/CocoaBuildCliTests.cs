@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
-using Cocoa.Tests.CodeAnalysis.Emit.Native;
+using Cocoa.Tests.CodeGen.Emit.Native;
 using Xunit;
 
 namespace Cocoa.Tests.Compiler

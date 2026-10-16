@@ -3,7 +3,7 @@ using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.Emit
+namespace Cocoa.Tests.CodeGen.Emit
 {
     /// <summary>
     /// 6e-M22 C8 / 6e-G7：集合泛型 facade（List&lt;T&gt;）经“源码方式”集成——

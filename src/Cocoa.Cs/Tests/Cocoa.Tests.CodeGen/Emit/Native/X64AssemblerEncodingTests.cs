@@ -4,7 +4,7 @@ using Cocoa.CodeGen.Native.Assembler;
 using Cocoa.CodeGen.Native.Assembler.X64;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.Emit.Native
+namespace Cocoa.Tests.CodeGen.Emit.Native
 {
     /// <summary>
     /// X64Assembler 指令编码字节断言（9d：汇编器可信化，纯托管不启动 native exe）。
