@@ -14,7 +14,7 @@ namespace Cocoa.Tests.Compiler
     /// 阶段 6 Step E/6f-3：跨库同名类型歧义消解——装载不再抛错，改为登记歧义全名集；
     /// 非限定使用 → 绑定期诊断；`using X = 库名.全名` 库限定别名唯一化（绑定侧 + 读侧前缀消歧）。
     /// </summary>
-    public class CodAmbiguousNameTests
+    public class CoaAmbiguousNameTests
     {
         private static string WriteLib(string dir, string libName, string value)
         {

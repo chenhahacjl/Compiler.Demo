@@ -16,7 +16,7 @@ namespace Cocoa.Tests.CodeAnalysis
     /// 基类在另一个 `.coa`（含 BCL 接口如 IDisposable），派生库经 `extends base(...)` 构造链。
     /// 覆盖三处修复：① `.coa` 门禁放行 cod 来源基类；② IL 构造链跨库解析；③ 派生类不重列基类已实现接口。
     /// </summary>
-    public class CodCrossLibraryInheritanceTests
+    public class CoaCrossLibraryInheritanceTests
     {
         private const string BaseLibSource = @"using System
 

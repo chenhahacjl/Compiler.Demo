@@ -6,40 +6,45 @@ using Xunit;
 namespace Cocoa.Tests.Compiler
 {
     /// <summary>
-    /// 阶段 6 Step D-a：lambda/函数值库体（fnval/invoc 节点）.coa 序列化 round-trip——
-    /// 库内高阶函数消费 fnty 参数并间接调用；消费方把自身 lambda 传入库函数。
-    /// 捕获闭包（__Env_* 宿主装饰经 .coa 重建）另记边界（Step F 追）。
+    /// 阶段 6 Step F 6f-4：捕获闭包经库（__Env_* 环境类 .coa 重建 + A1 库发射）——
+    /// 库返回捕获闭包（按值捕捉）与有状态闭包（可变局部捕捉），消费方运行期调用验证：
+    /// 环境元数据（IsLambda/IsLambdaWithEnvironment/EnvironmentClass/CapturedVariables）跨库往返完整。
     /// </summary>
-    public class CodFntyLibraryTests
+    public class CoaClosureLibraryTests
     {
         [Fact]
-        public void Library_With_HigherOrder_Functions_RoundTrips_And_Runs()
+        public void Library_With_Capturing_And_Stateful_Closures_Runs_EndToEnd()
         {
-            var root = CliTestRunner.NewTempDir("cod-fnty");
-            var libDir = Path.Combine(root, "MathLib");
+            var root = CliTestRunner.NewTempDir("cod-closure");
+            var libDir = Path.Combine(root, "ClosureLib");
             var appDir = Path.Combine(root, "App");
             Directory.CreateDirectory(libDir);
             Directory.CreateDirectory(appDir);
 
-            File.WriteAllText(Path.Combine(libDir, "Math.co"), @"namespace MathLib
+            File.WriteAllText(Path.Combine(libDir, "ClosureLib.co"), @"namespace ClosureLib
 {
-    public function ApplyThe(f: (i32) -> i32, v: i32): i32
+    public function MakeAdder(n: i32): (i32) -> i32
     {
-        return f(v)
+        return (x: i32) => x + n
     }
 
-    public function Identity(): (i32) -> i32
+    public function Counter(): (i32) -> i32
     {
-        return (x: i32) => x
+        var c = 0
+        return (x: i32) =>
+        {
+            c = c + x
+            return c
+        }
     }
 }
 ");
-File.WriteAllText(Path.Combine(libDir, "MathLib.coproj"), @"<Project Version=""1"">
+            File.WriteAllText(Path.Combine(libDir, "ClosureLib.coproj"), @"<Project Version=""1"">
   <PropertyGroup Label=""Language"">
     <Language>Cocoa</Language>
   </PropertyGroup>
   <PropertyGroup Label=""Assembly"">
-    <AssemblyName>MathLib</AssemblyName>
+    <AssemblyName>ClosureLib</AssemblyName>
   </PropertyGroup>
   <PropertyGroup Label=""Output"">
     <OutputType>Cocoa</OutputType>
@@ -50,18 +55,17 @@ File.WriteAllText(Path.Combine(libDir, "MathLib.coproj"), @"<Project Version=""1
 </Project>
 ");
 
-            File.WriteAllText(Path.Combine(appDir, "app.co"), @"using MathLib
+            File.WriteAllText(Path.Combine(appDir, "main.co"), @"using ClosureLib
 using System
 
-function Main(): i32
+function Main(): void
 {
-    var double2 = (x: i32) => x * 2
-    var r = MathLib.ApplyThe(double2, 21)
-    var id = MathLib.Identity()
-    var m = id(5)
-    System.Console.WriteLine(r)
-    System.Console.WriteLine(m)
-    return 0
+    var add5 = ClosureLib.MakeAdder(5)
+    System.Console.WriteLine(add5(37))
+
+    var cnt = ClosureLib.Counter()
+    System.Console.WriteLine(cnt(10))
+    System.Console.WriteLine(cnt(32))
 }
 ");
             File.WriteAllText(Path.Combine(appDir, "App.coproj"), @"<Project Version=""1"">
@@ -76,26 +80,32 @@ function Main(): i32
   </PropertyGroup>
   <ItemGroup>
     <Source Include=""*.co"" />
-    <Reference Include=""../MathLib/MathLib.coa"" />
+    <Reference Include=""../ClosureLib/ClosureLib.coa"" />
   </ItemGroup>
 </Project>
 ");
 
-            var libProject = Path.Combine(libDir, "MathLib.coproj");
+            var libProject = Path.Combine(libDir, "ClosureLib.coproj");
             var libBuild = CliTestRunner.Run($"build \"{libProject}\"", root);
             Assert.True(libBuild.ExitCode == 0, $"lib build failed: {libBuild.Stdout}{libBuild.Stderr}");
-            Assert.True(File.Exists(Path.Combine(libDir, "MathLib.coa")));
+            Assert.True(File.Exists(Path.Combine(libDir, "ClosureLib.coa")));
+
+            // 记录闭包元数据确已随库携带（IsLambda/EnvClass/捕获清单）
+            var libText = File.ReadAllText(Path.Combine(libDir, "ClosureLib.coa"));
+            Assert.Contains("envl:true", libText);
+            Assert.Contains("envc:__Env_MakeAdder", libText);
+            Assert.Contains("envcap:1", libText);
 
             var appProject = Path.Combine(appDir, "App.coproj");
             var appBuild = CliTestRunner.Run($"build \"{appProject}\" -b managed-net --dotnet-runtime net9.0", root);
             Assert.True(appBuild.ExitCode == 0, $"app build failed: {appBuild.Stdout}{appBuild.Stderr}");
             Assert.True(File.Exists(Path.Combine(appDir, "App.exe")));
-            Assert.True(File.Exists(Path.Combine(appDir, "MathLib.Managed.dll")), "库托管 dll 应按需生成（fnval 消费）");
+            Assert.True(File.Exists(Path.Combine(appDir, "ClosureLib.Managed.dll")), "库托管 dll 应按需生成（捕获闭包宿主）");
 
             var run = RunExe(Path.Combine(appDir, "App.exe"));
             Assert.True(run.exitCode == 0, $"app run failed: {run.output}");
             Assert.Contains("42", run.output);
-            Assert.Contains("5", run.output);
+            Assert.Contains("10", run.output);
         }
 
         private static (int exitCode, string output) RunExe(string exePath)

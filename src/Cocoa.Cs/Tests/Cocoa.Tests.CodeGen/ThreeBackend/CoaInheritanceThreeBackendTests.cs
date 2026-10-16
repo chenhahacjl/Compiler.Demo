@@ -21,7 +21,7 @@ namespace Cocoa.Tests.CodeGen.ThreeBackend
     /// 6e-M33：.coa 基类序列化——同库可序列化基类的继承链（cls `base:` 字段 + 实例方法/构造 fn +
     /// `ctorchain` 构造链节点）跨库 round-trip 与三后端消费（Handle 族 FileHandle extends Handle 硬前置）。
     /// </summary>
-    public class CodInheritanceThreeBackendTests
+    public class CoaInheritanceThreeBackendTests
     {
         private const string LibSource = @"namespace MyLib
 {

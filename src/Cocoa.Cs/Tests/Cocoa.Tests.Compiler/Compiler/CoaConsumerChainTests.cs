@@ -10,7 +10,7 @@ namespace Cocoa.Tests.Compiler
     /// LibA 的 Managed.dll 跨界调用 LibB.Managed（全目录 provenance：库间调用不落本地方法）。
     /// 透传依赖由引用侧显式提供（App 同时引用 LibB 与 LibA，LibB 在前）。
     /// </summary>
-    public class CodConsumerChainTests
+    public class CoaConsumerChainTests
     {
         [Fact]
         public void App_Consumes_LibA_Which_Calls_LibB_Runs_EndToEnd()

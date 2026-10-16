@@ -13,19 +13,21 @@ using Xunit;
 namespace Cocoa.Tests.SelfHosting.CodeAnalysis
 {
     /// <summary>
-    /// 6e-M32 Tier-2：co 编译器（自举）Binder 函数级 attribute 查询面对拍。
-    /// 驱动 co Binder 绑定带 `[Test]` 的源，断言 GetFunctionAttribute* 结果。
+    /// 6e-M32 Tier-2 attribute：co 编译器（自举）解析层对拍。
+    /// 编译 co 编译器源码 + 驱动，经 co Parser 解析 attribute 源，断言 AttributeList 树形。
     /// </summary>
-    public class CoAttributeBindTests
+    public class CocoaAttributeParseTests
     {
         [Theory]
-        [InlineData("[Test] function F(): void\n{\n}\n", "1|Test|")]
-        [InlineData("[Mark(\"a\",1)] function G(): i32\n{\n    return 0\n}\n", "1|Mark|\"a\",1")]
-        public void CoBinder_FunctionAttributes_Queried(string source, string expected)
+        [InlineData("[Test] function F(): void\n{\n}\n", "(FunctionDeclaration (AttributeList (Attribute (IdentifierToken \"Test\")))")]
+        [InlineData("[Facade(\"System.IntPtr\")] public class NativeInt32\n{\n}\n", "(ClassDeclaration (AttributeList (Attribute (IdentifierToken \"Facade\") (StringToken \"\\\"System.IntPtr\\\"\")))")]
+        [InlineData("[Test] function F(): void\n{\n}\n\n[Other] public function G(): i32\n{\n    return 0\n}\n", "(AttributeList (Attribute (IdentifierToken \"Test\")))")]
+        public void CoParser_AttributeList_Produced(string source, string expectedFragment)
         {
             var (output, compileErrors) = RunSelfDriver(source);
             Assert.True(compileErrors.Count == 0, "COCOMPILE-ERROR: " + string.Join(" | ", compileErrors));
-            Assert.Equal(expected, output);
+
+            Assert.True(output.Contains(expectedFragment), $"expected fragment '{expectedFragment}' not found.\nOUTPUT: {output}");
         }
 
         private static (string Output, List<string> CompileErrors) RunSelfDriver(string source)
@@ -54,7 +56,7 @@ namespace Cocoa.Tests.SelfHosting.CodeAnalysis
                     return ("", result.Diagnostics.Select(d => d.Message).ToList());
                 }
 
-                return (writer.ToString().Replace("\r\n", "\n").TrimEnd('\n'), new List<string>());
+                return (writer.ToString().Replace("\r\n", "\n"), new List<string>());
             }
             finally
             {
@@ -66,11 +68,12 @@ namespace Cocoa.Tests.SelfHosting.CodeAnalysis
         {
             var embedded = source.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n").Replace("\t", "\\t");
             return
-                "using Cocoa.CodeAnalysis.Syntax\nusing Cocoa.CodeAnalysis.Binder\nusing System\n\n" +
+                "using Cocoa.CodeAnalysis.Syntax\nusing System\n\n" +
                 "function Main(): i32\n{\n" +
-                "    let b = Cocoa.CodeAnalysis.Binder.Binder.Create(\"" + embedded + "\")\n" +
-                "    b.BindCompilationUnit()\n" +
-                "    System.Console.WriteLine(string(b.GetFunctionAttributeCount(0)) + \"|\" + b.GetFunctionAttributeName(0, 0) + \"|\" + b.GetFunctionAttributeArgText(0, 0))\n" +
+                "    let p = Cocoa.CodeAnalysis.Syntax.Parser.Create(\"" + embedded + "\")\n" +
+                "    let ri = p.ParseCompilationUnit()\n" +
+                "    System.Console.WriteLine(ri.Dump())\n" +
+                "    System.Console.WriteLine(\"DIAG:\" + string(p.DiagnosticCount()))\n" +
                 "    return 0\n" +
                 "}\n";
         }

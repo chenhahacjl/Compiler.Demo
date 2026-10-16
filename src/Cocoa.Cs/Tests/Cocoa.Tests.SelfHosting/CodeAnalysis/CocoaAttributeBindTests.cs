@@ -13,20 +13,22 @@ using Xunit;
 namespace Cocoa.Tests.SelfHosting.CodeAnalysis
 {
     /// <summary>
-    /// A 可行性探针 2：co 编译器（自持）对方法组/函数引用的支持——
-    /// 编译 co 编译器源码 + 驱动（`let f = Add; f(41)`），Evaluator 求值断言。
+    /// 6e-M32 Tier-2：co 编译器（自举）Binder 函数级 attribute 查询面对拍。
+    /// 驱动 co Binder 绑定带 `[Test]` 的源，断言 GetFunctionAttribute* 结果。
     /// </summary>
-    public class CoFunctionReferenceProbe
+    public class CocoaAttributeBindTests
     {
-        [Fact]
-        public void CoCompiler_MethodGroup_Callable()
+        [Theory]
+        [InlineData("[Test] function F(): void\n{\n}\n", "1|Test|")]
+        [InlineData("[Mark(\"a\",1)] function G(): i32\n{\n    return 0\n}\n", "1|Mark|\"a\",1")]
+        public void CoBinder_FunctionAttributes_Queried(string source, string expected)
         {
-            var (output, exitValue, compileErrors) = RunSelfDriver();
+            var (output, compileErrors) = RunSelfDriver(source);
             Assert.True(compileErrors.Count == 0, "COCOMPILE-ERROR: " + string.Join(" | ", compileErrors));
-            Assert.Equal(42, exitValue);
+            Assert.Equal(expected, output);
         }
 
-        private static (string Output, int ExitValue, List<string> CompileErrors) RunSelfDriver()
+        private static (string Output, List<string> CompileErrors) RunSelfDriver(string source)
         {
             var root = RepoRoot();
             var compilerDir = Path.Combine(root, "src", "Cocoa.Co", "Cocoa.Compiler");
@@ -37,21 +39,22 @@ namespace Cocoa.Tests.SelfHosting.CodeAnalysis
                 trees.Add(SyntaxTree.Parse(File.ReadAllText(file)));
             }
 
-            trees.Add(SyntaxTree.Parse(DriverSource()));
+            trees.Add(SyntaxTree.Parse(BuildDriverSource(source)));
 
             var original = Console.Out;
             try
             {
                 using var writer = new StringWriter();
                 Console.SetOut(writer);
+
                 var compilation = Compilation.Create("Main", new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, trees.ToArray());
                 var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
                 if (result.Diagnostics.HasErrors())
                 {
-                    return ("", -1, result.Diagnostics.Select(d => d.Message).ToList());
+                    return ("", result.Diagnostics.Select(d => d.Message).ToList());
                 }
 
-                return (writer.ToString().Replace("\r\n", "\n"), result.Value is int i ? i : -1, new List<string>());
+                return (writer.ToString().Replace("\r\n", "\n").TrimEnd('\n'), new List<string>());
             }
             finally
             {
@@ -59,19 +62,18 @@ namespace Cocoa.Tests.SelfHosting.CodeAnalysis
             }
         }
 
-        private static string DriverSource() => @"using System
-
-function Add(a: i32): i32
-{
-    return a + 1
-}
-
-function Main(): i32
-{
-    let f = Add
-    return f(41)
-}
-";
+        private static string BuildDriverSource(string source)
+        {
+            var embedded = source.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n").Replace("\t", "\\t");
+            return
+                "using Cocoa.CodeAnalysis.Syntax\nusing Cocoa.CodeAnalysis.Binder\nusing System\n\n" +
+                "function Main(): i32\n{\n" +
+                "    let b = Cocoa.CodeAnalysis.Binder.Binder.Create(\"" + embedded + "\")\n" +
+                "    b.BindCompilationUnit()\n" +
+                "    System.Console.WriteLine(string(b.GetFunctionAttributeCount(0)) + \"|\" + b.GetFunctionAttributeName(0, 0) + \"|\" + b.GetFunctionAttributeArgText(0, 0))\n" +
+                "    return 0\n" +
+                "}\n";
+        }
 
         private static string RepoRoot()
         {

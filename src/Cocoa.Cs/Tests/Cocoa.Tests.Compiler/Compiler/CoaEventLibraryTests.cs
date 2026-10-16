@@ -10,7 +10,7 @@ namespace Cocoa.Tests.Compiler
     /// （cls 携带 evt 符号 + fld 后备字段，类方法体含触发脱糖），消费方实例化、+=
     /// 订阅并调用库方法触发。
     /// </summary>
-    public class CodEventLibraryTests
+    public class CoaEventLibraryTests
     {
         [Fact]
         public void Library_With_EventClass_RoundTrips_Symbols_And_AppBuilds()

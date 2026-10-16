@@ -12,7 +12,7 @@ namespace Cocoa.Tests.Compiler
     /// <summary>
     /// 阶段 6 Step E：.coa 库引用拓扑序（Kahn）——refcoa 依赖链排序 + 环检测 + 宽松缺失依赖。
     /// </summary>
-    public class CodLibraryOrderTests
+    public class CoaLibraryOrderTests
     {
         private static CoaProgram Library(string name, params string[] codReferences)
         {
