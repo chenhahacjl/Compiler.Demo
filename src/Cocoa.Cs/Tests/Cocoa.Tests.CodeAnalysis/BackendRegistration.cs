@@ -4,7 +4,7 @@ using Cocoa.CodeGen.Native;
 using Cocoa.CodeGen.PE;
 using System.Runtime.CompilerServices;
 
-namespace Cocoa.Tests
+namespace Cocoa.Tests.CodeAnalysis
 {
     /// <summary>
     /// 娴嬭瘯绋嬪簭闆嗘ā鍧楀垵濮嬪寲锛氭敞鍐屾媶鍒嗗悗鐨?managed/native 鍚庣鍙戝皠濮旀墭涓庤В閲婂櫒姹傚€煎鎵樸€?

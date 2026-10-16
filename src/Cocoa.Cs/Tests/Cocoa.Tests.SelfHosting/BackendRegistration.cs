@@ -4,7 +4,7 @@ using Cocoa.CodeGen.Native;
 using Cocoa.CodeGen.PE;
 using System.Runtime.CompilerServices;
 
-namespace Cocoa.Tests
+namespace Cocoa.Tests.SelfHosting
 {
     /// <summary>
     /// 自举测试程序集模块初始化：注册拆分后的 managed/native 后端发射委托与解释器求值委托。
