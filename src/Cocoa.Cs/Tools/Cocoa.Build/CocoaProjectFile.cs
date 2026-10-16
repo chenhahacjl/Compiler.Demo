@@ -126,7 +126,13 @@ namespace Cocoa.Build
         /// <summary>默认输出文件名（T3：linux native 产物无扩展名——ELF 惯例；其余恒 .exe/.dll/.coa）。</summary>
         public string GetDefaultOutputFileName()
         {
-            if (Backend == CodeBackend.Native && TargetOs == TargetOS.Linux && Output == ProjectOutputFormat.Executable)
+            return GetDefaultOutputFileName(TargetOs);
+        }
+
+        /// <summary>按生效 OS 计算默认输出文件名（T3：命令行 --os 可覆盖项目声明）。</summary>
+        public string GetDefaultOutputFileName(TargetOS effectiveTargetOs)
+        {
+            if (Backend == CodeBackend.Native && effectiveTargetOs == TargetOS.Linux && Output == ProjectOutputFormat.Executable)
             {
                 return AssemblyName;
             }

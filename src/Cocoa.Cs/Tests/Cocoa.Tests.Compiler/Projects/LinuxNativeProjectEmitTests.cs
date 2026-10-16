@@ -68,5 +68,30 @@ namespace Cocoa.Tests.Projects
             var bytes = File.ReadAllBytes(outputPath);
             Assert.Equal(new byte[] { 0x7F, (byte)'E', (byte)'L', (byte)'F' }, new[] { bytes[0], bytes[1], bytes[2], bytes[3] });
         }
+
+        [Fact]
+        public void LinuxNative_TargetOsOverride_OverridesProject()
+        {
+            // T3 --os：命令行 TargetOsOverride=linux 覆盖项目声明（项目本身未声明 TargetOS，默认 windows）。
+            var project = WriteProject();
+            var result = ProjectBuilder.Build(
+                project,
+                new ProjectBuildOptions
+                {
+                    CacheRoot = _directory,
+                    NoIncremental = true,
+                    TargetOsOverride = Cocoa.Targeting.TargetOS.Linux,
+                },
+                _out);
+
+            Assert.True(result.Success, _out.ToString());
+
+            var outputPath = Path.Combine(_directory, "out", project.GetDefaultOutputFileName(Cocoa.Targeting.TargetOS.Linux));
+            Assert.True(File.Exists(outputPath), $"output '{outputPath}' not found");
+            Assert.False(outputPath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
+
+            var bytes = File.ReadAllBytes(outputPath);
+            Assert.Equal(new byte[] { 0x7F, (byte)'E', (byte)'L', (byte)'F' }, new[] { bytes[0], bytes[1], bytes[2], bytes[3] });
+        }
     }
 }

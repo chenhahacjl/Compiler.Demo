@@ -23,6 +23,7 @@ namespace Cocoa.Cli
             var dotnetRuntimeText = (string?)null;
             var docRequested = false;
             var helpRequested = false;
+            var osText = (string?)null;
 
             for (var i = 0; i < args.Length; i++)
             {
@@ -56,6 +57,14 @@ namespace Cocoa.Cli
                         break;
                     case "--platform":
                         if (!CliHelper.TryTakeValue(args, ref i, inlineValue, out platformText))
+                        {
+                            return 1;
+                        }
+
+                        break;
+                    case "--os":
+                        // T3：目标 OS（windows/linux）——native 经此分流 PE/ELF（覆盖项目 <TargetOS>）。
+                        if (!CliHelper.TryTakeValue(args, ref i, inlineValue, out osText))
                         {
                             return 1;
                         }
@@ -171,6 +180,23 @@ namespace Cocoa.Cli
                 return 1;
             }
 
+            TargetOS? targetOsOverride = null;
+            if (osText != null)
+            {
+                targetOsOverride = osText.ToLowerInvariant() switch
+                {
+                    "windows" => TargetOS.Windows,
+                    "linux" => TargetOS.Linux,
+                    _ => (TargetOS?)null,
+                };
+
+                if (targetOsOverride == null)
+                {
+                    Console.Error.WriteLine($"error: invalid os '{osText}'. Expected: windows, linux");
+                    return 1;
+                }
+            }
+
             // 未指定 -b 时透传 null：ProjectBuilder 按「命令行 > 项目 <Backend> 声明 > dotnet 缺省」解析
             // （项目级声明，2026-09-14 结构重组定稿；先例 --platform 默认取项目设置）
             CodeBackend? backend = backendText switch
@@ -203,6 +229,7 @@ namespace Cocoa.Cli
             {
                 FormatOverride = format,
                 PlatformOverride = platformText,
+                TargetOsOverride = targetOsOverride,
                 NoIncremental = noIncremental,
                 ConfigurationOverride = debugRequested
                     ? ProjectConfiguration.Debug
@@ -256,6 +283,7 @@ else if (extension.Equals(".coproj", StringComparison.OrdinalIgnoreCase))
             Console.WriteLine("  -p <path>          The path to a .coproj or .cosln file");
             Console.WriteLine("  -f <format>        The output format: executable (default), library, cocoa");
             Console.WriteLine("  --platform <arch>  The native target platform: x86 or x64 (default: project setting)");
+            Console.WriteLine("  --os <name>        The native target OS: windows or linux (default: project <TargetOS>, else windows). linux => ELF (x64 only)");
             Console.WriteLine("  -o <path>          The output file path");
             Console.WriteLine("  -r <path>          The path of a reference to add (can be repeated)");
             Console.WriteLine("  -b <name>          The code generation backend: dotnet or native (default: project <Backend> declaration, else dotnet)");

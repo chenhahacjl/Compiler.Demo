@@ -27,6 +27,9 @@ namespace Cocoa.Build
             var backend = options.Backend ?? project.Backend
                 ?? InferBackend(projectTfm);
 
+            // T3：有效 TargetOS（命令行 --os 覆盖 > 项目声明）——native 消费与输出文件名均基于此
+            var effectiveTargetOs = options.TargetOsOverride ?? project.TargetOs;
+
             // 有效 Cpu：CLI --platform 覆盖优先（校验与消费均基于此）
             var effectiveCpu = project.Cpu;
             if (!string.IsNullOrEmpty(options.PlatformOverride))
@@ -116,7 +119,7 @@ namespace Cocoa.Build
             var outputDirectory = project.GetOutputDirectory();
             var outputFile = options.OutputFileOverride != null
                 ? Path.GetFullPath(options.OutputFileOverride)
-                : Path.Combine(outputDirectory, project.GetDefaultOutputFileName());
+                : Path.Combine(outputDirectory, project.GetDefaultOutputFileName(effectiveTargetOs));
             Directory.CreateDirectory(Path.GetDirectoryName(outputFile)!);
 
             var expansion = Glob.Expand(project.SourcePatterns, project.Directory);
@@ -227,7 +230,13 @@ namespace Cocoa.Build
                         return new ProjectBuildResult(success: true, upToDate: false);
                     }
 
-                    if (!TryParseTargetPlatform(project.TargetOs, options.PlatformOverride, effectiveCpu.ToString(), out var platform, out var platformError))
+                    if (effectiveTargetOs == TargetOS.Linux && effectiveCpu != Cpu.X64)
+                    {
+                        messageWriter.WriteLine("error: linux native target currently supports x64 only (ELF64)");
+                        return ProjectBuildResult.Failed;
+                    }
+
+                    if (!TryParseTargetPlatform(effectiveTargetOs, options.PlatformOverride, effectiveCpu.ToString(), out var platform, out var platformError))
                     {
                         messageWriter.WriteLine($"error: {platformError}");
                         return ProjectBuildResult.Failed;

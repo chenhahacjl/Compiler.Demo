@@ -9,6 +9,10 @@ namespace Cocoa.Build
 
         public ProjectOutputFormat? FormatOverride { get; set; }
         public string? PlatformOverride { get; set; }
+
+        /// <summary>T3：目标 OS 覆盖（--os linux/windows）；空 = 项目 <c>TargetOS</c> 声明。</summary>
+        public TargetOS? TargetOsOverride { get; set; }
+
         public bool NoIncremental { get; set; }
         public ProjectConfiguration? ConfigurationOverride { get; set; }
         public string? OutputFileOverride { get; set; }
