@@ -65,7 +65,7 @@ namespace Cocoa.Tests.SelfHosting.Compiler
                 .Replace("\\", "\\\\").Replace("\r", "\\r").Replace("\n", "\\n").Replace("\"", "\\\"");
             var main = "using System\n" +
                 "function Main(): i32\n{\n" +
-                "    let b = Cocoa.CodeAnalysis.Binder.Binder.Create(\"" + esc + "\")\n" +
+                "    let b = Cocoa.CodeAnalysis.Binding.Binder.Create(\"" + esc + "\")\n" +
                 "    b.BindCompilationUnit()\n" +
                 "    System.Console.WriteLine(\"DC:\" + string(b.DiagnosticCount()))\n" +
                 "    var i = 0\n" +
@@ -123,7 +123,7 @@ namespace Cocoa.Tests.SelfHosting.Compiler
             var allSrc = string.Join(Environment.NewLine, files.Select(f => File.ReadAllText(f)));
             var main = "using System\n" +
                 "function Main(args: string[]): i32\n{\n" +
-                "    let b = Cocoa.CodeAnalysis.Binder.Binder.Create(args[0])\n" +
+                "    let b = Cocoa.CodeAnalysis.Binding.Binder.Create(args[0])\n" +
                 "    b.BindCompilationUnit()\n" +
                 "    System.Console.WriteLine(\"DC:\" + string(b.DiagnosticCount()))\n" +
                 "    var i = 0\n" +

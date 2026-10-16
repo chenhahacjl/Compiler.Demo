@@ -194,7 +194,7 @@ namespace Cocoa.Tests.SelfHosting.CodeAnalysis
             var embedded = source.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n").Replace("\t", "\\t");
 
             return
-                "using Cocoa.CodeAnalysis.Syntax\nusing Cocoa.CodeAnalysis.Binder\nusing Cocoa.CodeGen\nusing System\n\n" +
+                "using Cocoa.CodeAnalysis.Syntax\nusing Cocoa.CodeAnalysis.Binding\nusing Cocoa.CodeGen\nusing System\n\n" +
                 "function KeyOf(b: Binder, i: i32): string\n" +
                 "{\n" +
                 "    // FunctionSortKey：owner|ns|name|params（顶层 owner/ns 为空；参数规范名 Ordinal）\n" +
@@ -241,7 +241,7 @@ namespace Cocoa.Tests.SelfHosting.CodeAnalysis
                 "}\n\n" +
                 "function Main(): i32\n" +
                 "{\n" +
-                "    let b = Cocoa.CodeAnalysis.Binder.Binder.Create(\"" + embedded + "\")\n" +
+                "    let b = Cocoa.CodeAnalysis.Binding.Binder.Create(\"" + embedded + "\")\n" +
                 "    b.BindCompilationUnit()\n" +
                 "    var keys = new string[b.GetFunctionCount()]\n" +
                 "    var order = new i32[b.GetFunctionCount()]\n" +

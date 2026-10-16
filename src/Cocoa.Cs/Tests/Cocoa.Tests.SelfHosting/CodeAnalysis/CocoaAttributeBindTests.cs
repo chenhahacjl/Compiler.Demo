@@ -66,9 +66,9 @@ namespace Cocoa.Tests.SelfHosting.CodeAnalysis
         {
             var embedded = source.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n").Replace("\t", "\\t");
             return
-                "using Cocoa.CodeAnalysis.Syntax\nusing Cocoa.CodeAnalysis.Binder\nusing System\n\n" +
+                "using Cocoa.CodeAnalysis.Syntax\nusing Cocoa.CodeAnalysis.Binding\nusing System\n\n" +
                 "function Main(): i32\n{\n" +
-                "    let b = Cocoa.CodeAnalysis.Binder.Binder.Create(\"" + embedded + "\")\n" +
+                "    let b = Cocoa.CodeAnalysis.Binding.Binder.Create(\"" + embedded + "\")\n" +
                 "    b.BindCompilationUnit()\n" +
                 "    System.Console.WriteLine(string(b.GetFunctionAttributeCount(0)) + \"|\" + b.GetFunctionAttributeName(0, 0) + \"|\" + b.GetFunctionAttributeArgText(0, 0))\n" +
                 "    return 0\n" +

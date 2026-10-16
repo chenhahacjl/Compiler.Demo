@@ -157,7 +157,7 @@ namespace Cocoa.Tests.SelfHosting.Compiler
         private static string BuildDriverSource()
         {
             var sb = new StringBuilder();
-            sb.Append("using Cocoa.CodeAnalysis.Syntax\nusing Cocoa.CodeAnalysis.Binder\nusing Cocoa.CodeGen\nusing System\n\n");
+            sb.Append("using Cocoa.CodeAnalysis.Syntax\nusing Cocoa.CodeAnalysis.Binding\nusing Cocoa.CodeGen\nusing System\n\n");
 
             sb.Append("function HexByte2(v: i32): string\n{\n");
             sb.Append("    let digits = \"0123456789abcdef\"\n");

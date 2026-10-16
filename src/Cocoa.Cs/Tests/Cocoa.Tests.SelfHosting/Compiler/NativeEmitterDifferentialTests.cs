@@ -219,7 +219,7 @@ namespace Cocoa.Tests.SelfHosting.Compiler
         private static string BuildDriverSource()
         {
             var sb = new StringBuilder();
-            sb.Append("using Cocoa.CodeAnalysis.Syntax\nusing Cocoa.CodeAnalysis.Binder\nusing Cocoa.CodeGen\nusing System\n\n");
+            sb.Append("using Cocoa.CodeAnalysis.Syntax\nusing Cocoa.CodeAnalysis.Binding\nusing Cocoa.CodeGen\nusing System\n\n");
 
             // KeyOf：FunctionSortKey（owner|ns|name|params）
             sb.Append("function KeyOf(b: Binder, i: i32): string\n{\n");
@@ -270,7 +270,7 @@ namespace Cocoa.Tests.SelfHosting.Compiler
             sb.Append("    while i < 13\n");
             sb.Append("    {\n");
             sb.Append("        let src = CorpusSource(i)\n");
-            sb.Append("        let b = Cocoa.CodeAnalysis.Binder.Binder.Create(src)\n");
+            sb.Append("        let b = Cocoa.CodeAnalysis.Binding.Binder.Create(src)\n");
             sb.Append("        b.BindCompilationUnit()\n");
             sb.Append("        let n = b.GetFunctionCount()\n");
             sb.Append("        var keys = new string[8]\n");
