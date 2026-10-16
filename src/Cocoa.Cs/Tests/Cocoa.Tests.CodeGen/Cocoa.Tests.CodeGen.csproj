@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\Core\Cocoa.IlMetadata\Cocoa.IlMetadata.csproj" />
     <ProjectReference Include="..\..\Core\Cocoa.Targeting\Cocoa.Targeting.csproj" />
     <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.PE\Cocoa.CodeGen.PE.csproj" />
+    <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.Elf\Cocoa.CodeGen.Elf.csproj" />
     <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.Managed\Cocoa.CodeGen.Managed.csproj" />
     <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.Native\Cocoa.CodeGen.Native.csproj" />
     <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.Interpreter\Cocoa.CodeGen.Interpreter.csproj" />

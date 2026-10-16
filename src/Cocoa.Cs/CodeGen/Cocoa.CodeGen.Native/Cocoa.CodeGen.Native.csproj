@@ -12,6 +12,7 @@
     <ProjectReference Include="..\..\Core\Cocoa.Text\Cocoa.Text.csproj" />
     <ProjectReference Include="..\..\Core\Cocoa.CodeAnalysis\Cocoa.CodeAnalysis.csproj" />
     <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.PE\Cocoa.CodeGen.PE.csproj" />
+    <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.Elf\Cocoa.CodeGen.Elf.csproj" />
   </ItemGroup>
 
 

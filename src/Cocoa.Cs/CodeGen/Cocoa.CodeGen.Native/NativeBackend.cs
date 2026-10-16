@@ -101,6 +101,19 @@ namespace Cocoa.CodeGen.Native
                 return 1;
             }
 
+            // T3：linux 目标零导入（裸 syscall 运行时）——extern（DLL 导入）面未实现，编译期明确拒绝。
+            if (platform.OS == TargetOS.Linux)
+            {
+                var externFunction = program.Functions.Keys.FirstOrDefault(f => f.IsExtern);
+                if (externFunction != null)
+                {
+                    var location = externFunction.Declaration?.GetDeclarationNameLocation()
+                                   ?? new TextLocation(compilation.SyntaxTrees[0].Text, new TextSpan(0, 0));
+                    diagnostics = ImmutableArray.Create(Diagnostic.Error(location, $"linux-x64 目标暂不支持 extern（DLL）导入：'{externFunction.Name}'（T3 最小交付）。"));
+                    return 1;
+                }
+            }
+
             var objectFaceBag = new DiagnosticBag();
             NativeObjectModelValidator.Validate(program, objectFaceBag, new TextLocation(compilation.SyntaxTrees[0].Text, new TextSpan(0, 0)));
             if (objectFaceBag.Any())

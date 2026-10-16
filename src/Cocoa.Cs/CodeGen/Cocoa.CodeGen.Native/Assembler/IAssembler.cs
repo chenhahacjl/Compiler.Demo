@@ -186,6 +186,9 @@ namespace Cocoa.CodeGen.Native.Assembler
 
         void Ret();
         void Nop();
+
+        /// <summary>Linux 裸系统调用（0F 05）：rax=号，rdi/rsi/rdx/r10/r8/r9 参数经 Mov 就绪。</summary>
+        void Syscall();
     }
 }
 

@@ -68,8 +68,9 @@ namespace Cocoa.CodeGen.Native.Lir
         FreeArgs,    // FreeArgs <totalBytes>         — add rsp, totalBytes
         SetArg,      // SetArg <ordinal> <src>       — 运行时调用参数寄存器（0→ecx, 1→edx, 2→r8d, 3→r9d）
         StoreRet,    // StoreRet <src>               — store [rbp - slot]
-        StackCheck,  // StackCheck                   — TEB 栈限检查（prolog）
+        StackCheck,  // StackCheck                   — TEB 栈限检查（prolog；Linux 无 TEB 时为空操作）
         SysCall,     // SysCall <dst?> <import> <argCount> — 平台化系统调用（x64 fastcall+shadow / x86 stdcall；第 5 参恒为 0）
+        Syscall,     // Syscall <dst?> <syscallNumber> <argCount> — Linux 裸系统调用（rax=号，rdi/rsi/rdx/r10/r8/r9；0F 05）
 
         // 栈操作（ABI 层：临时保存/恢复）
         Push,        // Push <src>

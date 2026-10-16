@@ -510,6 +510,12 @@ namespace Cocoa.CodeGen.Native.Assembler.X86
             EmitByte(0x90);
         }
 
+        /// <summary>Linux 裸系统调用仅 x64 支持（ELF64 交付范围）；x86 触发即抛。</summary>
+        public void Syscall()
+        {
+            throw new System.NotSupportedException("Linux raw syscall is only supported on x64 targets (ELF64).");
+        }
+
         // ------------------------------------------------------------------
         // SSE（double，IEEE-754 binary64）
         // ------------------------------------------------------------------

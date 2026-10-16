@@ -43,10 +43,26 @@ namespace Cocoa.CodeGen.Native
             // 6c-2：无自解析 stub，IAT 由 OS 加载器按导入描述符填充，入口即 main
             var result = LirToAssembler.Emit(a, ir, entryLabel, platform, null);
 
+            // T3：linux 目标仅 x64（ELF64）；其余走 Windows PE 现状字节不变。
+            var isLinux = platform.OS == TargetOS.Linux;
+            if (isLinux && platform.Arch != Architecture.X64)
+            {
+                throw new System.InvalidOperationException("linux 目标当前仅支持 x64（ELF64）。");
+            }
+
             var dataRva = PeFileWriter.ComputeDataRva(a.ToArray().Length);
-            a.Patch(dataRva - PeFileWriter.TextRva, PeFileWriter.ImageBaseOf(platform.Arch));
+            var imageBase = isLinux ? Cocoa.CodeGen.Elf.ElfFileWriter.ImageBase : PeFileWriter.ImageBaseOf(platform.Arch);
+            a.Patch(dataRva - PeFileWriter.TextRva, imageBase);
             var code = a.ToArray();
             var entryPointRva = PeFileWriter.TextRva + a.GetLabelOffset(result.StubLabel);
+
+            if (isLinux)
+            {
+                // T3 linux 最小交付：ELF ET_EXEC（非 PIE）——无导入表/重定位/资源/元数据节。
+                Cocoa.CodeGen.Elf.ElfFileWriter.Write(outputPath, code, a.GetData(), entryPointRva, dataRva);
+                return;
+            }
+
             // M4a：数据段绝对地址槽 → .reloc（ASLR 下加载器同步修正 vtable 函数/名字指针）
             // M4：.cocoa 元数据节默认强制内嵌（设计稿：体积接受；无 strip 选项）
             var cocoaMetadata = new CocoaMetadataBuilder(emit.Symbols).Build();

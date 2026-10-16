@@ -180,6 +180,9 @@ namespace Cocoa.CodeGen.Native
                 case LirOpCode.SysCall:
                     EmitSysCall(instruction);
                     break;
+                case LirOpCode.Syscall:
+                    EmitLinuxSyscall(instruction);
+                    break;
                 case LirOpCode.Push:
                     EmitPush(instruction);
                     break;
@@ -1237,13 +1240,15 @@ namespace Cocoa.CodeGen.Native
             {
                 // 入口返回 = 进程退出码：int main 用返回值；void main 默认 0。
                 // （Loader 直接进入 main，无 C runtime 包装，故此处显式退出进程。）
+                // T3：退出码经 ABI 描述符首个参数寄存器（Win64=ecx；SysV=edi）传 ExitProcess。
+                var exitArg = AbiToRegister(_abi.ArgumentRegisters[0], prefer32: true);
                 if (returnSize > 0)
                 {
-                    _a.Mov(X64Size.Dword, X64Register.ECX, X64Register.EAX);
+                    _a.Mov(X64Size.Dword, exitArg, X64Register.EAX);
                 }
                 else
                 {
-                    _a.Xor(X64Size.Dword, X64Register.ECX, X64Register.ECX);
+                    _a.Xor(X64Size.Dword, exitArg, exitArg);
                 }
 
                 var aligned = EmitAlign(0);
@@ -1872,6 +1877,45 @@ namespace Cocoa.CodeGen.Native
         }
 
         /// <summary>
+        /// Linux 裸系统调用（Syscall &lt;dst?&gt; &lt;syscallNumber&gt; &lt;argCount&gt;，T3）：
+        /// 参数经 SetArg 进 _sysArgs，按 SysV syscall 寄存器序 rdi,rsi,rdx,r10,r8,r9 装载（arg4 用 r10 而非函数 ABI 的 rcx），
+        /// 最后 rax=号并执行 `syscall`；返回值经 rax → 槽。无 shadow space、无栈参（本交付 ≤6 参）。
+        /// 16 字节栈对齐对 syscall 指令本身非必需（内核入口处理），无需对齐垫片。
+        /// </summary>
+        private void EmitLinuxSyscall(LirInstruction instruction)
+        {
+            var syscallNumber = (int)instruction.A.Imm;
+            var argCount = (int)instruction.B.Imm;
+            var dst = instruction.Dst;
+
+            if (argCount > 6)
+            {
+                throw new Exception($"Linux syscall with {argCount} arguments is not supported (max 6).");
+            }
+
+            var syscallRegs = new[]
+            {
+                X64Register.RDI, X64Register.RSI, X64Register.RDX, X64Register.R10, X64Register.R8, X64Register.R9,
+            };
+
+            for (var i = 0; i < argCount && i < _sysArgs.Count; i++)
+            {
+                LoadSlot(X64Register.RAX, _sysArgs[i], RegisterSize(_sysArgs[i]));
+                _a.Mov(X64Size.Qword, syscallRegs[i], X64Register.RAX);
+            }
+
+            _a.Mov(X64Size.Qword, X64Register.RAX, syscallNumber);
+            _a.Syscall();
+
+            if (dst != null)
+            {
+                StoreSlot(dst, X64Register.EAX);
+            }
+
+            _sysArgs.Clear();
+        }
+
+        /// <summary>
         /// x86（cdecl/stdcall）SysCall 参数压栈：真 8 字节值（I64）压两个 dword（高 dword 先压、低 dword 后压，
         /// 对齐 cdecl 8 字节参数布局）；Addr/I32/F32 压单 dword（x86 32 位指针/窄值只低 4 字节有意义）。
         /// 此前一律只 Push EAX 或一律双 push 都会导致参数错位/栈不平衡。返回压入的 dword 数。
@@ -1907,6 +1951,12 @@ namespace Cocoa.CodeGen.Native
 
         private void EmitStackCheck()
         {
+            // T3：Linux-x64 无 TEB（GS 段不存在）→ RequiresStackCheck=false 时跳过（否则 GS+0 解引用崩）。
+            if (!_abi.RequiresStackCheck)
+            {
+                return;
+            }
+
             _a.MovGs(X64Register.RCX, _stackLimitOffset);
             _a.Add(X64Size.Dword, X64Register.ECX, 0x10000);
             _a.Cmp(X64Size.Dword, X64Register.RSP, X64Register.RCX);

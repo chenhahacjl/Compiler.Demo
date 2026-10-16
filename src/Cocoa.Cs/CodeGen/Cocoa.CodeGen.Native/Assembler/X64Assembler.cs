@@ -660,6 +660,13 @@ namespace Cocoa.CodeGen.Native.Assembler.X64
             EmitByte(0x90);
         }
 
+        /// <summary>Linux 裸系统调用指令（0F 05）。rax=号、rdi/rsi/rdx/r10/r8/r9 参数须先行就绪。</summary>
+        public void Syscall()
+        {
+            EmitByte(0x0F);
+            EmitByte(0x05);
+        }
+
         // ------------------------------------------------------------------
         // SSE（double，IEEE-754 binary64）
         // ------------------------------------------------------------------

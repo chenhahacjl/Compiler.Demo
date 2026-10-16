@@ -1,9 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>Cocoa.CodeGen.Elf</RootNamespace>
-    <!-- linux-x64 ELF 瀵硅薄鍐欏嚭锛坓libc 鍔ㄦ€侀摼鎺ワ級銆俆3 闃舵瀹炵幇锛欵lfObjectWriter 绛夈€?         绌哄３鍏堣锛岄伩鍏嶇洰褰曠粨鏋勪簩娆¤皟鏁淬€?-->
+    <!-- linux-x64 ELF 对象写出器（T3：最小可执行 ET_EXEC，非 PIE 固定基址，零动态链接）。
+         结构：ELF64 头 + PT_LOAD×2 + PT_GNU_STACK + 节表（.text/.data/.shstrtab）。 -->
   </PropertyGroup>
   <ItemGroup>
-<ProjectReference Include="..\..\Core\Cocoa.Targeting\Cocoa.Targeting.csproj" />
+    <ProjectReference Include="..\..\Core\Cocoa.Targeting\Cocoa.Targeting.csproj" />
   </ItemGroup>
 </Project>

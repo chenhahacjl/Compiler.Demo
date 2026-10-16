@@ -53,6 +53,7 @@ namespace Cocoa.CodeGen.Native
 
             private readonly LirProgram _program;
             private readonly bool _isX64;
+            private readonly TargetOS _os;
             private readonly string _tickCountImport;
             private readonly int _heapPtrOffset;
             private readonly int _heapEndOffset;
@@ -76,6 +77,7 @@ namespace Cocoa.CodeGen.Native
             {
                 _program = program;
                 _isX64 = platform.Arch == Architecture.X64;
+                _os = platform.OS;
                 _tickCountImport = _isX64 ? "GetTickCount64" : "GetTickCount";
                 _heapPtrOffset = _isX64 ? 8 : 4;
                 _heapEndOffset = _isX64 ? 16 : 8;
@@ -85,6 +87,20 @@ namespace Cocoa.CodeGen.Native
             {
                 EmitData();
 
+                // T3：Linux-x64 走独立运行时薄层（裸 syscall + UTF-8 控制台）；Windows 保持现状字节不变。
+                if (_os == TargetOS.Linux)
+                {
+                    EmitLinuxFunctions();
+                }
+                else
+                {
+                    EmitWindowsFunctions();
+                }
+            }
+
+            /// <summary>Windows 运行时叶函数列表（现状，函数顺序照抄，保证产物字节不变）。</summary>
+            private void EmitWindowsFunctions()
+            {
                 _ = BeginFunctionTyped("WriteStr", new[] { 8, 4 }, LirType.Addr);
                 EmitWriteStr();
                 _ = BeginFunction("BuildInt", 4, 8);
@@ -361,6 +377,13 @@ namespace Cocoa.CodeGen.Native
                 _bcryptAlg = _program.AddData(LirDataItem.Pointer(Prefix + "BcryptAlg"));
                 _bcryptHash = _program.AddData(LirDataItem.Pointer(Prefix + "BcryptHash"));
 
+                // T3：Linux 运行时零导入（裸 syscall），不挂 kernel32/bcrypt；新增 Linux 专用 scratch 数据项。
+                if (_os == TargetOS.Linux)
+                {
+                    AddLinuxDataItems();
+                    return;
+                }
+
                 _program.Imports.AddRange(Kernel32Imports.Select(n => new LirImport(PlatformDllResolver.Kernel32, n, false)));
                 _program.Imports.Add(new LirImport(PlatformDllResolver.Kernel32, _tickCountImport, false));
                 _program.Imports.AddRange(BcryptImports.Select(n => new LirImport("bcrypt.dll", n, false)));
@@ -610,6 +633,20 @@ namespace Cocoa.CodeGen.Native
             private void SysCall(LirVirtualRegister? dst, string import, int argCount, params LirVirtualRegister?[] args)
             {
                 SysCallDll(dst, PlatformDllResolver.Kernel32, import, argCount, false, args);
+            }
+
+            /// <summary>Linux 裸系统调用（T3）：rax=号，参数 rdi,rsi,rdx,r10,r8,r9；返回值 rax → dst。零导入，不依赖 glibc。</summary>
+            private void LinuxSyscall(LirVirtualRegister? dst, int syscallNumber, int argCount, params LirVirtualRegister?[] args)
+            {
+                for (var i = 0; i < argCount && i < args.Length; i++)
+                {
+                    if (args[i] != null)
+                    {
+                        SetArg(i, args[i]!);
+                    }
+                }
+
+                Add(LirOpCode.Syscall, dst, LirOperand.Constant(syscallNumber), LirOperand.Constant(argCount));
             }
 
             /// <summary>任意 DLL 导入调用（ucrtbase 等）；cdecl=true 时 x86 调用方清栈。x64 fastcall / x86 stdcall 约定由 LirToAssembler.SysCall 负责。</summary>

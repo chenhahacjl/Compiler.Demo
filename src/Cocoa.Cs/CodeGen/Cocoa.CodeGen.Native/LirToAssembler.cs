@@ -78,8 +78,11 @@ namespace Cocoa.CodeGen.Native
             _program = program;
             _entryLabel = entryLabel;
             _platform = platform;
-            // T1：ABI 数据经描述符（WinX64/WinX86），消除对调用约定的硬编码；值照抄现行为，产物不变。
-            _abi = platform.Arch == Architecture.X64 ? (IAbiDescriptor)WinX64Abi.Instance : WinX86Abi.Instance;
+            // T1：ABI 数据经描述符（WinX64/WinX86/SysVAmd64），消除对调用约定的硬编码；值照抄现行为，Windows 产物不变。
+            // T3：Linux-x64 走 SysVAmd64（6 参数寄存器、无 shadow space、无 TEB 栈限检查）。
+            _abi = platform.OS == TargetOS.Linux ? (IAbiDescriptor)SysVAmd64Abi.Instance
+                : platform.Arch == Architecture.X64 ? (IAbiDescriptor)WinX64Abi.Instance
+                : WinX86Abi.Instance;
             _isX64 = platform.Arch == Architecture.X64;
             _slotSize = _abi.SlotSize;
             _paramOffset = _abi.ParamOffset;

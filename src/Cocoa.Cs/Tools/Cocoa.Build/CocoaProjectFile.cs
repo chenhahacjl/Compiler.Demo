@@ -123,9 +123,14 @@ namespace Cocoa.Build
             return Path.GetFullPath(Path.Combine(Directory, OutputPath));
         }
 
-        /// <summary>默认输出文件名。</summary>
+        /// <summary>默认输出文件名（T3：linux native 产物无扩展名——ELF 惯例；其余恒 .exe/.dll/.coa）。</summary>
         public string GetDefaultOutputFileName()
         {
+            if (Backend == CodeBackend.Native && TargetOs == TargetOS.Linux && Output == ProjectOutputFormat.Executable)
+            {
+                return AssemblyName;
+            }
+
             var extension = Output switch
             {
                 ProjectOutputFormat.Library => ".dll",
