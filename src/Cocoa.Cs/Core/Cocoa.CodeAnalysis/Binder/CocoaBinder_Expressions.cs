@@ -1804,7 +1804,7 @@ namespace Cocoa.CodeAnalysis.Binder
 
         /// <summary>
         /// 6e-M19 M2-b：facade 成员路由。receiver 为基元/string 时查找对应 facade 类（System.Int32 等，
-        /// stdlib cod 注入）的方法（声明侧已降级为静态、首参 this），receiver 前置为首参完成静态容器
+        /// stdlib coa 注入）的方法（声明侧已降级为静态、首参 this），receiver 前置为首参完成静态容器
         /// 调用绑定，三后端零特判发射。未命中返回 null（外层继续报 UnknownMember）。
         /// </summary>
         private BoundExpression? TryBindFacadeMemberCall(
@@ -1852,7 +1852,7 @@ namespace Cocoa.CodeAnalysis.Binder
             return new BoundCallExpression(syntax, method, boundArguments.ToImmutable());
         }
 
-        /// <summary>receiver 类型 → facade 类（stdlib cod 注入；全名解析优先，cod 库直查兜底）。</summary>
+        /// <summary>receiver 类型 → facade 类（stdlib coa 注入；全名解析优先，coa 库直查兜底）。</summary>
         private NamedTypeSymbol? ResolveFacadeClass(TypeSymbol receiverType)
         {
             var fullName = FacadeNameOfType(receiverType);
@@ -1868,7 +1868,7 @@ namespace Cocoa.CodeAnalysis.Binder
                 return nts;
             }
 
-            // 全名映射表为准（cod 注入类不带序列化标记；声明侧/注入侧均已补齐，此处双保险）
+            // 全名映射表为准（coa 注入类不带序列化标记；声明侧/注入侧均已补齐，此处双保险）
             if (!FacadeTargets.ContainsKey(fullName))
             {
                 return null;

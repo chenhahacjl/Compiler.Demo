@@ -337,7 +337,7 @@ namespace Cocoa.Build
                 CopyReferencesToOutput(references, outputDirectory);
 
                 // 动态链接（阶段 A）：被消费的 `.coa` 库按需生成托管 dll 并部署——
-                // 含系统库（SystemLibrary 自动发现）。缺失或 stamp（cod sha256）过期 → 现场再生，自愈误删
+                // 含系统库（SystemLibrary 自动发现）。缺失或 stamp（coa sha256）过期 → 现场再生，自愈误删
                 if (linkCoaDynamically)
                 {
                     if (!EnsureManagedDlls(compilation.CoaLibraries, outputDirectory, IlTarget.Parse(dotnetRuntime!) ?? IlTarget.Default, messageWriter))
@@ -548,7 +548,7 @@ namespace Cocoa.Build
 
         /// <summary>
         /// 动态链接（阶段 A）：确保被消费 `.coa` 库的托管 dll（X.Managed.dll）在输出目录就绪——
-        /// 缺失或 stamp（cod 文件 sha256）过期 → 从 cod 现场再生。误删/清缓存后下次构建自动自愈。
+        /// 缺失或 stamp（coa 文件 sha256）过期 → 从 coa 现场再生。误删/清缓存后下次构建自动自愈。
         /// 返回 false 表示有生成错误（已写诊断，调用方判构建失败）。
         /// </summary>
         private static bool EnsureManagedDlls(IEnumerable<(string Name, string SourcePath)> libraries, string outputDirectory, IlTarget target, TextWriter messageWriter)

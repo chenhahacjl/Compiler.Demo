@@ -145,7 +145,7 @@ namespace System.Collections.Generic
         public void Stack_PushPopPeek()
         {
             var libTree = SyntaxTree.Parse(CollectionsSource);
-            // Stack.co 由 SDK 构建产出的 cod 注入——但此处用源码集成模式
+            // Stack.co 由 SDK 构建产出的 coa 注入——但此处用源码集成模式
             var stackSource = SyntaxTree.Parse(StackSource);
             var appTree = SyntaxTree.Parse(@"
 function Main(): void

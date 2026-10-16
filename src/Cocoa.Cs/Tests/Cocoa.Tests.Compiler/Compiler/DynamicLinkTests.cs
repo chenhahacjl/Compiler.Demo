@@ -7,13 +7,13 @@ using Xunit;
 namespace Cocoa.Tests.Compiler
 {
     /// <summary>
-    /// 动态链接（阶段 A）端到端：库构建只产 cod；消费方按需生成 X.Managed.dll 并部署；
+    /// 动态链接（阶段 A）端到端：库构建只产 coa；消费方按需生成 X.Managed.dll 并部署；
     /// 部署 dll 被误删后增量重建自动自愈（lazy 模型核心承诺）。
     /// </summary>
     public class DynamicLinkTests
     {
         [Fact]
-        public void Cod_Consumer_Generates_And_SelfHeals_ManagedDlls()
+        public void Coa_Consumer_Generates_And_SelfHeals_ManagedDlls()
         {
             var root = CliTestRunner.NewTempDir("dynlink");
             var libDir = Path.Combine(root, "Lib");
@@ -52,7 +52,7 @@ namespace MyLib
                 "  <ItemGroup>\n    <Source Include=\"*.co\" />\n    <Reference Include=\"../Lib/Lib.coa\" />\n  </ItemGroup>\n" +
                 "</Project>\n");
 
-            // 1. 库构建：只产出 cod，不预生成任何 dll（lazy）
+            // 1. 库构建：只产出 coa，不预生成任何 dll（lazy）
             var libBuild = CliTestRunner.Run($"build \"{Path.Combine(libDir, "Lib.coproj")}\"", root);
             Assert.Equal(0, libBuild.ExitCode);
             Assert.True(File.Exists(Path.Combine(libDir, "Lib.coa")));

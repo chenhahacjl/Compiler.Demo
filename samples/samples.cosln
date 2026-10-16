@@ -13,7 +13,7 @@
   <Project Include="Tutorial/Dialects/TopLevelFunctions/TopLevelFunctions.coproj" />
   <Project Include="Libraries/NetLibrary/mylib/MyLib.coproj" />
   <Project Include="Libraries/NetLibrary/app/App.coproj" />
-  <Project Include="Libraries/CodLibrary/mylib/MyLib.coproj" />
-  <Project Include="Libraries/CodLibrary/app/App.coproj" />
+  <Project Include="Libraries/CoaLibrary/mylib/MyLib.coproj" />
+  <Project Include="Libraries/CoaLibrary/app/App.coproj" />
   <Project Include="Classes/CSharpClass/CSharpClass.coproj" />
 </Solution>

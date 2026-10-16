@@ -14,7 +14,7 @@
 | Cocoa.Cli | `src/Cocoa.Co/Cli/Cocoa.Cli.coproj` | Exe；`<Backend>native</Backend>`（项目级声明，`-b` 可覆盖）；`Reference ../Cocoa.Compiler/out/*.coa` | `Cocoa.Cli` csproj |
 | CodeGen（增量五） | `CodeGen/CodeGen.coproj` | Library | CodeGen 下 7 csproj 收敛为 1（Native/Il 子目录对称） |
 
-`src/Cocoa.Co/Cocoa.Co.cosln` 为唯一构建入口（`cocoa build src/Cocoa.Co/Cocoa.Co.cosln`），内部拓扑排序 + `.coa` 引用（CodLibrary 先例）。
+`src/Cocoa.Co/Cocoa.Co.cosln` 为唯一构建入口（`cocoa build src/Cocoa.Co/Cocoa.Co.cosln`），内部拓扑排序 + `.coa` 引用（CoaLibrary 先例）。
 
 ## 目录结构（终态蓝图）
 

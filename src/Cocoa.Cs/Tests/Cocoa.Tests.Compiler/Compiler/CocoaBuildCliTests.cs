@@ -156,9 +156,9 @@ namespace Cocoa.Tests.Compiler
         }
 
         [Fact]
-        public void Build_Project_CorruptCodReference_ReportsCleanError()
+        public void Build_Project_CorruptCoaReference_ReportsCleanError()
         {
-            var dir = NewRunDir("corrupt-cod");
+            var dir = NewRunDir("corrupt-coa");
             var libDir = Path.Combine(dir, "MyLib");
             var appDir = Path.Combine(dir, "App");
             Directory.CreateDirectory(libDir);
@@ -191,14 +191,14 @@ namespace Cocoa.Tests.Compiler
 
             var libBuild = Run($"build \"{Path.Combine(libDir, "MyLib.coproj")}\"");
             Assert.True(libBuild.ExitCode == 0, $"lib build failed: {libBuild.Stdout}{libBuild.Stderr}");
-            var codPath = Path.Combine(libDir, "out", "MyLib.coa");
-            Assert.True(File.Exists(codPath), $"cod not emitted: {libBuild.Stdout}{libBuild.Stderr}");
+            var coaPath = Path.Combine(libDir, "out", "MyLib.coa");
+            Assert.True(File.Exists(coaPath), $"coa not emitted: {libBuild.Stdout}{libBuild.Stderr}");
 
             // 校验和强制后：构造带合法校验和的版本错误文档，保证到达版本检查层
             var bogusCod = "(coa COCOA 99)\n";
             var bogusHash = Convert.ToHexString(
                 System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(bogusCod))).ToLowerInvariant();
-            File.WriteAllText(codPath, bogusCod + "(checksum sha256:" + bogusHash + ")");
+            File.WriteAllText(coaPath, bogusCod + "(checksum sha256:" + bogusHash + ")");
 
             File.WriteAllText(
                 Path.Combine(appDir, "App.co"),
@@ -366,9 +366,9 @@ namespace Cocoa.Tests.Compiler
         }
 
         [Fact]
-        public void Build_CodFormat_EmitsCodFile()
+        public void Build_CoaFormat_EmitsCoaFile()
         {
-            var run = "cod-format";
+            var run = "coa-format";
             var dir = NewRunDir(run);
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, "Lib.co"), "namespace MyLib\n{\n    function Add(a: i32, b: i32): i32\n    {\n        return a + b\n    }\n}\n");
@@ -388,9 +388,9 @@ namespace Cocoa.Tests.Compiler
         }
 
         [Fact]
-        public void Build_CodFormat_RejectsEntry()
+        public void Build_CoaFormat_RejectsEntry()
         {
-            var run = "cod-entry";
+            var run = "coa-entry";
             var dir = NewRunDir(run);
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, "Lib.co"), "function Main() { }");
@@ -408,7 +408,7 @@ namespace Cocoa.Tests.Compiler
             Assert.Contains("入口", stdout);
         }
 
-        private static (string LibDir, string AppDir) CreateCodLibraryAndApp(string run, string backend)
+        private static (string LibDir, string AppDir) CreateCoaLibraryAndApp(string run, string backend)
         {
             var root = NewRunDir(run);
             var libDir = Path.Combine(root, "Lib");
@@ -473,9 +473,9 @@ namespace MyLib
         [Theory]
         [InlineData("native")]
         [InlineData("managed-net")]
-        public void Build_CodReference_Consume_Runs(string backend)
+        public void Build_CoaReference_Consume_Runs(string backend)
         {
-            var (libDir, appDir) = CreateCodLibraryAndApp("cod-consume-" + backend, backend);
+            var (libDir, appDir) = CreateCoaLibraryAndApp("coa-consume-" + backend, backend);
             var libProject = Path.Combine(libDir, "Lib.coproj");
             var appProject = Path.Combine(appDir, "App.coproj");
 
@@ -498,9 +498,9 @@ namespace MyLib
         }
 
         [Fact]
-        public void Build_CodReference_CopiedToOutput()
+        public void Build_CoaReference_CopiedToOutput()
         {
-            var (libDir, appDir) = CreateCodLibraryAndApp("copylocal-cod", "managed-net");
+            var (libDir, appDir) = CreateCoaLibraryAndApp("copylocal-coa", "managed-net");
             var libResult = Run($"build \"{Path.Combine(libDir, "Lib.coproj")}\"");
             Assert.Equal(0, libResult.ExitCode);
 

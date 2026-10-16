@@ -8,7 +8,7 @@ namespace Cocoa.CodeGen.Managed
     /// <summary>
     /// 单个方法体的 IL 发射状态（4.1）：把 <c>IlEmitter</c> 的"方法体发射状态"（局部变量槽、临时槽、
     /// 标签占位、异常保护区、return 出口、闭包环境局部）收拢为协作对象，随方法体发射创建、结束时释放。
-    /// IlEmitter 保留跨方法共享依赖（MetadataBuilder/token 映射/框架引用/符号 Def 映射/cod 缓存）。
+    /// IlEmitter 保留跨方法共享依赖（MetadataBuilder/token 映射/框架引用/符号 Def 映射/coa 缓存）。
     /// </summary>
     internal sealed class MethodBodyBuilder
     {

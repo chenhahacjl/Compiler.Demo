@@ -92,7 +92,7 @@ namespace Cocoa.Cli
             Console.WriteLine($"platforms : {JoinOrNone(program.Platforms)}");
             Console.WriteLine($"imports   : {JoinOrNone(program.NativeImports)}");
             Console.WriteLine($"refs dll  : {JoinOrNone(program.DotnetReferences)}");
-            Console.WriteLine($"refs cod  : {JoinOrNone(program.CoaReferences)}");
+            Console.WriteLine($"refs coa  : {JoinOrNone(program.CoaReferences)}");
             Console.WriteLine($"namespaces: {JoinOrNone(program.Namespaces)}");
 
             if (program.Enums.Length > 0)

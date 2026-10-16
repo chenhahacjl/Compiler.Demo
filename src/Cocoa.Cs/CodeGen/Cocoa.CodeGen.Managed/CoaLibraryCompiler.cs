@@ -30,20 +30,20 @@ namespace Cocoa.CodeGen.Managed
         }
 
         /// <summary>从内存中的 CoaProgram 发射托管库 dll（仅系统库外部目录）。</summary>
-        public static ImmutableArray<Diagnostic> EmitManagedDll(CoaProgram cod, string dllPath, IlTarget target)
+        public static ImmutableArray<Diagnostic> EmitManagedDll(CoaProgram coa, string dllPath, IlTarget target)
         {
-            return EmitManagedDllCore(cod, dllPath, target, BuildExternalProvenance(SystemLibrary.Load()));
+            return EmitManagedDllCore(coa, dllPath, target, BuildExternalProvenance(SystemLibrary.Load()));
         }
 
         /// <summary>6f-2：从内存中的 CoaProgram 发射托管库 dll，外部目录 = 完整库集合（系统库 + 引用用户库）——
         /// 库间动态链接（阶段 A3）：本库体调用其他用户库时，对该库符号命中 provenance → Call [X.Managed]member。
         /// 自身从目录排除（自身符号按本地方法/类型发射）。</summary>
-        public static ImmutableArray<Diagnostic> EmitManagedDll(CoaProgram cod, string dllPath, IlTarget target, ImmutableArray<CoaProgram> allLibraries)
+        public static ImmutableArray<Diagnostic> EmitManagedDll(CoaProgram coa, string dllPath, IlTarget target, ImmutableArray<CoaProgram> allLibraries)
         {
             var builder = ImmutableDictionary.CreateBuilder<object, string>(System.Collections.Generic.ReferenceEqualityComparer.Instance);
             foreach (var library in allLibraries)
             {
-                if (ReferenceEquals(library, cod) || string.IsNullOrEmpty(library.Name))
+                if (ReferenceEquals(library, coa) || string.IsNullOrEmpty(library.Name))
                 {
                     continue;
                 }
@@ -51,16 +51,16 @@ namespace Cocoa.CodeGen.Managed
                 PopulateProvenance(builder, library);
             }
 
-            return EmitManagedDllCore(cod, dllPath, target, builder.ToImmutable());
+            return EmitManagedDllCore(coa, dllPath, target, builder.ToImmutable());
         }
 
-        private static ImmutableArray<Diagnostic> EmitManagedDllCore(CoaProgram cod, string dllPath, IlTarget target, ImmutableDictionary<object, string> coaAssemblies)
+        private static ImmutableArray<Diagnostic> EmitManagedDllCore(CoaProgram coa, string dllPath, IlTarget target, ImmutableDictionary<object, string> coaAssemblies)
         {
             // 6e 跨库里程碑：gcls 开放方法（泛型定义/泛型方法，开放类型参数无法编码 IL）不进库发射——
             // 否则其 ContainingClass（泛型定义类）被当作普通类发射，遇 K/T 报 Unexpected type K。
             // S-7：.coa 库体为 raw 结构化 HIR —— 送入 BoundProgram 前统一 Lower 为 MIR（IlEmitter 消费契约）。
             var functionsBuilder = ImmutableDictionary.CreateBuilder<CodeAnalysis.Symbols.FunctionSymbol, BoundBlockStatement>();
-            foreach (var pair in cod.Bodies)
+            foreach (var pair in coa.Bodies)
             {
                 if (pair.Key.ContainingClass?.IsGenericDefinition == true || pair.Key.IsGenericMethod)
                 {
@@ -71,7 +71,7 @@ namespace Cocoa.CodeGen.Managed
             }
 
             // 6e-M35：库 extern 函数（import P/Invoke，无 body）同样进发射清单——本地 MethodDef+ImplMap（kernel32.dll 等 native import）
-            foreach (var fn in cod.Functions)
+            foreach (var fn in coa.Functions)
             {
                 if (fn.IsExtern && !functionsBuilder.ContainsKey(fn))
                 {
@@ -86,7 +86,7 @@ namespace Cocoa.CodeGen.Managed
                 mainFunction: null,
                 scriptFunction: null,
                 functions: functionsBuilder.ToImmutable(),
-                classes: cod.Classes);
+                classes: coa.Classes);
 
             var moduleName = Path.GetFileNameWithoutExtension(dllPath);
             var references = IlReferenceResolver.ResolveDefaultReferences(target)
@@ -99,7 +99,7 @@ namespace Cocoa.CodeGen.Managed
         /// <summary>
         /// 6f-2：外部库符号 → Managed dll 程序集名 溯源目录（动态链接 A3）。与 CocoaBinder 动态 provenance
         /// 同构：A1 库发射时跨库调用（本库体调用 System.Core 等）需在 coaAssemblies 命中才能输出
-        /// `Call [X.Managed]member` 而非落到本地方法定义。用户库间依赖后续经 refcod 拓扑扩展。
+        /// `Call [X.Managed]member` 而非落到本地方法定义。用户库间依赖后续经 refcoa 拓扑扩展。
         /// </summary>
         private static ImmutableDictionary<object, string> BuildExternalProvenance(ImmutableArray<CoaProgram> external)
         {

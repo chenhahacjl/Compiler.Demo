@@ -822,7 +822,7 @@ namespace Cocoa.CodeGen.Managed
 
         /// <summary>
         /// 用户定义运算符方法的 IL 发射：按参数顺序压栈后 <c>call</c>。
-        /// 目标优先本编译单元 <see cref="_methods"/> 的 MethodDef，回退 cod 库的 MemberRef。
+        /// 目标优先本编译单元 <see cref="_methods"/> 的 MethodDef，回退 coa 库的 MemberRef。
         /// 运算符方法恒 static，故无 this/接收者与 struct 取址处理。
         /// </summary>
         private void EmitUserDefinedOperatorCall(IlAssembler il, FunctionSymbol method, params BoundExpression[] arguments)
@@ -844,7 +844,7 @@ namespace Cocoa.CodeGen.Managed
                 return;
             }
 
-            throw new System.Exception($"运算符方法 '{method.ContainingClass?.Name}.{method.Name}' 无发射目标（未登记 MethodDef 且非 cod 库成员）。");
+            throw new System.Exception($"运算符方法 '{method.ContainingClass?.Name}.{method.Name}' 无发射目标（未登记 MethodDef 且非 coa 库成员）。");
         }
 
         private void EmitBinaryExpression(IlAssembler il, BoundBinaryExpression node)

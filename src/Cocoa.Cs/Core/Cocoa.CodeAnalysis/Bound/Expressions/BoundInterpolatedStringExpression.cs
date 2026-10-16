@@ -9,7 +9,7 @@ namespace Cocoa.CodeAnalysis.Bound
     /// <summary>
     /// 插值字符串的高 Bound（Y A2-F1）：保留文本段与"已绑定洞"结构，由共享规范化 pass
     /// （<see cref="Lowering.InterpolationNormalizer"/>）降至 <see cref="BoundFormatExpression"/> / string 拼接。
-    /// Type 恒为 string；本节点仅存在于"绑定后 → 规范化前"，cod / 发射 / 求值均消费降后形态。
+    /// Type 恒为 string；本节点仅存在于"绑定后 → 规范化前"，coa / 发射 / 求值均消费降后形态。
     /// </summary>
     public sealed class BoundInterpolatedStringExpression : BoundExpression
     {

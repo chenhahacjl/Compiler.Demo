@@ -29,7 +29,7 @@ namespace Cocoa.CodeAnalysis
                     if (reference.EndsWith(".coa", StringComparison.OrdinalIgnoreCase))
                     {
                         // 6e 跨库里程碑：用户 `.coa` 以「系统库 + 已加载用户库」为 external——
-                        // 跨库符号合并复用实例（按依赖序加载；本轮最小实现：按传入序，refcod 拓扑留待完善）
+                        // 跨库符号合并复用实例（按依赖序加载；本轮最小实现：按传入序，refcoa 拓扑留待完善）
                         var external = builder.ToImmutable();
                         var library = CoaSerializer.Load(reference, external);
                         library.Name = CoaAssemblyNaming.ManagedAssemblyName(Path.GetFileNameWithoutExtension(reference));
@@ -96,7 +96,7 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>
-        /// 6e-Step E：`.coa` 库引用拓扑序（Kahn）——按各自 `CoaReferences`（refcod 清单）构造依赖图，
+        /// 6e-Step E：`.coa` 库引用拓扑序（Kahn）——按各自 `CoaReferences`（refcoa 清单）构造依赖图，
         /// 被依赖库先行（读侧 external 按序合并，首次命中实例复用）。环检测报错；未加载依赖计为无约束（宽松）。
         /// 排序稳定：同层保持原相对顺序。
         /// </summary>
@@ -186,7 +186,7 @@ namespace Cocoa.CodeAnalysis
                     }
                 }
 
-                throw new InvalidOperationException("cod 库循环引用: " + string.Join(", ", cyclic) + "。refcod 依赖不能成环。");
+                throw new InvalidOperationException("coa 库循环引用: " + string.Join(", ", cyclic) + "。refcoa 依赖不能成环。");
             }
 
             return order.ToImmutable();
@@ -205,7 +205,7 @@ namespace Cocoa.CodeAnalysis
 
         private static string NormalizeReference(string reference)
         {
-            // refcod 清单可能带 `X.Managed` 形式（命名对齐），压平为库键
+            // refcoa 清单可能带 `X.Managed` 形式（命名对齐），压平为库键
             var baseName = reference;
             if (baseName.EndsWith(".coa", StringComparison.OrdinalIgnoreCase))
             {
@@ -265,7 +265,7 @@ namespace Cocoa.CodeAnalysis
         /// <summary>类声明是否带 `facade` 修饰符（未命中 FacadeTargets 的 facade 类映射 BCL 前也按符号序列化）。</summary>
         private static bool DeclaredFacade(NamedTypeSymbol classType)
         {
-            // 部分类任一部分声明含 facade 关键字即算；Declaration 为 null（纯 cod 重建/外部类）按 IsFacadeClass 判定
+            // 部分类任一部分声明含 facade 关键字即算；Declaration 为 null（纯 coa 重建/外部类）按 IsFacadeClass 判定
             return classType.Declaration?.HasDeclaredFacadeModifier() ?? false;
         }
 

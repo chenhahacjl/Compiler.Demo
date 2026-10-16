@@ -95,9 +95,9 @@ function Main(): void
         public void DEBUG_SubstitutedCtor_VariableAudit()
         {
             var dir = NewDir();
-            var codPath = EmitGenericLibrary(dir);
+            var coaPath = EmitGenericLibrary(dir);
 
-            var lib = global::Cocoa.CodeAnalysis.Serialization.CoaSerializer.Load(codPath);
+            var lib = global::Cocoa.CodeAnalysis.Serialization.CoaSerializer.Load(coaPath);
             var def = lib.GenericDefinitions.Single();
             var ctorDef = def.Methods.Single(m => m.IsConstructor);
 
@@ -140,9 +140,9 @@ function Main(): void
         public void Evaluator_Consumes_GenericLibrary()
         {
             var dir = NewDir();
-            var codPath = EmitGenericLibrary(dir);
+            var coaPath = EmitGenericLibrary(dir);
 
-            var compilation = Compilation.Create(new[] { codPath }, SyntaxTree.Parse(AppSource));
+            var compilation = Compilation.Create(new[] { coaPath }, SyntaxTree.Parse(AppSource));
             var result = compilation.Evaluate(new System.Collections.Generic.Dictionary<Cocoa.CodeAnalysis.Symbols.VariableSymbol, object>());
 
             Assert.Empty(result.Diagnostics.Where(d => d.IsError));
@@ -160,10 +160,10 @@ function Main(): void
         {
             var platform = (TargetPlatform)platformObject;
             var dir = NewDir();
-            var codPath = EmitGenericLibrary(dir);
+            var coaPath = EmitGenericLibrary(dir);
 
             var syntaxTree = SyntaxTree.Parse(AppSource);
-            var compilation = Compilation.Create(new[] { codPath }, syntaxTree);
+            var compilation = Compilation.Create(new[] { coaPath }, syntaxTree);
             var exePath = Path.Combine(dir, "app" + (platform.Arch == Architecture.X86 ? "-x86" : "-x64") + ".exe");
             var diagnostics = compilation.EmitNative("app", exePath, platform);
             Assert.True(diagnostics.IsEmpty, string.Join("\n", diagnostics.Select(d => d.Message)));
@@ -187,11 +187,11 @@ function Main(): void
         public void Il_Consumes_GenericLibrary()
         {
             var dir = NewDir();
-            var codPath = EmitGenericLibrary(dir);
+            var coaPath = EmitGenericLibrary(dir);
 
             var syntaxTree = SyntaxTree.Parse(AppSource);
             var compilation = Compilation.Create("Main",
-                new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location, codPath },
+                new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location, coaPath },
                 syntaxTree);
             var exePath = Path.Combine(dir, "app-il.exe");
             var diagnostics = compilation.Emit("app-il",

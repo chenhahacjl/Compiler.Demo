@@ -15,7 +15,7 @@ namespace Cocoa.Tests.Compiler
         [Fact]
         public void Library_With_HigherOrder_Functions_RoundTrips_And_Runs()
         {
-            var root = CliTestRunner.NewTempDir("cod-fnty");
+            var root = CliTestRunner.NewTempDir("coa-fnty");
             var libDir = Path.Combine(root, "MathLib");
             var appDir = Path.Combine(root, "App");
             Directory.CreateDirectory(libDir);

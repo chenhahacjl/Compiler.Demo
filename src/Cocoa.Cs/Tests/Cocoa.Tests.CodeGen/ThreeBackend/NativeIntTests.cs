@@ -43,7 +43,7 @@ function Main(): i32
 }";
 
         private const string Expected = "True\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nFalse\n";
-        private const string CodExpected = "True\nTrue\n";
+        private const string CoaExpected = "True\nTrue\n";
 
         // ---- Evaluator -------------------------------------------------------
 
@@ -267,9 +267,9 @@ function Main(): i32
         // ---- .coa round-trip（@nint/@nuint TypeRef） -------------------------
 
         [Fact]
-        public void Cod_RoundTrip_NativeInt_FieldAndParam()
+        public void Coa_RoundTrip_NativeInt_FieldAndParam()
         {
-            var dir = Path.Combine(Path.GetTempPath(), "cocoa-nint-cod-" + Guid.NewGuid().ToString("N"));
+            var dir = Path.Combine(Path.GetTempPath(), "cocoa-nint-coa-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(dir);
 
             var libSource = @"namespace MyLib
@@ -323,7 +323,7 @@ function Main(): i32
                 Console.SetOut(writer);
                 var eval = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
                 Assert.True(!eval.Diagnostics.HasErrors(), string.Join("\n", eval.Diagnostics.Select(d => d.Message)));
-                Assert.Equal(CodExpected, writer.ToString().Replace("\r\n", "\n"));
+                Assert.Equal(CoaExpected, writer.ToString().Replace("\r\n", "\n"));
             }
             finally
             {

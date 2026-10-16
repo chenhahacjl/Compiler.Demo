@@ -35,7 +35,7 @@ namespace Cocoa.CodeGen.Managed
                 return;
             }
 
-            // 动态链接（阶段 A3）：cod 顶层函数 → <CocoaTopLevel>.MemberRef 外部调用
+            // 动态链接（阶段 A3）：coa 顶层函数 → <CocoaTopLevel>.MemberRef 外部调用
             if (_coaAssemblies.TryGetValue(node.Function, out var coaAssembly))
             {
                 foreach (var argument in node.Arguments)

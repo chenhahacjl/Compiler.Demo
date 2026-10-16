@@ -66,7 +66,7 @@ function Main(): i32
         [Fact]
         public void EmitCocoa_Serializes_BaseType_And_CtorChain()
         {
-            var dir = Path.Combine(Path.GetTempPath(), "cocoa-codinherit-" + Guid.NewGuid().ToString("N"));
+            var dir = Path.Combine(Path.GetTempPath(), "cocoa-coainherit-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(dir);
             var output = Path.Combine(dir, "Lib.coa");
 
@@ -84,16 +84,16 @@ function Main(): i32
         [Fact]
         public void Read_Coa_Restores_BaseType_Chain()
         {
-            var dir = Path.Combine(Path.GetTempPath(), "cocoa-codinherit-" + Guid.NewGuid().ToString("N"));
+            var dir = Path.Combine(Path.GetTempPath(), "cocoa-coainherit-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(dir);
             var output = Path.Combine(dir, "Lib.coa");
 
             var compilation = Compilation.Create(SyntaxTree.Parse(LibSource));
             Assert.True(compilation.EmitCocoa("Lib", output).IsEmpty);
 
-            var cod = CoaSerializer.Read(File.ReadAllText(output), "Lib", ImmutableArray<CoaProgram>.Empty);
-            var baseType = cod.Classes.First(c => c.Name == "Base");
-            var derived = cod.Classes.First(c => c.Name == "Derived");
+            var coa = CoaSerializer.Read(File.ReadAllText(output), "Lib", ImmutableArray<CoaProgram>.Empty);
+            var baseType = coa.Classes.First(c => c.Name == "Base");
+            var derived = coa.Classes.First(c => c.Name == "Derived");
 
             Assert.Equal(baseType, derived.BaseType);
             Assert.Same(baseType, derived.BaseType);
@@ -129,7 +129,7 @@ function Main(): i32
         public void Il_E2e_Consumer_Inheritance()
         {
             var lib = CompileLib();
-            var (exitCode, stdout) = EmitIlAndRun(Consumer, lib, "cod-inherit-il");
+            var (exitCode, stdout) = EmitIlAndRun(Consumer, lib, "coa-inherit-il");
             Assert.Equal(0, exitCode);
             Assert.Equal(Expected, stdout.Replace("\r\n", "\n"));
         }
@@ -145,14 +145,14 @@ function Main(): i32
         public void Native_E2e_Consumer_Inheritance(object platform)
         {
             var lib = CompileLib();
-            var (exitCode, stdout) = EmitNativeAndRun(Consumer, lib, "cod-inherit-native", (TargetPlatform)platform);
+            var (exitCode, stdout) = EmitNativeAndRun(Consumer, lib, "coa-inherit-native", (TargetPlatform)platform);
             Assert.Equal(0, exitCode);
             Assert.Equal(Expected, stdout);
         }
 
         private static string CompileLib()
         {
-            var dir = Path.Combine(Path.GetTempPath(), "cocoa-codinherit-" + Guid.NewGuid().ToString("N"));
+            var dir = Path.Combine(Path.GetTempPath(), "cocoa-coainherit-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(dir);
             var output = Path.Combine(dir, "Lib.coa");
             var compilation = Compilation.Create(SyntaxTree.Parse(LibSource));
@@ -165,7 +165,7 @@ function Main(): i32
         {
             var syntaxTree = SyntaxTree.Parse(source);
             var compilation = Compilation.Create("Main", new[] { libPath, typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, syntaxTree);
-            var directory = Path.Combine(Path.GetTempPath(), "cocoa-codinherit-il");
+            var directory = Path.Combine(Path.GetTempPath(), "cocoa-coainherit-il");
             Directory.CreateDirectory(directory);
             var exePath = Path.Combine(directory, name + ".exe");
             var diagnostics = compilation.Emit(name, new[] { libPath, typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, exePath, IlTarget.Parse("net9.0"));
@@ -189,7 +189,7 @@ function Main(): i32
         {
             var syntaxTree = SyntaxTree.Parse(source);
             var compilation = Compilation.Create("Main", new[] { libPath }, syntaxTree);
-            var directory = Path.Combine(Path.GetTempPath(), "cocoa-codinherit-native");
+            var directory = Path.Combine(Path.GetTempPath(), "cocoa-coainherit-native");
             Directory.CreateDirectory(directory);
             var suffix = platform.Arch == Architecture.X86 ? "-x86" : "";
             var exePath = Path.Combine(directory, name + suffix + ".exe");

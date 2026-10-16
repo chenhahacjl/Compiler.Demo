@@ -25,11 +25,11 @@ namespace Cocoa.CodeGen.Managed
         private readonly IlFramework _framework;
         private readonly string _moduleName;
 
-        // 动态链接（阶段 A3）：cod 来源符号 → 库程序集名；据此合成 AssemblyRef/TypeRef/MemberRef 指向各库 dll
+        // 动态链接（阶段 A3）：coa 来源符号 → 库程序集名；据此合成 AssemblyRef/TypeRef/MemberRef 指向各库 dll
         private readonly ImmutableDictionary<object, string> _coaAssemblies;
         private readonly Dictionary<string, IlAssemblyRef> _coaAssemblyRefs = new Dictionary<string, IlAssemblyRef>();
 
-        /// <summary>cod 顶层函数重载组（同库内同 (ns,name) 的函数 >1）：方法名追加参数类型后缀，与库侧发射规则一致。</summary>
+        /// <summary>coa 顶层函数重载组（同库内同 (ns,name) 的函数 >1）：方法名追加参数类型后缀，与库侧发射规则一致。</summary>
         private readonly HashSet<(string asm, string ns, string name)> _coaOverloadedGroups = new();
         private readonly Dictionary<FunctionSymbol, IlMethodDef> _methods = new Dictionary<FunctionSymbol, IlMethodDef>();
 
@@ -255,7 +255,7 @@ namespace Cocoa.CodeGen.Managed
                     }
                     else if (iface.ContainingLibrary != null && iface.TypeKind == TypeKind.Interface)
                     {
-                        // cod 库接口（BCL 同名接口）：无 TypeDef，按全名直联。
+                        // coa 库接口（BCL 同名接口）：无 TypeDef，按全名直联。
                         // 仅当 BCL 对应物确实为接口时才重定向（System.IO.Stream 在 Cocoa 是接口、BCL 是类 → 跳过，
                         // 否则 TypeDef 会"把类当接口实现"被 CLR 拒绝）。
                         if (_framework.IsInterfaceInReferences(iface.FullName))
@@ -1272,7 +1272,7 @@ namespace Cocoa.CodeGen.Managed
                     return IlType.Class(_framework.RequireType(openNameDef), isValueType: isStructFacade);
                 }
 
-                // 动态链接：cod 容器类 → 指向其库 dll 的 TypeRef
+                // 动态链接：coa 容器类 → 指向其库 dll 的 TypeRef
                 if (_coaAssemblies.TryGetValue(classType, out var coaAssembly))
                 {
                     return IlType.Class(CoaClassRef(classType, coaAssembly));
@@ -1313,14 +1313,14 @@ namespace Cocoa.CodeGen.Managed
                     return IlType.Class(_framework.RequireType("System.Type"));
                 }
 
-                // cod 库接口（System.IDisposable / IEnumerable 等 BCL 同名接口）：无 TypeDef，按全名直联 BCL TypeRef。
+                // coa 库接口（System.IDisposable / IEnumerable 等 BCL 同名接口）：无 TypeDef，按全名直联 BCL TypeRef。
                 // （接口在 .coa 重建后 ContainingLibrary 已回填，正值系统库与消费方共享接口成员。）
                 if (classType.ContainingLibrary != null && classType.TypeKind == TypeKind.Interface)
                 {
                     return IlType.Class(_framework.RequireType(classType.FullName));
                 }
 
-                // cod 库类已在 BCL 引用中定义（MemoryStream 等）：无 TypeDef，按全名直联 BCL TypeRef。
+                // coa 库类已在 BCL 引用中定义（MemoryStream 等）：无 TypeDef，按全名直联 BCL TypeRef。
                 if (_classTypeDefs.TryGetValue(classType, out var typeDef))
                 {
                     return IlType.Class(typeDef, isValueType: classType.IsValueType);
@@ -1422,7 +1422,7 @@ namespace Cocoa.CodeGen.Managed
         }
 
         /// <summary>
-        /// cod 函数的 MemberRef 合成：类方法挂宿主类 TypeRef（方法名 EmitName 原样）；顶层函数挂
+        /// coa 函数的 MemberRef 合成：类方法挂宿主类 TypeRef（方法名 EmitName 原样）；顶层函数挂
         /// &lt;CocoaTopLevel&gt; TypeRef（EmitName 全名 + 重载后缀，规则与库侧发射一致）。
         /// </summary>
         private IlMethodRef CoaMethodRef(FunctionSymbol function, string assemblyName)

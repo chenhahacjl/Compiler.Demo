@@ -27,7 +27,7 @@ namespace Cocoa.CodeAnalysis.Bound
         public ImmutableArray<NamedTypeSymbol> Classes { get; }
 
         /// <summary>
-        /// 动态链接（阶段 A2）：cod 来源符号 → 所属库程序集名（如 "MyLib"）。
+        /// 动态链接（阶段 A2）：coa 来源符号 → 所属库程序集名（如 "MyLib"）。
         /// 非空时 IlEmitter 对这些符号合成 AssemblyRef/TypeRef/MemberRef 指向同名 dll，
         /// 而非内联实现；键为 NamedTypeSymbol / FunctionSymbol（extern 与 builtin 单例不入表）。
         /// </summary>

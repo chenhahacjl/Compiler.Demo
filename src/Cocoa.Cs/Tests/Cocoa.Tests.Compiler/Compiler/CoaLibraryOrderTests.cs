@@ -14,7 +14,7 @@ namespace Cocoa.Tests.Compiler
     /// </summary>
     public class CoaLibraryOrderTests
     {
-        private static CoaProgram Library(string name, params string[] codReferences)
+        private static CoaProgram Library(string name, params string[] coaReferences)
         {
             var program = new CoaProgram(
                 functions: default,
@@ -26,7 +26,7 @@ namespace Cocoa.Tests.Compiler
                 platforms: default,
                 dotnetReferences: default,
                 nativeImports: default,
-                coaReferences: codReferences.ToImmutableArray(),
+                coaReferences: coaReferences.ToImmutableArray(),
                 namespaces: default);
             program.Name = name;
             return program;

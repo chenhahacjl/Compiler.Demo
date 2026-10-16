@@ -254,7 +254,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
             var classType = new NamedTypeSymbol(name, ns, visibility, declaration: null);
             classType.ContainingLibrary = _context.ModuleName;
             classType.FacadeBclTargetName = bclTargetName;
-            // 6e-M19 M2-c：cod 类默认继承 System.Object（与源码绑定一致；.coa v1 不序列化接口声明）。
+            // 6e-M19 M2-c：coa 类默认继承 System.Object（与源码绑定一致；.coa v1 不序列化接口声明）。
             classType.BaseType = NamedTypeSymbol.SystemObject;
             // 6e-G7/M0-1a：接口位回填 + 实现接口列表回填
             if (isInterface)

@@ -288,7 +288,7 @@ namespace Cocoa.Tests.Compiler
             var runDir = Build(backend: "managed-net", dotnetRuntime: "net9.0")!;
 
             // .coa 库消费（编译期 IR 合并）：Add/Mul/Factorial/enum 判定/字符串拼接
-            AssertExeOutput(RunDirectExe, SampleExe(runDir, "Libraries/CodLibrary/app"),
+            AssertExeOutput(RunDirectExe, SampleExe(runDir, "Libraries/CoaLibrary/app"),
                 new[] { "5", "12", "120", "weekend", "Hello, Cocoa" });
             // .NET dll 库消费（类实例化 + 方法调用）：Point(3,4) → X/Y/Area
             AssertExeOutput(RunDirectExe, SampleExe(runDir, "Libraries/NetLibrary/app"),
@@ -303,11 +303,11 @@ namespace Cocoa.Tests.Compiler
         /// 断言 .coa 库消费路径在 native 下的输出与语义一致（双后端通用性）。
         /// </summary>
         [Fact]
-        public void Golden_Native_CodLibrary_Snapshot()
+        public void Golden_Native_CoaLibrary_Snapshot()
         {
             var runDir = BuildTolerant(backend: "native");
 
-            AssertExeOutput(RunNative, SampleExe(runDir, "Libraries/CodLibrary/app"),
+            AssertExeOutput(RunNative, SampleExe(runDir, "Libraries/CoaLibrary/app"),
                 new[] { "5", "12", "120", "weekend", "Hello, Cocoa" });
         }
     }

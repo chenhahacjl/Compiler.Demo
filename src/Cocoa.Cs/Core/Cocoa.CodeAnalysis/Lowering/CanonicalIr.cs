@@ -7,7 +7,7 @@ namespace Cocoa.CodeAnalysis.Lowering
 {
     /// <summary>
     /// 规范 IR 契约校验（Y A2-F1 + HIR 净化 T0.5）：在消费边界确认函数体已无"高 Bound"节点——
-    /// 语用：高节点只允许存活于"绑定后 → 规范化前"；cod / 三后端 / 求值只能见到规范形态。
+    /// 语用：高节点只允许存活于"绑定后 → 规范化前"；coa / 三后端 / 求值只能见到规范形态。
     /// 清单随 F6（高/规范节点分离）扩充；高节点集以 <see cref="IsHighKind"/> 集中声明，便于 Phase 1 追加语言专属高节点。
     /// </summary>
     internal static class CanonicalIr

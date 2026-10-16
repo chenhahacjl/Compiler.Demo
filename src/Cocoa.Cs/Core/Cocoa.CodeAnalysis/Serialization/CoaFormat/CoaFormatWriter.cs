@@ -186,7 +186,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                 _output.End();
             }
 
-            _output.End(); // cod
+            _output.End(); // coa
             buffer.WriteLine();
 
             // 完整性校验：对正文全部字节（UTF-8）取SHA256，追加为文件末行（读侧强制校验，缺失/不符拒载）。
@@ -910,7 +910,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                     break;
                 default:
                     // 6e-G7 S2：杜绝静默产出损坏流——未覆盖节点显式失败
-                    throw new NotSupportedException($"[cod] Unserializable statement kind '{statement.Kind}'");
+                    throw new NotSupportedException($"[coa] Unserializable statement kind '{statement.Kind}'");
             }
         }
 
@@ -1208,7 +1208,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                         break;
                     }
                 default:
-                    throw new NotSupportedException($"[cod] Unserializable expression kind '{expression.Kind}' in fn '{_registry.CurrentFunctionName}' at {expression.Syntax}");
+                    throw new NotSupportedException($"[coa] Unserializable expression kind '{expression.Kind}' in fn '{_registry.CurrentFunctionName}' at {expression.Syntax}");
             }
         }
 

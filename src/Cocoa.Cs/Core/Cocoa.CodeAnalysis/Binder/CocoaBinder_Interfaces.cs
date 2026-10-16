@@ -529,7 +529,7 @@ namespace Cocoa.CodeAnalysis.Binder
             {
                 // 6e 跨库里程碑：setter 克隆索引参数（独立 ParameterSymbol 实例）——否则与 getter 共享
                 // 同一 `index` 参数，Registry `_varKeys` 冲突（get_Item 的参数键误落 set_Item 名下），
-                // 读侧 body 变量解析错位（cod 泛型集合索引器求值 KeyNotFound）。
+                // 读侧 body 变量解析错位（coa 泛型集合索引器求值 KeyNotFound）。
                 var setterIndexParams = isIndexer
                     ? indexParams.Select(p => new ParameterSymbol(p.Name, p.Type, p.Ordinal)).ToImmutableArray()
                     : indexParams;

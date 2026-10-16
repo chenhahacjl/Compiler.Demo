@@ -15,7 +15,7 @@ namespace Cocoa.Tests.Compiler
         [Fact]
         public void Library_With_Capturing_And_Stateful_Closures_Runs_EndToEnd()
         {
-            var root = CliTestRunner.NewTempDir("cod-closure");
+            var root = CliTestRunner.NewTempDir("coa-closure");
             var libDir = Path.Combine(root, "ClosureLib");
             var appDir = Path.Combine(root, "App");
             Directory.CreateDirectory(libDir);

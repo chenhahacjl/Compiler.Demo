@@ -33,7 +33,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
 
         public string FnKey(FunctionSymbol fn)
         {
-            // 6e-G7：开放体携带后，部分符号（如 cod 注入链上的实例化副本）不经 RegisterFunction——
+            // 6e-G7：开放体携带后，部分符号（如 coa 注入链上的实例化副本）不经 RegisterFunction——
             // 缺键时回退动态计算（公式与 Seal 一致），读写两侧对称即自洽
             return _fnKeys.TryGetValue(fn, out var key) ? key : ComputeFnKey(fn);
         }

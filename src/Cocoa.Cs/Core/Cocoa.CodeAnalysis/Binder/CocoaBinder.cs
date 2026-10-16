@@ -27,7 +27,7 @@ namespace Cocoa.CodeAnalysis.Binder
         /// </summary>
         public static Func<string, bool>? SyscallCallbackResolver;
 
-        /// <summary>P5 步骤 1：绑定期只读上下文聚合（诊断/引用/using/内建解析/运算符/扩展方法/全局命名空间/cod 库/环境元组缓存）。</summary>
+        /// <summary>P5 步骤 1：绑定期只读上下文聚合（诊断/引用/using/内建解析/运算符/扩展方法/全局命名空间/coa 库/环境元组缓存）。</summary>
         private readonly BindingContext _context;
 
         private DiagnosticBag _diagnostics => _context.Diagnostics;
@@ -531,14 +531,14 @@ namespace Cocoa.CodeAnalysis.Binder
             {
                 // 泛型定义方法（6e-M20）：模板体不进发射清单——实例化类方法经 Monomorphizer 重绑后并入。
                 // 6e-G7 S2：改跳过为「构建开放绑定体」（T 保持开放的降级 Bound 块）随库携带，
-                // 供消费方 BoundTreeSubstituter 替换展开（cod 库无源码，语法重绑路径不可达）。
+                // 供消费方 BoundTreeSubstituter 替换展开（coa 库无源码，语法重绑路径不可达）。
                 if (function.ContainingClass?.IsGenericDefinition == true)
                 {
                     // 开放体在 T 开放上下文下绑定，个别转换检查会报「假阳性」诊断
                     // （历史边界：正因此前选语法重绑路线）——诊断不外泄，体照常携带供替换展开
                     if (!function.IsGenericMethod && !function.IsExtern && !function.IsAbstract && function.BuiltinKind == null)
                     {
-                        // S-7：泛型开放体随库携带为 raw（结构化 HIR）——读侧并入 cod.Bodies，
+                        // S-7：泛型开放体随库携带为 raw（结构化 HIR）——读侧并入 coa.Bodies，
                         // 消费方 Monomorphizer 替换展开后由其捷径补 Lower（见 Monomorphizer 三个替换点）。
                         var (rawOpenBody, _, _, _) = BuildFunctionBody(isScript, parentScope, function, globalScope, coaLibraries, globalNamespace);
                         genericOpenBodies.Add(function, rawOpenBody);
@@ -688,7 +688,7 @@ namespace Cocoa.CodeAnalysis.Binder
                 }
                 else
                 {
-                    // 溯源表：cod 符号 → 库程序集名。extern(P/Invoke) 本地声明；内建单例走消费方
+                    // 溯源表：coa 符号 → 库程序集名。extern(P/Invoke) 本地声明；内建单例走消费方
                     // 本地运行时分发（BuiltinKind 分派），二者均不外链。
                     var provenance = ImmutableDictionary.CreateBuilder<object, string>(ReferenceEqualityComparer.Instance);
                     foreach (var library in coaLibraries)
@@ -939,7 +939,7 @@ namespace Cocoa.CodeAnalysis.Binder
             // F2 共享绑定服务（A3-3）：构造链（base/this）+ 字段初始化器 → 函数体前缀（见 BuildConstructorPrefix）
             body = BuildConstructorPrefix(binder, function, bodySyntax ?? function.Syntax!, body);
 
-            // 6e 跨库里程碑：cod 库泛型开放体经 Monomorphizer 重绑时 function 无 Declaration/Syntax
+            // 6e 跨库里程碑：coa 库泛型开放体经 Monomorphizer 重绑时 function 无 Declaration/Syntax
             // （bodyLocation 为 null）——返回位置诊断留空即可，不影响降级。
             var returnCheckLocation = function.ReturnType != TypeSymbol.Void && bodyLocation != null
                 ? (TextLocation?)bodyLocation.Location

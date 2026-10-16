@@ -20,7 +20,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
 
         public NamedTypeSymbol ResolveOwnerClass(string fullName)
         {
-            // 6e-M19 M2-c：内建系统类（System.Object/System.Type）按单例解析（不从 cod 类型表读）。
+            // 6e-M19 M2-c：内建系统类（System.Object/System.Type）按单例解析（不从 coa 类型表读）。
             // 6f：对象根统一后符号名为 object；System.Object 为 .NET 互操作全名，等价映射。
             if (fullName == "System.Object" || fullName == "object")
             {

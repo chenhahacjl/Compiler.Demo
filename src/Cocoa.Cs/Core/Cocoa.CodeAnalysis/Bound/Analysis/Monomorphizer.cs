@@ -52,7 +52,7 @@ namespace Cocoa.CodeAnalysis.Bound
         {
             // 1. 活实例化种子：语法扫描泛型类型子句 + new/调用站点的显式实参
             var helperBinder = new CocoaBinder(isScript, parentScope, null, globalScope.References, globalScope.UsingNamespaces, BuiltinTypes.Lookup, globalScope.UsingStatics, globalScope.UsingAliases, coaLibraries);
-            // 6e 跨库里程碑：源码泛型定义先注册（同名占位，cod 后注册静默跳过）——保证源内联集合类
+            // 6e 跨库里程碑：源码泛型定义先注册（同名占位，coa 后注册静默跳过）——保证源内联集合类
             // 优先于 System.Collections.coa 同名 gcls。
             helperBinder.RegisterSourceGenericDefinitionsForSeed(globalScope);
             helperBinder.RegisterCoaGenericDefinitionsForSeed(coaLibraries);
@@ -200,13 +200,13 @@ namespace Cocoa.CodeAnalysis.Bound
                     }
 
                     // 6e 跨库里程碑：instantiated.Methods 与 definition.Methods 可能异序（Populate 先方法后
-                    // 属性访问器，与 cod 读侧 fn 条目序不同）——按「方法名 + 元数 + 类」重定位定义方法，
-                    // 避免索引错配（cod=get_Count 落到 inst=Add）。
+                    // 属性访问器，与 coa 读侧 fn 条目序不同）——按「方法名 + 元数 + 类」重定位定义方法，
+                    // 避免索引错配（coa=get_Count 落到 inst=Add）。
                     definitionMethod = FindDefinitionMethod(definition, instantiatedMethod)
                         ?? definition.Methods.FirstOrDefault(m => SameMethodSignature(m, instantiatedMethod))
                         ?? definitionMethod;
 
-                    // 6e-G7 S5/S6：cod 来源定义（无语法树）→ 用库携带的开放绑定体做替换展开
+                    // 6e-G7 S5/S6：coa 来源定义（无语法树）→ 用库携带的开放绑定体做替换展开
                     if (definition.Declaration == null)
                     {
                         BoundBlockStatement? openBody = null;
@@ -245,7 +245,7 @@ namespace Cocoa.CodeAnalysis.Bound
                     if (definitionProperty.Getter != null && instantiatedProperty.Getter != null &&
                         !instantiatedProperty.Getter.IsExtern && !instantiatedProperty.Getter.IsAbstract)
                     {
-                        // 6e 跨库里程碑：cod 库属性访问器（getter 无 Declaration/Syntax）→ 与 177-194 同款捷径：
+                        // 6e 跨库里程碑：coa 库属性访问器（getter 无 Declaration/Syntax）→ 与 177-194 同款捷径：
                         // 用库携带的开放绑定体做替换展开，避免 BuildFunctionBodyForMonomorphization 在 null 语法上 NRE。
                         if (TrySubstituteCoaAccessor(definitionProperty.Getter, definition, instantiated, instantiatedProperty.Getter, coaLibraries, out var coaGetterBody))
                         {
@@ -265,7 +265,7 @@ namespace Cocoa.CodeAnalysis.Bound
                     if (definitionProperty.Setter != null && instantiatedProperty.Setter != null &&
                         !instantiatedProperty.Setter.IsExtern && !instantiatedProperty.Setter.IsAbstract)
                     {
-                        // 同上：cod 库 setter 开放体替换捷径
+                        // 同上：coa 库 setter 开放体替换捷径
                         if (TrySubstituteCoaAccessor(definitionProperty.Setter, definition, instantiated, instantiatedProperty.Setter, coaLibraries, out var coaSetterBody))
                         {
                             // S-7：库体为 raw —— 替换展开后 Lower 为 MIR
@@ -294,9 +294,9 @@ namespace Cocoa.CodeAnalysis.Bound
         }
 
         /// <summary>
-        /// 6e 跨库里程碑：cod 库属性访问器（getter/setter，无 Declaration/Syntax）开放体替换捷径——
+        /// 6e 跨库里程碑：coa 库属性访问器（getter/setter，无 Declaration/Syntax）开放体替换捷径——
         /// 从库携带的 Bodies 取定义访问器开放体，经 BoundTreeSubstituter 替换为实例化访问器体。
-        /// 与 176-194 方法分支同款逻辑；cod 来源定义走捷径避免 BuildFunctionBodyForMonomorphization NRE。
+        /// 与 176-194 方法分支同款逻辑；coa 来源定义走捷径避免 BuildFunctionBodyForMonomorphization NRE。
         /// </summary>
         private static bool TrySubstituteCoaAccessor(
             FunctionSymbol definitionAccessor,
@@ -308,7 +308,7 @@ namespace Cocoa.CodeAnalysis.Bound
         {
             body = null!;
 
-            // cod 来源定义（无语法树）
+            // coa 来源定义（无语法树）
             if (definitionAccessor.Declaration != null)
             {
                 return false;

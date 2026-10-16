@@ -402,7 +402,7 @@ namespace Cocoa.Cli
 
         /// <summary>
         /// 动态链接：确保被消费 `.coa` 库的托管 dll（X.Managed.dll）在输出目录就绪——
-        /// 缺失或 stamp（cod sha256）过期 → 从 cod 现场再生（与 cocoa build 同机制）。
+        /// 缺失或 stamp（coa sha256）过期 → 从 coa 现场再生（与 cocoa build 同机制）。
         /// </summary>
         private static bool EnsureManagedDlls(System.Collections.Immutable.ImmutableArray<Cocoa.CodeAnalysis.Serialization.CoaProgram> libraries, string outputDirectory, IlTarget target, System.Collections.Immutable.ImmutableHashSet<string> nowarnCodes)
         {

@@ -8,7 +8,7 @@ namespace Cocoa.CodeAnalysis.Binder
 {
     /// <summary>
     /// 绑定期只读上下文（P5 步骤 1）：跨绑定分片共享的只读状态聚合——诊断袋、引用、using、
-    /// 内建类型解析器、运算符重载索引、扩展方法索引、全局命名空间树、cod 库、环境/元组缓存。
+    /// 内建类型解析器、运算符重载索引、扩展方法索引、全局命名空间树、coa 库、环境/元组缓存。
     /// 只读（无 setter）：可变集合（_usingNamespaces 等）作为容器整体持有，内容仍由绑定期各阶段填充。
     /// 字段经转发属性由 <see cref="CocoaBinder"/> 暴露，方法体零改动（对齐 4.1 IlEmitter→MethodBodyBuilder 模式）。
     /// </summary>
@@ -68,7 +68,7 @@ namespace Cocoa.CodeAnalysis.Binder
         /// <summary>using 别名表（可变容器）。</summary>
         public Dictionary<string, string> UsingAliases { get; } = new Dictionary<string, string>();
 
-        /// <summary>cod 库集合（跨库符号解析）。</summary>
+        /// <summary>coa 库集合（跨库符号解析）。</summary>
         public ImmutableArray<CoaProgram> CoaLibraries { get; }
 
         /// <summary>跨用户库同名类型全名集（非限定使用拒绝解析）。</summary>

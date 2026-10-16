@@ -15,7 +15,7 @@ namespace Cocoa.Tests.Compiler
         [Fact]
         public void App_Consumes_LibA_Which_Calls_LibB_Runs_EndToEnd()
         {
-            var root = CliTestRunner.NewTempDir("cod-chain");
+            var root = CliTestRunner.NewTempDir("coa-chain");
             var libB = Path.Combine(root, "LibB");
             var libA = Path.Combine(root, "LibA");
             var appDir = Path.Combine(root, "App");

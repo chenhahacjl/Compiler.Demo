@@ -115,7 +115,7 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         /// <summary>
         /// 语义标志：本函数是否源自 lambda 提升（Y §6.7 A1——把"语法类名探测"从共享语义层摘除，
-        /// 供 IL/native 发射器判定 env-first 形态；cod 读侧恢复时亦按此标志，勿再依赖 <c>function.Syntax</c> 类别）。
+        /// 供 IL/native 发射器判定 env-first 形态；coa 读侧恢复时亦按此标志，勿再依赖 <c>function.Syntax</c> 类别）。
         /// </summary>
         public bool IsLambda { get; set; }
 

@@ -39,8 +39,8 @@ cocoa build -p samples/samples.cosln
 ./samples/Tutorial/Basics/HelloWorld/out/HelloWorld.exe
 
 # 库互操作三形态（.NET dll 库 / .coa 程序集 / native DLL import），命令见 samples/README.md
-cocoa build -p samples/Libraries/CodLibrary/app/App.coproj -b native
-./samples/Libraries/CodLibrary/app/out/App.exe
+cocoa build -p samples/Libraries/CoaLibrary/app/App.coproj -b native
+./samples/Libraries/CoaLibrary/app/out/App.exe
 
 # 指定输出格式与 .NET 目标框架
 cocoa build -p foo.coproj -f library

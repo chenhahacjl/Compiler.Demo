@@ -15,7 +15,7 @@ namespace Cocoa.Tests.Compiler
         [Fact]
         public void Library_With_EventClass_RoundTrips_Symbols_And_AppBuilds()
         {
-            var root = CliTestRunner.NewTempDir("cod-evt");
+            var root = CliTestRunner.NewTempDir("coa-evt");
             var libDir = Path.Combine(root, "GreeterLib");
             var appDir = Path.Combine(root, "App");
             Directory.CreateDirectory(libDir);

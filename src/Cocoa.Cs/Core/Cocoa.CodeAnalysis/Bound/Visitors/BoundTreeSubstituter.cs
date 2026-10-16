@@ -39,7 +39,7 @@ namespace Cocoa.CodeAnalysis.Bound
             }
 
             // 6e 跨库里程碑：方法映射按「名 + 元数」匹配而非索引——实例化类的 Methods 顺序
-            // （Populate：先普通方法后属性访问器）与 cod 读侧 fn 条目序可能不同，索引错配会
+            // （Populate：先普通方法后属性访问器）与 coa 读侧 fn 条目序可能不同，索引错配会
             // 令替换后 body 内 membercall 解析到错误实例化方法（Dictionary HashCode 等 KeyNotFound）。
             foreach (var definitionMethod in definition.Methods)
             {

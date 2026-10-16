@@ -1415,10 +1415,10 @@ namespace Cocoa.CodeAnalysis.Binder
         }
 
         /// <summary>
-        /// 6e-G7 S6：种子收集辅助 binder 注册 cod 库的泛型定义类名——
+        /// 6e-G7 S6：种子收集辅助 binder 注册 coa 库的泛型定义类名——
         /// 使 BindGenericTypeNameForExpansion 能解析消费方站点的 `Box&lt;i32&gt;` 为实例化类型。
         /// </summary>
-        /// <summary>注册本编译声明的泛型定义（源码优先于 cod：同名占位后 cod 注册静默跳过）。</summary>
+        /// <summary>注册本编译声明的泛型定义（源码优先于 coa：同名占位后 coa 注册静默跳过）。</summary>
         public void RegisterSourceGenericDefinitionsForSeed(BoundGlobalScope globalScope)
         {
             foreach (var classType in globalScope.Classes)
@@ -1432,9 +1432,9 @@ namespace Cocoa.CodeAnalysis.Binder
 
         public void RegisterCoaGenericDefinitionsForSeed(ImmutableArray<CoaProgram> libraries)
         {
-            // 6e 跨库里程碑：cod 泛型定义注册为单态化种子解析候选（源码同名泛型定义已先注册占位，
-            // TryDeclareClass 同名静默跳过——源码优先于 cod，源内联集合测试不被打扰；
-            // cod 仅兜底源码未声明的泛型集合，跨库消费方 seed 经此发现 HashSet/Dictionary 等）。
+            // 6e 跨库里程碑：coa 泛型定义注册为单态化种子解析候选（源码同名泛型定义已先注册占位，
+            // TryDeclareClass 同名静默跳过——源码优先于 coa，源内联集合测试不被打扰；
+            // coa 仅兜底源码未声明的泛型集合，跨库消费方 seed 经此发现 HashSet/Dictionary 等）。
             foreach (var library in libraries)
             {
                 foreach (var genericDefinition in library.GenericDefinitions)

@@ -17,7 +17,7 @@ using Xunit;
 namespace Cocoa.Tests.CodeGen.Serialization
 {
     /// <summary>
-    /// cod 库相关测试串行集合：成员测试会改写进程级 COCOA_STDLIB 并 Reset stdlib，
+    /// coa 库相关测试串行集合：成员测试会改写进程级 COCOA_STDLIB 并 Reset stdlib，
     /// 与其他消费 stdlib 的测试并行时产生注入窗口竞争（G7 期间实证），故整体禁并行。
     /// </summary>
     [CollectionDefinition("StdLibSequence", DisableParallelization = true)]
@@ -28,7 +28,7 @@ namespace Cocoa.Tests.CodeGen.Serialization
     [Collection("StdLibSequence")]
     public class CoaSerializerTests
     {
-        private static readonly string TestRoot = Path.Combine(Path.GetTempPath(), "cocoa-cod-tests");
+        private static readonly string TestRoot = Path.Combine(Path.GetTempPath(), "cocoa-coa-tests");
 
         private const string LibrarySource = @"
 namespace MyLib
@@ -145,7 +145,7 @@ namespace MyLib
 ";
             var output = EmitLibrary(dir, source);
             var text = File.ReadAllText(output);
-            Assert.True(text.Contains("(gcls"), "cod 缺少 gcls 节点，实际前 600 字符：\n" + text.Substring(0, Math.Min(600, text.Length)));
+            Assert.True(text.Contains("(gcls"), "coa 缺少 gcls 节点，实际前 600 字符：\n" + text.Substring(0, Math.Min(600, text.Length)));
             Assert.Contains("(tpar", text);
             Assert.Contains("!MyLib.Box.T", text);
             Assert.Contains("MyLib.Box`1#!MyLib.Box.T", text);
@@ -201,7 +201,7 @@ namespace MyLib
 ";
             var output = EmitLibrary(dir, source);
             var text = File.ReadAllText(output);
-            Assert.True(text.Contains("iface:true"), "cod 缺少接口位，实际：\n" + text.Substring(0, Math.Min(600, text.Length)));
+            Assert.True(text.Contains("iface:true"), "coa 缺少接口位，实际：\n" + text.Substring(0, Math.Min(600, text.Length)));
             Assert.Contains("iface:false", text);
             Assert.Contains("ifaces:1", text);
 
@@ -234,7 +234,7 @@ namespace MyLib
 ";
             var output = EmitLibrary(dir, source);
             var text = File.ReadAllText(output);
-            Assert.True(text.Contains("fnty{"), "cod 缺少 fnty 节点，实际：\n" + text.Substring(0, Math.Min(600, text.Length)));
+            Assert.True(text.Contains("fnty{"), "coa 缺少 fnty 节点，实际：\n" + text.Substring(0, Math.Min(600, text.Length)));
 
             var loaded = CoaSerializer.Load(output);
             var wrap = loaded.Functions.Single(f => f.Name == "Wrap");
@@ -252,7 +252,7 @@ namespace MyLib
         }
 
         [Fact]
-        public void Cod_Emit_WritesFile()
+        public void Coa_Emit_WritesFile()
         {
             var output = EmitLibrary(NewDir(), LibrarySource);
             Assert.True(File.Exists(output));
@@ -261,7 +261,7 @@ namespace MyLib
         }
 
         [Fact]
-        public void Cod_Read_Rejects_UnknownVersion()
+        public void Coa_Read_Rejects_UnknownVersion()
         {
             var source = "(coa COCOA 99)\n";
             var exception = Assert.Throws<InvalidDataException>(() => CoaSerializer.Read(source + ChecksumLine(source)));
@@ -276,7 +276,7 @@ namespace MyLib
         }
 
         [Fact]
-        public void Cod_Checksum_Emitted_And_Accepted()
+        public void Coa_Checksum_Emitted_And_Accepted()
         {
             var output = EmitLibrary(NewDir(), LibrarySource);
             var text = File.ReadAllText(output);
@@ -286,7 +286,7 @@ namespace MyLib
         }
 
         [Fact]
-        public void Cod_Checksum_Tamper_Rejected()
+        public void Coa_Checksum_Tamper_Rejected()
         {
             var output = EmitLibrary(NewDir(), LibrarySource);
             var text = File.ReadAllText(output);
@@ -300,7 +300,7 @@ namespace MyLib
         }
 
         [Fact]
-        public void Cod_Checksum_Missing_Rejected()
+        public void Coa_Checksum_Missing_Rejected()
         {
             var output = EmitLibrary(NewDir(), LibrarySource);
             var text = File.ReadAllText(output);
@@ -314,15 +314,15 @@ namespace MyLib
         }
 
         [Fact]
-        public void Cod_Serialize_RoundTrip_Stable()
+        public void Coa_Serialize_RoundTrip_Stable()
         {
             var output = EmitLibrary(NewDir(), LibrarySource);
             var text = File.ReadAllText(output);
 
-            var cod = CoaSerializer.Read(text);
+            var coa = CoaSerializer.Read(text);
 
             using var writer = new StringWriter();
-            CoaSerializer.Write(writer, cod);
+            CoaSerializer.Write(writer, coa);
 
             Assert.Equal(text, writer.ToString());
         }
@@ -356,29 +356,29 @@ namespace Lib
         }
 
         [Fact]
-        public void Cod_Deserialize_Symbols()
+        public void Coa_Deserialize_Symbols()
         {
             var output = EmitLibrary(NewDir(), LibrarySource);
-            var cod = CoaSerializer.Read(File.ReadAllText(output));
+            var coa = CoaSerializer.Read(File.ReadAllText(output));
 
-            Assert.Contains(cod.Functions, f => f.Name == "Add");
-            Assert.Contains(cod.Functions, f => f.Name == "Factorial");
-            Assert.Contains(cod.Functions, f => f.Name == "Sum");
-            Assert.Contains(cod.Functions, f => f.Name == "IsGreen");
-            Assert.Contains(cod.Functions, f => f.Name == "Greet");
-            Assert.Contains(cod.Enums, e => e.Name == "Color");
-            Assert.Contains(cod.Bodies.Keys, f => f.Name == "Factorial");
-            Assert.Equal(CoaRequirement.Any, cod.Requires);
-            Assert.Contains(cod.Namespaces, ns => ns == "MyLib");
+            Assert.Contains(coa.Functions, f => f.Name == "Add");
+            Assert.Contains(coa.Functions, f => f.Name == "Factorial");
+            Assert.Contains(coa.Functions, f => f.Name == "Sum");
+            Assert.Contains(coa.Functions, f => f.Name == "IsGreen");
+            Assert.Contains(coa.Functions, f => f.Name == "Greet");
+            Assert.Contains(coa.Enums, e => e.Name == "Color");
+            Assert.Contains(coa.Bodies.Keys, f => f.Name == "Factorial");
+            Assert.Equal(CoaRequirement.Any, coa.Requires);
+            Assert.Contains(coa.Namespaces, ns => ns == "MyLib");
 
-            var add = Assert.Single(cod.Functions, f => f.Name == "Add");
+            var add = Assert.Single(coa.Functions, f => f.Name == "Add");
             Assert.Equal(2, add.Parameters.Length);
             Assert.Same(TypeSymbol.Int32, add.ReturnType);
             Assert.Same(TypeSymbol.Int32, add.Parameters[0].Type);
         }
 
         [Fact]
-        public void Cod_Builtin_RoundTrips_ToSingleton()
+        public void Coa_Builtin_RoundTrips_ToSingleton()
         {
             var dir = NewDir();
             var source = @"
@@ -396,9 +396,9 @@ namespace MyLib
 }
 ";
             var output = EmitLibrary(dir, source);
-            var cod = CoaSerializer.Read(File.ReadAllText(output));
+            var coa = CoaSerializer.Read(File.ReadAllText(output));
 
-            var body = cod.Bodies[Assert.Single(cod.Functions, f => f.Name == "SayHi")];
+            var body = coa.Bodies[Assert.Single(coa.Functions, f => f.Name == "SayHi")];
             var call = FindCallToPrint(body);
             Assert.NotNull(call);
             Assert.Equal(Cocoa.CodeAnalysis.Symbols.BuiltinKind.WriteLine, call!.Method!.BuiltinKind);
@@ -448,7 +448,7 @@ namespace MyLib
         }
 
         [Fact]
-        public void Cod_Reject_Entry()
+        public void Coa_Reject_Entry()
         {
             var dir = NewDir();
             var source = @"using System
@@ -471,7 +471,7 @@ namespace MyLib
         }
 
         [Fact]
-        public void Cod_Reject_NoNamespace()
+        public void Coa_Reject_NoNamespace()
         {
             var dir = NewDir();
             var source = @"
@@ -490,7 +490,7 @@ function Add(a: i32, b: i32): i32
         }
 
         [Fact]
-        public void Cod_PlainInstanceClass_Serializes()
+        public void Coa_PlainInstanceClass_Serializes()
         {
             // 6e-Step D-b：普通实例类（base=Object、真实例语义：实例字段/实例方法）现可入 .coa——
             // 读侧往返可重建（曾拒绝"实例类"，门放行为容器判定专门豁免）。
@@ -520,7 +520,7 @@ namespace MyLib
         }
 
         [Fact]
-        public void Cod_ContainerClass_RoundTrips()
+        public void Coa_ContainerClass_RoundTrips()
         {
             var dir = NewDir();
             var source = @"
@@ -557,9 +557,9 @@ namespace System
 }
 ";
             var output = EmitLibrary(dir, source);
-            var cod = CoaSerializer.Read(File.ReadAllText(output));
+            var coa = CoaSerializer.Read(File.ReadAllText(output));
 
-            var runtime = Assert.Single(cod.Classes, c => c.Name == "Runtime");
+            var runtime = Assert.Single(coa.Classes, c => c.Name == "Runtime");
             Assert.Equal("System", runtime.Namespace);
             Assert.Equal("System.Runtime", runtime.FullName);
 
@@ -569,25 +569,25 @@ namespace System
             Assert.Same(runtime, print.ContainingClass);
 
             // 6e-M18：静态方法容器类（方法带函数体）符号往返
-            var utils = Assert.Single(cod.Classes, c => c.Name == "Utils");
+            var utils = Assert.Single(coa.Classes, c => c.Name == "Utils");
             Assert.Equal("System.Utils", utils.FullName);
             Assert.Equal(2, utils.Methods.Length);
 
             var triple = Assert.Single(utils.Methods, m => m.Name == "Triple");
             Assert.True(triple.IsStatic);
             Assert.Same(utils, triple.ContainingClass);
-            Assert.Contains(cod.Functions, f => f.Name == "Triple" && f.ContainingClass == utils);
+            Assert.Contains(coa.Functions, f => f.Name == "Triple" && f.ContainingClass == utils);
 
             var utilsMax = Assert.Single(utils.Methods, m => m.Name == "Max");
             Assert.Same(utils, utilsMax.ContainingClass);
-            Assert.Contains(cod.Functions, f => f.Name == "Max" && f.ContainingClass == utils);
+            Assert.Contains(coa.Functions, f => f.Name == "Max" && f.ContainingClass == utils);
 
-            var math = Assert.Single(cod.Functions, f => f.Name == "Max" && f.ContainingClass == null);
+            var math = Assert.Single(coa.Functions, f => f.Name == "Max" && f.ContainingClass == null);
             Assert.Equal("System.Math", math.Namespace);
         }
 
         [Fact]
-        public void Cod_ExternEntryPointCharSet_RoundTrips()
+        public void Coa_ExternEntryPointCharSet_RoundTrips()
         {
             var dir = NewDir();
             var source = @"
@@ -604,9 +604,9 @@ namespace System
 }
 ";
             var output = EmitLibrary(dir, source);
-            var cod = CoaSerializer.Read(File.ReadAllText(output));
+            var coa = CoaSerializer.Read(File.ReadAllText(output));
 
-            var kernel32 = Assert.Single(cod.Classes, c => c.Name == "Kernel32");
+            var kernel32 = Assert.Single(coa.Classes, c => c.Name == "Kernel32");
             var method = Assert.Single(kernel32.Methods, m => m.Name == "GetTickCountAlias");
 
             Assert.True(method.IsExtern);
@@ -616,7 +616,7 @@ namespace System
         }
 
         [Fact]
-        public void Cod_ExternDefaultCharsetUnicode_WhenNoMetadata()
+        public void Coa_ExternDefaultCharsetUnicode_WhenNoMetadata()
         {
             var dir = NewDir();
             var source = @"
@@ -632,9 +632,9 @@ namespace System
 }
 ";
             var output = EmitLibrary(dir, source);
-            var cod = CoaSerializer.Read(File.ReadAllText(output));
+            var coa = CoaSerializer.Read(File.ReadAllText(output));
 
-            var kernel32 = Assert.Single(cod.Classes, c => c.Name == "Kernel32");
+            var kernel32 = Assert.Single(coa.Classes, c => c.Name == "Kernel32");
             var method = Assert.Single(kernel32.Methods, m => m.Name == "GetTickCount");
 
             Assert.Null(method.EntryPoint);
@@ -642,7 +642,7 @@ namespace System
         }
 
         [Fact]
-        public void Cod_ContainerClass_StaticMethod_EndToEnd()
+        public void Coa_ContainerClass_StaticMethod_EndToEnd()
         {
             var dir = NewDir();
             var source = @"
@@ -716,7 +716,7 @@ function Main(): i32
         }
 
         [Fact]
-        public void Cod_SystemLibrary_Loads_WhenPresent()
+        public void Coa_SystemLibrary_Loads_WhenPresent()
         {
             var baseDirectory = Path.GetDirectoryName(typeof(CoaSerializerTests).Assembly.Location)!;
             var systemCore = Path.Combine(baseDirectory, "System.Core.coa");
@@ -747,7 +747,7 @@ function Main(): i32
         }
 
         [Fact]
-        public void Cod_SystemLibrary_Discovers_Additional_Modules()
+        public void Coa_SystemLibrary_Discovers_Additional_Modules()
         {
             // 多程序集发现（6e-M17）：目录内 System*.coa 自动加载，核心 System.Core.coa 强制首位；
             // 未来大功能模块（System.Net.coa 等）放入目录即生效。本测试用临时 System.Demo.coa 模拟。
@@ -757,7 +757,7 @@ function Main(): i32
                 return; // 核心库未部署时跳过（降级语义）
             }
 
-            var dir = Path.Combine(Path.GetTempPath(), "cocoa-cod-discovery", Guid.NewGuid().ToString("N"));
+            var dir = Path.Combine(Path.GetTempPath(), "cocoa-coa-discovery", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(dir);
             try
             {
@@ -813,7 +813,7 @@ function Main(): i32
         }
 
         [Fact]
-        public void Cod_SystemLibrary_Discovers_From_CocoaSdk()
+        public void Coa_SystemLibrary_Discovers_From_CocoaSdk()
         {
             // VS/dotnet 风格发布布局：SDK 放在 <exe>/SDK，经 COCOA_SDK env 或 ./SDK 相对发现。
             // 本测试验证 COCOA_SDK env 指向目录时优先加载（优先级高于 COCOA_STDLIB）。
@@ -858,8 +858,8 @@ function Main(): i32
         [Fact]
         public void FacadeInstanceClass_RoundTrips_MemberFlags()
         {
-            // 6b：facade 实例类（映射 BCL、体内不经 cod 执行）按符号序列化——属性访问器（acc 位）往返一致；
-            // facade 构造器不经 cod（绑定期经 facade→BCL 合成），IsFacadeClass 由注入侧按 FacadeTargets 补齐。
+            // 6b：facade 实例类（映射 BCL、体内不经 coa 执行）按符号序列化——属性访问器（acc 位）往返一致；
+            // facade 构造器不经 coa（绑定期经 facade→BCL 合成），IsFacadeClass 由注入侧按 FacadeTargets 补齐。
             // 换门即 System.Core.coa（含 Exception.co）重建成功、消费方 `new Exception(...)` 可绑定。
             var dir = NewDir();
             var source = @"
@@ -1041,8 +1041,8 @@ namespace MyLib
 }
 ";
 
-            var codPath = EmitLibrary(dir, libSource);
-            var text = File.ReadAllText(codPath);
+            var coaPath = EmitLibrary(dir, libSource);
+            var text = File.ReadAllText(coaPath);
             Assert.Contains("(while", text);
 
             var appSource = @"
@@ -1055,7 +1055,7 @@ function Main(): void
 ";
 
             // Evaluator
-            var evalCompilation = Compilation.Create(new[] { codPath }, SyntaxTree.Parse(appSource));
+            var evalCompilation = Compilation.Create(new[] { coaPath }, SyntaxTree.Parse(appSource));
             var original = Console.Out;
             try
             {
@@ -1071,7 +1071,7 @@ function Main(): void
             }
 
             // IL
-            var refs = new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location, codPath };
+            var refs = new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location, coaPath };
             var ilTree = SyntaxTree.Parse(appSource);
             var ilCompilation = Compilation.Create("Main", refs, ilTree);
             var exePath = Path.Combine(dir, "app-il.exe");
@@ -1095,7 +1095,7 @@ function Main(): void
 
             // native x64
             TargetPlatform.TryParse("windows-x64", out var platform);
-            var nativeCompilation = Compilation.Create(new[] { codPath }, SyntaxTree.Parse(appSource));
+            var nativeCompilation = Compilation.Create(new[] { coaPath }, SyntaxTree.Parse(appSource));
             var nativeExe = Path.Combine(dir, "app-native-x64.exe");
             var nativeDiagnostics = nativeCompilation.EmitNative("app-native", nativeExe, platform);
             Assert.Empty(nativeDiagnostics.Select(d => d.Message));

@@ -129,7 +129,7 @@ function Main(): i32
             // App → LibMid → LibOne：LibMid 引用 LibOne+LibTwo（同全名 Shared.Conflict），
             // 以 `using C = LibOne.Shared.Conflict` 唯一化；其 .coa 体携带 LibOne 前缀键，
             // 消费方读侧经库前缀消歧恢复符号 → 运行期贯通（输出 1）
-            var root = CliTestRunner.NewTempDir("cod-amb-chain");
+            var root = CliTestRunner.NewTempDir("coa-amb-chain");
             var libOne = Path.Combine(root, "LibOne");
             var libTwo = Path.Combine(root, "LibTwo");
             var mid = Path.Combine(root, "LibMid");

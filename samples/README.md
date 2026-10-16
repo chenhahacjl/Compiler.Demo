@@ -23,7 +23,7 @@ cocoa build -p samples/<路径>/<项目>.coproj [-b dotnet]
 | `Tutorial/Dialects` | 语法风格对照：CsStyle · TopLevelFunctions |
 | `Tutorial/Interop` | native DLL 导入（kernel32 import 块） |
 | `Libraries/NetLibrary` | .NET dll 库（`output = library`）+ `[references]` 消费方 app |
-| `Libraries/CodLibrary` | .coa Cocoa 程序集库（`output = cocoa`）+ 消费方 app |
+| `Libraries/CoaLibrary` | .coa Cocoa 程序集库（`output = cocoa`）+ 消费方 app |
 | `Classes/CSharpClass` | Cocoa 式类语法预览：字段/属性/构造函数/static |
 | `Samples/UI` | System.UI 立即模式 UI 库：BasicUI · AdvancedUI · NativeUI · DeclarativeUI |
 | `Samples/Linux` | Linux native（`--os linux` ELF）：LibcInterop · LibmMath · CrossPlatform（WSL 实机验证） |
@@ -112,9 +112,9 @@ cocoa build -p samples/Libraries/NetLibrary/app/App.coproj -b dotnet
 ./samples/Libraries/NetLibrary/app/out/App.exe
 
 # .coa Cocoa 程序集库（output = cocoa）：编译期 IR 合并，native + dotnet 双后端
-cocoa build -p samples/Libraries/CodLibrary/mylib/MyLib.coproj
-cocoa build -p samples/Libraries/CodLibrary/app/App.coproj -b native
-./samples/Libraries/CodLibrary/app/out/App.exe
+cocoa build -p samples/Libraries/CoaLibrary/mylib/MyLib.coproj
+cocoa build -p samples/Libraries/CoaLibrary/app/App.coproj -b native
+./samples/Libraries/CoaLibrary/app/out/App.exe
 ```
 
 ## 注意事项

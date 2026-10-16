@@ -1256,7 +1256,7 @@ namespace Cocoa.CodeGen.Managed
                 EmitExpression(il, argument);
             }
 
-            // 动态链接（阶段 A3）：cod 容器类静态方法 → MemberRef 外部调用
+            // 动态链接（阶段 A3）：coa 容器类静态方法 → MemberRef 外部调用
             if (node.Method != null)
             {
                 // 6e-M35：库 extern（import P/Invoke）调用点按需声明 MethodDef+ImplMap——仅被调用时才入发射集，
@@ -1365,7 +1365,7 @@ namespace Cocoa.CodeGen.Managed
                          node.Method.ContainingClass is NamedTypeSymbol { IsValueType: true, SpecialType: global::Cocoa.CodeAnalysis.Symbols.SpecialType.None }
                     ? "Call"
                     : "Callvirt";
-                // cod 库容器方法（System.IDisposable.Dispose / System.Index.FromEnd / System.Array.GetValue 等）：
+                // coa 库容器方法（System.IDisposable.Dispose / System.Index.FromEnd / System.Array.GetValue 等）：
                 // 不作 TypeDef/MethodDef，调用点按容器类型 TypeRef 直联 BCL MemberRef。
                 // 仅当容器类型已在 BCL 引用中定义且方法可解析时才走此路径。
                 if (instanceMethod.ContainingClass is { ContainingLibrary: not null }
@@ -1576,11 +1576,11 @@ namespace Cocoa.CodeGen.Managed
 
             if (_coaAssemblies.TryGetValue(classType, out var coaObjectAssembly))
             {
-                // 6e-Step D-b：动态链接 + cod 普通实例类 → Newobj MemberRef（库托管 dll 宿主 TypeRef）
+                // 6e-Step D-b：动态链接 + coa 普通实例类 → Newobj MemberRef（库托管 dll 宿主 TypeRef）
                 var coaCtor = node.Constructor ?? classType.GetMethod(classType.Name);
                 if (coaCtor == null)
                 {
-                    throw new System.Exception($"cod 类型 {classType.Name} 无构造函数。");
+                    throw new System.Exception($"coa 类型 {classType.Name} 无构造函数。");
                 }
 
                 il.Emit(IlOpCodeTable.Get("Newobj"), CoaMethodRef(coaCtor, coaObjectAssembly));
@@ -1631,7 +1631,7 @@ namespace Cocoa.CodeGen.Managed
                 return;
             }
 
-            // cod 库类已在 BCL 引用中定义且无本地 TypeDef（构造函数不发射）：直连 BCL MemberRef。
+            // coa 库类已在 BCL 引用中定义且无本地 TypeDef（构造函数不发射）：直连 BCL MemberRef。
             // （MemoryStream/StreamWriter 等真实 Cocoa body 类已入 TypeDef 表 → 跳过，走下方 _methods[ctor]）
             var ctor = node.Constructor ?? classType.GetMethod(classType.Name);
             if (ctor != null && classType.ContainingLibrary != null
@@ -1669,7 +1669,7 @@ namespace Cocoa.CodeGen.Managed
         private readonly Dictionary<(string asm, string type, string name), IlFieldRef> _coaFieldRefs =
             new Dictionary<(string, string, string), IlFieldRef>();
 
-        /// <summary>6e-Step D-b：cod 类的字段 token——本地 TypeDef 用 _fieldDefs；cod 类走库 dll 宿主 TypeRef 的 FieldRef。
+        /// <summary>6e-Step D-b：coa 类的字段 token——本地 TypeDef 用 _fieldDefs；coa 类走库 dll 宿主 TypeRef 的 FieldRef。
         /// 6e-M31：facade 类型字段（映射到 BCL）→ BCL 同名 FieldRef（ldfld/stfld/ldsfld 目标）。</summary>
         private object _fieldToken(FieldSymbol field)
         {
