@@ -91,6 +91,7 @@ namespace Cocoa.Cli
             var backendText = (string?)null;
             var platformText = (string?)null;
             var dotnetRuntimeText = (string?)null;
+            var osText = (string?)null;
             var referencePaths = new List<string>();
             var sourcePaths = new List<string>();
             var helpRequested = false;
@@ -156,6 +157,14 @@ namespace Cocoa.Cli
                         }
 
                         break;
+                    case "--os":
+                        // T3：目标 OS（windows/linux）——native 后端经此分流 PE/ELF。
+                        if (!CliHelper.TryTakeValue(args, ref i, inlineValue, out osText))
+                        {
+                            return 1;
+                        }
+
+                        break;
                     case "--nowarn":
                         // D3：`--nowarn:COC1001,COC1002` 或 `--nowarn COC1001,COC1002`——按诊断码压制警告
                         if (!CliHelper.TryTakeValue(args, ref i, inlineValue, out var nowarnText))
@@ -209,6 +218,28 @@ namespace Cocoa.Cli
                 return 1;
             }
 
+            var targetOs = TargetOS.Windows;
+            if (osText != null)
+            {
+                if (!TargetPlatform.TryParse(osText + "-x64", out _))
+                {
+                    Console.Error.WriteLine($"error: invalid os '{osText}'. Expected: windows, linux");
+                    return 1;
+                }
+
+                targetOs = osText.ToLowerInvariant() switch
+                {
+                    "linux" => TargetOS.Linux,
+                    _ => TargetOS.Windows,
+                };
+            }
+
+            if (targetOs == TargetOS.Linux && platform == Architecture.X86)
+            {
+                Console.Error.WriteLine("error: linux target currently supports x64 only (ELF64)");
+                return 1;
+            }
+
             IlTarget? target = null;
             if (dotnetRuntimeText != null)
             {
@@ -229,7 +260,15 @@ namespace Cocoa.Cli
 
             if (outputPath == null)
             {
-                outputPath = Path.ChangeExtension(sourcePaths[0], ".exe");
+                // T3：linux native 无扩展名（ELF 惯例）；其余恒 .exe
+                if (backend == CodeBackend.Native && targetOs == TargetOS.Linux)
+                {
+                    outputPath = Path.GetFileNameWithoutExtension(sourcePaths[0]);
+                }
+                else
+                {
+                    outputPath = Path.ChangeExtension(sourcePaths[0], ".exe");
+                }
             }
 
             if (moduleName == null)
@@ -295,7 +334,7 @@ namespace Cocoa.Cli
             {
                 if (backend == CodeBackend.Native)
                 {
-                    diagnostics = compilation.EmitNative(moduleName, outputPath, new TargetPlatform(TargetOS.Windows, platform));
+                    diagnostics = compilation.EmitNative(moduleName, outputPath, new TargetPlatform(targetOs, platform));
                 }
                 else if (effectiveTarget.Runtime == IlRuntime.NetCore)
                 {

@@ -1742,13 +1742,9 @@ namespace Cocoa.CodeGen.Native
 
             if (_isX64)
             {
-                var target = ordinal switch
-                {
-                    0 => X64Register.RCX,
-                    1 => X64Register.RDX,
-                    2 => X64Register.R8,
-                    _ => X64Register.R9,
-                };
+                // T3：double 参数经 ABI 描述符寄存器序（Win64 rcx,rdx,r8,r9；SysV rdi,rsi,rdx,rcx），
+                // 与 EmitInitRegArg 对称——此前硬编码 Windows 序导致 Linux 下 double 落到 rcx 却从 rdi 读。
+                var target = AbiToRegister(_abi.ArgumentRegisters[ordinal]);
                 _a.Mov(X64Size.Qword, X64Register.RAX, new X64MemoryOperand(X64Register.RBP, slot));
                 _a.Mov(X64Size.Qword, target, X64Register.RAX);
                 return;
