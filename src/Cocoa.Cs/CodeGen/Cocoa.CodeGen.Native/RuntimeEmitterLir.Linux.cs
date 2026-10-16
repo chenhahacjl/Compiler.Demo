@@ -511,7 +511,9 @@ namespace Cocoa.CodeGen.Native
         }
 
         // ------------------------------------------------------------------
-        // ReadKey(intercept:4) → char：read(0) 单字节（canonical 模式需回车摘要；raw 模式 TODO）
+        // ReadKey(intercept:4) → char：read(0) 单字节。
+        // tty 交互（canonical 模式）需回车后返回（raw mode VMIN/VTIME 曾尝试，tty read 返 0 不可靠，已回退）；
+        // 管道/EOF 下立即返回。回显由 intercept=0 时 write(1) 完成。
         // ------------------------------------------------------------------
 
         private void EmitReadKeyLinux()
@@ -533,9 +535,7 @@ namespace Cocoa.CodeGen.Native
             // intercept=0 回显（write(1)）
             Cmp(intercept, 0);
             Jcc(LirCond.NotEqual, echo);
-            var outBuf = NewPtr();
-            LeaData(outBuf, _linuxInBuf);
-            LinuxSyscall(null, __NR_write, 3, C(8, 1), outBuf, C(8, 1));
+            LinuxSyscall(null, __NR_write, 3, C(8, 1), inBuf, C(8, 1));
 
             Mark(echo);
             StoreRet(ch);
