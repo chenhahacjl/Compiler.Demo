@@ -36,7 +36,7 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
             return architecture == Architecture.X86 ? 0x400000 : 0x140000000;
         }
 
-        public static void Write(string outputPath, byte[] code, byte[] data, int entryPointRva, IReadOnlyList<PefileImport> imports, Architecture architecture, IReadOnlyList<int>? dataAbsoluteFixups = null, ushort subsystem = PeSubsystemWindowsCui, byte[]? cocoaMetadata = null, IReadOnlyList<PeExportEntry>? exports = null, ResourceSectionResult? resources = null)
+        public static void Write(string outputPath, byte[] code, byte[] data, int entryPointRva, IReadOnlyList<PeFileImport> imports, Architecture architecture, IReadOnlyList<int>? dataAbsoluteFixups = null, ushort subsystem = PeSubsystemWindowsCui, byte[]? cocoaMetadata = null, IReadOnlyList<PeExportEntry>? exports = null, ResourceSectionResult? resources = null)
         {
             var pe32 = architecture == Architecture.X86;
 

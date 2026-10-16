@@ -16,7 +16,7 @@ namespace Cocoa.CodeGen.Native
     /// <summary>IR → IAssembler 的发射结果：全部函数/特殊函数 label 与入口 stub label。</summary>
     internal sealed class LirEmitResult
     {
-        public LirEmitResult(Dictionary<string, int> labels, int stubLabel, List<PefileImport> imports)
+        public LirEmitResult(Dictionary<string, int> labels, int stubLabel, List<PeFileImport> imports)
         {
             Labels = labels;
             StubLabel = stubLabel;
@@ -25,7 +25,7 @@ namespace Cocoa.CodeGen.Native
 
         public Dictionary<string, int> Labels { get; }
         public int StubLabel { get; }
-        public List<PefileImport> Imports { get; }
+        public List<PeFileImport> Imports { get; }
     }
 
     /// <summary>
@@ -44,14 +44,14 @@ namespace Cocoa.CodeGen.Native
         private readonly int _slotSize;
         private readonly int _paramOffset;
         private readonly int _stackLimitOffset;
-        private readonly Action<IReadOnlyList<PefileImport>, int>? _emitStub;
+        private readonly Action<IReadOnlyList<PeFileImport>, int>? _emitStub;
 
         private readonly Dictionary<LirFunction, int> _functionLabels = new();
         private readonly Dictionary<string, int> _nameToLabel = new();
         private readonly Dictionary<int, int> _asmLabelCache = new();
         private readonly Dictionary<string, int> _dataSymbols = new();
         private readonly Dictionary<LirImport, int> _importSlots = new();
-        private readonly List<PefileImport> _imports = new();
+        private readonly List<PeFileImport> _imports = new();
         private readonly List<LirVirtualRegister> _sysArgs = new();
 
         // M5-a4 续作：布局无关符号化 dump——asm 标签 → 符号（函数名 / L{irLabel} / rt:运行时名）
@@ -72,7 +72,7 @@ namespace Cocoa.CodeGen.Native
         private int _stubLabel;
 
         private LirToAssembler(IAssembler a, LirProgram program, int entryLabel, TargetPlatform platform,
-            Action<IReadOnlyList<PefileImport>, int>? emitStub)
+            Action<IReadOnlyList<PeFileImport>, int>? emitStub)
         {
             _a = a;
             _program = program;
@@ -125,7 +125,7 @@ namespace Cocoa.CodeGen.Native
         };
 
         public static LirEmitResult Emit(IAssembler a, LirProgram program, int entryLabel, TargetPlatform platform,
-            Action<IReadOnlyList<PefileImport>, int>? emitStub)
+            Action<IReadOnlyList<PeFileImport>, int>? emitStub)
         {
             var emitter = new LirToAssembler(a, program, entryLabel, platform, emitStub);
             emitter.EmitProgram();
@@ -254,7 +254,7 @@ namespace Cocoa.CodeGen.Native
 
             foreach (var import in reordered)
             {
-                _imports.Add(new PefileImport(import.DllName, import.Name, _a.GetDataOffset(_importSlots[import])));
+                _imports.Add(new PeFileImport(import.DllName, import.Name, _a.GetDataOffset(_importSlots[import])));
             }
         }
 
