@@ -6,7 +6,7 @@ using Cocoa.Text;
 using System.CodeDom.Compiler;
 using System.Diagnostics;
 
-namespace Cocoa.Text
+namespace Cocoa.CodeAnalysis.Text
 {
     public static class TextWriterExtensions
     {

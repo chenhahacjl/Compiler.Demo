@@ -1,3 +1,4 @@
+using Cocoa.CodeAnalysis.Text;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Syntax.Nodes;
 using Cocoa.CodeAnalysis.Syntax.Green;

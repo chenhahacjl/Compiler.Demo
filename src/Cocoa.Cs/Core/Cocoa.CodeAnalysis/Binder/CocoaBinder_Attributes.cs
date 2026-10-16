@@ -27,7 +27,7 @@ namespace Cocoa.CodeAnalysis.Binder
         /// 此前属性能解析/绑定/写进 PE 的 CustomAttribute 表，但编译器**不消费**任何属性——
         /// 本方法让「写进去的属性」第一次真正影响编译结果。
         /// </summary>
-        private void ReportObsoleteUsage(Text.TextLocation location, FunctionSymbol? method)
+        private void ReportObsoleteUsage(Cocoa.Text.TextLocation location, FunctionSymbol? method)
         {
             if (method == null || method.Attributes.IsDefaultOrEmpty)
             {
