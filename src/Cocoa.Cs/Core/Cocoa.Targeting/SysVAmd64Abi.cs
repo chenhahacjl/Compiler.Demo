@@ -3,7 +3,7 @@ namespace Cocoa.Targeting
     /// <summary>
     /// System V AMD64 ABI（Linux x64）：
     /// 参数寄存器 rdi,rsi,rdx,rcx,r8,r9（6 个），无 shadow space；槽 8 字节；参数区偏移 16；栈限检查预留。
-    /// 数据待 T3 ELF 后端核对；寄存器序符合 SysV 规范。
+    /// 浮点参数寄存器 xmm0-7（8 个，与整数寄存器独立计数）。数据待 T3 ELF 后端核对；寄存器序符合 SysV 规范。
     /// </summary>
     public sealed class SysVAmd64Abi : IAbiDescriptor
     {
@@ -22,5 +22,6 @@ namespace Cocoa.Targeting
         public int SlotBytes => 8;
         public bool RequiresStackCheck => false;
         public int SysCallRegisterCount => 6;
+        public int FloatArgRegisterCount => 8;
     }
 }

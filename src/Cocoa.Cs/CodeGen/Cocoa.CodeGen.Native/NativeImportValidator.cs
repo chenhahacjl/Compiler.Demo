@@ -57,22 +57,27 @@ namespace Cocoa.CodeGen.Native
 
                 // 9d：签名自检（生成期失败快，不产运行期坏 exe）。
 
-                // 返回类型：仅 void/整型/指针（SysCall 返回值经 EAX/EDX:EAX 整数路径；float/double 走 XMM0 未支持）。
+                // 返回类型：仅 void/整型/指针（SysCall 返回值经 EAX/EDX:EAX 整数路径）；x64 追加 float/double（N4：经 XMM0）。
+                var isX64 = architecture == Architecture.X64;
                 var rt = function.ReturnType;
+                var floatOk = isX64 && (rt == TypeSymbol.Float || rt == TypeSymbol.Double);
                 if (rt != TypeSymbol.Void &&
-                    !(rt.IsPrimitiveValueType && rt != TypeSymbol.Float && rt != TypeSymbol.Double))
+                    !(rt.IsPrimitiveValueType && rt != TypeSymbol.Float && rt != TypeSymbol.Double) && !floatOk)
                 {
                     builder.Add(Diagnostic.Error(location,
-                        $"extern function '{function.Name}' 返回类型 '{rt.Name}' 不受 native 后端支持（仅 void/整型/指针；字符串/浮点/结构体返回需经 System.Runtime 原语封装）。"));
+                        $"extern function '{function.Name}' 返回类型 '{rt.Name}' 不受 native 后端支持（仅 void/整型/指针；字符串/结构体返回需经 System.Runtime 原语封装）。"));
                 }
 
-                // 参数类型：float/double 参数经整数寄存器装载路径，native 后端不支持。
-                foreach (var parameter in function.Parameters)
+                // 参数类型：float/double 参数在 x86 经整数寄存器装载路径不支持；x64（N4）经 xmm 寄存器合法。
+                if (!isX64)
                 {
-                    if (parameter.Type == TypeSymbol.Float || parameter.Type == TypeSymbol.Double)
+                    foreach (var parameter in function.Parameters)
                     {
-                        builder.Add(Diagnostic.Error(location,
-                            $"extern function '{function.Name}' 参数 '{parameter.Name}' 为浮点类型，native 后端不支持（仅整型/指针）。"));
+                        if (parameter.Type == TypeSymbol.Float || parameter.Type == TypeSymbol.Double)
+                        {
+                            builder.Add(Diagnostic.Error(location,
+                                $"extern function '{function.Name}' 参数 '{parameter.Name}' 为浮点类型，native 后端不支持（仅整型/指针）。"));
+                        }
                     }
                 }
 

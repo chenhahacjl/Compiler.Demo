@@ -22,5 +22,6 @@ namespace Cocoa.Targeting
         public int SlotBytes => 8;
         public bool RequiresStackCheck => true;
         public int SysCallRegisterCount => 4;
+        public int FloatArgRegisterCount => 4;
     }
 }

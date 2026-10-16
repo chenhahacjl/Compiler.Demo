@@ -1,0 +1,36 @@
+// N4：Linux native 直接 .so 动态导入（glibc libc.so.6）——extern string 实参经
+// ExternUtf8Ptr 编组为 NUL 结尾 UTF-8 char*（puts/strlen），文件 IO 走 System.IO facade。
+
+using System
+
+class LibC
+{
+    import libc
+    {
+        static stdcall function puts(s: string): i32
+            extern()
+        static stdcall function strlen(s: string): i32
+            extern()
+        static stdcall function getpid(): i32
+            extern()
+        static stdcall function fflush(stream: nint): i32
+            extern()
+    }
+}
+
+function Main(): i32
+{
+    LibC.puts("hello from libc")
+    LibC.fflush(0)
+    var n = LibC.strlen("cocoa")
+    System.Console.WriteLine(n)
+    var pid = LibC.getpid()
+    System.Console.WriteLine(pid > 0)
+
+    var path = "/tmp/cocoa-libc.txt"
+    System.IO.File.WriteAllText(path, "interop")
+    var text = System.IO.File.ReadAllText(path)
+    System.Console.WriteLine(text == "interop")
+    System.IO.File.Delete(path)
+    return 0
+}

@@ -21,6 +21,8 @@
 | [plan/自举缺口分析.md](plan/自举缺口分析.md) | 阶段 7 前置盘点：语言面现状 / 标准库缺口分级 / 实施顺序（已定稿） |
 | [plan/自举实施计划.md](plan/自举实施计划.md) | 阶段 7 实施主线：管线增量分解 / 验收护栏（增量一~五 ✅ 全部完成；阶段 8 B1≡B2 fixpoint 达成，前置类里程碑 C-1~C-4 ✅） |
 | [plan/CSharp兼容性差距报告.md](plan/CSharp兼容性差距报告.md) | C# 兼容性差距总账（v1.1，2026-09-12；10 月特性批次后需重核） |
+| [plan/N3-glibc动态链接诊断.md](plan/N3-glibc动态链接诊断.md) | N3 glibc `.so` 动态链接实现记录（已打通）：PT_INTERP/PT_DYNAMIC + GLOB_DAT 等价 Windows IAT + 踩坑 checklist |
+| [plan/N4-linux-extern互操作面.md](plan/N4-linux-extern互操作面.md) | N4 extern 互操作面（已打通）：UTF-8 字符串编组 + f64 xmm ABI（SysV/Win64 同步）+ 样本实机验证 |
 | [plan/IR分层与格式设计.md](plan/IR分层与格式设计.md) | HIR/MIR/LIR 三层语义与命名、「.coa 存 HIR」决策（S-7 定稿为准） |
 | [plan/语义债务清单.md](plan/语义债务清单.md) | 定夺类设计偏差 D1-D5（非 bug），修或维持需逐项拍板 |
 | [plan/语言特性对照表.md](plan/语言特性对照表.md) | **语言面权威表**：C# 语义 × 双轨（C# / .co）逐特性状态，源码实证（`SyntaxKind` / 绑定器 / 发射器 / 测试），含 Attribute·反射·运算符重载三专题与 20 项补齐路线 |
@@ -70,6 +72,7 @@
 | UI 前置编译器增强：native extern 参数上限 7→12+；`.coa` 序列化门禁扩展（带属性实例类/含 body 静态类） | 用户，2026-09-08 | [plan/UI库规划.md](plan/UI库规划.md) §8/§12 A6 |
 | 去 C# 方言：仅保留 .co（删除 Cocoa.Dialects.CSharp，104 文件 ~920KB 整前端双份/漂移测试；Language 中间层后续塌缩） | 用户，2026-09-13 | [plan/自举实施计划.md](plan/自举实施计划.md) §5 |
 | `.coproj` 目标属性设计定稿：Backend 三分（native/managed-fx/managed-net）、`Arch`（anycpu/x86/x64）、四维 IlTarget、TFM 必填/组内校验、target-aware SDK、ARM 抽象层预留 | 用户评审，2026-10-15 | [plan/coproj目标属性设计.md](plan/coproj目标属性设计.md) |
+| Linux native 后端：ELF ET_EXEC（非 PIE）+ SysV ABI + 裸 syscall 运行时；外部 `.so` 走动态导入（DT_NEEDED + GLOB_DAT，等价 Windows IAT）；extern 编组 UTF-8 string / f64 xmm（SysV 与 Win64 共用同一 xmm ABI 修复） | 用户+实施，2026-10-16 | [plan/N4-linux-extern互操作面.md](plan/N4-linux-extern互操作面.md)、[plan/N3-glibc动态链接诊断.md](plan/N3-glibc动态链接诊断.md) |
 
 ## 5. 维护约定
 

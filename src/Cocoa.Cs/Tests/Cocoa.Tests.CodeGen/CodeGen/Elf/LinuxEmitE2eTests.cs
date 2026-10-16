@@ -94,6 +94,36 @@ function Main()
         }
 
         [Fact]
+        public void WindowsTarget_SoImport_IsRejected()
+        {
+            // 对称门禁：windows 目标——import libc 编译期拒绝（不再产出运行期 LoadLibrary 坏 exe）。
+            var syntaxTree = SyntaxTree.Parse(@"using System
+
+class L
+{
+    import libc
+    {
+        static stdcall function getpid(): i32
+            extern()
+    }
+}
+
+function Main(): i32
+{
+    var pid = L.getpid()
+    Console.WriteLine(pid > 0)
+    return 0
+}");
+            var compilation = Compilation.Create(syntaxTree);
+            var outputPath = OutputPath("windows-so-rejected");
+            var diagnostics = compilation.EmitNative("windows-so-rejected", outputPath, new TargetPlatform(TargetOS.Windows, Architecture.X64));
+            Assert.False(diagnostics.IsEmpty);
+            Assert.Contains(diagnostics, d =>
+                d.Message.Contains(".so 库") || d.Message.Contains("libc"));
+            Assert.False(System.IO.File.Exists(outputPath));
+        }
+
+        [Fact]
         public void LinuxNative_ShimExtern_Compiles()
         {
             // kernel32 四符号 shim（GetTickCount/Sleep/Beep/ExitProcess）在 Linux 零导入编译通过。
@@ -229,6 +259,152 @@ function Main(): i32
 
             Assert.True(hasInterp, "PT_INTERP missing");
             Assert.True(hasDynamic, "PT_DYNAMIC missing");
+        }
+
+        [Fact]
+        public void LinuxNative_StringArgExtern_EmitsDynamicWithLibcDynstr()
+        {
+            // N4：extern string 实参经 ExternUtf8Ptr 编组（编译期接受 libc），产物为动态 ELF
+            // 且 .dynstr 含 DT_NEEDED 的 libc.so.6 与导入符号 puts/strlen；无 Windows DLL 报错。
+            Emit(@"using System
+
+class L
+{
+    import libc
+    {
+        static stdcall function puts(s: string): i32
+            extern()
+        static stdcall function strlen(s: string): i32
+            extern()
+    }
+}
+
+function Main(): i32
+{
+    L.puts(""hi"")
+    var n = L.strlen(""cocoa"")
+    System.Console.WriteLine(n)
+    return 0
+}", "dynamic-string-extern");
+
+            var bytes = System.IO.File.ReadAllBytes(OutputPath("dynamic-string-extern"));
+            var names = SectionNames(bytes);
+            Assert.Contains(".interp", names);
+            Assert.Contains(".dynstr", names);
+            Assert.Contains(".rela.dyn", names);
+
+            var dynstr = SectionBytes(bytes, ".dynstr");
+            Assert.True(IndexOf(dynstr, System.Text.Encoding.ASCII.GetBytes("libc.so.6\0")) >= 0, "dynstr 缺 libc.so.6");
+            Assert.True(IndexOf(dynstr, System.Text.Encoding.ASCII.GetBytes("puts\0")) >= 0, "dynstr 缺 puts");
+            Assert.True(IndexOf(dynstr, System.Text.Encoding.ASCII.GetBytes("strlen\0")) >= 0, "dynstr 缺 strlen");
+        }
+
+        [Fact]
+        public void LinuxNative_F64ArgExtern_Libm_EmitsSseArgLoad()
+        {
+            // N4：extern f64 实参经 SysV xmm 寄存器装载（movd xmm0,eax + pinsrd 位模式），
+            // 产物动态 ELF 且 .dynstr 含 libm.so.6 与 sqrt。
+            Emit(@"using System
+
+class M
+{
+    import libm
+    {
+        static stdcall function sqrt(x: f64): f64
+            extern()
+    }
+}
+
+function Main(): i32
+{
+    var r = M.sqrt(16.0)
+    System.Console.WriteLine(r > 3.9)
+    return 0
+}", "dynamic-libm-sse");
+
+            var bytes = System.IO.File.ReadAllBytes(OutputPath("dynamic-libm-sse"));
+            var names = SectionNames(bytes);
+            Assert.Contains(".interp", names);
+            Assert.Contains(".dynstr", names);
+
+            var dynstr = SectionBytes(bytes, ".dynstr");
+            Assert.True(IndexOf(dynstr, System.Text.Encoding.ASCII.GetBytes("libm.so.6\0")) >= 0, "dynstr 缺 libm.so.6");
+            Assert.True(IndexOf(dynstr, System.Text.Encoding.ASCII.GetBytes("sqrt\0")) >= 0, "dynstr 缺 sqrt");
+
+            // movd xmm0,eax（66 0F 6E C0）在 .text 出现 → f64 实参确经 xmm 装载。
+            var text = SectionBytes(bytes, ".text");
+            Assert.True(IndexOf(text, new byte[] { 0x66, 0x0F, 0x6E, 0xC0 }) >= 0,
+                ".text 应含 movd xmm0,eax（f64 实参 xmm 装载）");
+        }
+
+        private static System.Collections.Generic.List<string> SectionNames(byte[] image)
+        {
+            var names = new System.Collections.Generic.List<string>();
+            var shoff = (int)System.Buffers.Binary.BinaryPrimitives.ReadUInt64LittleEndian(image.AsSpan(0x28));
+            var shnum = System.Buffers.Binary.BinaryPrimitives.ReadUInt16LittleEndian(image.AsSpan(0x3C));
+            var shstrndx = System.Buffers.Binary.BinaryPrimitives.ReadUInt16LittleEndian(image.AsSpan(0x3E));
+            var shstrOff = (int)System.Buffers.Binary.BinaryPrimitives.ReadUInt64LittleEndian(image.AsSpan(shoff + shstrndx * 64 + 0x18));
+            for (var i = 0; i < shnum; i++)
+            {
+                var nameOff = (int)System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(image.AsSpan(shoff + i * 64));
+                names.Add(ReadCString(image, shstrOff + nameOff));
+            }
+
+            return names;
+        }
+
+        private static byte[] SectionBytes(byte[] image, string wanted)
+        {
+            var shoff = (int)System.Buffers.Binary.BinaryPrimitives.ReadUInt64LittleEndian(image.AsSpan(0x28));
+            var shnum = System.Buffers.Binary.BinaryPrimitives.ReadUInt16LittleEndian(image.AsSpan(0x3C));
+            var shstrndx = System.Buffers.Binary.BinaryPrimitives.ReadUInt16LittleEndian(image.AsSpan(0x3E));
+            var shstrOff = (int)System.Buffers.Binary.BinaryPrimitives.ReadUInt64LittleEndian(image.AsSpan(shoff + shstrndx * 64 + 0x18));
+            for (var i = 0; i < shnum; i++)
+            {
+                var nameOff = (int)System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(image.AsSpan(shoff + i * 64));
+                if (ReadCString(image, shstrOff + nameOff) == wanted)
+                {
+                    var offset = (int)System.Buffers.Binary.BinaryPrimitives.ReadUInt64LittleEndian(image.AsSpan(shoff + i * 64 + 0x18));
+                    var size = (int)System.Buffers.Binary.BinaryPrimitives.ReadUInt64LittleEndian(image.AsSpan(shoff + i * 64 + 0x20));
+                    return image.Skip(offset).Take(size).ToArray();
+                }
+            }
+
+            throw new Exception($"section '{wanted}' not found");
+        }
+
+        private static int IndexOf(byte[] haystack, byte[] needle)
+        {
+            for (var i = 0; i <= haystack.Length - needle.Length; i++)
+            {
+                var match = true;
+                for (var j = 0; j < needle.Length; j++)
+                {
+                    if (haystack[i + j] != needle[j])
+                    {
+                        match = false;
+                        break;
+                    }
+                }
+
+                if (match)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private static string ReadCString(byte[] image, int offset)
+        {
+            var sb = new System.Text.StringBuilder();
+            while (offset < image.Length && image[offset] != 0)
+            {
+                sb.Append((char)image[offset++]);
+            }
+
+            return sb.ToString();
         }
     }
 }

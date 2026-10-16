@@ -10,9 +10,10 @@ namespace Cocoa.CodeGen.Native
 {
     /// <summary>
     /// T3：Linux x86_64 运行时薄层——控制台 Hello 链（WriteStr/PrintString/PrintInt/Input/ReadKey）、
-    /// 堆（Alloc）、退出（ExitProcess）、时间（TickCount/Sleep/Beep）、随机（Random）以裸 syscall 实现，
-    /// 零导入、不依赖 glibc。File/Env/Process/SHA256/SelfIntrospect/BuildArgs/ExternWidePtr 面编译期警示、
-    /// 运行期明确报错退出（见 EmitLinuxUnsupported）。
+    /// 堆（Alloc）、退出（ExitProcess）、时间（TickCount/Sleep/Beep）、随机（Random）、
+    /// File/Env/Process/SHA256/SelfIntrospect/BuildArgs 以裸 syscall 实现，零 glibc 依赖；
+    /// 外部 .so 动态导入（N3 glibc）在此之上。N4：extern string 参数经 ExternUtf8Ptr0-3
+    /// 编组为 NUL 结尾 UTF-8（char*），对齐 SysV C 函数消费。
     /// UTF-16→UTF-8（WriteStr）与 UTF-8→UTF-16（Input）均为 BMP 全实现（代理对 TODO）。
     /// </summary>
     internal sealed partial class RuntimeFunctionEmitter
@@ -117,6 +118,12 @@ namespace Cocoa.CodeGen.Native
             _ = BeginFunction("TickCount"); EmitNowLinux();
             _ = BeginFunction("Sleep", 4); EmitSleepLinux();
             _ = BeginFunction("Beep", 4, 4); EmitBeepLinux();
+
+            // ---- Linux extern string 参数编组（N4）：CO 串 → NUL 结尾 UTF-8（char*），4 个独立缓冲供多 string 参数 ----
+            _ = BeginFunctionTyped("ExternUtf8Ptr0", new[] { 8 }, LirType.Addr); EmitExternUtf8Ptr(_extMarshal0);
+            _ = BeginFunctionTyped("ExternUtf8Ptr1", new[] { 8 }, LirType.Addr); EmitExternUtf8Ptr(_extMarshal1);
+            _ = BeginFunctionTyped("ExternUtf8Ptr2", new[] { 8 }, LirType.Addr); EmitExternUtf8Ptr(_extMarshal2);
+            _ = BeginFunctionTyped("ExternUtf8Ptr3", new[] { 8 }, LirType.Addr); EmitExternUtf8Ptr(_extMarshal3);
 
             // ---- Linux 文件/目录/环境（裸 syscall；实现见 RuntimeEmitterLir.LinuxFile.cs）----
             _ = BeginFunctionTyped("FileExists", new[] { 8 }, LirType.Addr); EmitFileExistsLinux();
@@ -723,6 +730,102 @@ namespace Cocoa.CodeGen.Native
         private void EmitBeepLinux()
         {
             EndFunction(_currentFunction!, 0);
+        }
+
+        // ------------------------------------------------------------------
+        // ExternUtf8Ptr0-3 (s:8) → char*：CO 串（UTF-16，无 null 结尾）→ NUL 结尾 UTF-8 缓冲。
+        // 编码分支与 WriteStrLinux 同构（BMP；代理对 TODO）；N4 后 extern string 实参经此编组
+        // 供 libc（puts/fopen 等）消费，对齐 SysV C 调用约定。
+        // ------------------------------------------------------------------
+
+        /// <summary>复制 CO 字符串为 NUL 结尾 UTF-8 到 <paramref name="bufferKey"/> 并返回缓冲区指针。</summary>
+        private LirVirtualRegister Utf8PtrZ(LirVirtualRegister s, string bufferKey)
+        {
+            var src = WidePtr(s);
+            var len = NewReg(4);
+            Load(len, s, NativeObjectModel.StringLengthOffset, 4);
+            var pb = NewPtr();
+            LeaData(pb, bufferKey);
+            var dst = NewPtr();
+            Mov(dst, pb);
+            var i = NewReg(4);
+            Const(i, 0);
+            var loop = NewLabel();
+            var multi = NewLabel();
+            var three = NewLabel();
+            var next = NewLabel();
+            var done = NewLabel();
+
+            Mark(loop);
+            Cmp(i, len);
+            Jcc(LirCond.GreaterOrEqual, done);
+
+            var p = NewPtr();
+            Mov(p, src);
+            var off = NewReg(4);
+            Mov(off, i);
+            Shl(off, off, 1);
+            Add(p, p, off);
+            var ch = NewReg(4);
+            Load(ch, p, 0, 2);
+
+            Cmp(ch, 0x80);
+            Jcc(LirCond.AboveOrEqual, multi);
+            Store(dst, 0, ch, 1);
+            AddI(dst, dst, 1);
+            Jmp(next);
+
+            Mark(multi);
+            Cmp(ch, 0x800);
+            Jcc(LirCond.AboveOrEqual, three);
+
+            var b0 = NewReg(4);
+            Mov(b0, ch);
+            Shr(b0, b0, 6);
+            Or(b0, b0, C(4, 0xC0));
+            var b1 = NewReg(4);
+            Mov(b1, ch);
+            And(b1, b1, C(4, 0x3F));
+            Or(b1, b1, C(4, 0x80));
+            Store(dst, 0, b0, 1);
+            Store(dst, 1, b1, 1);
+            AddI(dst, dst, 2);
+            Jmp(next);
+
+            Mark(three);
+            var t0 = NewReg(4);
+            Mov(t0, ch);
+            Shr(t0, t0, 12);
+            Or(t0, t0, C(4, 0xE0));
+            var t1 = NewReg(4);
+            Mov(t1, ch);
+            Shr(t1, t1, 6);
+            And(t1, t1, C(4, 0x3F));
+            Or(t1, t1, C(4, 0x80));
+            var t2 = NewReg(4);
+            Mov(t2, ch);
+            And(t2, t2, C(4, 0x3F));
+            Or(t2, t2, C(4, 0x80));
+            Store(dst, 0, t0, 1);
+            Store(dst, 1, t1, 1);
+            Store(dst, 2, t2, 1);
+            AddI(dst, dst, 3);
+
+            Mark(next);
+            AddI(i, i, 1);
+            Jmp(loop);
+
+            Mark(done);
+            Store(dst, 0, C(4, 0), 1);
+            return pb;
+        }
+
+        /// <summary>ExternUtf8PtrN：编组 _args[0] 到指定缓冲并返回 char*（与 Windows ExternWidePtrN 对称）。</summary>
+        private void EmitExternUtf8Ptr(string bufferKey)
+        {
+            var p = Utf8PtrZ(_args[0], bufferKey);
+            StoreRet(p);
+            EndFunction(_currentFunction!, 8);
         }
     }
 }

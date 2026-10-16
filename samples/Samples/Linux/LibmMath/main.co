@@ -1,0 +1,28 @@
+// N4：Linux native 调 libm（libm.so.6）——extern f64 实参/返回经 SysV xmm 寄存器
+// （LoadSlotXmm → xmm0-7，MOVD+PINSRD 位模式装载；返回经 XMM0 → 槽）。
+
+using System
+
+class LibM
+{
+    import libm
+    {
+        static stdcall function sqrt(x: f64): f64
+            extern()
+        static stdcall function pow(x: f64, y: f64): f64
+            extern()
+        static stdcall function sin(x: f64): f64
+            extern()
+    }
+}
+
+function Main(): i32
+{
+    var s = LibM.sqrt(16.0)
+    System.Console.WriteLine(s > 3.999 && s < 4.001)
+    var p = LibM.pow(2.0, 10.0)
+    System.Console.WriteLine(p > 1023.9 && p < 1024.1)
+    var si = LibM.sin(0.0)
+    System.Console.WriteLine(si > -0.001 && si < 0.001)
+    return 0
+}

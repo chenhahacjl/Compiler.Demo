@@ -347,13 +347,17 @@ namespace Cocoa.CodeGen.Native
             return result ?? VoidResult();
         }
 
-        /// <summary>extern string 参数编组：复制为 null 结尾宽串（按序号取用独立缓冲）并返回 LPCWSTR。</summary>
+        /// <summary>
+        /// extern string 参数编组：复制为 null 结尾窄串并按平台编码返回指针
+        /// （Windows UTF-16 LPCWSTR / Linux UTF-8 char*，按序号取用独立缓冲）。
+        /// </summary>
         private LirVirtualRegister EmitExternStringArg(LirVirtualRegister value, int slot)
         {
             var instructions = _builder.CurrentFunction.Instructions;
             Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(value)));
             var ptr = AllocateRegister(LirType.Addr);
-            Add(instructions, new LirInstruction(LirOpCode.Call, ptr, LirOperand.Runtime("ExternWidePtr" + slot), LirOperand.Constant(0)));
+            var marshaler = _os == TargetOS.Linux ? "ExternUtf8Ptr" : "ExternWidePtr";
+            Add(instructions, new LirInstruction(LirOpCode.Call, ptr, LirOperand.Runtime(marshaler + slot), LirOperand.Constant(0)));
             return ptr;
         }
 

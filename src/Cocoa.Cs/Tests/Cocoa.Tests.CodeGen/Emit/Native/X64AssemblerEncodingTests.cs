@@ -114,5 +114,20 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
             // movabs rax, 0x123456789 → 48 B8 89 67 45 23 01 00 00 00
             AssertHex("48 B8 89 67 45 23 01 00 00 00", Emit(a => a.Mov(X64Size.Qword, X64Register.RAX, 0x123456789L)));
         }
+
+        [Fact]
+        public void movd_GprToXmm0_MarshalAll_Sequence()
+        {
+            // N4：f64 实参 xmm 装载序列（LoadSlotXmm）——MOVD xmm0,eax → 66 0F 6E C0；
+            // MOVD（64 位宽）经 rex.W → 66 48 0F 6E C0 两态，SysV extern 双精度实参用前者。
+            AssertHex("66 0F 6E C0", Emit(a => a.MovdGprToXmm(X64Register.XMM0, X64Register.EAX)));
+        }
+
+        [Fact]
+        public void Pinsrd_Xmm0_Eax_Imm1()
+        {
+            // PINSRD xmm0, eax, 1 → 66 0F 3A 22 C0 01（LoadSlotXmm 高 dword 写入）
+            AssertHex("66 0F 3A 22 C0 01", Emit(a => a.Pinsrd(X64Register.XMM0, X64Register.EAX, 1)));
+        }
     }
 }

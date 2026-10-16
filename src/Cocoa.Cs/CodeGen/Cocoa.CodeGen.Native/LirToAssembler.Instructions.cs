@@ -1794,14 +1794,35 @@ namespace Cocoa.CodeGen.Native
                 _a.Sub(X64Size.Qword, X64Register.RSP, frameSize);
                 _stackDepth += frameSize / 8;
 
-                for (var i = 0; i < Math.Min(argCount, 4) && i < _sysArgs.Count; i++)
+                // N4：寄存器实参按类型独立计数装载——整数/指针挑 ABI 整数寄存器，双精度挑 ABI 浮点寄存器
+                // （SysV xmm0-7 / Win64 xmm0-3）。Windows 纯整型调用发射序列与既有字节逐条一致。
+                var intReg = 0;
+                var floatReg = 0;
+                for (var i = 0; i < argCount; i++)
                 {
-                    LoadSlot(X64Register.EAX, _sysArgs[i], RegisterSize(_sysArgs[i]));
-                    // T1：SysCall 参数寄存器序经 ABI 描述符
-                    var target = i < _abi.ArgumentRegisterCount
-                        ? AbiToRegister(_abi.ArgumentRegisters[i])
-                        : X64Register.RAX;
-                    _a.Mov(ToSize(RegisterSize(_sysArgs[i])), target, X64Register.RAX);
+                    var arg = _sysArgs.Count > i ? _sysArgs[i] : null;
+                    if (arg == null)
+                    {
+                        break;
+                    }
+
+                    if (arg.Type == LirType.F64 || arg.Type == LirType.F32)
+                    {
+                        if (floatReg < _abi.FloatArgRegisterCount)
+                        {
+                            var xmm = (X64Register)((int)X64Register.XMM0 + floatReg++);
+                            LoadSlotXmm(xmm, arg, arg.Type == LirType.F32);
+                            continue;
+                        }
+                    }
+                    else if (intReg < _abi.ArgumentRegisterCount)
+                    {
+                        LoadSlot(X64Register.EAX, arg, RegisterSize(arg));
+                        _a.Mov(ToSize(RegisterSize(arg)), AbiToRegister(_abi.ArgumentRegisters[intReg++]), X64Register.EAX);
+                        continue;
+                    }
+
+                    // 寄存器溢出：由下方按位置进栈（逐参 0 填充语义保持既有行为）。
                 }
 
                 // 栈参（第 5 参起，[RSP+0x20 + (i-4)*8]）——循环装载，任意参数量
@@ -1850,7 +1871,12 @@ namespace Cocoa.CodeGen.Native
 
             if (dst != null)
             {
-                if (!_isX64 && RegisterSize(dst) == 8)
+                if (_isX64 && (dst.Type == LirType.F64 || dst.Type == LirType.F32))
+                {
+                    // N4：x64 浮点返回值经 XMM0（SysV/Win64 ABI）→ 槽。
+                    StoreSlotXmm(dst, X64Register.XMM0, dst.Type == LirType.F32);
+                }
+                else if (!_isX64 && RegisterSize(dst) == 8)
                 {
                     // x86 8 字节返回值：I64 用 EDX:EAX 双槽；Addr（32 位指针）只 EAX 低 dword，高 4 字节清零
                     // （EDX 对 32 位返回是垃圾，写高槽会把指针高 32 位污染 → 0xC0000005）。

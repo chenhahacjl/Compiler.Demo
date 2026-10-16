@@ -35,5 +35,11 @@ namespace Cocoa.Targeting
 
         /// <summary>SysCall 的寄存器序号（对应 ArgumentRegisters；当前第 5 参恒 0 语义由调用方处理）。</summary>
         int SysCallRegisterCount { get; }
+
+        /// <summary>
+        /// 浮点参数寄存器数（x64：SysV 8 个 xmm0-7 / Win64 4 个 xmm0-3；x86 0 = 无浮点寄存器 ABI）。
+        /// 浮点/双精度实参按此从 XMM0 起逐一分配，与整数参数寄存器独立计数。
+        /// </summary>
+        int FloatArgRegisterCount { get; }
     }
 }

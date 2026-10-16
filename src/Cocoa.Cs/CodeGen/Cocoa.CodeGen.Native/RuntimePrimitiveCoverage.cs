@@ -9,7 +9,7 @@ namespace Cocoa.CodeGen.Native
     /// <summary>运行时原语的平台覆盖平台。<see cref="RuntimePrimitiveCoverage"/> 一致性锁用。</summary>
     public enum RuntimePrimitivePlatform
     {
-        /// <summary>x64 与 x86 双平台均发射。</summary>
+        /// <summary>x64 与 x86（Windows）双平台均发射。</summary>
         All,
 
         /// <summary>仅 x86（x64 走内联指令，如 64 位除/余）。</summary>
@@ -17,6 +17,12 @@ namespace Cocoa.CodeGen.Native
 
         /// <summary>仅 x64（预留：目前无 x64 独占运行时原语）。</summary>
         X64,
+
+        /// <summary>仅 Windows（任一架构；如 extern 宽串编组 ExternWidePtr0-3）。</summary>
+        Windows,
+
+        /// <summary>仅 Linux（x64；如 extern UTF-8 编组 ExternUtf8Ptr0-3）。</summary>
+        Linux,
     }
 
     /// <summary>
@@ -48,10 +54,14 @@ namespace Cocoa.CodeGen.Native
             new("ObjectGetHashCode", "System", RuntimePrimitivePlatform.All, "-"),
             new("ObjectGetType", "System", RuntimePrimitivePlatform.All, "-"),
             new("TypeSimpleName", "System", RuntimePrimitivePlatform.All, "-"),
-            new("ExternWidePtr0", "System", RuntimePrimitivePlatform.All, "-"),
-            new("ExternWidePtr1", "System", RuntimePrimitivePlatform.All, "-"),
-            new("ExternWidePtr2", "System", RuntimePrimitivePlatform.All, "-"),
-            new("ExternWidePtr3", "System", RuntimePrimitivePlatform.All, "-"),
+            new("ExternWidePtr0", "System", RuntimePrimitivePlatform.Windows, "-"),
+            new("ExternWidePtr1", "System", RuntimePrimitivePlatform.Windows, "-"),
+            new("ExternWidePtr2", "System", RuntimePrimitivePlatform.Windows, "-"),
+            new("ExternWidePtr3", "System", RuntimePrimitivePlatform.Windows, "-"),
+            new("ExternUtf8Ptr0", "System", RuntimePrimitivePlatform.Linux, "-"),
+            new("ExternUtf8Ptr1", "System", RuntimePrimitivePlatform.Linux, "-"),
+            new("ExternUtf8Ptr2", "System", RuntimePrimitivePlatform.Linux, "-"),
+            new("ExternUtf8Ptr3", "System", RuntimePrimitivePlatform.Linux, "-"),
 
             // Strings 分片（RuntimeEmitterLir.Strings.cs）：字符串运算/解析/格式化
             new("ParseInt", "Strings", RuntimePrimitivePlatform.All, "-"),
@@ -163,10 +173,13 @@ namespace Cocoa.CodeGen.Native
         {
             var emitted = EmittedPrimitiveNames(platform).ToHashSet();
             var isX64 = platform.Arch == Architecture.X64;
+            var isLinux = platform.OS == TargetOS.Linux;
             return Rows
                 .Where(r => r.Platform == RuntimePrimitivePlatform.All ||
-                            (r.Platform == RuntimePrimitivePlatform.X86 && !isX64) ||
-                            (r.Platform == RuntimePrimitivePlatform.X64 && isX64))
+                            (r.Platform == RuntimePrimitivePlatform.X86 && !isLinux && !isX64) ||
+                            (r.Platform == RuntimePrimitivePlatform.X64 && isX64) ||
+                            (r.Platform == RuntimePrimitivePlatform.Windows && !isLinux) ||
+                            (r.Platform == RuntimePrimitivePlatform.Linux && isLinux))
                 .Select(r => r.Name)
                 .Where(n => !emitted.Contains(n))
                 .ToImmutableArray();

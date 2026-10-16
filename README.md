@@ -2,7 +2,7 @@
 
 用 C# 编写的 C 系方言编译器，同时具备 **Native 代码生成**（x86 / x64，零依赖、纯自研 PE 输出）与 **IL 代码生成**（ECMA-335）两条后端路径；编译器本体正在用 Cocoa 语言重写（自举，阶段 7 已完成，阶段 8 自举验证进行中）。
 
-> 当前阶段：阶段 8 — 自举验证（B1 ≡ B2）。阶段 7（用 Cocoa 重写编译器）已收官：增量一~五全部完成——Lexer/Parser/Binder/Lowering 逐单元差分对齐，自举 Emit 全链（Interpreter + IL 自研 ManagedPEWriter + Native LIR）落地（见 [`docs-dev/plan/自举实施计划.md`](docs-dev/plan/自举实施计划.md)）。
+> 当前阶段：阶段 8 — 自举验证（B1 ≡ B2）。阶段 7（用 Cocoa 重写编译器）已收官——增量一~五全部完成——Lexer/Parser/Binder/Lowering 逐单元差分对齐，自举 Emit 全链（Interpreter + IL 自研 ManagedPEWriter + Native LIR）落地（见 [`docs-dev/plan/自举实施计划.md`](docs-dev/plan/自举实施计划.md)）。**并行跨平台线：Linux native 后端（T0-T3 + N3/N4，2026-10-16）**——TargetTriple/ABI 去平台化、最小可执行 ELF、裸 syscall 运行时、`cocoa build --os linux` + ELF 内嵌元数据节、glibc `.so` 动态链接（DT_NEEDED + GLOB_DAT）、extern UTF-8 字符串 + f64 xmm ABI（见 [`docs-dev/plan/N4-linux-extern互操作面.md`](docs-dev/plan/N4-linux-extern互操作面.md)）。
 > 最新：**阶段 8 里程碑：B1 自举闭环（2026-09-25，全量 241K 语料自编译）、B1→B2 全量 543K 语料通过（2026-09-26）、B2 == B1 fixpoint 达成（字节级一致，2026-09-30）**；ilverify 双轨错配清零与语言特性补全（嵌套类/模式匹配/`?.`/checked-unchecked/typeof/sizeof/Attribute/运算符重载）持续推进。近期流水见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 路线图（摘要）
