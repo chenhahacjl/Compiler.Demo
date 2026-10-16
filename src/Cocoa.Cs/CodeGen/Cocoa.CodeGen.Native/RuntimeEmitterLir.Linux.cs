@@ -31,6 +31,10 @@ namespace Cocoa.CodeGen.Native
         private string _linuxOutBuf = "";
         private string _linuxInBuf = "";
         private string _linuxTimeBuf = "";
+        private string _linuxProcExe = "";
+        private string _linuxProcEnviron = "";
+        private string _linuxProcCmdline = "";
+        private string _linuxStatBuf = "";
 
         private void AddLinuxDataItems()
         {
@@ -38,6 +42,11 @@ namespace Cocoa.CodeGen.Native
             _linuxOutBuf = _program.AddData(LirDataItem.ByteArray(Prefix + "LinuxOutBuf", new byte[0x4000]));
             _linuxInBuf = _program.AddData(LirDataItem.ByteArray(Prefix + "LinuxInBuf", new byte[0x2000]));
             _linuxTimeBuf = _program.AddData(LirDataItem.ByteArray(Prefix + "LinuxTime", new byte[16]));
+            // 文件 IO：/proc 常量路径（NUL 结尾 UTF-8）+ stat 缓冲。
+            _linuxProcExe = _program.AddData(LirDataItem.ByteArray(Prefix + "LinuxProcExe", System.Text.Encoding.UTF8.GetBytes("/proc/self/exe\0")));
+            _linuxProcEnviron = _program.AddData(LirDataItem.ByteArray(Prefix + "LinuxProcEnviron", System.Text.Encoding.UTF8.GetBytes("/proc/self/environ\0")));
+            _linuxProcCmdline = _program.AddData(LirDataItem.ByteArray(Prefix + "LinuxProcCmdline", System.Text.Encoding.UTF8.GetBytes("/proc/self/cmdline\0")));
+            _linuxStatBuf = _program.AddData(LirDataItem.ByteArray(Prefix + "LinuxStatBuf", new byte[144]));
         }
 
         private void EmitLinuxFunctions()
@@ -99,28 +108,30 @@ namespace Cocoa.CodeGen.Native
             _ = BeginFunction("Sleep", 4); EmitSleepLinux();
             _ = BeginFunction("Beep", 4, 4); EmitBeepLinux();
 
-            // ---- Linux 不支持面（编译期已警示；运行期明确报错退出）----
-            EmitLinuxUnsupported("BuildArgs", 8);
-            EmitLinuxUnsupported("FileExists", 4, 8);
-            EmitLinuxUnsupported("DirectoryExists", 4, 8);
-            EmitLinuxUnsupported("CreateDirectory", 0, 8);
-            EmitLinuxUnsupported("FileDelete", 0, 8);
-            EmitLinuxUnsupported("FileCopy", 0, 8, 8);
-            EmitLinuxUnsupported("GetEnvironmentVariable", 8, 8);
-            EmitLinuxUnsupported("GetCurrentDirectory", 8);
-            EmitLinuxUnsupported("GetExecutablePath", 8);
+            // ---- Linux 文件/目录/环境（裸 syscall；实现见 RuntimeEmitterLir.LinuxFile.cs）----
+            _ = BeginFunctionTyped("FileExists", new[] { 8 }, LirType.Addr); EmitFileExistsLinux();
+            _ = BeginFunctionTyped("DirectoryExists", new[] { 8 }, LirType.Addr); EmitDirectoryExistsLinux();
+            _ = BeginFunctionTyped("CreateDirectory", new[] { 8 }, LirType.Addr); EmitCreateDirectoryLinux();
+            _ = BeginFunctionTyped("FileDelete", new[] { 8 }, LirType.Addr); EmitFileDeleteLinux();
+            _ = BeginFunctionTyped("FileCopy", new[] { 8, 8 }, LirType.Addr, LirType.Addr); EmitFileCopyLinux();
+            _ = BeginFunctionTyped("GetEnvironmentVariable", new[] { 8 }, LirType.Addr); EmitGetEnvironmentVariableLinux();
+            _ = BeginFunction("GetCurrentDirectory"); EmitGetCurrentDirectoryLinux();
+            _ = BeginFunction("GetExecutablePath"); EmitGetExecutablePathLinux();
+            _ = BeginFunctionTyped("SetCurrentDirectory", new[] { 8 }, LirType.Addr); EmitSetCurrentDirectoryLinux();
+            _ = BeginFunctionTyped("FileReadAllBytes", new[] { 8 }, LirType.Addr); EmitFileReadAllBytesLinux();
+            _ = BeginFunctionTyped("FileWriteAllBytes", new[] { 8, 8 }, LirType.Addr, LirType.Addr); EmitFileWriteAllBytesLinux();
+            _ = BeginFunctionTyped("FileOpenHandle", new[] { 8, 4, 4, 4 }, LirType.Addr); EmitFileOpenHandleLinux();
+            _ = BeginFunctionTyped("FileSizeHandle", new[] { 8 }, LirType.Addr); EmitFileSizeHandleLinux();
+            _ = BeginFunctionTyped("FileSeekHandle", new[] { 8, 8, 4 }, LirType.Addr, LirType.I64, LirType.I32); EmitFileSeekHandleLinux();
+            _ = BeginFunctionTyped("FileTellHandle", new[] { 8 }, LirType.Addr); EmitFileTellHandleLinux();
+            _ = BeginFunctionTyped("FileCloseHandle", new[] { 8 }, LirType.Addr); EmitFileCloseHandleLinux();
+            _ = BeginFunctionTyped("FileReadHandle", new[] { 8, 8, 4, 4 }, LirType.Addr, LirType.Addr, LirType.I32, LirType.I32); EmitFileReadHandleLinux();
+            _ = BeginFunctionTyped("FileWriteHandle", new[] { 8, 8, 4, 4 }, LirType.Addr, LirType.Addr, LirType.I32, LirType.I32); EmitFileWriteHandleLinux();
+
+            // ---- Linux 不支持的运行期面（编译期已警示；运行期明确报错退出）----
+            _ = BeginFunction("BuildArgs"); EmitBuildArgsLinux();
             EmitLinuxUnsupported("SelfIntrospect", 8);
-            EmitLinuxUnsupported("SetCurrentDirectory", 0, 8);
-            EmitLinuxUnsupported("FileReadAllBytes", 8, 8);
-            EmitLinuxUnsupported("FileWriteAllBytes", 0, 8, 8);
-            EmitLinuxUnsupported("FileOpenHandle", 8, 8, 4, 4, 4);
-            EmitLinuxUnsupported("FileSizeHandle", 8, 8);
-            EmitLinuxUnsupported("FileSeekHandle", 8, 8, 8, 4);
-            EmitLinuxUnsupported("FileTellHandle", 8, 8);
-            EmitLinuxUnsupported("FileCloseHandle", 0, 8);
-            EmitLinuxUnsupported("FileReadHandle", 4, 8, 8, 4, 4);
-            EmitLinuxUnsupported("FileWriteHandle", 4, 8, 8, 4, 4);
-            EmitLinuxUnsupported("LaunchProcess", 8, 8, 8, 8);
+            _ = BeginFunctionTyped("LaunchProcess", new[] { 8, 8, 8 }, LirType.Addr, LirType.Addr, LirType.Addr); EmitLaunchProcessLinux();
             EmitLinuxUnsupported("Sha256Hash", 8, 8);
 
             // ---- 特殊函数（DivByZero/StackOverflow 经 PrintString+ExitProcess，Linux 天然可用）----

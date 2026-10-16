@@ -124,5 +124,38 @@ function Main()
             var bytes = System.IO.File.ReadAllBytes(outputPath);
             Assert.Equal(new byte[] { 0x7F, (byte)'E', (byte)'L', (byte)'F' }, new[] { bytes[0], bytes[1], bytes[2], bytes[3] });
         }
+
+        [Fact]
+        public void LinuxNative_FileEnvSurface_Emits()
+        {
+            // N2：文件/环境/句柄族 + argv + Process 面可编（结构断言；实机语义见 verify-linux-vm 冒烟）。
+            var syntaxTree = SyntaxTree.Parse(@"using System
+using System.IO
+using System.Syscall
+
+function Main(args: string[]): i32
+{
+    System.IO.File.WriteAllBytes(""/tmp/x.bin"", new u8[4])
+    var r = System.IO.File.ReadAllBytes(""/tmp/x.bin"")
+    System.Console.WriteLine(r.Length)
+    System.IO.File.Delete(""/tmp/x.bin"")
+    var e = System.Environment.GetEnvironmentVariable(""PATH"")
+    System.Console.WriteLine(e.Length > 0)
+    System.Environment.GetExecutablePath()
+    System.IO.Directory.GetCurrentDirectory()
+    var c = System.Syscall.ProcessSyscall.LaunchProcess(""/bin/echo"", ""hi"", """")
+    System.Console.WriteLine(c == 0)
+    return 0
+}");
+            // 与 SystemIOFileStream 等 facade 测试同款标准库引用，解析 System.IO/System.Syscall 面。
+            var references = new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location };
+            var compilation = Compilation.Create("Main", references, syntaxTree);
+            var outputPath = OutputPath("file-env-surface");
+            var diagnostics = compilation.EmitNative("file-env-surface", outputPath, new TargetPlatform(TargetOS.Linux, Architecture.X64));
+            Assert.True(diagnostics.IsEmpty, string.Join("\n", System.Linq.Enumerable.Select(diagnostics, d => d.Message)));
+
+            var bytes = System.IO.File.ReadAllBytes(outputPath);
+            Assert.Equal(new byte[] { 0x7F, (byte)'E', (byte)'L', (byte)'F' }, new[] { bytes[0], bytes[1], bytes[2], bytes[3] });
+        }
     }
 }
