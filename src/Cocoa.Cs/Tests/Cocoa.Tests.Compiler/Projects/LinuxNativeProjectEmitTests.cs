@@ -3,7 +3,7 @@ using System.IO;
 using Cocoa.Build;
 using Xunit;
 
-namespace Cocoa.Tests.Projects
+namespace Cocoa.Tests.Compiler.Projects
 {
     /// <summary>
     /// T3.3：linux-native .coproj 生成立面——产物无扩展名（ELF 惯例）+ ELF 魔数；

@@ -4,7 +4,7 @@ using Cocoa.CodeAnalysis;
 using Cocoa.Engine;
 using Xunit;
 
-namespace Cocoa.Tests.Engine
+namespace Cocoa.Tests.Compiler.Engine
 {
     /// <summary>
     /// M4：CocoaEngine IlEmit 后端——DoString（发射+反射执行，Value 经 $eval）、

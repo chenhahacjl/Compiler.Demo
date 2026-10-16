@@ -2,7 +2,7 @@ using System.Collections.Immutable;
 using Cocoa.Build;
 using Xunit;
 
-namespace Cocoa.Tests.Projects
+namespace Cocoa.Tests.Compiler.Projects
 {
     public class SolutionBuilderTests
     {

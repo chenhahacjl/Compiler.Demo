@@ -4,7 +4,7 @@ using System.IO;
 using Cocoa.Build;
 using Xunit;
 
-namespace Cocoa.Tests.Projects
+namespace Cocoa.Tests.Compiler.Projects
 {
     public class BuildCacheTests : IDisposable
     {

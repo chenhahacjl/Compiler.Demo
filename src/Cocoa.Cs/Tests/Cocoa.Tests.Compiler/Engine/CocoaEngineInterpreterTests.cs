@@ -4,7 +4,7 @@ using Cocoa.CodeAnalysis;
 using Cocoa.Engine;
 using Xunit;
 
-namespace Cocoa.Tests.Engine
+namespace Cocoa.Tests.Compiler.Engine
 {
     /// <summary>
     /// M1：CocoaEngine 嵌入式引擎核心——DoString 返回值/submission 链保持/全局变量读写/

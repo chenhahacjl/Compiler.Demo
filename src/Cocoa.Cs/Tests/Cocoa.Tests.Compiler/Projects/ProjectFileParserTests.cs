@@ -4,7 +4,7 @@ using Cocoa.Build;
 using Cocoa.Targeting;
 using Xunit;
 
-namespace Cocoa.Tests.Projects
+namespace Cocoa.Tests.Compiler.Projects
 {
     public class ProjectFileParserTests
     {
