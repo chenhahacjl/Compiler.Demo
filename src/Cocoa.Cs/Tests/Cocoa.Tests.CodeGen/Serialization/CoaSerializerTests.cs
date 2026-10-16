@@ -98,7 +98,7 @@ namespace MyLib
             var compilation = Compilation.Create(SyntaxTree.Load(libPath));
 
             var output = Path.Combine(dir, "Lib.coa");
-            var diagnostics = compilation.EmitCocoa("Lib", output);
+            var diagnostics = compilation.EmitCoa("Lib", output);
             Assert.True(diagnostics.Length == 0, string.Join("; ", diagnostics));
 
             return output;
@@ -465,7 +465,7 @@ namespace MyLib
             File.WriteAllText(libPath, source);
             var compilation = Compilation.Create(SyntaxTree.Load(libPath));
 
-            var diagnostics = compilation.EmitCocoa("Lib", Path.Combine(dir, "Lib.coa"));
+            var diagnostics = compilation.EmitCoa("Lib", Path.Combine(dir, "Lib.coa"));
             Assert.True(diagnostics.HasErrors());
             Assert.Contains("入口", diagnostics[0].Message);
         }
@@ -484,7 +484,7 @@ function Add(a: i32, b: i32): i32
             File.WriteAllText(libPath, source);
             var compilation = Compilation.Create(SyntaxTree.Load(libPath));
 
-            var diagnostics = compilation.EmitCocoa("Lib", Path.Combine(dir, "Lib.coa"));
+            var diagnostics = compilation.EmitCoa("Lib", Path.Combine(dir, "Lib.coa"));
             Assert.True(diagnostics.HasErrors());
             Assert.Contains("namespace", diagnostics[0].Message);
         }
@@ -510,7 +510,7 @@ namespace MyLib
             var compilation = Compilation.Create(SyntaxTree.Load(libPath));
 
             var output = Path.Combine(dir, "Lib.coa");
-            var diagnostics = compilation.EmitCocoa("Lib", output);
+            var diagnostics = compilation.EmitCoa("Lib", output);
             Assert.False(diagnostics.HasErrors());
 
             var loaded = CoaSerializer.Load(output);
@@ -663,7 +663,7 @@ namespace System
     }
 }
 ";
-            var diagnostics = Compilation.Create(SyntaxTree.Parse(source)).EmitCocoa("System.Core", Path.Combine(dir, "System.Core.coa"));
+            var diagnostics = Compilation.Create(SyntaxTree.Parse(source)).EmitCoa("System.Core", Path.Combine(dir, "System.Core.coa"));
             Assert.Empty(diagnostics);
             Assert.True(File.Exists(Path.Combine(dir, "System.Core.coa")));
 
@@ -772,7 +772,7 @@ namespace System.Demo
         return 42
     }
 }");
-                var diagnostics = Compilation.Create(demoTree).EmitCocoa("System.Demo", Path.Combine(dir, "System.Demo.coa"));
+                var diagnostics = Compilation.Create(demoTree).EmitCoa("System.Demo", Path.Combine(dir, "System.Demo.coa"));
                 Assert.Empty(diagnostics);
                 Assert.True(File.Exists(Path.Combine(dir, "System.Demo.coa")));
 
@@ -991,7 +991,7 @@ namespace Test
             File.WriteAllText(libPath, source);
             var compilation = Compilation.Create(SyntaxTree.Load(libPath));
             var output = Path.Combine(dir, "Lib.coa");
-            var diagnostics = compilation.EmitCocoa("Lib", output);
+            var diagnostics = compilation.EmitCoa("Lib", output);
             Assert.True(diagnostics.Length == 0, string.Join("; ", diagnostics.Select(d => d.Message)));
 
             var text = File.ReadAllText(output);

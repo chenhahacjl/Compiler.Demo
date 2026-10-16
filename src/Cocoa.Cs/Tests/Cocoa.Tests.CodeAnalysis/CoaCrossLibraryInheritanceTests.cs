@@ -88,7 +88,7 @@ function Main(): i32
             var output = Path.Combine(dir, "BaseLib.coa");
 
             var compilation = Compilation.Create(SyntaxTree.Parse(BaseLibSource));
-            var diagnostics = compilation.EmitCocoa("BaseLib", output);
+            var diagnostics = compilation.EmitCoa("BaseLib", output);
             Assert.True(diagnostics.IsEmpty, string.Join("\n", diagnostics));
             return output;
         }
@@ -100,13 +100,13 @@ function Main(): i32
             var output = Path.Combine(dir, "DerivedLib.coa");
 
             var compilation = Compilation.Create(new[] { baseLibPath }, SyntaxTree.Parse(DerivedLibSource));
-            var diagnostics = compilation.EmitCocoa("DerivedLib", output);
+            var diagnostics = compilation.EmitCoa("DerivedLib", output);
             Assert.True(diagnostics.IsEmpty, string.Join("\n", diagnostics));
             return output;
         }
 
         [Fact]
-        public void EmitCocoa_CrossLibraryBase_Serializes()
+        public void EmitCoa_CrossLibraryBase_Serializes()
         {
             var baseLib = CompileBaseLib();
             var derivedLib = CompileDerivedLib(baseLib);

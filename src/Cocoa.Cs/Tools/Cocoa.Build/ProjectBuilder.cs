@@ -227,7 +227,7 @@ namespace Cocoa.Build
                     var docPath = options.DocOutput != null
                         ? outputFile + ".xml"
                         : project.DocumentationFile;
-                    diagnostics = compilation.EmitCocoa(project.Name, outputFile, docPath);
+                    diagnostics = compilation.EmitCoa(project.Name, outputFile, docPath);
                 }
                 else if (backend == CodeBackend.Native)
                 {
@@ -318,7 +318,7 @@ namespace Cocoa.Build
                 return new ProjectBuildResult(success: false, upToDate: false);
             }
 
-            // 6e-M24：XML documentation 输出（exe/library；`.coa` 已在 EmitCocoa 内写出）
+            // 6e-M24：XML documentation 输出（exe/library；`.coa` 已在 EmitCoa 内写出）
             if (format != ProjectOutputFormat.Cocoa)
             {
                 var docPath = options.DocOutput != null

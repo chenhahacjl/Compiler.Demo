@@ -34,7 +34,7 @@ namespace Shared
 ";
             var path = Path.Combine(dir, libName + ".coa");
             var compilation = Compilation.Create(SyntaxTree.Parse(source));
-            var diagnostics = compilation.EmitCocoa(libName, path);
+            var diagnostics = compilation.EmitCoa(libName, path);
             Assert.False(diagnostics.HasErrors());
             return path;
         }

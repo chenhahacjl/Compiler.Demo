@@ -99,7 +99,7 @@ namespace Cocoa.CodeAnalysis.Serialization
         public ImmutableDictionary<string, TypeSymbol> TypesByName { get; }
 
         /// <summary>
-        /// 库的程序集名（文件基名，如 "MyLib"）。Load 时由文件名回填、EmitCocoa 构造时为模块名；
+        /// 库的程序集名（文件基名，如 "MyLib"）。Load 时由文件名回填、EmitCoa 构造时为模块名；
         /// 动态链接（阶段 A2/A3）据此合成 AssemblyRef/TypeRef/MemberRef 指向同名托管 dll。
         /// </summary>
         public string Name { get; set; } = "";

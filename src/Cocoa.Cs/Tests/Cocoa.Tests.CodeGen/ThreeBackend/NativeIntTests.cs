@@ -297,7 +297,7 @@ function Main(): i32
             var libTree = SyntaxTree.Parse(libSource);
             var lib = Compilation.Create(libTree);
             var output = Path.Combine(dir, "Box.coa");
-            var emitDiagnostics = lib.EmitCocoa("Box", output);
+            var emitDiagnostics = lib.EmitCoa("Box", output);
 
             Assert.True(emitDiagnostics.IsEmpty, string.Join("\n", emitDiagnostics.Select(d => d.Message)));
             var text = File.ReadAllText(output);

@@ -34,19 +34,19 @@ namespace Cocoa.CodeAnalysis.Bound
         public ImmutableDictionary<object, string> CoaAssemblies { get; }
 
         /// <summary>
-        /// 泛型定义类（6e-G7 S1）：模板壳，IL/native 发射清单排除；仅 EmitCocoa 序列化为 gcls 条目。
+        /// 泛型定义类（6e-G7 S1）：模板壳，IL/native 发射清单排除；仅 EmitCoa 序列化为 gcls 条目。
         /// </summary>
         public ImmutableArray<NamedTypeSymbol> GenericDefinitions { get; }
 
         /// <summary>
         /// 泛型定义方法的开放绑定体（6e-G7 S2）：T 保持开放的降级 Bound 块，
-        /// EmitCocoa 序列化进 bodies 区供消费方替换展开（S-7 后为 raw 结构化 HIR）。
+        /// EmitCoa 序列化进 bodies 区供消费方替换展开（S-7 后为 raw 结构化 HIR）。
         /// </summary>
         public ImmutableDictionary<FunctionSymbol, BoundBlockStatement> GenericOpenBodies { get; }
 
         /// <summary>
         /// 源码函数的 raw（未 Lower）绑定体（S-7）：绑定 + 插值归一后、Lowering 前，
-        /// EmitCocoa 以此为 `.coa` bodies 序列化源（for/while/if 保留）。
+        /// EmitCoa 以此为 `.coa` bodies 序列化源（for/while/if 保留）。
         /// Functions（lowered/MIR）仍是三后端与求值器唯一消费契约。
         /// </summary>
         public ImmutableDictionary<FunctionSymbol, BoundBlockStatement> RawFunctions { get; }

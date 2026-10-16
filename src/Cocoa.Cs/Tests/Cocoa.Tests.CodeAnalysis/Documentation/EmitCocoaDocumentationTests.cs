@@ -11,7 +11,7 @@ using Xunit;
 
 namespace Cocoa.Tests.CodeAnalysis.Documentation
 {
-    public class EmitCocoaDocumentationTests
+    public class EmitCoaDocumentationTests
     {
         private const string Source = @"namespace MyLib
 {
@@ -37,14 +37,14 @@ namespace Cocoa.Tests.CodeAnalysis.Documentation
         }
 
         [Fact]
-        public void EmitCocoa_WritesXmlSidecar_WithClassAndMethodDocs()
+        public void EmitCoa_WritesXmlSidecar_WithClassAndMethodDocs()
         {
             var dir = NewDir();
             var compilation = Compilation.Create(SyntaxTree.Parse(Source));
             var coaPath = Path.Combine(dir, "MyLib.coa");
             var docPath = Path.Combine(dir, "MyLib.coa.xml");
 
-            var diagnostics = compilation.EmitCocoa("MyLib", coaPath, docPath);
+            var diagnostics = compilation.EmitCoa("MyLib", coaPath, docPath);
             Assert.Empty(diagnostics);
 
             Assert.True(File.Exists(docPath));
@@ -58,13 +58,13 @@ namespace Cocoa.Tests.CodeAnalysis.Documentation
         }
 
         [Fact]
-        public void EmitCocoa_EmbedsDocsSegment_AndReadBackfillsSymbols()
+        public void EmitCoa_EmbedsDocsSegment_AndReadBackfillsSymbols()
         {
             var dir = NewDir();
             var compilation = Compilation.Create(SyntaxTree.Parse(Source));
             var coaPath = Path.Combine(dir, "MyLib.coa");
 
-            var diagnostics = compilation.EmitCocoa("MyLib", coaPath);
+            var diagnostics = compilation.EmitCoa("MyLib", coaPath);
             Assert.Empty(diagnostics);
 
             var program = CoaSerializer.Load(coaPath, ImmutableArray<CoaProgram>.Empty);
@@ -80,13 +80,13 @@ namespace Cocoa.Tests.CodeAnalysis.Documentation
         }
 
         [Fact]
-        public void EmitCocoa_WithoutDocPath_DoesNotWriteXml()
+        public void EmitCoa_WithoutDocPath_DoesNotWriteXml()
         {
             var dir = NewDir();
             var compilation = Compilation.Create(SyntaxTree.Parse(Source));
             var coaPath = Path.Combine(dir, "MyLib.coa");
 
-            compilation.EmitCocoa("MyLib", coaPath);
+            compilation.EmitCoa("MyLib", coaPath);
 
             Assert.False(File.Exists(Path.Combine(dir, "MyLib.coa.xml")));
         }

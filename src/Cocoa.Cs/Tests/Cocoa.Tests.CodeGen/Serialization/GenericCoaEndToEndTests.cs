@@ -77,7 +77,7 @@ function Main(): void
         {
             var compilation = Compilation.Create(SyntaxTree.Parse(LibrarySource));
             var output = Path.Combine(dir, "MyLib.coa");
-            var diagnostics = compilation.EmitCocoa("MyLib", output);
+            var diagnostics = compilation.EmitCoa("MyLib", output);
             Assert.True(diagnostics.IsEmpty, string.Join("; ", diagnostics));
             Assert.True(File.Exists(output));
 

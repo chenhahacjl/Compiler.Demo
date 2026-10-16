@@ -64,14 +64,14 @@ function Main(): i32
         // ---- .coa 写侧：base: 字段 + ctorchain 节点 ----------------------------------
 
         [Fact]
-        public void EmitCocoa_Serializes_BaseType_And_CtorChain()
+        public void EmitCoa_Serializes_BaseType_And_CtorChain()
         {
             var dir = Path.Combine(Path.GetTempPath(), "cocoa-coainherit-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(dir);
             var output = Path.Combine(dir, "Lib.coa");
 
             var compilation = Compilation.Create(SyntaxTree.Parse(LibSource));
-            var diagnostics = compilation.EmitCocoa("Lib", output);
+            var diagnostics = compilation.EmitCoa("Lib", output);
 
             Assert.True(diagnostics.IsEmpty, string.Join("\n", diagnostics.Select(d => d.Message)));
             var text = File.ReadAllText(output);
@@ -89,7 +89,7 @@ function Main(): i32
             var output = Path.Combine(dir, "Lib.coa");
 
             var compilation = Compilation.Create(SyntaxTree.Parse(LibSource));
-            Assert.True(compilation.EmitCocoa("Lib", output).IsEmpty);
+            Assert.True(compilation.EmitCoa("Lib", output).IsEmpty);
 
             var coa = CoaSerializer.Read(File.ReadAllText(output), "Lib", ImmutableArray<CoaProgram>.Empty);
             var baseType = coa.Classes.First(c => c.Name == "Base");
@@ -156,7 +156,7 @@ function Main(): i32
             Directory.CreateDirectory(dir);
             var output = Path.Combine(dir, "Lib.coa");
             var compilation = Compilation.Create(SyntaxTree.Parse(LibSource));
-            var diagnostics = compilation.EmitCocoa("Lib", output);
+            var diagnostics = compilation.EmitCoa("Lib", output);
             Assert.True(diagnostics.IsEmpty, string.Join("\n", diagnostics.Select(d => d.Message)));
             return output;
         }

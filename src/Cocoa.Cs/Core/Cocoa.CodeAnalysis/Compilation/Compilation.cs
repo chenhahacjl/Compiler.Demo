@@ -14,7 +14,7 @@ using System.IO;
 namespace Cocoa.CodeAnalysis
 {
     /// <summary>
-    /// 发射管线（4.2 自 Compilation.cs 拆出，partial 分文件）：EmitTree/Emit/EmitNative/EmitCocoa 与函数值/OOP 门禁扫描。
+    /// 发射管线（4.2 自 Compilation.cs 拆出，partial 分文件）：EmitTree/Emit/EmitNative/EmitCoa 与函数值/OOP 门禁扫描。
     /// </summary>
     /// <summary>
     /// 命名空间与类型解析（4.2 自 Compilation.cs 拆出，partial 分文件）：全局命名空间树构建、GetTypeByMetadataName/GetNamespace 等查询。
@@ -445,7 +445,7 @@ namespace Cocoa.CodeAnalysis
 
             var program = GetProgram();
 
-            // 与 Evaluate/EmitCocoa 一致的门禁（重构阶段 1a/A3）：绑定/单态化产出的错误
+            // 与 Evaluate/EmitCoa 一致的门禁（重构阶段 1a/A3）：绑定/单态化产出的错误
             // 不得进入发射——否则带错程序会被静默生成为 dll/exe
             if (program.Diagnostics.HasErrors())
             {
@@ -556,7 +556,7 @@ namespace Cocoa.CodeAnalysis
         /// <summary>
         /// 把库编译为 `.coa` 语义层程序集（编译到 BoundProgram 即停，不走 IR/机器码/IL）。
         /// </summary>
-        public ImmutableArray<Diagnostic> EmitCocoa(string moduleName, string outputPath, string? docPath = null)
+        public ImmutableArray<Diagnostic> EmitCoa(string moduleName, string outputPath, string? docPath = null)
         {
             var parseDiagnostics = SyntaxTrees.SelectMany(st => st.Diagnostics);
 
@@ -706,7 +706,7 @@ var globals = GlobalScope.Variables.OfType<GlobalVariableSymbol>().ToImmutableAr
         }
 
         /// <summary>
-        /// 6e-M24：为 exe/library 产物生成 XML documentation 文件（`.coa` 由 <see cref="EmitCocoa"/> 内写出）。
+        /// 6e-M24：为 exe/library 产物生成 XML documentation 文件（`.coa` 由 <see cref="EmitCoa"/> 内写出）。
         /// 遍历全局作用域符号 + 类成员，输出带 <c>DocumentationText</c> 的成员。
         /// </summary>
         public int EmitDocumentation(string moduleName, string docPath)
@@ -740,7 +740,7 @@ var globals = GlobalScope.Variables.OfType<GlobalVariableSymbol>().ToImmutableAr
             }
         }
 
-        /// <summary>新增节点序列化以兜底抛错为准（Write/Read 未覆盖的 kind 会在 EmitCocoa/载入时报显式错误，杜绝静默损坏流）。</summary>
+        /// <summary>新增节点序列化以兜底抛错为准（Write/Read 未覆盖的 kind 会在 EmitCoa/载入时报显式错误，杜绝静默损坏流）。</summary>
 
         /// <summary>Step D-a：从已经绑定 raw 体中抽取得 λ/方法值携带的已绑定体，入库符号+body 集合（至不动点，嵌套 λ 递归发现）。</summary>
         private static void CollectFunctionValueBodies(
