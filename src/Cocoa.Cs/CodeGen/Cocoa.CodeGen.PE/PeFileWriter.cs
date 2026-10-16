@@ -187,20 +187,37 @@ namespace Cocoa.CodeGen.PE
             // SizeOfHeaders 须同时 ≥ 节表、(建议)节对齐倍数，否则加载器可能拒载。
             var headersSize = Math.Max(SizeOfHeaders, Align(minHeaders, SectionAlignment));
 
-            var config = new PeImageConfig(
-                pe32 ? PeMachine.I386 : PeMachine.AMD64,
-                (ulong)ImageBaseOf(architecture),
-                (ushort)subsystem,
-                pe32 ? (ushort)(PeDllCharacteristics.NxChipCompat | PeDllCharacteristics.NoSeh | PeDllCharacteristics.TerminalServerAware)
-                     : (ushort)(PeDllCharacteristics.CurrentImage | PeDllCharacteristics.TerminalServerAware),
-                (uint)entryPointRva)
-            {
-                SizeOfHeaders = (uint)headersSize,
-            };
+            var dllCharacteristics = pe32
+                ? (ushort)(PeDllCharacteristics.NxChipCompat | PeDllCharacteristics.NoSeh | PeDllCharacteristics.TerminalServerAware)
+                : (ushort)(PeDllCharacteristics.CurrentImage | PeDllCharacteristics.TerminalServerAware);
 
             // 有重定位节时不再声明 RelocsStripped（x86 历史行为保留：无重定位时仍声明剥离）
             var fileCharacteristics = relocBlob.Length > 0 ? (ushort)0 : (pe32 ? PeFileCharacteristics.RelocsStripped : (ushort)0);
-            var image = PeImageBuilder.Build(config, sections, directories, fileCharacteristics);
+
+            // T3：经 PeObjectWriter 写出——回填 TimeDateStamp + CheckSum（CheckSumMappedFile 语义）
+            var objOptions = new Cocoa.Targeting.ObjectWriteOptions(
+                Cocoa.Targeting.TargetOS.Windows,
+                pe32 ? Cocoa.Targeting.Cpu.X86 : Cocoa.Targeting.Cpu.X64,
+                (ulong)ImageBaseOf(architecture),
+                (ushort)subsystem,
+                (uint)entryPointRva,
+                SectionAlignment, 0x200)
+            {
+                SizeOfHeaders = (uint)headersSize,
+                DllCharacteristics = dllCharacteristics,
+                AdditionalFileCharacteristics = fileCharacteristics,
+            };
+            foreach (var section in sections)
+            {
+                objOptions.Sections.Add(new Cocoa.Targeting.SectionSpec(section.Name, section.RawData, section.VirtualAddress, section.Characteristics));
+            }
+
+            foreach (var (entry, rva, size) in directories)
+            {
+                objOptions.Entries.Add(new Cocoa.Targeting.TargetEntry((int)entry, rva, size));
+            }
+
+            var image = PeObjectWriter.Instance.Write(objOptions);
             File.WriteAllBytes(outputPath, image);
         }
 
