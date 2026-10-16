@@ -23,7 +23,7 @@ namespace Cocoa.Tests.CodeGen.Serialization
     /// G7 用户泛型库端到端：泛型定义经 .coa 携带（gcls/tpar/fld/fn+开放体）→ 消费方实例化单态化 ×三后端。
     /// </summary>
     [Collection("StdLibSequence")]
-    public class GenericCoaE2eTests
+    public class GenericCoaEndToEndTests
     {
         private const string LibrarySource = @"
 namespace MyLib

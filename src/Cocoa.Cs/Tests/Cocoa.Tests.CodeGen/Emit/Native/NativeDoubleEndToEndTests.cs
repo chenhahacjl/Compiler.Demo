@@ -17,7 +17,7 @@ namespace Cocoa.Tests.CodeGen.Emit.Native
     /// Native 路径 double 消费 e2e（阶段 6a-5）：字面量/算术/比较/转换/print/double[]，
     /// 与 IL 后端输出对齐；另覆盖定点 6 位舍入剪零与特殊值（x64 与 x86 双平台）。
     /// </summary>
-    public class NativeDoubleE2eTests
+    public class NativeDoubleEndToEndTests
     {
         private static string GetExePath(string name, TargetPlatform platform)
         {

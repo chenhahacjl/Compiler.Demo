@@ -130,7 +130,7 @@ function Main(): i32
         [Fact]
         public void IlE2e_Indexer_CountProperty()
         {
-            var (exitCode, stdout) = IlE2eTests.EmitAndRun(Source, "idx-il");
+            var (exitCode, stdout) = IlEndToEndTests.EmitAndRun(Source, "idx-il");
             Assert.Equal(0, exitCode);
             Assert.Equal(ExpectedOutput, stdout.Replace("\r\n", "\n"));
         }

@@ -10,7 +10,7 @@ namespace Cocoa.Tests.CodeGen.Emit.Native
     /// <summary>
     /// 6e-M19 M4：native 对象模型落地——Object 成员面（ToString/GetHashCode/Equals/GetType +
     /// 静态 Equals/ReferenceEquals）在 native 后端编译放行（原 M2-c"未实现"守卫移除）。
-    /// 运行时语义由 <see cref="NativeOopE2eTests"/> 双平台 e2e 锁定；此处锁定编译期无诊断。
+    /// 运行时语义由 <see cref="NativeOopEndToEndTests"/> 双平台 e2e 锁定；此处锁定编译期无诊断。
     /// </summary>
     public class NativeObjectFaceTests
     {

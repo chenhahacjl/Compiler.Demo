@@ -90,7 +90,7 @@ function Main(): i32
 
             if (backend == "il")
             {
-                var (exitCode, stdout) = Emit.IL.IlE2eTests.EmitAndRun(CopyOutProgram, "ByRefContract");
+                var (exitCode, stdout) = Emit.IL.IlEndToEndTests.EmitAndRun(CopyOutProgram, "ByRefContract");
                 Assert.Equal(0, exitCode);
                 Assert.Equal(Expected, stdout.Replace("\r\n", "\n"));
                 return;

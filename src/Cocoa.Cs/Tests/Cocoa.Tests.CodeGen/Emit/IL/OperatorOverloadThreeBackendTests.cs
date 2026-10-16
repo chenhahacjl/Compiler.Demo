@@ -239,7 +239,7 @@ function Main(): i32
 
             if (backend == "il")
             {
-                var (exitCode, stdout) = IlE2eTests.EmitAndRun(source, name);
+                var (exitCode, stdout) = IlEndToEndTests.EmitAndRun(source, name);
                 Assert.Equal(0, exitCode);
                 Assert.Equal(expected, stdout.Replace("\r\n", "\n"));
                 return;

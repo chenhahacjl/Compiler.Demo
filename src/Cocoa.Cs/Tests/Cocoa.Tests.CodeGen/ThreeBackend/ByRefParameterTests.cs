@@ -128,7 +128,7 @@ function Main(): void
 
             if (backend == "il")
             {
-                var (exitCode, stdout) = IlE2eTests.EmitAndRun(MatrixProgram, "ByRefMatrix");
+                var (exitCode, stdout) = IlEndToEndTests.EmitAndRun(MatrixProgram, "ByRefMatrix");
                 Assert.Equal(0, exitCode);
                 Assert.Equal(expected, stdout.Replace("\r\n", "\n"));
                 return;

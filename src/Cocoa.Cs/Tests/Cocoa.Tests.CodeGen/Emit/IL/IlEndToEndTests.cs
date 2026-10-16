@@ -6,7 +6,7 @@ using Cocoa.Targeting;
 using Xunit;
 namespace Cocoa.Tests.CodeGen.Emit.IL
 {
-    public class IlE2eTests
+    public class IlEndToEndTests
     {
         private static readonly string _uniqueRunDir = Guid.NewGuid().ToString("N");
 

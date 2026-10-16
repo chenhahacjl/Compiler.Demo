@@ -86,7 +86,7 @@ function Main()
         [Fact]
         public void IlE2e_WrapAround_Truncation_Fnv1a()
         {
-            var (exitCode, stdout) = IlE2eTests.EmitAndRun(Source, "wrap-il");
+            var (exitCode, stdout) = IlEndToEndTests.EmitAndRun(Source, "wrap-il");
             Assert.Equal(0, exitCode);
             Assert.Equal(ExpectedOutput, stdout.Replace("\r\n", "\n"));
         }

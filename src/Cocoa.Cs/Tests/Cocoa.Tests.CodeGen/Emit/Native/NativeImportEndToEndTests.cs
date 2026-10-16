@@ -16,7 +16,7 @@ namespace Cocoa.Tests.CodeGen.Emit.Native
     /// Native 路径 import 消费 e2e（阶段 6c-1）：用户 extern 经多 DLL 导入表 + 启动 stub 解析，
     /// 退出码/返回值验证参数与符号穿越（x64 与 x86 双平台）。
     /// </summary>
-    public class NativeImportE2eTests
+    public class NativeImportEndToEndTests
     {
         private static string GetExePath(string name, TargetPlatform platform)
         {

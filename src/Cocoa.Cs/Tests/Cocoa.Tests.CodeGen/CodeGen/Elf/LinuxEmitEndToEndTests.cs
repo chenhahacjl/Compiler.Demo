@@ -12,7 +12,7 @@ namespace Cocoa.Tests.CodeGen.Elf
     /// T3.3：linux-x64 原生发射冒烟（结构断言；实机可执行验收由 tools/verify-linux-vm.cmd 覆盖）。
     /// 验证 NativeCodeEmitter 按 OS 分流到 ELF 写出器、入口落在 .text 段、中文（多字节 UTF-8）链路可编。
     /// </summary>
-    public class LinuxEmitE2eTests
+    public class LinuxEmitEndToEndTests
     {
         private static string OutputPath(string name)
         {

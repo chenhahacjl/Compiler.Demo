@@ -19,7 +19,7 @@ namespace Cocoa.Tests.CodeGen.ThreeBackend
     /// <summary>
     /// 泛型单态化端到端测试（6e-M20 G2）：Box&lt;T&gt; / 嵌套泛型 / 约束——Evaluator + IL + native x64/x86。
     /// </summary>
-    public class GenericE2eTests
+    public class GenericEndToEndTests
     {
         private const string BoxProgram = @"using System
 

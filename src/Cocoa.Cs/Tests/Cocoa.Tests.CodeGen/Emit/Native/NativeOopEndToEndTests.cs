@@ -18,9 +18,9 @@ namespace Cocoa.Tests.CodeGen.Emit.Native
     /// new/字段/构造链/this、继承 + virtual/override vtable 虚分派、base.Method() 直调、
     /// Object 成员面（ToString/GetHashCode/Equals/GetType 默认与 override）、System.Type
     /// （Name/FullName/ToString）、== / != 引用相等、静态字段零值存储、对象数组元素清零。
-    /// 程序形状与 IlE2eTests 对应用例一致，锁定三后端语义一致。
+    /// 程序形状与 IlEndToEndTests 对应用例一致，锁定三后端语义一致。
     /// </summary>
-    public class NativeOopE2eTests
+    public class NativeOopEndToEndTests
     {
         private static string GetExePath(string name, TargetPlatform platform)
         {
@@ -113,7 +113,7 @@ function Main()
         [MemberData(nameof(GetPlatforms))]
         public void Oop_Inheritance_VirtualDispatch_BaseCall_CtorChain(object platform)
         {
-            // 与 IlE2eTests.Oop_Inheritance_Polymorphism_Static_Property_OnDotnetHost 同形
+            // 与 IlEndToEndTests.Oop_Inheritance_Polymorphism_Static_Property_OnDotnetHost 同形
             var (exitCode, stdout) = EmitNativeAndRun(@"using System
 
 public class Shape
@@ -168,7 +168,7 @@ function Main()
         [MemberData(nameof(GetPlatforms))]
         public void Oop_Override_ToString_BaseToString(object platform)
         {
-            // 与 IlE2eTests.ObjectModel_Override_ToString_VirtualDispatch_OnDotnetHost 同形：
+            // 与 IlEndToEndTests.ObjectModel_Override_ToString_VirtualDispatch_OnDotnetHost 同形：
             // 经基类引用调用 → 虚分派到派生 override；base.ToString() 非虚直调不递归
             var (exitCode, stdout) = EmitNativeAndRun(@"using System
 
@@ -266,7 +266,7 @@ function Main()
         [MemberData(nameof(GetPlatforms))]
         public void Oop_Override_GetHashCode_Equals(object platform)
         {
-            // 与 IlE2eTests.ObjectModel_Override_GetHashCode_Equals_OnDotnetHost 同形
+            // 与 IlEndToEndTests.ObjectModel_Override_GetHashCode_Equals_OnDotnetHost 同形
             var (exitCode, stdout) = EmitNativeAndRun(@"using System
 
 public class Box
