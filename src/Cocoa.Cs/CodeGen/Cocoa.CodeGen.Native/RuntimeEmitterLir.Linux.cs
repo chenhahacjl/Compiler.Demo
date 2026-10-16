@@ -20,10 +20,19 @@ namespace Cocoa.CodeGen.Native
         // ---- Linux x86_64 syscall 号（本交付子集）----
         private const int __NR_read = 0;
         private const int __NR_write = 1;
+        private const int __NR_ioctl = 16;
         private const int __NR_mmap = 9;
         private const int __NR_nanosleep = 35;
         private const int __NR_clock_gettime = 228;
         private const int __NR_exit_group = 231;
+
+        // termios ioctl（终端 raw mode；非 tty 时返回 -ENOTTY → 回落普通读取）
+        private const int TermiosTcGets = 0x5401;
+        private const int TermiosTcSets = 0x5402;
+        private const int TermiosIcanon = 0x2;
+        private const int TermiosEcho = 0x8;
+        private const int TermiosLFlagOffset = 12; // struct termios c_lflag
+        private const int TermiosCcBase = 17;      // c_cc[] 起始；VMIN=6 → +6，VTIME=5 → +5
 
         private const int MapPrivateAnon = 0x22; // MAP_PRIVATE | MAP_ANONYMOUS
         private const int ProtReadWrite = 0x03;  // PROT_READ | PROT_WRITE
@@ -511,9 +520,8 @@ namespace Cocoa.CodeGen.Native
         }
 
         // ------------------------------------------------------------------
-        // ReadKey(intercept:4) → char：read(0) 单字节。
-        // tty 交互（canonical 模式）需回车后返回（raw mode VMIN/VTIME 曾尝试，tty read 返 0 不可靠，已回退）；
-        // 管道/EOF 下立即返回。回显由 intercept=0 时 write(1) 完成。
+        // ReadKey(intercept:4) → char：tty 时 raw mode（tcgetattr/tcsetattr，关 ICANON|ECHO + VMIN=1/VTIME=0）
+        // 即时按键；非 tty（管道/重定向）回落普通单字节读（ioctl -ENOTTY → 跳过）。回显由 intercept=0 时 write(1)。
         // ------------------------------------------------------------------
 
         private void EmitReadKeyLinux()
@@ -521,18 +529,76 @@ namespace Cocoa.CodeGen.Native
             var intercept = _args[0];
             var echo = NewLabel();
             var done = NewLabel();
+            var plain = NewLabel();
+            var afterTerm = NewLabel();
+            var restoreSkipped = NewLabel();
 
             var n = NewReg(4);
             var inBuf = NewPtr();
             LeaData(inBuf, _linuxInBuf);
+            var ch = NewReg(4);
+
+            // ---- raw mode：TCGETS → 保存 → 关 ICANON|ECHO + VMIN/VTIME → TCSETS ----
+            var termios = NewPtr();
+            LeaData(termios, _linuxOutBuf);
+            var r = NewReg(4);
+            LinuxSyscall(r, __NR_ioctl, 3, C(8, 0), C(8, TermiosTcGets), termios);
+            Cmp(r, 0);
+            Jcc(LirCond.NotEqual, plain);
+
+            var orig = NewPtr();
+            LeaData(orig, _linuxStatBuf);
+            var ci = NewReg(4);
+            Const(ci, 0);
+            var copyLoop = NewLabel();
+            var copyDone = NewLabel();
+            Mark(copyLoop);
+            Cmp(ci, 15);
+            Jcc(LirCond.GreaterOrEqual, copyDone);
+            var coff = NewReg(4);
+            Mov(coff, ci);
+            Shl(coff, coff, 2);
+            var sw = NewPtr();
+            Mov(sw, termios);
+            Add(sw, sw, coff);
+            var word = NewReg(4);
+            Load(word, sw, 0, 4);
+            var dw = NewPtr();
+            Mov(dw, orig);
+            Add(dw, dw, coff);
+            Store(dw, 0, word, 4);
+            AddI(ci, ci, 1);
+            Jmp(copyLoop);
+            Mark(copyDone);
+
+            var lf = NewReg(4);
+            Load(lf, termios, TermiosLFlagOffset, 4);
+            And(lf, lf, C(4, -(TermiosIcanon | TermiosEcho) - 1));
+            Store(termios, TermiosLFlagOffset, lf, 4);
+            Store(termios, TermiosCcBase + 6, C(4, 1), 1); // VMIN=1：单字节即返回
+            Store(termios, TermiosCcBase + 5, C(4, 0), 1); // VTIME=0
+            LinuxSyscall(r, __NR_ioctl, 3, C(8, 0), C(8, TermiosTcSets), termios);
+
             LinuxSyscall(n, __NR_read, 3, C(8, 0), inBuf, C(8, 1));
+
+            // 恢复原 termios
+            Cmp(r, 0);
+            Jcc(LirCond.NotEqual, restoreSkipped);
+            LinuxSyscall(null, __NR_ioctl, 3, C(8, 0), C(8, TermiosTcSets), orig);
+            Mark(restoreSkipped);
+            Jmp(afterTerm);
+
+            // ---- 非 tty 普通读 ----
+            Mark(plain);
+            LinuxSyscall(n, __NR_read, 3, C(8, 0), inBuf, C(8, 1));
+            Mark(afterTerm);
+
             Cmp(n, 0);
             Jcc(LirCond.LessOrEqual, done);
 
-            var ch = NewReg(4);
             Load(ch, inBuf, 0, 1);
 
-            // intercept=0 回显（write(1)）
+            // intercept=0 回显（write(1)；raw 下 ECHO 已关，需自行写出）
             Cmp(intercept, 0);
             Jcc(LirCond.NotEqual, echo);
             LinuxSyscall(null, __NR_write, 3, C(8, 1), inBuf, C(8, 1));
