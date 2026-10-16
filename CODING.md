@@ -16,33 +16,34 @@
 |---|---|---|---|
 | `Cocoa.Targeting` | `Cocoa.Targeting` | 同名 | 目标常量：`TargetPlatform` / `IlTarget` |
 | `Cocoa.CodeAnalysis` | `Cocoa.CodeAnalysis` | 同名 | **编译器单装配件**（前端 + 绑定 + 降级 + 序列化）：Text / Syntax（SyntaxKind、SyntaxFacts、LexerBase、绿红树）/ Cocoa 前端（CocoaLexer、CocoaParser、CocoaBinder）/ Symbols / Bound / Compilation（`Compilation`/`SemanticModel` 具体类）/ Lowering / Serialization（CoaSerializer、SystemLibrary）/ Documentation / Authoring（Classifier）/ CFG / Monomorphizer |
-| `Cocoa.Metadata` | `Cocoa.Metadata` | 同名 | **共享元数据层**（非后端）：IL 结构模型（IlOpCode / IlInstruction / IlMetadataModel / IlTypes）+ 外部程序集元数据读取（MetadataReader / AssemblyReader）。前端与 IL 后端共用；与 `CodeGen/*` 后端工程隔离 |
-| `Cocoa.CodeGen.Managed.Writer` | 同名 | 同名 | IL 后端：IlEmitter / MetadataBuilder / ManagedPEWriter / AppHostPatcher / CoaLibraryCompiler（`.coa`→DLL） |
-| `Cocoa.CodeGen.PE` | 同名 | 同名 | PE 基础设施：PE 表 / PeFileWriter |
-| `Cocoa.CodeGen.Native.Lir` | 同名 | 同名 | LIR：LirProgram / LirInstruction / LirPrinter |
-| `Cocoa.CodeGen.Native` | 同名 | 同名 | Native 后端：MIR→LIR、LirToAssembler、RuntimeEmitterLir（x86/x64 统一 IR 发射） |
-| `Cocoa.CodeGen.Interpreter` | 同名 | 同名 | 解释器后端：Evaluator / DebuggerSession |
+| `Cocoa.IlMetadata` | `Cocoa.IlMetadata` | 同名 | **共享元数据层**（非后端）：IL 结构模型（IlOpCode / IlInstruction / IlMetadataModel / IlTypes）+ 外部程序集元数据读取（MetadataReader / AssemblyReader）。前端与 IL 后端共用；与 `CodeGen/*` 后端工程隔离 |
+| `Cocoa.CodeGen.Managed` | `Cocoa.CodeGen.Managed` | 同名 | IL 后端：IlEmitter / MetadataBuilder / ManagedPEWriter / AppHostPatcher / CoaLibraryCompiler（`.coa`→DLL） |
+| `Cocoa.CodeGen.ObjectFormat` | `Cocoa.CodeGen.ObjectFormat`（`.PE`/`.Elf` 子命名空间） | 同名 | 目标文件格式：PE 基础设施（PE 表 / PeFileWriter）+ ELF 写出器（ElfFileWriter / ElfObjectWriter） |
+| `Cocoa.CodeGen.Native` | `Cocoa.CodeGen.Native`（含 `.Lir` 子命名空间） | 同名 | Native 后端：MIR→LIR、LirToAssembler、RuntimeEmitterLir（x86/x64 统一 IR 发射，拆分文件 `RuntimeFunctionEmitter.*`） |
+| `Cocoa.CodeGen.Interpreter` | `Cocoa.CodeGen.Interpreter` | 同名 | 解释器后端：Evaluator / DebuggerSession |
 | `Cocoa.Build` | `Cocoa.Build` | 同名 | 项目系统：`.coproj`/`.cosln` 解析、ProjectBuilder/SolutionBuilder、BuildCache、Glob |
 | `Cocoa.Cli` | `Cocoa.Cli` | **`cocoa`** | 主 CLI（子命令 new/build/run/list/add/remove/clean/-i） |
 | `Cocoa.Cli.Repl` | `Cocoa.Cli.Repl` | 同名 | REPL：终端渲染、补全、元命令 |
-| `Cocoa.Tests` | 各测试 ns | — | 全量测试（基线见 §7） |
-| `Cocoa.Tests.SelfHosting` | `Cocoa.Tests.*`（保留原名） | — | 自举/差分测试（阶段 8：Bootstrapper*/Corpus_*/Scaffold*/*DifferentialTests/Golden，独立工程）；**渐进迁移源**——逐个用 `.co` 重写进 `src/Cocoa.Co/Cocoa.Tests/*.co` 后删除，归零即自举测试框架成熟 |
+| `Cocoa.Tests.CodeAnalysis` | `Cocoa.Tests.CodeAnalysis` | — | 前端/绑定/文档/流分析单元测试 + ThreeBackend 集成 |
+| `Cocoa.Tests.CodeGen` | `Cocoa.Tests.CodeGen`（`ThreeBackend`/`Emit`/`CodeGen` 子命名空间） | — | 三后端与发射测试（IL/PE/Native/Elf） |
+| `Cocoa.Tests.Compiler` | `Cocoa.Tests.Compiler`（`Engine`/`Projects` 子命名空间） | — | CLI 与项目系统测试 |
+| `Cocoa.Tests.SelfHosting` | `Cocoa.Tests.SelfHosting` | — | 自举/差分测试（阶段 8：Bootstrapper*/Corpus_*/Scaffold*/*DifferentialTests/Golden，独立工程）；**渐进迁移源**——逐个用 `.co` 重写进 `src/Cocoa.Co/Cocoa.Tests/*.co` 后删除，归零即自举测试框架成熟 |
 
 ## 3. 依赖方向
 
 ```
 Cocoa.Cli ──→ Cocoa.Build, Cocoa.Cli.Repl, Cocoa.CodeAnalysis,
-              CodeGen.{PE, Managed.Writer, Native, Interpreter}, Cocoa.Metadata, Cocoa.Targeting
-Cocoa.Build ──→ Cocoa.CodeAnalysis, CodeGen.Managed.Writer, Cocoa.Targeting
-CodeGen.Managed.Writer ──→ Cocoa.CodeAnalysis, CodeGen.{PE}, Cocoa.Metadata
-CodeGen.Native ──→ Cocoa.CodeAnalysis, CodeGen.{PE, Native.Lir}
+              CodeGen.{Managed, ObjectFormat, Native, Interpreter}, Cocoa.IlMetadata, Cocoa.Targeting
+Cocoa.Build ──→ Cocoa.CodeAnalysis, CodeGen.Managed, Cocoa.Targeting
+CodeGen.Managed ──→ Cocoa.CodeAnalysis, CodeGen.{ObjectFormat}, Cocoa.IlMetadata
+CodeGen.Native ──→ Cocoa.CodeAnalysis, CodeGen.{ObjectFormat}
 CodeGen.Interpreter ──→ Cocoa.CodeAnalysis
-Cocoa.CodeAnalysis ──→ Cocoa.Metadata, Cocoa.Targeting
-CodeGen.PE ──→ Cocoa.Targeting
-Cocoa.Metadata ──→ （无）共享元数据层（IL 结构模型 + 外部元数据读取），前后端共用
+Cocoa.CodeAnalysis ──→ Cocoa.IlMetadata, Cocoa.Targeting
+CodeGen.ObjectFormat ──→ Cocoa.Targeting, Cocoa.CodeAnalysis
+Cocoa.IlMetadata ──→ （无）共享元数据层（IL 结构模型 + 外部元数据读取），前后端共用
 ```
 
-- 后端（Managed.Writer / Native / Interpreter）**反向引用** `Cocoa.CodeAnalysis`，消费 `BoundProgram` 等绑定 IR；**Core 不引用任何后端工程**（共享元数据经独立层 `Cocoa.Metadata` 接入，见 §5）。
+- 后端（Managed / Native / Interpreter）**反向引用** `Cocoa.CodeAnalysis`，消费 `BoundProgram` 等绑定 IR；**Core 不引用任何后端工程**（共享元数据经独立层 `Cocoa.IlMetadata` 接入，见 §5）。
 - CLI/测试是唯一同时引用 Core 与全部后端的宿主。
 
 ## 4. 单语言前端
@@ -55,7 +56,7 @@ Cocoa.Metadata ──→ （无）共享元数据层（IL 结构模型 + 外部�
 
 ## 5. 后端注册模式
 
-Core（`Cocoa.CodeAnalysis`）不引用任何后端工程，后端能力经**静态委托注册**注入（共享元数据经独立层 `Cocoa.Metadata` 接入，非后端）：
+Core（`Cocoa.CodeAnalysis`）不引用任何后端工程，后端能力经**静态委托注册**注入（共享元数据经独立层 `Cocoa.IlMetadata` 接入，非后端）：
 
 ```csharp
 // Core 侧（Compilation 内）
@@ -74,7 +75,7 @@ ManagedBackend.Register(); NativeBackend.Register(); InterpreterBackend.Register
 ## 6. Partial 拆分规则
 
 - 巨型文件（**>2,000 行**）按职责拆 `Type.Role.cs` partial：入口/核心留在主文件。
-- 现行范例：`CocoaBinder`（主文件 + Statements/Expressions/Declarations/TypeResolution/Attributes）、`CocoaParser`（主文件 + Types/Statements/Members）、`RuntimeEmitterLir`（.Strings/.System/.IO/.Arrays/.Numerics/.Int64）、`MirToLir`/`IlEmitter`/`Evaluator`/`LirToAssembler`（按语句/表达式/转换分片）。
+- 现行范例：`CocoaBinder`（主文件 + Statements/Expressions/Declarations/TypeResolution/Attributes）、`CocoaParser`（主文件 + Types/Statements/Members）、`RuntimeFunctionEmitter`（.Strings/.System/.IO/.Arrays/.Numerics/.Int64，入口包装类 `RuntimeEmitterLir` 留在主文件）、`MirToLir`/`IlEmitter`/`Evaluator`/`LirToAssembler`（按语句/表达式/转换分片）。
 - 已合并为单文件的范例（2026-10 结构优化）：`CocoaLexer`、`CocoaGreenNodeFactory`、`MetadataBuilder`、`AssemblyReader`、`X64Assembler`、`Compilation`——拆分理由薄弱的非必要分片回单文件。
 - 拆分纪律：**纯移动零逻辑**、独立 commit、`--no-incremental` 全量构建 + 测试。
 
@@ -88,7 +89,7 @@ ManagedBackend.Register(); NativeBackend.Register(); InterpreterBackend.Register
 ## 8. 验证与提交纪律
 
 - 验证：`dotnet build src/Cocoa.Cs/Cocoa.slnx --no-incremental`（增量构建在 stash/mtime 往返后会用陈旧二进制骗人）
-  + `dotnet test src/Cocoa.Cs/Cocoa.Tests` 全量（**C# 特性快速回路**，不含自举/差分）。
+  + `dotnet test src/Cocoa.Cs/Cocoa.slnx` 全量（**C# 特性快速回路**，不含自举/差分；含 `Cocoa.Tests.{CodeAnalysis,CodeGen,Compiler}`）。
 - 自举/差分测试在独立工程 `Cocoa.Tests.SelfHosting`（阶段 8 相关、依赖 `src/Cocoa.Co` 语料与 `%TEMP%` 产物）：
   `dotnet test src/Cocoa.Cs/Cocoa.Tests.SelfHosting`。开发 Cocoa.Cs 特性时默认只跑前一个即可。
 - 标准库重建：改 `src/Cocoa.SDK/` 后跑 `tools\build-sdk.cmd`（产物收集到 `src/Cocoa.Cs/libs/` 与 `tools\cocoa-sdk/` 并自动分发）。

@@ -31,19 +31,20 @@
 解决方案 `src/Cocoa.Cs/Cocoa.slnx`，现行项目与命名空间映射见 [`CODING.md`](../CODING.md) §2。摘要：
 
 - `Cocoa.CodeAnalysis`（ns `Cocoa.CodeAnalysis`）：**编译器单装配件**，前端 + 绑定 + 降级 + 序列化 + Authoring。
-- `Cocoa.Metadata`（ns `Cocoa.Metadata`）：共享元数据层——IL 结构模型（IlTypes/IlOpCode/IlMetadataModel）+ 外部程序集元数据读取（MetadataReader/AssemblyReader）。前端与 IL 后端共用，与后端工程隔离。
-- `Cocoa.CodeGen.{Managed.Writer, PE, Native.Lir, Native, Interpreter}`：IL / PE / Native / 解释器后端。
+- `Cocoa.IlMetadata`（ns `Cocoa.IlMetadata`）：共享元数据层——IL 结构模型（IlTypes/IlOpCode/IlMetadataModel）+ 外部程序集元数据读取（MetadataReader/AssemblyReader）。前端与 IL 后端共用，与后端工程隔离。
+- `Cocoa.CodeGen.{Managed, ObjectFormat, Native, Interpreter}`：IL / 目标文件格式（`.PE`/`.Elf`）/ Native / 解释器后端。
 - `Cocoa.Build`：项目系统；`Cocoa.Cli`（AssemblyName `cocoa`）+ `Cocoa.Cli.Repl`：CLI 与 REPL；`Cocoa.Targeting`：目标常量（演进为目标模型事实源）。
+- 测试：`Cocoa.Tests.{CodeAnalysis, CodeGen, Compiler, SelfHosting}` 四分。
 - 依赖方向严格单向；后端**反向引用** `Cocoa.CodeAnalysis` 消费 `BoundProgram`，Core 不引用后端（§六）。
 
-> **工程结构演进方向（定稿待实施）**：目录重组为 4 分类（`Core/` `CodeGen/` `Tools/` `Tests/`，17 项目恒 2 级深度）；`Cocoa.CodeAnalysis.Text`→`Cocoa.Text`、`Cocoa.Metadata`→`Cocoa.IlMetadata`、`Cocoa.CodeGen.Managed.Writer`→`Cocoa.CodeGen.Managed`、`Native.Lir` 降为 `Native/Lir/`；`Cocoa.Targeting` 承载 `TargetTriple/Cpu/IAbiDescriptor/IPlatformRuntime/IObjectWriter`。详见 [`coproj目标属性设计.md`](../docs-dev/plan/coproj目标属性设计.md) 与执行计划。
+> **工程结构（已实施）**：目录为 4 分类（`Core/` `CodeGen/` `Tools/` `Tests/`）；`Cocoa.CodeGen.PE`/`Cocoa.CodeGen.Elf` 已合并为 `Cocoa.CodeGen.ObjectFormat`（`.PE`/`.Elf` 子命名空间）、`Cocoa.CodeGen.Managed.Writer`→`Cocoa.CodeGen.Managed`、`Native.Lir` 降为 `Native/Lir/`、`Cocoa.Metadata`→`Cocoa.IlMetadata`；`Cocoa.Targeting` 承载 `TargetTriple/Cpu/IAbiDescriptor/IPlatformRuntime/IObjectWriter`。详见 [`coproj目标属性设计.md`](../docs-dev/plan/coproj目标属性设计.md)。
 
 ## 三、后端与运行时
 
-- **Native**：`Cocoa.CodeGen.Native` — MIR→LIR、`LirToAssembler`、`RuntimeEmitterLir`（运行时辅助函数 IR 化，x86/x64 统一）、自研 PE（`.text/.data/.idata`）。
-- **IL**：`Cocoa.CodeGen.Managed.Writer` — `IlEmitter` + 自研 IL 编码器 + 元数据写入器；读侧 `Cocoa.Metadata`（`MetadataReader`，共享元数据层）；Mono.Cecil / Mono.Options 已移除（仅剩 `System.Collections.Immutable`）。
+- **Native**：`Cocoa.CodeGen.Native` — MIR→LIR、`LirToAssembler`、`RuntimeEmitterLir`/`RuntimeFunctionEmitter`（运行时辅助函数 IR 化，x86/x64 统一）、自研目标文件（`.text/.data/.idata`，经 `Cocoa.CodeGen.ObjectFormat` 的 PE/ELF 写出器）。
+- **IL**：`Cocoa.CodeGen.Managed` — `IlEmitter` + 自研 IL 编码器 + 元数据写入器；读侧 `Cocoa.IlMetadata`（`MetadataReader`，共享元数据层）；Mono.Cecil / Mono.Options 已移除（仅剩 `System.Collections.Immutable`）。
 - **Evaluator**：`Cocoa.CodeGen.Interpreter` — 解释执行 + `DebuggerSession`。
-- 测试基线：`Cocoa.Tests` 全量 **53,364 通过 / 1 跳过**（2026-09-15 最后一次全量验证；10 月语言特性持续增补，最新计数待全量运行）。
+- 测试基线：`Cocoa.Tests.*` 全量 **53,364 通过 / 1 跳过**（2026-09-15 最后一次全量验证；10 月语言特性持续增补，最新计数待全量运行）。
 
 ## 四、互操作与输出
 
