@@ -15,7 +15,7 @@
 | 工程 | 根命名空间 | AssemblyName | 职责 |
 |---|---|---|---|
 | `Cocoa.Targeting` | `Cocoa.Targeting` | 同名 | 目标常量：`TargetPlatform` / `IlTarget` |
-| `Cocoa.CodeAnalysis` | `Cocoa.CodeAnalysis` | 同名 | **编译器单装配件**（前端 + 绑定 + 降级 + 序列化）：Text / Syntax（SyntaxKind、SyntaxFacts、LexerBase、绿红树）/ Cocoa 前端（CocoaLexer、CocoaParser、CocoaBinder）/ Symbols / Bound / Compilation（`Compilation`/`SemanticModel` 具体类）/ Lowering / Serialization（CoaSerializer、SystemLibrary）/ Documentation / Authoring（Classifier）/ CFG / Monomorphizer |
+| `Cocoa.CodeAnalysis` | `Cocoa.CodeAnalysis` | 同名 | **编译器单装配件**（前端 + 绑定 + 降级 + 序列化）：Text / Syntax（SyntaxKind、SyntaxFacts、绿红树）/ Cocoa 前端（CocoaLexer、CocoaParser、CocoaBinder）/ Symbols / Bound / Compilation（`Compilation`/`SemanticModel` 具体类）/ Lowering / Serialization（CoaSerializer、SystemLibrary）/ Documentation / Authoring（Classifier）/ CFG / Monomorphizer |
 | `Cocoa.IlMetadata` | `Cocoa.IlMetadata` | 同名 | **共享元数据层**（非后端）：IL 结构模型（IlOpCode / IlInstruction / IlMetadataModel / IlTypes）+ 外部程序集元数据读取（MetadataReader / AssemblyReader）。前端与 IL 后端共用；与 `CodeGen/*` 后端工程隔离 |
 | `Cocoa.CodeGen.Managed` | `Cocoa.CodeGen.Managed` | 同名 | IL 后端：IlEmitter / MetadataBuilder / ManagedPEWriter / AppHostPatcher / CoaLibraryCompiler（`.coa`→DLL） |
 | `Cocoa.CodeGen.ObjectFormat` | `Cocoa.CodeGen.ObjectFormat`（`.PE`/`.Elf` 子命名空间） | 同名 | 目标文件格式：PE 基础设施（PE 表 / PeFileWriter）+ ELF 写出器（ElfFileWriter / ElfObjectWriter） |
@@ -50,7 +50,7 @@ Cocoa.IlMetadata ──→ （无）共享元数据层（IL 结构模型 + 外�
 
 去 C# 方言后，前端为 **Cocoa 单一实现**：`CocoaLexer` / `CocoaParser` / `CocoaBinder`，`Compilation`/`SemanticModel` 已塌缩为具体类。
 
-- 共享机械件：`SyntaxKind`（共享枚举）、`SyntaxFacts`、`LexerBase`（abstract partial 词法骨架）、绿节点工厂基建。
+- 共享机械件：`SyntaxKind`（共享枚举）、`SyntaxFacts`、绿节点工厂基建（`CocoaLexer` 已合并为单文件）。
 - 语言个性（节点类、Binder、Parser）为单份手写，无第二方言对照，故**不再需要漂移检测护栏**。
 - 语法节点直接继承 `SyntaxNode`（绿/红桥接经 `RawKind`，默认由 `Kind` 派生）。
 
@@ -82,9 +82,9 @@ ManagedBackend.Register(); NativeBackend.Register(); InterpreterBackend.Register
 ## 7. NoWarn 棘轮与测试基线
 
 - `Directory.Build.props`：`TreatWarningsAsErrors=true`，全局 `NoWarn = CS0108;CA1416;xUnit2013;xUnit1026`。
-  个别项目（`Cocoa.Cli` / `Cocoa.Build`）另有 nullable 债务压制组（CS8600..CS8625），清零后删除。
+   nullable 债务压制组已全部清零（`Cocoa.Cli` 2026-09、`Cocoa.Build` 2026-10），无项目级 NoWarn 例外。
 - **棘轮只进不退**：禁止新增大范围 NoWarn；确需抑制 → 单条目 + 行内注释 + 登记债务清单。
-- 测试基线：全量 **53,364 通过 / 1 跳过**（2026-09-15 最后一次全量验证；10 月特性增补，最新计数待全量运行）。
+- 测试基线：全量 **53,364 通过 / 1 跳过**（2026-09-15 历史口径）；现行快速回路（不含自举）实测 **3,338 通过**（2026-10-17：CodeAnalysis 1,999 / CodeGen 1,026 / Compiler 313）。自举差分套件含迁移期漂移（`Cocoa.CodeAnalysis.Binder`→`Binding` 已修，Binder 对拍 parity 待续）。
 
 ## 8. 验证与提交纪律
 
