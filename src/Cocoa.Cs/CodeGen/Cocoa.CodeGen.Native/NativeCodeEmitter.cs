@@ -56,18 +56,17 @@ namespace Cocoa.CodeGen.Native
             var code = a.ToArray();
             var entryPointRva = PeFileWriter.TextRva + a.GetLabelOffset(result.StubLabel);
 
+            // M4：.cocoa 元数据节默认强制内嵌（设计稿：体积接受；无 strip 选项）
+            var cocoaMetadata = new CocoaMetadataBuilder(emit.Symbols).Build();
+
             if (isLinux)
             {
-                // T3 linux 最小交付：ELF ET_EXEC（非 PIE）——无导入表/重定位/资源/元数据节。
-                Cocoa.CodeGen.Elf.ElfFileWriter.Write(outputPath, code, a.GetData(), entryPointRva, dataRva);
+                // T3 linux 交付：ELF ET_EXEC（非 PIE）——无导入表/重定位/资源；含 .cocoa 元数据节（inspect 用）。
+                Cocoa.CodeGen.Elf.ElfFileWriter.Write(outputPath, code, a.GetData(), entryPointRva, dataRva, cocoaMetadata);
                 return;
             }
 
             // M4a：数据段绝对地址槽 → .reloc（ASLR 下加载器同步修正 vtable 函数/名字指针）
-            // M4：.cocoa 元数据节默认强制内嵌（设计稿：体积接受；无 strip 选项）
-            var cocoaMetadata = new CocoaMetadataBuilder(emit.Symbols).Build();
-            // 资源集（版本 VS_VERSIONINFO / 图标 RT_GROUP_ICON+RT_ICON / 通用 RT_RCDATA → .rsrc）——
-            // 规避杀软对无资源裸 PE 的启发式误报；图标同时让 explorer 显示应用图标
             var resources = Cocoa.CodeGen.PE.PeResourceSet.BuildRsrcSection(resourceOptions);
             PeFileWriter.Write(outputPath, code, a.GetData(), entryPointRva, result.Imports, platform.Arch, a.DataAbsoluteFixups, subsystem, cocoaMetadata, CollectExports(emit.Symbols, result, a), resources);
         }

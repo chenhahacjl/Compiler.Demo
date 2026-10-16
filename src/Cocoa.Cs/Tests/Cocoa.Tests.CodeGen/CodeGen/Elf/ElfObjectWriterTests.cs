@@ -117,6 +117,28 @@ namespace Cocoa.Tests.CodeGen.Elf
             Assert.Equal(".shstrtab", AsCString(image, shstr + 13));
         }
 
+        [Fact]
+        public void CocoaMetadata_ExtraSection_Embedded()
+        {
+            // 附 .cocoa 节：shnum=5、节名经 shstrtab 附加偏移解析、文件数据可回读。
+            var options = Build();
+            options.Sections.Add(new SectionSpec(".cocoa", new byte[] { 0x43, 0x4F, 0x43, 0x4F, 0x41, 0 }, 0x2110, 0));
+            var image = ElfObjectWriter.Instance.Write(options);
+
+            var shoff = BinaryPrimitives.ReadUInt64LittleEndian(image.AsSpan(0x28));
+            var shnum = BinaryPrimitives.ReadUInt16LittleEndian(image.AsSpan(0x3C));
+            Assert.Equal(5, shnum);
+
+            // .cocoa 段头（索引 3）：name=23（附加名区，前缀 "\0.text\0.data\0.shstrtab\0" 后）、PROGBITS、RW
+            var cocoaOff = shoff + 3 * 64;
+            Assert.Equal(23u, BinaryPrimitives.ReadUInt32LittleEndian(image.AsSpan((int)cocoaOff + 0x00)));
+            Assert.Equal(1u, BinaryPrimitives.ReadUInt32LittleEndian(image.AsSpan((int)cocoaOff + 0x04)));
+            Assert.Equal(3UL, BinaryPrimitives.ReadUInt64LittleEndian(image.AsSpan((int)cocoaOff + 0x08)));
+
+            var dataRaw = (int)BinaryPrimitives.ReadUInt64LittleEndian(image.AsSpan((int)cocoaOff + 0x18));
+            Assert.Equal(new byte[] { 0x43, 0x4F, 0x43, 0x4F, 0x41, 0 }, image.Skip(dataRaw).Take(6).ToArray());
+        }
+
         private static string AsCString(byte[] image, int offset)
         {
             var sb = new System.Text.StringBuilder();

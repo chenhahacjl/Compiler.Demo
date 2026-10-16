@@ -43,6 +43,14 @@ namespace Cocoa.CodeGen.Elf
         public const ulong ShfExecInstr = 0x4;
 
         public const ulong PageSize = 0x1000;
+
+        /// <summary>shstrtab 固定前缀："\0.text\0.data\0.shstrtab\0"（.text=1 .data=7 .shstrtab=13）；附加节名在其后。</summary>
+        public static readonly byte[] ShStrTabPrefix =
+        {
+            0, (byte)'.', (byte)'t', (byte)'e', (byte)'x', (byte)'t', 0,
+            (byte)'.', (byte)'d', (byte)'a', (byte)'t', (byte)'a', 0,
+            (byte)'.', (byte)'s', (byte)'h', (byte)'s', (byte)'t', (byte)'r', (byte)'t', (byte)'a', (byte)'b', 0,
+        };
     }
 
     /// <summary>
@@ -63,31 +71,64 @@ namespace Cocoa.CodeGen.Elf
 
             var text = options.Sections.FirstOrDefault(s => s.Name == ".text")
                 ?? throw new InvalidOperationException("ElfObjectWriter: 缺少 .text 节。");
-            var data = options.Sections.FirstOrDefault(s => s.Name == ".data")
-                ?? throw new InvalidOperationException("ElfObjectWriter: 缺少 .data 节。");
+
+            // 可装载节：.text → RX 段；其余（.data/.cocoa…）→ RW 段，连续排列
+            var rwSections = options.Sections.Where(s => s.Name != ".text").ToList();
+            var rwFirst = rwSections.FirstOrDefault()
+                ?? throw new InvalidOperationException("ElfObjectWriter: 缺少可装载 RW 节。");
 
             var imageBase = options.ImageBase;
 
             // ---- 文件布局 ----
             var textOffset = Align((uint)(ElfConstants.HeaderSize + 3 * ElfConstants.ProgramHeaderSize), (int)ElfConstants.PageSize);
-            var dataOffset = Align(textOffset + (uint)text.RawData.Length, (int)ElfConstants.PageSize);
-            var shstrOffset = Align(dataOffset + (uint)data.RawData.Length, 8);
-            var sectionTableOffset = Align((uint)(shstrOffset + (uint)ShStrTabBytes.Length), 8);
-            var totalSize = sectionTableOffset + 4 * ElfConstants.SectionHeaderSize;
+            var textSize = (uint)text.RawData.Length;
+            var rwOffset = Align(textOffset + textSize, (int)ElfConstants.PageSize);
+
+            var rwLayout = new (SectionSpec Section, uint FileOffset)[rwSections.Count];
+            var rwPos = rwOffset;
+            for (var i = 0; i < rwSections.Count; i++)
+            {
+                rwPos = Align(rwPos, 8);
+                rwLayout[i] = (rwSections[i], rwPos);
+                rwPos += (uint)rwSections[i].RawData.Length;
+            }
+
+            var rwSize = rwPos - rwOffset;
+
+            // shstrtab：固定前缀（.text=1 .data=7 .shstrtab=13）+ 附加节名
+            var shstr = new System.Collections.Generic.List<byte>();
+            shstr.AddRange(ElfConstants.ShStrTabPrefix);
+            var extraNameOffsets = new System.Collections.Generic.Dictionary<string, uint>(StringComparer.Ordinal);
+            foreach (var section in options.Sections.Where(s => s.Name != ".text" && s.Name != ".data" && s.Name != ".shstrtab"))
+            {
+                if (!extraNameOffsets.ContainsKey(section.Name))
+                {
+                    extraNameOffsets[section.Name] = (uint)shstr.Count;
+                    shstr.AddRange(System.Text.Encoding.ASCII.GetBytes(section.Name));
+                    shstr.Add(0);
+                }
+            }
+
+            var shstrBytes = shstr.ToArray();
+            var shstrOffset = Align(rwOffset + rwSize, 8);
+            var sectionTableOffset = Align((uint)(shstrOffset + (uint)shstrBytes.Length), 8);
+            var sectionCount = options.Sections.Count;
+            var shnum = sectionCount + 2; // NULL + sections + .shstrtab
+            var totalSize = sectionTableOffset + (uint)shnum * ElfConstants.SectionHeaderSize;
 
             var image = new byte[totalSize];
 
             var textVaddr = imageBase + text.VirtualAddress;
-            var dataVaddr = imageBase + data.VirtualAddress;
+            var rwVaddr = imageBase + rwFirst.VirtualAddress;
             var entryPoint = imageBase + options.AddressOfEntryPoint;
 
             // ---- 程序头（PT_LOAD×2 + PT_GNU_STACK）----
             WriteProgramHeader(image, 0x40,
                 ElfConstants.PtLoad, ElfConstants.PfR | ElfConstants.PfX,
-                textOffset, textVaddr, (uint)text.RawData.Length, ElfConstants.PageSize);
+                textOffset, textVaddr, textSize, ElfConstants.PageSize);
             WriteProgramHeader(image, 0x40 + ElfConstants.ProgramHeaderSize,
                 ElfConstants.PtLoad, ElfConstants.PfR | ElfConstants.PfW,
-                dataOffset, dataVaddr, (uint)data.RawData.Length, ElfConstants.PageSize);
+                rwOffset, rwVaddr, rwSize, ElfConstants.PageSize);
             WriteProgramHeader(image, 0x40 + 2 * ElfConstants.ProgramHeaderSize,
                 ElfConstants.PtGnuStack, ElfConstants.PfR | ElfConstants.PfW,
                 0, 0, 0, 16);
@@ -110,35 +151,45 @@ namespace Cocoa.CodeGen.Elf
             BinaryPrimitives.WriteUInt16LittleEndian(header.Slice(0x36), ElfConstants.ProgramHeaderSize);
             BinaryPrimitives.WriteUInt16LittleEndian(header.Slice(0x38), 3); // e_phnum
             BinaryPrimitives.WriteUInt16LittleEndian(header.Slice(0x3A), ElfConstants.SectionHeaderSize);
-            BinaryPrimitives.WriteUInt16LittleEndian(header.Slice(0x3C), 4); // e_shnum
-            BinaryPrimitives.WriteUInt16LittleEndian(header.Slice(0x3E), 3); // e_shstrndx
+            BinaryPrimitives.WriteUInt16LittleEndian(header.Slice(0x3C), (ushort)shnum);
+            BinaryPrimitives.WriteUInt16LittleEndian(header.Slice(0x3E), (ushort)(shnum - 1)); // e_shstrndx
 
             // ---- 节数据 ----
             text.RawData.CopyTo(image, (int)textOffset);
-            data.RawData.CopyTo(image, (int)dataOffset);
-            ShStrTabBytes.CopyTo(image, (int)shstrOffset);
+            foreach (var (section, fileOffset) in rwLayout)
+            {
+                section.RawData.CopyTo(image, (int)fileOffset);
+            }
 
-            // ---- 节表 ----
-            WriteSectionHeader(image, (int)(sectionTableOffset + 0 * ElfConstants.SectionHeaderSize), 0, 0, 0, 0, 0, 0, 0);
-            WriteSectionHeader(image, (int)(sectionTableOffset + 1 * ElfConstants.SectionHeaderSize),
+            shstrBytes.CopyTo(image, (int)shstrOffset);
+
+            // ---- 节表：NULL + 逐节 + .shstrtab ----
+            WriteSectionHeader(image, (int)sectionTableOffset, 0, 0, 0, 0, 0, 0, 0);
+            var sectionIndex = 1;
+            WriteSectionHeader(image, (int)(sectionTableOffset + sectionIndex * ElfConstants.SectionHeaderSize),
                 1, ElfConstants.ShtProgbits, ElfConstants.ShfAlloc | ElfConstants.ShfExecInstr,
-                textVaddr, textOffset, (uint)text.RawData.Length, 16);
-            WriteSectionHeader(image, (int)(sectionTableOffset + 2 * ElfConstants.SectionHeaderSize),
-                7, ElfConstants.ShtProgbits, ElfConstants.ShfAlloc | ElfConstants.ShfWrite,
-                dataVaddr, dataOffset, (uint)data.RawData.Length, 8);
-            WriteSectionHeader(image, (int)(sectionTableOffset + 3 * ElfConstants.SectionHeaderSize),
-                13, ElfConstants.ShtStrTab, 0, 0, shstrOffset, (uint)ShStrTabBytes.Length, 1);
+                textVaddr, textOffset, textSize, 16);
+            sectionIndex++;
+
+            foreach (var (section, fileOffset) in rwLayout)
+            {
+                var addr = rwVaddr + (fileOffset - rwOffset);
+                var nameOffset = section.Name switch
+                {
+                    ".data" => 7u,
+                    _ => extraNameOffsets[section.Name],
+                };
+                WriteSectionHeader(image, (int)(sectionTableOffset + sectionIndex * ElfConstants.SectionHeaderSize),
+                    nameOffset, ElfConstants.ShtProgbits, ElfConstants.ShfAlloc | ElfConstants.ShfWrite,
+                    addr, fileOffset, (uint)section.RawData.Length, 8);
+                sectionIndex++;
+            }
+
+            WriteSectionHeader(image, (int)(sectionTableOffset + sectionIndex * ElfConstants.SectionHeaderSize),
+                13, ElfConstants.ShtStrTab, 0, 0, shstrOffset, (uint)shstrBytes.Length, 1);
 
             return image;
         }
-
-        /// <summary>shstrtab 内容："\0.text\0.data\0.shstrtab\0"（偏移 .text=1 .data=7 .shstrtab=13）。</summary>
-        private static readonly byte[] ShStrTabBytes =
-        {
-            0, (byte)'.', (byte)'t', (byte)'e', (byte)'x', (byte)'t', 0,
-            (byte)'.', (byte)'d', (byte)'a', (byte)'t', (byte)'a', 0,
-            (byte)'.', (byte)'s', (byte)'h', (byte)'s', (byte)'t', (byte)'r', (byte)'t', (byte)'a', (byte)'b', 0,
-        };
 
         private static void WriteProgramHeader(byte[] image, int offset, uint type, uint flags, ulong fileOffset, ulong vaddr, uint size, ulong alignment)
         {

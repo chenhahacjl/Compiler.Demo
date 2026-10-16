@@ -19,7 +19,7 @@ namespace Cocoa.CodeGen.Elf
         /// <summary>节/段对齐（4KB 页）。</summary>
         public const int SectionAlignment = 0x1000;
 
-        public static void Write(string outputPath, byte[] code, byte[] data, int entryPointRva, int dataRva)
+        public static void Write(string outputPath, byte[] code, byte[] data, int entryPointRva, int dataRva, byte[]? cocoaMetadata = null)
         {
             var options = new ObjectWriteOptions(
                 TargetOS.Linux, Cpu.X64, (ulong)ImageBase,
@@ -29,6 +29,12 @@ namespace Cocoa.CodeGen.Elf
 
             options.Sections.Add(new SectionSpec(".text", code, (uint)TextRva, 0));
             options.Sections.Add(new SectionSpec(".data", data, (uint)dataRva, 0));
+
+            // .cocoa 元数据节（工具链 inspect 用；+8 字节对齐并入 RW 段）
+            if (cocoaMetadata != null && cocoaMetadata.Length > 0)
+            {
+                options.Sections.Add(new SectionSpec(".cocoa", cocoaMetadata, (uint)(dataRva + data.Length), 0));
+            }
 
             var image = ElfObjectWriter.Instance.Write(options);
             File.WriteAllBytes(outputPath, image);

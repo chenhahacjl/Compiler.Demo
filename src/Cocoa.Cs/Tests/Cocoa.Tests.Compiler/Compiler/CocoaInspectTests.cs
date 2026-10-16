@@ -105,7 +105,7 @@ function Main(): i32
 
             var (exitCode, _, stderr) = CliTestRunner.Run("inspect \"" + textPath + "\"", Path.GetTempPath());
             Assert.Equal(1, exitCode);
-            Assert.Contains("非有效 PE 镜像", stderr);
+            Assert.Contains("非有效 PE/ELF 镜像", stderr);
         }
 
         [Fact]

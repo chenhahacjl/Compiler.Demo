@@ -99,9 +99,15 @@ namespace Cocoa.Cli
 
         private static byte[] ExtractSection(byte[] image, string wantedName)
         {
+            // T3：ELF（linux-x64 native 产物）——经节表定位 .cocoa
+            if (image.Length >= 0x40 && image[0] == 0x7F && image[1] == (byte)'E' && image[2] == (byte)'L' && image[3] == (byte)'F')
+            {
+                return ExtractSectionElf(image, wantedName);
+            }
+
             if (image.Length < 0x40 || image[0] != 'M' || image[1] != 'Z')
             {
-                throw new InvalidDataException($"'{wantedName}' 定位失败：非有效 PE 镜像");
+                throw new InvalidDataException($"'{wantedName}' 定位失败：非有效 PE/ELF 镜像");
             }
 
             var peOffset = BitConverter.ToInt32(image, 0x3C);
@@ -139,6 +145,77 @@ namespace Cocoa.Cli
             }
 
             return Array.Empty<byte>();
+        }
+
+        /// <summary>ELF64 节表定位目标节（shstrtab 名解析）。非 ELF64 返回 0 长度。</summary>
+        private static byte[] ExtractSectionElf(byte[] image, string wantedName)
+        {
+            if (image[4] != 2 || image[5] != 1) // ELFCLASS64 / LE
+            {
+                return Array.Empty<byte>();
+            }
+
+            var shoff = BitConverter.ToInt64(image, 0x28);
+            var shentsize = BitConverter.ToInt16(image, 0x3A);
+            var shnum = BitConverter.ToInt16(image, 0x3C);
+            var shstrndx = BitConverter.ToInt16(image, 0x3E);
+            if (shentsize != 64 || shoff <= 0 || shnum <= 0 || shoff + (long)shnum * 64 > image.Length)
+            {
+                return Array.Empty<byte>();
+            }
+
+            // shstrtab 段（用于节名解析）
+            var strTableBase = (int)(shoff + (long)shstrndx * 64);
+            var strOffset = BitConverter.ToInt64(image, strTableBase + 0x18);
+            var strSize = BitConverter.ToInt64(image, strTableBase + 0x20);
+            if (strOffset < 0 || strSize < 0 || strOffset + strSize > image.Length)
+            {
+                return Array.Empty<byte>();
+            }
+
+            for (var i = 0; i < shnum; i++)
+            {
+                var baseOffset = (int)(shoff + (long)i * 64);
+                var nameOffset = BitConverter.ToInt32(image, baseOffset + 0x00);
+                if (nameOffset <= 0 || nameOffset >= strSize)
+                {
+                    continue;
+                }
+
+                var name = ReadNullTerminated(image, strOffset + nameOffset, (int)(strSize - nameOffset));
+                if (name == wantedName)
+                {
+                    var secOffset = BitConverter.ToInt64(image, baseOffset + 0x18);
+                    var secSize = BitConverter.ToInt64(image, baseOffset + 0x20);
+                    if (secSize <= 0 || secOffset < 0 || secOffset + secSize > image.Length)
+                    {
+                        return Array.Empty<byte>();
+                    }
+
+                    var raw = new byte[(int)secSize];
+                    Array.Copy(image, (int)secOffset, raw, 0, raw.Length);
+                    return raw;
+                }
+            }
+
+            return Array.Empty<byte>();
+        }
+
+        private static string ReadNullTerminated(byte[] image, long offset, int maxLength)
+        {
+            var sb = new System.Text.StringBuilder();
+            for (var i = 0; i < maxLength && offset + i < image.Length; i++)
+            {
+                var b = image[(int)(offset + i)];
+                if (b == 0)
+                {
+                    break;
+                }
+
+                sb.Append((char)b);
+            }
+
+            return sb.ToString();
         }
 
         private static void Print(CocoaMetadataModel model, string path)
