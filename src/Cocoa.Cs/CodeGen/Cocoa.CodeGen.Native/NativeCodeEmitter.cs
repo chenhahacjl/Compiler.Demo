@@ -5,7 +5,7 @@ using Cocoa.CodeGen.Native.Lir;
 using Cocoa.CodeGen.Native.Assembler;
 using Cocoa.CodeGen.Native.Assembler.X64;
 using Cocoa.CodeGen.Native.Assembler.X86;
-using Cocoa.CodeGen.PE;
+using Cocoa.CodeGen.ObjectFormat.PE;
  using Cocoa.Targeting;
 
 using Cocoa.CodeAnalysis;
@@ -51,7 +51,7 @@ namespace Cocoa.CodeGen.Native
             }
 
             var dataRva = PeFileWriter.ComputeDataRva(a.ToArray().Length);
-            var imageBase = isLinux ? Cocoa.CodeGen.Elf.ElfFileWriter.ImageBase : PeFileWriter.ImageBaseOf(platform.Arch);
+            var imageBase = isLinux ? Cocoa.CodeGen.ObjectFormat.Elf.ElfFileWriter.ImageBase : PeFileWriter.ImageBaseOf(platform.Arch);
             a.Patch(dataRva - PeFileWriter.TextRva, imageBase);
             var code = a.ToArray();
             var entryPointRva = PeFileWriter.TextRva + a.GetLabelOffset(result.StubLabel);
@@ -76,17 +76,17 @@ namespace Cocoa.CodeGen.Native
                     }
                 }
 
-                Cocoa.CodeGen.Elf.ElfFileWriter.Write(outputPath, code, a.GetData(), entryPointRva, dataRva, cocoaMetadata, dynImports);
+                Cocoa.CodeGen.ObjectFormat.Elf.ElfFileWriter.Write(outputPath, code, a.GetData(), entryPointRva, dataRva, cocoaMetadata, dynImports);
                 return;
             }
 
             // M4a：数据段绝对地址槽 → .reloc（ASLR 下加载器同步修正 vtable 函数/名字指针）
-            var resources = Cocoa.CodeGen.PE.PeResourceSet.BuildRsrcSection(resourceOptions);
+            var resources = Cocoa.CodeGen.ObjectFormat.PE.PeResourceSet.BuildRsrcSection(resourceOptions);
             PeFileWriter.Write(outputPath, code, a.GetData(), entryPointRva, result.Imports, platform.Arch, a.DataAbsoluteFixups, subsystem, cocoaMetadata, CollectExports(emit.Symbols, result, a), resources);
         }
 
         /// <summary>C-3：收集 `[Export]` 顶层函数 → (导出名, RVA)。RVA = TextRva + 函数入口标签相对 code 偏移。</summary>
-        private static System.Collections.Generic.List<PE.PeExportEntry>? CollectExports(
+        private static System.Collections.Generic.List<PeExportEntry>? CollectExports(
             EmittedSymbolSnapshot symbols,
             LirEmitResult result,
             IAssembler a)
@@ -96,7 +96,7 @@ namespace Cocoa.CodeGen.Native
                 return null;
             }
 
-            var exports = new System.Collections.Generic.List<PE.PeExportEntry>();
+            var exports = new System.Collections.Generic.List<PeExportEntry>();
             foreach (var kvp in symbols.Functions)
             {
                 var function = kvp.Key;
@@ -112,7 +112,7 @@ namespace Cocoa.CodeGen.Native
                 }
 
                 var offset = a.GetLabelOffset(label);
-                exports.Add(new PE.PeExportEntry(function.Name, (uint)(PE.PeFileWriter.TextRva + offset), IsForwarder: false));
+                exports.Add(new PeExportEntry(function.Name, (uint)(PeFileWriter.TextRva + offset), IsForwarder: false));
             }
 
             return exports.Count > 0 ? exports : null;

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 
 using Cocoa.CodeGen.Native.Assembler.X64;
-using Cocoa.CodeGen.PE;
+using Cocoa.CodeGen.ObjectFormat.PE;
 
 using Cocoa.CodeAnalysis;
 

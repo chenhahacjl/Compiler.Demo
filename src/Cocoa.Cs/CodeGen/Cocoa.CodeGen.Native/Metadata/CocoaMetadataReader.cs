@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Text;
-using Cocoa.CodeGen.PE;
+using Cocoa.CodeGen.ObjectFormat.PE;
 
 namespace Cocoa.CodeGen.Native.Metadata
 {

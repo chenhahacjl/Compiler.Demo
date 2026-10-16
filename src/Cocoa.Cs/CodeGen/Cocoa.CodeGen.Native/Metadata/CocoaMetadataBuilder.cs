@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Text;
+using Cocoa.CodeGen.ObjectFormat.PE;
 using Cocoa.CodeAnalysis.Symbols;
 
 namespace Cocoa.CodeGen.Native.Metadata
@@ -78,7 +79,7 @@ namespace Cocoa.CodeGen.Native.Metadata
                 headerBlockSize += 8 + Align4(Encoding.ASCII.GetByteCount(name) + 1);
             }
 
-            var offsets = PE.MetadataRootStream.ComputeOffsets(headerBlockSize, streams);
+            var offsets = MetadataRootStream.ComputeOffsets(headerBlockSize, streams);
             var lastDataEnd = headerBlockSize;
             foreach (var (name, data) in streams)
             {
@@ -96,8 +97,8 @@ namespace Cocoa.CodeGen.Native.Metadata
             root[6] = (byte)streams.Count;
             root[7] = (byte)(streams.Count >> 8);
 
-            PE.MetadataRootStream.WriteHeaders(root, 0, magicHeaderSize, streams, offsets);
-            PE.MetadataRootStream.WriteData(root, 0, streams, offsets);
+            MetadataRootStream.WriteHeaders(root, 0, magicHeaderSize, streams, offsets);
+            MetadataRootStream.WriteData(root, 0, streams, offsets);
             return root;
         }
 

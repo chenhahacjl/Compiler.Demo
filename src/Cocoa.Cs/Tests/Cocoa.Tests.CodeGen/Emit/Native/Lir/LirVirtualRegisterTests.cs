@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using Cocoa.CodeGen.Native;
-using Cocoa.CodeGen.PE;
+using Cocoa.CodeGen.ObjectFormat.PE;
 using Cocoa.CodeGen.Native.Lir;
 using Xunit;
 

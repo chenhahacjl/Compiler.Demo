@@ -1,4 +1,4 @@
-using Cocoa.CodeGen.Elf;
+using Cocoa.CodeGen.ObjectFormat.Elf;
 using Cocoa.Targeting;
 using System;
 using System.Buffers.Binary;

@@ -1,7 +1,7 @@
 using Cocoa.CodeGen.Managed;
 using Cocoa.CodeGen.Interpreter;
 using Cocoa.CodeGen.Native;
-using Cocoa.CodeGen.PE;
+using Cocoa.CodeGen.ObjectFormat.PE;
 using System.Runtime.CompilerServices;
 
 namespace Cocoa.Tests.CodeAnalysis

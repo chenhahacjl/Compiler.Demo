@@ -1,6 +1,6 @@
 using System.Text;
 using Cocoa.CodeGen.Native.Metadata;
-using Cocoa.CodeGen.PE;
+using Cocoa.CodeGen.ObjectFormat.PE;
 using Cocoa.CodeAnalysis.Symbols;
 
 namespace Cocoa.Cli

@@ -4,7 +4,7 @@ using System.IO;
 
 namespace Cocoa.CodeAnalysis
 {
-    /// <summary>PE 资源条目（Core 侧载体；PE 后端转换为 <c>Cocoa.CodeGen.PE.PeResourceData</c>）。</summary>
+    /// <summary>PE 资源条目（Core 侧载体；PE 后端转换为 <c>Cocoa.CodeGen.ObjectFormat.PE.PeResourceData</c>）。</summary>
     public readonly record struct PeResourceItem(uint Type, uint NameId, ushort LanguageId, byte[] Data);
 
     /// <summary>IL 内嵌资源（ManifestResource：名称 + 数据，运行时 GetManifestResourceStream 读取）。</summary>

@@ -3,7 +3,7 @@ using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.CodeAnalysis.Text;
 using Cocoa.Targeting;
 using Cocoa.CodeGen.Managed;
-using Cocoa.CodeGen.PE;
+using Cocoa.CodeGen.ObjectFormat.PE;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Syntax.Nodes;
 using Cocoa.CodeAnalysis.Syntax.Green;

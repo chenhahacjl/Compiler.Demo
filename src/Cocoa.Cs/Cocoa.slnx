@@ -10,10 +10,9 @@
   </Folder>
   <Folder Name="/CodeGen/">
     <Project Path="CodeGen/Cocoa.CodeGen.Managed/Cocoa.CodeGen.Managed.csproj" />
-    <Project Path="CodeGen/Cocoa.CodeGen.PE/Cocoa.CodeGen.PE.csproj" />
+    <Project Path="CodeGen/Cocoa.CodeGen.ObjectFormat/Cocoa.CodeGen.ObjectFormat.csproj" />
     <Project Path="CodeGen/Cocoa.CodeGen.Native/Cocoa.CodeGen.Native.csproj" />
     <Project Path="CodeGen/Cocoa.CodeGen.Interpreter/Cocoa.CodeGen.Interpreter.csproj" />
-    <Project Path="CodeGen/Cocoa.CodeGen.Elf/Cocoa.CodeGen.Elf.csproj" />
   </Folder>
   <Folder Name="/Tools/">
     <Project Path="Tools/Cli/Cocoa.Cli/Cocoa.Cli.csproj" />

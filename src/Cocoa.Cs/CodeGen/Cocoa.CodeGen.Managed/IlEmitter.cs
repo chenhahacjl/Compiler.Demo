@@ -405,7 +405,7 @@ namespace Cocoa.CodeGen.Managed
             var entryPointToken = program.MainFunction == null ? 0 : _metadata.BuildTokenMap()[_methods[program.MainFunction]];
 
             // IL 产物资源：win32 图标 / 通用 RT_RCDATA → .rsrc；内嵌资源 → ManifestResource（GetManifestResourceStream 读取）
-            var win32Resources = _resourceOptions != null ? Cocoa.CodeGen.PE.PeResourceSet.BuildWin32Only(_resourceOptions) : null;
+            var win32Resources = _resourceOptions != null ? Cocoa.CodeGen.ObjectFormat.PE.PeResourceSet.BuildWin32Only(_resourceOptions) : null;
             foreach (var embedded in _resourceOptions?.EmbeddedResources ?? System.Array.Empty<Cocoa.CodeAnalysis.PeEmbeddedResource>())
             {
                 _metadata.AddManifestResource(new Cocoa.IlMetadata.IlManifestResource(embedded.Name, embedded.Data));

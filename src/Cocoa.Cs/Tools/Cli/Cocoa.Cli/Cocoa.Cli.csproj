@@ -6,7 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
 <ProjectReference Include="..\..\..\Core\Cocoa.CodeAnalysis\Cocoa.CodeAnalysis.csproj" />
-<ProjectReference Include="..\..\..\CodeGen\Cocoa.CodeGen.PE\Cocoa.CodeGen.PE.csproj" />
+<ProjectReference Include="..\..\..\CodeGen\Cocoa.CodeGen.ObjectFormat\Cocoa.CodeGen.ObjectFormat.csproj" />
 <ProjectReference Include="..\..\..\CodeGen\Cocoa.CodeGen.Managed\Cocoa.CodeGen.Managed.csproj" />
 <ProjectReference Include="..\..\..\CodeGen\Cocoa.CodeGen.Native\Cocoa.CodeGen.Native.csproj" />
 <ProjectReference Include="..\..\..\Core\Cocoa.Targeting\Cocoa.Targeting.csproj" />

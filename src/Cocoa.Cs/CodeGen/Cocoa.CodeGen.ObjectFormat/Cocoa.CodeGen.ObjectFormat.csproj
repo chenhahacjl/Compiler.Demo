@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Cocoa.CodeGen.ObjectFormat</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+<ProjectReference Include="..\..\Core\Cocoa.Targeting\Cocoa.Targeting.csproj" />
+<ProjectReference Include="..\..\Core\Cocoa.CodeAnalysis\Cocoa.CodeAnalysis.csproj" />
+  </ItemGroup>
+
+</Project>

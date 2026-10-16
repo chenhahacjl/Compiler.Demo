@@ -10,7 +10,7 @@
 
   <ItemGroup>
 <ProjectReference Include="..\..\Core\Cocoa.CodeAnalysis\Cocoa.CodeAnalysis.csproj" />
-<ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.PE\Cocoa.CodeGen.PE.csproj" />
+<ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.ObjectFormat\Cocoa.CodeGen.ObjectFormat.csproj" />
 <ProjectReference Include="..\..\Core\Cocoa.IlMetadata\Cocoa.IlMetadata.csproj" />
   </ItemGroup>
 

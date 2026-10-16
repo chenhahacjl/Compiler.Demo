@@ -9,7 +9,7 @@ using Cocoa.CodeAnalysis.Syntax.Nodes;
 using Cocoa.CodeAnalysis.Syntax.Green;
 using Cocoa.CodeGen.Native;
 using Cocoa.CodeGen.Native.Metadata;
-using Cocoa.CodeGen.PE;
+using Cocoa.CodeGen.ObjectFormat.PE;
 using Cocoa.Targeting;
 using Xunit;
 

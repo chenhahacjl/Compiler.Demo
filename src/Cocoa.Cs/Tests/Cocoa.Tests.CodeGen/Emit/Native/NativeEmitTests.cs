@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using Cocoa.CodeAnalysis;
-using Cocoa.CodeGen.PE;
+using Cocoa.CodeGen.ObjectFormat.PE;
  using Cocoa.Targeting;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Syntax.Nodes;

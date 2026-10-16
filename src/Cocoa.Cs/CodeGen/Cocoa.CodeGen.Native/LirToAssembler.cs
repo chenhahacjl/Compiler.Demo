@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Cocoa.CodeGen.Native.Assembler;
 using Cocoa.CodeGen.Native.Assembler.X64;
-using Cocoa.CodeGen.PE;
+using Cocoa.CodeGen.ObjectFormat.PE;
  using Cocoa.Targeting;
 
 using Cocoa.CodeAnalysis;

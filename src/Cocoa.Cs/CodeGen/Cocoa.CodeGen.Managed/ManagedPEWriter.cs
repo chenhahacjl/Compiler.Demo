@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using Cocoa.CodeGen.PE;
-using static Cocoa.CodeGen.PE.PeBinary;
+using Cocoa.CodeGen.ObjectFormat.PE;
+using static Cocoa.CodeGen.ObjectFormat.PE.PeBinary;
 
 using Cocoa.IlMetadata;
 using Cocoa.CodeAnalysis;
