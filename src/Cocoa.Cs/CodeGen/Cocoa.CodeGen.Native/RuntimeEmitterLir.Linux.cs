@@ -56,6 +56,7 @@ namespace Cocoa.CodeGen.Native
             _linuxProcEnviron = _program.AddData(LirDataItem.ByteArray(Prefix + "LinuxProcEnviron", System.Text.Encoding.UTF8.GetBytes("/proc/self/environ\0")));
             _linuxProcCmdline = _program.AddData(LirDataItem.ByteArray(Prefix + "LinuxProcCmdline", System.Text.Encoding.UTF8.GetBytes("/proc/self/cmdline\0")));
             _linuxStatBuf = _program.AddData(LirDataItem.ByteArray(Prefix + "LinuxStatBuf", new byte[144]));
+            AddShaDataItems();
         }
 
         private void EmitLinuxFunctions()
@@ -139,9 +140,9 @@ namespace Cocoa.CodeGen.Native
 
             // ---- Linux 不支持的运行期面（编译期已警示；运行期明确报错退出）----
             _ = BeginFunction("BuildArgs"); EmitBuildArgsLinux();
-            EmitLinuxUnsupported("SelfIntrospect", 8);
+            _ = BeginFunction("SelfIntrospect"); EmitSelfIntrospectLinux();
             _ = BeginFunctionTyped("LaunchProcess", new[] { 8, 8, 8 }, LirType.Addr, LirType.Addr, LirType.Addr); EmitLaunchProcessLinux();
-            EmitLinuxUnsupported("Sha256Hash", 8, 8);
+            _ = BeginFunctionTyped("Sha256Hash", new[] { 8 }, LirType.Addr); EmitSha256HashLinux();
 
             // ---- 特殊函数（DivByZero/StackOverflow 经 PrintString+ExitProcess，Linux 天然可用）----
             var divByZero = BeginFunction("DivByZero");

@@ -157,5 +157,39 @@ function Main(args: string[]): i32
             var bytes = System.IO.File.ReadAllBytes(outputPath);
             Assert.Equal(new byte[] { 0x7F, (byte)'E', (byte)'L', (byte)'F' }, new[] { bytes[0], bytes[1], bytes[2], bytes[3] });
         }
+
+        [Fact]
+        public void LinuxNative_Sha256AndSelfIntrospect_Emits()
+        {
+            // N5b：SHA-256（纯 LIR）与 SelfIntrospect（/proc/self/exe 扫描 .cocoa）面可编。
+            var syntaxTree = SyntaxTree.Parse(@"using System
+using System.Syscall
+
+class Runtime
+{
+    syscall function SelfIntrospect(): bool
+}
+
+function Main(): i32
+{
+    var data: u8[] = new u8[3]
+    data[0] = 97
+    data[1] = 98
+    data[2] = 99
+    var hash = System.Syscall.MathSyscall.Sha256Hash(data)
+    System.Console.WriteLine(Convert.ToHexString(hash))
+    var ok = Runtime.SelfIntrospect()
+    System.Console.WriteLine(ok)
+    return 0
+}");
+            var references = new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location };
+            var compilation = Compilation.Create("Main", references, syntaxTree);
+            var outputPath = OutputPath("sha-selfintrospect");
+            var diagnostics = compilation.EmitNative("sha-selfintrospect", outputPath, new TargetPlatform(TargetOS.Linux, Architecture.X64));
+            Assert.True(diagnostics.IsEmpty, string.Join("\n", System.Linq.Enumerable.Select(diagnostics, d => d.Message)));
+
+            var bytes = System.IO.File.ReadAllBytes(outputPath);
+            Assert.Equal(new byte[] { 0x7F, (byte)'E', (byte)'L', (byte)'F' }, new[] { bytes[0], bytes[1], bytes[2], bytes[3] });
+        }
     }
 }
