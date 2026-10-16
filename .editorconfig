@@ -67,6 +67,38 @@ dotnet_style_explicit_tuple_names = true:suggestion
 dotnet_style_predefined_type_for_locals_parameters_members = true:suggestion
 dotnet_style_predefined_type_for_member_access = true:suggestion
 
+# Naming conventions（suggestion 级，机械提示；棘轮要求零新增编译器警告不受影响）
+dotnet_naming_rule.types_and_namespaces_should_be_pascalcase.severity = suggestion
+dotnet_naming_rule.types_and_namespaces_should_be_pascalcase.symbols = types_and_namespaces
+dotnet_naming_rule.types_and_namespaces_should_be_pascalcase.style = pascal_case
+dotnet_naming_symbols.types_and_namespaces.applicable_kinds = class, struct, interface, enum, delegate, namespace
+dotnet_naming_symbols.types_and_namespaces.applicable_accessibilities = *
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+
+dotnet_naming_rule.type_parameters_should_start_with_t.severity = suggestion
+dotnet_naming_rule.type_parameters_should_start_with_t.symbols = type_parameters
+dotnet_naming_rule.type_parameters_should_start_with_t.style = type_parameter_t
+dotnet_naming_symbols.type_parameters.applicable_kinds = type_parameter
+dotnet_naming_symbols.type_parameters.applicable_accessibilities = *
+dotnet_naming_style.type_parameter_t.required_prefix = T
+dotnet_naming_style.type_parameter_t.capitalization = pascal_case
+
+dotnet_naming_rule.private_static_fields_should_start_with_s.severity = suggestion
+dotnet_naming_rule.private_static_fields_should_start_with_s.symbols = private_static_fields
+dotnet_naming_rule.private_static_fields_should_start_with_s.style = s_prefix
+dotnet_naming_symbols.private_static_fields.applicable_kinds = field
+dotnet_naming_symbols.private_static_fields.applicable_accessibilities = private
+dotnet_naming_symbols.private_static_fields.required_modifiers = static
+dotnet_naming_style.s_prefix.required_prefix = s_
+dotnet_naming_style.s_prefix.capitalization = camel_case
+
+dotnet_naming_rule.members_should_be_pascalcase.severity = suggestion
+dotnet_naming_rule.members_should_be_pascalcase.symbols = members
+dotnet_naming_rule.members_should_be_pascalcase.style = pascal_case
+dotnet_naming_symbols.members.applicable_kinds = property, method, event
+dotnet_naming_symbols.members.applicable_accessibilities = public, internal, protected
+dotnet_naming_style.pascal_case2.capitalization = pascal_case
+
 # Script files
 [*.{ps1,psm1,psd1}]
 insert_final_newline = true
