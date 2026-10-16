@@ -13,7 +13,7 @@ using Xunit;
 namespace Cocoa.Tests.CodeGen.ThreeBackend
 {
     /// <summary>
-    /// u64 有序比较三后端回归（x86 修复后解锁，原 NativeX86U64CompareKnownIssueTests）。
+    /// u64 有序比较三后端回归（x86 修复后解锁，原 NativeX86U64CompareKnownIssueTests 更名而来）。
     ///
     /// 修复定位：x86 64 位比较（EmitCmp64X86）高 32 位恒用有符号 Less/Greater，u64 无符号大值
     /// （高 32 ≥ 0x80000000 被视负）→ `u64 <`/`<=` 恒假。新增 LirOpCode.CmpU（u64 比较）承载
