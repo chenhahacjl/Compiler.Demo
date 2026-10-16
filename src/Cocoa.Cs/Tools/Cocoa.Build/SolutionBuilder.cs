@@ -76,6 +76,7 @@ namespace Cocoa.Build
             {
                 FormatOverride = options.FormatOverride,
                 PlatformOverride = options.PlatformOverride,
+                TargetOsOverride = options.TargetOsOverride,
                 NoIncremental = options.NoIncremental,
                 ConfigurationOverride = options.ConfigurationOverride,
                 OutputFileOverride = options.OutputFileOverride,

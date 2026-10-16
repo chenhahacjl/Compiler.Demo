@@ -119,7 +119,7 @@ namespace Cocoa.Build
             var outputDirectory = project.GetOutputDirectory();
             var outputFile = options.OutputFileOverride != null
                 ? Path.GetFullPath(options.OutputFileOverride)
-                : Path.Combine(outputDirectory, project.GetDefaultOutputFileName(effectiveTargetOs));
+                : Path.Combine(outputDirectory, project.GetDefaultOutputFileName(effectiveTargetOs, backend));
             Directory.CreateDirectory(Path.GetDirectoryName(outputFile)!);
 
             var expansion = Glob.Expand(project.SourcePatterns, project.Directory);
@@ -161,6 +161,7 @@ namespace Cocoa.Build
             {
                 $"format={format}",
                 $"platform={options.PlatformOverride ?? effectiveCpu.ToString()}",
+                $"os={effectiveTargetOs}",
                 $"backend={backend}",
                 $"configuration={options.ConfigurationOverride ?? project.Configuration}",
                 $"output={outputFile}",

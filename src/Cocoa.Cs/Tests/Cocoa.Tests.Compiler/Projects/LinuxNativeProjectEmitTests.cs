@@ -86,7 +86,7 @@ namespace Cocoa.Tests.Projects
 
             Assert.True(result.Success, _out.ToString());
 
-            var outputPath = Path.Combine(_directory, "out", project.GetDefaultOutputFileName(Cocoa.Targeting.TargetOS.Linux));
+            var outputPath = Path.Combine(_directory, "out", project.GetDefaultOutputFileName(Cocoa.Targeting.TargetOS.Linux, Cocoa.Targeting.CodeBackend.Native));
             Assert.True(File.Exists(outputPath), $"output '{outputPath}' not found");
             Assert.False(outputPath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
 
