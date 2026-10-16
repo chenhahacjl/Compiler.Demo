@@ -361,8 +361,8 @@ namespace Cocoa.CodeGen.Native
                 _bcryptAlg = _program.AddData(LirDataItem.Pointer(Prefix + "BcryptAlg"));
                 _bcryptHash = _program.AddData(LirDataItem.Pointer(Prefix + "BcryptHash"));
 
-                _program.Imports.AddRange(Kernel32Imports.Select(n => new LirImport("kernel32.dll", n, false)));
-                _program.Imports.Add(new LirImport("kernel32.dll", _tickCountImport, false));
+                _program.Imports.AddRange(Kernel32Imports.Select(n => new LirImport(PlatformDllResolver.Kernel32, n, false)));
+                _program.Imports.Add(new LirImport(PlatformDllResolver.Kernel32, _tickCountImport, false));
                 _program.Imports.AddRange(BcryptImports.Select(n => new LirImport("bcrypt.dll", n, false)));
             }
 
@@ -454,7 +454,7 @@ namespace Cocoa.CodeGen.Native
             private static readonly SimpleImportDef[] SimpleImports =
             {
                 // FileStream 句柄原语（Win32 kernel32；x64 参数寄存器 + 返回约定统一）
-                new("FileCloseHandle", "kernel32.dll", "CloseHandle", 0, new[] { 8 }, false, LirType.Addr),
+                new("FileCloseHandle", PlatformDllResolver.Kernel32, "CloseHandle", 0, new[] { 8 }, false, LirType.Addr),
             };
 
             private void EmitSimpleImports()
@@ -609,7 +609,7 @@ namespace Cocoa.CodeGen.Native
 
             private void SysCall(LirVirtualRegister? dst, string import, int argCount, params LirVirtualRegister?[] args)
             {
-                SysCallDll(dst, "kernel32.dll", import, argCount, false, args);
+                SysCallDll(dst, PlatformDllResolver.Kernel32, import, argCount, false, args);
             }
 
             /// <summary>任意 DLL 导入调用（ucrtbase 等）；cdecl=true 时 x86 调用方清栈。x64 fastcall / x86 stdcall 约定由 LirToAssembler.SysCall 负责。</summary>

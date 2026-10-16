@@ -221,11 +221,13 @@ namespace Cocoa.CodeGen.Native
 
             // 分组内聚：kernel32 组（运行时基础）全部在前，其余 DLL 组按首见顺序聚合，组内保持相对顺序。
             // IAT 由 OS 加载器按描述符 FirstThunk 连续填充，槽数组必须与 specs 分组顺序一致。
+            // T2：DLL 名经 PlatformDllResolver 归一（Windows 恒等；Linux 预留 libc 映射）。
             var seenImports = new HashSet<LirImport>();
             var imports = _program.Imports.Where(seenImports.Add).ToList();
-            var kernel32Group = imports.Where(i => string.Equals(i.DllName, "kernel32.dll", StringComparison.OrdinalIgnoreCase)).ToList();
-            var otherGroups = imports.Where(i => !string.Equals(i.DllName, "kernel32.dll", StringComparison.OrdinalIgnoreCase))
-                                     .GroupBy(i => i.DllName, StringComparer.OrdinalIgnoreCase)
+            var resolvedKernel32 = PlatformDllResolver.Resolve("kernel32.dll", _platform.OS);
+            var kernel32Group = imports.Where(i => string.Equals(PlatformDllResolver.Resolve(i.DllName, _platform.OS), resolvedKernel32, StringComparison.OrdinalIgnoreCase)).ToList();
+            var otherGroups = imports.Where(i => !string.Equals(PlatformDllResolver.Resolve(i.DllName, _platform.OS), resolvedKernel32, StringComparison.OrdinalIgnoreCase))
+                                     .GroupBy(i => PlatformDllResolver.Resolve(i.DllName, _platform.OS), StringComparer.OrdinalIgnoreCase)
                                      .SelectMany(g => g)
                                      .ToList();
             var reordered = kernel32Group.Concat(otherGroups).ToList();

@@ -1,4 +1,5 @@
 using System;
+using Cocoa.Targeting;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -11,9 +12,9 @@ namespace Cocoa.CodeGen.Native
 {
     internal sealed partial class RuntimeFunctionEmitter
     {
-        // StringFromChars(chars:8 char[]) → string（e-G7 ③a）：
-        // char[] 布局 [vtable][len@8][元素区@16（8 字节对齐，char 2 字节）] → CO 串 [vtable][len@8][chars@12]。
-        // 直接复制 UTF-16 数据区（AllocStringFromBuf 顺带补 null 结尾）。
+        // StringFromChars(chars:8 char[]) 鈫?string锛坋-G7 鈶锛夛細
+        // char[] 甯冨眬 [vtable][len@8][鍏冪礌鍖篅16锛? 瀛楄妭瀵归綈锛宑har 2 瀛楄妭锛塢 鈫?CO 涓?[vtable][len@8][chars@12]銆?
+        // 鐩存帴澶嶅埗 UTF-16 鏁版嵁鍖猴紙AllocStringFromBuf 椤哄甫琛?null 缁撳熬锛夈€?
         private void EmitStringFromChars()
         {
             var arr = _args[0];
@@ -30,7 +31,7 @@ namespace Cocoa.CodeGen.Native
             EndFunction(_currentFunction!, 8);
         }
 
-        // FileExists(path:8) → bool：GetFileAttributesW != INVALID_FILE_ATTRIBUTES(0xFFFFFFFF)
+        // FileExists(path:8) 鈫?bool锛欸etFileAttributesW != INVALID_FILE_ATTRIBUTES(0xFFFFFFFF)
         private void EmitFileExists()
         {
             var p = WidePtrZ(_args[0]);
@@ -43,7 +44,7 @@ namespace Cocoa.CodeGen.Native
             EndFunction(_currentFunction!, 4);
         }
 
-        // DirectoryExists(path:8) → bool：attrs != INVALID 且带 FILE_ATTRIBUTE_DIRECTORY(0x10)
+        // DirectoryExists(path:8) 鈫?bool锛歛ttrs != INVALID 涓斿甫 FILE_ATTRIBUTE_DIRECTORY(0x10)
         private void EmitDirectoryExists()
         {
             var p = WidePtrZ(_args[0]);
@@ -62,15 +63,15 @@ namespace Cocoa.CodeGen.Native
             EndFunction(_currentFunction!, 4);
         }
 
-        // CreateDirectory(path:8) → void：Win32 CreateDirectoryW（成功/已存在均忽略——BCL 幂等）
+        // CreateDirectory(path:8) 鈫?void锛歐in32 CreateDirectoryW锛堟垚鍔?宸插瓨鍦ㄥ潎蹇界暐鈥斺€擝CL 骞傜瓑锛?
         private void EmitCreateDirectory()
         {
             var p = WidePtrZ(_args[0]);
-            SysCallDll(null, "kernel32.dll", "CreateDirectoryW", 2, false, p, NullPtr());
+            SysCallDll(null, PlatformDllResolver.Kernel32, "CreateDirectoryW", 2, false, p, NullPtr());
             EndFunction(_currentFunction!, 0);
         }
 
-        // FileDelete(path:8) → void
+        // FileDelete(path:8) 鈫?void
         private void EmitFileDelete()
         {
             var p = WidePtrZ(_args[0]);
@@ -78,7 +79,7 @@ namespace Cocoa.CodeGen.Native
             EndFunction(_currentFunction!, 0);
         }
 
-        // FileCopy(src:8, dst:8) → void：CopyFileW（恒覆盖目标）；src/dst 用不同缓冲防覆盖
+        // FileCopy(src:8, dst:8) 鈫?void锛欳opyFileW锛堟亽瑕嗙洊鐩爣锛夛紱src/dst 鐢ㄤ笉鍚岀紦鍐查槻瑕嗙洊
         private void EmitFileCopy()
         {
             var src = WidePtrZ(_args[0]);
@@ -87,7 +88,7 @@ namespace Cocoa.CodeGen.Native
             EndFunction(_currentFunction!, 0);
         }
 
-        // GetEnvironmentVariable(name:8) → string：GetEnvironmentVariableW 两阶段；未命名 → 空串（对应 Evaluator ?? ""）。
+        // GetEnvironmentVariable(name:8) 鈫?string锛欸etEnvironmentVariableW 涓ら樁娈碉紱鏈懡鍚?鈫?绌轰覆锛堝搴?Evaluator ?? ""锛夈€?
         private void EmitGetEnvironmentVariable()
         {
             var p = WidePtrZ(_args[0]);
@@ -121,7 +122,7 @@ namespace Cocoa.CodeGen.Native
             EndFunction(_currentFunction!, 8);
         }
 
-        // GetCurrentDirectory() → string：GetCurrentDirectoryW 两阶段；失败 → 空串
+        // GetCurrentDirectory() 鈫?string锛欸etCurrentDirectoryW 涓ら樁娈碉紱澶辫触 鈫?绌轰覆
         private void EmitGetCurrentDirectory()
         {
             var empty = NewLabel();
@@ -150,7 +151,7 @@ namespace Cocoa.CodeGen.Native
             EndFunction(_currentFunction!, 8);
         }
 
-        // GetExecutablePath() → string：GetModuleFileNameW；缓冲截断/失败 → 空串
+        // GetExecutablePath() 鈫?string锛欸etModuleFileNameW锛涚紦鍐叉埅鏂?澶辫触 鈫?绌轰覆
         private void EmitGetExecutablePath()
         {
             var empty = NewLabel();
@@ -178,7 +179,7 @@ namespace Cocoa.CodeGen.Native
             EndFunction(_currentFunction!, 8);
         }
 
-        // SetCurrentDirectory(path:8) → void
+        // SetCurrentDirectory(path:8) 鈫?void
         private void EmitSetCurrentDirectory()
         {
             var p = WidePtrZ(_args[0]);
@@ -186,8 +187,8 @@ namespace Cocoa.CodeGen.Native
             EndFunction(_currentFunction!, 0);
         }
 
-        // FileReadAllBytes(path:8) → u8[]：CreateFile(GENERIC_READ, OPEN_EXISTING) → GetFileSizeEx →
-        // NewArray(size, 1) → ReadFile 循环拷入 arr+8 → CloseHandle。失败/缺文件 → 0 长度数组。
+        // FileReadAllBytes(path:8) 鈫?u8[]锛欳reateFile(GENERIC_READ, OPEN_EXISTING) 鈫?GetFileSizeEx 鈫?
+        // NewArray(size, 1) 鈫?ReadFile 寰幆鎷峰叆 arr+8 鈫?CloseHandle銆傚け璐?缂烘枃浠?鈫?0 闀垮害鏁扮粍銆?
         private void EmitFileReadAllBytes()
         {
             var fail = NewLabel();
@@ -196,16 +197,16 @@ namespace Cocoa.CodeGen.Native
 
             var pb = WidePtrZ(_args[0]);
             var fp = NewPtr();
-            SysCallDll(fp, "kernel32.dll", "CreateFileW", 7, false, pb, C(4, 0x80000000), C(4, 3), NullPtr(), C(4, 3), C(4, 0x80), NullPtr());
+            SysCallDll(fp, PlatformDllResolver.Kernel32, "CreateFileW", 7, false, pb, C(4, 0x80000000), C(4, 3), NullPtr(), C(4, 3), C(4, 0x80), NullPtr());
             EmitCheckInvalidHandle(fp, fail);
 
             var size = NewReg(8);
             Const(size, 0);
             var sizePtr = NewPtr();
             LeaSlot(sizePtr, size);
-            SysCallDll(null, "kernel32.dll", "GetFileSizeEx", 2, false, fp, sizePtr);
+            SysCallDll(null, PlatformDllResolver.Kernel32, "GetFileSizeEx", 2, false, fp, sizePtr);
             var total = NewReg(4);
-            Load(total, sizePtr, 0, 4); // 低 32 位即文件大小（<4GB）
+            Load(total, sizePtr, 0, 4); // 浣?32 浣嶅嵆鏂囦欢澶у皬锛?4GB锛?
 
             var arr = NewPtr();
             var readBytesVt = NewPtr();
@@ -233,14 +234,14 @@ namespace Cocoa.CodeGen.Native
             var dst = NewPtr();
             Mov(dst, arrBase);
             Add(dst, dst, off);
-            SysCallDll(null, "kernel32.dll", "ReadFile", 5, false, fp, dst, remain, readPtr, NullPtr());
-            Load(read, readPtr, 0, 4); // 共享缓冲 → read 寄存器槽
+            SysCallDll(null, PlatformDllResolver.Kernel32, "ReadFile", 5, false, fp, dst, remain, readPtr, NullPtr());
+            Load(read, readPtr, 0, 4); // 鍏变韩缂撳啿 鈫?read 瀵勫瓨鍣ㄦЫ
             Cmp(read, 0);
             Jcc(LirCond.LessOrEqual, readDone);
             Add(off, off, read);
             Jmp(readLoop);
             Mark(readDone);
-            SysCallDll(null, "kernel32.dll", "CloseHandle", 1, false, fp);
+            SysCallDll(null, PlatformDllResolver.Kernel32, "CloseHandle", 1, false, fp);
             Mov(result, arr);
             Jmp(done);
 
@@ -255,14 +256,14 @@ namespace Cocoa.CodeGen.Native
             EndFunction(_currentFunction!, 8);
         }
 
-        // FileWriteAllBytes(path:8, data:8) → void：CreateFile(GENERIC_WRITE, CREATE_ALWAYS) → WriteFile(data+8) → CloseHandle
+        // FileWriteAllBytes(path:8, data:8) 鈫?void锛欳reateFile(GENERIC_WRITE, CREATE_ALWAYS) 鈫?WriteFile(data+8) 鈫?CloseHandle
         private void EmitFileWriteAllBytes()
         {
             var fail = NewLabel();
             var data = _args[1];
             var pb = WidePtrZ(_args[0]);
             var fp = NewPtr();
-            SysCallDll(fp, "kernel32.dll", "CreateFileW", 7, false, pb, C(4, 0x40000000), C(4, 3), NullPtr(), C(4, 2), C(4, 0x80), NullPtr());
+            SysCallDll(fp, PlatformDllResolver.Kernel32, "CreateFileW", 7, false, pb, C(4, 0x40000000), C(4, 3), NullPtr(), C(4, 2), C(4, 0x80), NullPtr());
             EmitCheckInvalidHandle(fp, fail);
 
             var len = NewReg(4);
@@ -273,15 +274,15 @@ namespace Cocoa.CodeGen.Native
             Const(written, 0);
             var writtenPtr = NewPtr();
             LeaSlot(writtenPtr, written);
-            SysCallDll(null, "kernel32.dll", "WriteFile", 5, false, fp, src, len, writtenPtr, NullPtr());
-            SysCallDll(null, "kernel32.dll", "CloseHandle", 1, false, fp);
+            SysCallDll(null, PlatformDllResolver.Kernel32, "WriteFile", 5, false, fp, src, len, writtenPtr, NullPtr());
+            SysCallDll(null, PlatformDllResolver.Kernel32, "CloseHandle", 1, false, fp);
 
             Mark(fail);
             EndFunction(_currentFunction!, 0);
         }
 
-        // FileOpenHandle(path:8, mode:4, access:4, share:4) → i64：mode 1..6 对齐 .NET FileMode；失败 → 0
-        // Win32 CreateFileW（对齐 .NET FileStream 底层）；GENERIC_READ|WRITE=0xC0000000, GENERIC_WRITE=0x40000000,
+        // FileOpenHandle(path:8, mode:4, access:4, share:4) 鈫?i64锛歮ode 1..6 瀵归綈 .NET FileMode锛涘け璐?鈫?0
+        // Win32 CreateFileW锛堝榻?.NET FileStream 搴曞眰锛夛紱GENERIC_READ|WRITE=0xC0000000, GENERIC_WRITE=0x40000000,
         // FILE_SHARE_READ|WRITE=3, OPEN_EXISTING=3, CREATE_ALWAYS=2, OPEN_ALWAYS=4, FILE_ATTRIBUTE_NORMAL=0x80
         private void EmitFileOpenHandle()
         {
@@ -290,7 +291,7 @@ namespace Cocoa.CodeGen.Native
             var result = NewReg(8);
             Const(result, 0);
 
-            // mode(1-6) → disposition(1,2,3,4,5,4)；仅 Append(6) → OPEN_ALWAYS(4)，对齐 .NET FileMode
+            // mode(1-6) 鈫?disposition(1,2,3,4,5,4)锛涗粎 Append(6) 鈫?OPEN_ALWAYS(4)锛屽榻?.NET FileMode
             var mode = NewReg(4);
             Mov(mode, _args[1]);
             var disposition = NewReg(4);
@@ -304,7 +305,7 @@ namespace Cocoa.CodeGen.Native
             Const(disposition, 4);
             Mark(appendReady);
 
-            // access(1-3) → fAccess：GENERIC_READ=0x80000000 | GENERIC_WRITE=0x40000000（对齐 .NET FileAccess）
+            // access(1-3) 鈫?fAccess锛欸ENERIC_READ=0x80000000 | GENERIC_WRITE=0x40000000锛堝榻?.NET FileAccess锛?
             var access = NewReg(4);
             Mov(access, _args[2]);
             var fAccess = NewReg(4);
@@ -332,11 +333,11 @@ namespace Cocoa.CodeGen.Native
             var shareMode = NewReg(4);
             Mov(shareMode, _args[3]);
             var fp = NewPtr();
-            SysCallDll(fp, "kernel32.dll", "CreateFileW", 7, false, pw, fAccess, shareMode, NullPtr(), disposition, C(4, 0x80), NullPtr());
+            SysCallDll(fp, PlatformDllResolver.Kernel32, "CreateFileW", 7, false, pw, fAccess, shareMode, NullPtr(), disposition, C(4, 0x80), NullPtr());
             EmitCheckInvalidHandle(fp, fail); // INVALID_HANDLE_VALUE
             Mov(result, fp);
 
-            // Append(6)：打开后定位到文件尾（对齐 .NET FileStream）
+            // Append(6)锛氭墦寮€鍚庡畾浣嶅埌鏂囦欢灏撅紙瀵归綈 .NET FileStream锛?
             var seekEnd = NewLabel();
             var skipSeek = NewLabel();
             Cmp(mode, 6);
@@ -347,7 +348,7 @@ namespace Cocoa.CodeGen.Native
             Const(zero, 0);
             var origin2 = NewReg(4);
             Const(origin2, 2);
-            SysCallDll(null, "kernel32.dll", "SetFilePointerEx", 4, false, fp, zero, NullPtr(), origin2);
+            SysCallDll(null, PlatformDllResolver.Kernel32, "SetFilePointerEx", 4, false, fp, zero, NullPtr(), origin2);
             Mark(skipSeek);
 
             Jmp(done);
@@ -358,7 +359,7 @@ namespace Cocoa.CodeGen.Native
             EndFunction(_currentFunction!, 8);
         }
 
-        // FileSizeHandle(h) → 文件字节数（GetFileSizeEx；不改动文件位置——对齐 .NET FileStream.Length）
+        // FileSizeHandle(h) 鈫?鏂囦欢瀛楄妭鏁帮紙GetFileSizeEx锛涗笉鏀瑰姩鏂囦欢浣嶇疆鈥斺€斿榻?.NET FileStream.Length锛?
         private void EmitFileSizeHandle()
         {
             var fp = NewPtr();
@@ -367,30 +368,30 @@ namespace Cocoa.CodeGen.Native
             Const(size, 0);
             var sizePtr = NewPtr();
             LeaSlot(sizePtr, size);
-            SysCallDll(null, "kernel32.dll", "GetFileSizeEx", 2, false, fp, sizePtr);
-            Load(size, sizePtr, 0, 8); // 共享缓冲 → size 寄存器槽
+            SysCallDll(null, PlatformDllResolver.Kernel32, "GetFileSizeEx", 2, false, fp, sizePtr);
+            Load(size, sizePtr, 0, 8); // 鍏变韩缂撳啿 鈫?size 瀵勫瓨鍣ㄦЫ
             StoreRet(size);
             EndFunction(_currentFunction!, 8);
         }
 
-        // FileSeekHandle(h, offset:i64, origin) → 定位；origin 0=Begin 1=Current 2=End
-        // x86：I64 参数只传 32 位（EDX），取低 32 位用 SetFilePointer（32 位 dist，4GB 内）；x64 用 SetFilePointerEx（完整 64 位）
+        // FileSeekHandle(h, offset:i64, origin) 鈫?瀹氫綅锛沷rigin 0=Begin 1=Current 2=End
+        // x86锛欼64 鍙傛暟鍙紶 32 浣嶏紙EDX锛夛紝鍙栦綆 32 浣嶇敤 SetFilePointer锛?2 浣?dist锛?GB 鍐咃級锛泋64 鐢?SetFilePointerEx锛堝畬鏁?64 浣嶏級
         private void EmitFileSeekHandle()
         {
             if (_isX64)
             {
-                SysCallDll(null, "kernel32.dll", "SetFilePointerEx", 4, false, _args[0], _args[1], NullPtr(), _args[2]);
+                SysCallDll(null, PlatformDllResolver.Kernel32, "SetFilePointerEx", 4, false, _args[0], _args[1], NullPtr(), _args[2]);
             }
             else
             {
                 var offLo = NewReg(4);
-                Mov(offLo, _args[1]); // offset 低 32 位（x86 只传低 32）
-                SysCallDll(null, "kernel32.dll", "SetFilePointer", 4, false, _args[0], offLo, NullPtr(), _args[2]);
+                Mov(offLo, _args[1]); // offset 浣?32 浣嶏紙x86 鍙紶浣?32锛?
+                SysCallDll(null, PlatformDllResolver.Kernel32, "SetFilePointer", 4, false, _args[0], offLo, NullPtr(), _args[2]);
             }
             EndFunction(_currentFunction!, 0);
         }
 
-        // FileTellHandle(h) → 当前位置；x86 用 SetFilePointer（32 位 pos）+ 高 4 清 0 构造 i64 返回
+        // FileTellHandle(h) 鈫?褰撳墠浣嶇疆锛泋86 鐢?SetFilePointer锛?2 浣?pos锛? 楂?4 娓?0 鏋勯€?i64 杩斿洖
         private void EmitFileTellHandle()
         {
             var fp = NewPtr();
@@ -401,24 +402,24 @@ namespace Cocoa.CodeGen.Native
                 Const(pos, 0);
                 var posPtr = NewPtr();
                 LeaSlot(posPtr, pos);
-                SysCallDll(null, "kernel32.dll", "SetFilePointerEx", 4, false, fp, C(8, 0), posPtr, C(4, 1));
-                Load(pos, posPtr, 0, 8); // 共享缓冲 → pos 寄存器槽
+                SysCallDll(null, PlatformDllResolver.Kernel32, "SetFilePointerEx", 4, false, fp, C(8, 0), posPtr, C(4, 1));
+                Load(pos, posPtr, 0, 8); // 鍏变韩缂撳啿 鈫?pos 瀵勫瓨鍣ㄦЫ
                 StoreRet(pos);
             }
             else
             {
-                // x86：SetFilePointer 返回 DWORD 新位置（规避共享缓冲输出槽）
+                // x86锛歋etFilePointer 杩斿洖 DWORD 鏂颁綅缃紙瑙勯伩鍏变韩缂撳啿杈撳嚭妲斤級
                 var pos = NewReg(4);
-                SysCallDll(pos, "kernel32.dll", "SetFilePointer", 4, false, fp, C(4, 0), NullPtr(), C(4, 1));
+                SysCallDll(pos, PlatformDllResolver.Kernel32, "SetFilePointer", 4, false, fp, C(4, 0), NullPtr(), C(4, 1));
                 var res = NewReg(8);
-                Const(res, 0); // 双槽清 0（x86）
-                Mov(res, pos); // 低 4 = pos，高 4 = 0
+                Const(res, 0); // 鍙屾Ы娓?0锛坸86锛?
+                Mov(res, pos); // 浣?4 = pos锛岄珮 4 = 0
                 StoreRet(res);
             }
             EndFunction(_currentFunction!, 8);
         }
 
-        // FileReadHandle(h, data:u8[], start, count) → 实际读入字节（ReadFile；&read 输出槽）
+        // FileReadHandle(h, data:u8[], start, count) 鈫?瀹為檯璇诲叆瀛楄妭锛圧eadFile锛?read 杈撳嚭妲斤級
         private void EmitFileReadHandle()
         {
             var fp = NewPtr();
@@ -430,13 +431,13 @@ namespace Cocoa.CodeGen.Native
             Const(read, 0);
             var readPtr = NewPtr();
             LeaSlot(readPtr, read);
-            SysCallDll(null, "kernel32.dll", "ReadFile", 5, false, fp, dst, _args[3], readPtr, NullPtr());
-            Load(read, readPtr, 0, 4); // 共享缓冲 → read 寄存器槽
+            SysCallDll(null, PlatformDllResolver.Kernel32, "ReadFile", 5, false, fp, dst, _args[3], readPtr, NullPtr());
+            Load(read, readPtr, 0, 4); // 鍏变韩缂撳啿 鈫?read 瀵勫瓨鍣ㄦЫ
             StoreRet(read);
             EndFunction(_currentFunction!, 4);
         }
 
-        // FileWriteHandle(h, data:u8[], start, count)（WriteFile；&written 输出槽）
+        // FileWriteHandle(h, data:u8[], start, count)锛圵riteFile锛?written 杈撳嚭妲斤級
         private void EmitFileWriteHandle()
         {
             var fp = NewPtr();
@@ -448,12 +449,12 @@ namespace Cocoa.CodeGen.Native
             Const(written, 0);
             var writtenPtr = NewPtr();
             LeaSlot(writtenPtr, written);
-            SysCallDll(null, "kernel32.dll", "WriteFile", 5, false, fp, src, _args[3], writtenPtr, NullPtr());
+            SysCallDll(null, PlatformDllResolver.Kernel32, "WriteFile", 5, false, fp, src, _args[3], writtenPtr, NullPtr());
             EndFunction(_currentFunction!, 0);
         }
 
-        // Win32 INVALID_HANDLE_VALUE 判断：失败返回 -1；x86 32 位 -1（0xFFFFFFFF）存 Addr 槽后高 4 字节清 0，
-        // 8 字节比较会误判成功 → 取低 4 字节 == 0xFFFFFFFF（x64 失败 64 位 -1 的低 4 字节同样为全 1）。
+        // Win32 INVALID_HANDLE_VALUE 鍒ゆ柇锛氬け璐ヨ繑鍥?-1锛泋86 32 浣?-1锛?xFFFFFFFF锛夊瓨 Addr 妲藉悗楂?4 瀛楄妭娓?0锛?
+        // 8 瀛楄妭姣旇緝浼氳鍒ゆ垚鍔?鈫?鍙栦綆 4 瀛楄妭 == 0xFFFFFFFF锛坸64 澶辫触 64 浣?-1 鐨勪綆 4 瀛楄妭鍚屾牱涓哄叏 1锛夈€?
         private void EmitCheckInvalidHandle(LirVirtualRegister fp, int failLabel)
         {
             var lo = NewReg(4);
@@ -462,7 +463,7 @@ namespace Cocoa.CodeGen.Native
             Jcc(LirCond.Equal, failLabel);
         }
 
-        // 指针类型 NULL（x86 4 字节 / x64 8 字节）——不得用 C(8,0)（I64）：x86 压 8 字节导致参数错位/栈不平衡
+        // 鎸囬拡绫诲瀷 NULL锛坸86 4 瀛楄妭 / x64 8 瀛楄妭锛夆€斺€斾笉寰楃敤 C(8,0)锛圛64锛夛細x86 鍘?8 瀛楄妭瀵艰嚧鍙傛暟閿欎綅/鏍堜笉骞宠　
         private LirVirtualRegister NullPtr()
         {
             var p = NewPtr();
