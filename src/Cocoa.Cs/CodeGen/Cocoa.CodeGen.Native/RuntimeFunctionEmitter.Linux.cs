@@ -125,7 +125,7 @@ namespace Cocoa.CodeGen.Native
             _ = BeginFunctionTyped("ExternUtf8Ptr2", new[] { 8 }, LirType.Addr); EmitExternUtf8Ptr(_extMarshal2);
             _ = BeginFunctionTyped("ExternUtf8Ptr3", new[] { 8 }, LirType.Addr); EmitExternUtf8Ptr(_extMarshal3);
 
-            // ---- Linux 文件/目录/环境（裸 syscall；实现见 RuntimeEmitterLir.LinuxFile.cs）----
+            // ---- Linux 文件/目录/环境（裸 syscall；实现见 RuntimeFunctionEmitter.LinuxFile.cs）----
             _ = BeginFunctionTyped("FileExists", new[] { 8 }, LirType.Addr); EmitFileExistsLinux();
             _ = BeginFunctionTyped("DirectoryExists", new[] { 8 }, LirType.Addr); EmitDirectoryExistsLinux();
             _ = BeginFunctionTyped("CreateDirectory", new[] { 8 }, LirType.Addr); EmitCreateDirectoryLinux();

@@ -41,7 +41,7 @@ namespace Cocoa.CodeGen.Native
             // 主壳（RuntimeEmitterLir.cs）：声明式 import 派发
             new("FileCloseHandle", "Core", RuntimePrimitivePlatform.All, "kernel32"),
 
-            // System 分片（RuntimeEmitterLir.System.cs）：控制台/随机/对象面/Object 虚表
+            // System 分片（RuntimeFunctionEmitter.System.cs）：控制台/随机/对象面/Object 虚表
             new("Input", "System", RuntimePrimitivePlatform.All, "kernel32"),
             new("ReadKey", "System", RuntimePrimitivePlatform.All, "kernel32"),
             new("Random", "System", RuntimePrimitivePlatform.All, "kernel32"),
@@ -63,7 +63,7 @@ namespace Cocoa.CodeGen.Native
             new("ExternUtf8Ptr2", "System", RuntimePrimitivePlatform.Linux, "-"),
             new("ExternUtf8Ptr3", "System", RuntimePrimitivePlatform.Linux, "-"),
 
-            // Strings 分片（RuntimeEmitterLir.Strings.cs）：字符串运算/解析/格式化
+            // Strings 分片（RuntimeFunctionEmitter.Strings.cs）：字符串运算/解析/格式化
             new("ParseInt", "Strings", RuntimePrimitivePlatform.All, "-"),
             new("ParseBool", "Strings", RuntimePrimitivePlatform.All, "-"),
             new("Concat", "Strings", RuntimePrimitivePlatform.All, "-"),
@@ -78,7 +78,7 @@ namespace Cocoa.CodeGen.Native
             new("ScaleAssemble", "Strings", RuntimePrimitivePlatform.All, "-"),
             new("ApplyAlignment", "Strings", RuntimePrimitivePlatform.All, "-"),
 
-            // Numerics 分片（RuntimeEmitterLir.Numerics.cs）：整数/浮点/格式化/缓冲
+            // Numerics 分片（RuntimeFunctionEmitter.Numerics.cs）：整数/浮点/格式化/缓冲
             new("WriteStr", "Numerics", RuntimePrimitivePlatform.All, "-"),
             new("BuildInt", "Numerics", RuntimePrimitivePlatform.All, "-"),
             new("Alloc", "Numerics", RuntimePrimitivePlatform.All, "-"),
@@ -95,7 +95,7 @@ namespace Cocoa.CodeGen.Native
             new("BigDiv", "Numerics", RuntimePrimitivePlatform.All, "-"),
             new("DoubleFixed", "Numerics", RuntimePrimitivePlatform.All, "-"),
 
-            // Int64 分片（RuntimeEmitterLir.Int64.cs）：64 位运算（Idiv/Irem/Udiv/Urem 仅 x86）
+            // Int64 分片（RuntimeFunctionEmitter.Int64.cs）：64 位运算（Idiv/Irem/Udiv/Urem 仅 x86）
             new("Int64ToString", "Int64", RuntimePrimitivePlatform.All, "-"),
             new("UInt64ToString", "Int64", RuntimePrimitivePlatform.All, "-"),
             new("ParseInt64", "Int64", RuntimePrimitivePlatform.All, "-"),
@@ -104,7 +104,7 @@ namespace Cocoa.CodeGen.Native
             new("Udiv64", "Int64", RuntimePrimitivePlatform.X86, "-"),
             new("Urem64", "Int64", RuntimePrimitivePlatform.X86, "-"),
 
-            // Arrays 分片（RuntimeEmitterLir.Arrays.cs）：数组/缓冲/错误/Bcrypt/进程
+            // Arrays 分片（RuntimeFunctionEmitter.Arrays.cs）：数组/缓冲/错误/Bcrypt/进程
             new("NewArray", "Arrays", RuntimePrimitivePlatform.All, "-"),
             new("SliceArray", "Arrays", RuntimePrimitivePlatform.All, "-"),
             new("ArrayBoundsCheck", "Arrays", RuntimePrimitivePlatform.All, "-"),
@@ -115,7 +115,7 @@ namespace Cocoa.CodeGen.Native
             new("Sha256Hash", "Arrays", RuntimePrimitivePlatform.All, "bcrypt"),
             new("LaunchProcess", "Arrays", RuntimePrimitivePlatform.All, "kernel32"),
 
-            // IO 分片（RuntimeEmitterLir.IO.cs）：文件/目录/环境
+            // IO 分片（RuntimeFunctionEmitter.IO.cs）：文件/目录/环境
             new("StringFromChars", "IO", RuntimePrimitivePlatform.All, "-"),
             new("FileExists", "IO", RuntimePrimitivePlatform.All, "kernel32"),
             new("DirectoryExists", "IO", RuntimePrimitivePlatform.All, "kernel32"),
@@ -135,10 +135,10 @@ namespace Cocoa.CodeGen.Native
             new("FileReadHandle", "IO", RuntimePrimitivePlatform.All, "kernel32"),
             new("FileWriteHandle", "IO", RuntimePrimitivePlatform.All, "kernel32"),
 
-            // Introspection 分片（RuntimeEmitterLir.Introspection.cs）
+            // Introspection 分片（RuntimeFunctionEmitter.Introspection.cs）
             new("SelfIntrospect", "Introspection", RuntimePrimitivePlatform.All, "kernel32"),
 
-            // Delegates 分片（RuntimeEmitterLir.Delegates.cs）
+            // Delegates 分片（RuntimeFunctionEmitter.Delegates.cs）
             new("DelegateCombine", "Delegates", RuntimePrimitivePlatform.All, "-"),
             new("DelegateRemove", "Delegates", RuntimePrimitivePlatform.All, "-"),
             new("DelegateEquals", "Delegates", RuntimePrimitivePlatform.All, "-"));
