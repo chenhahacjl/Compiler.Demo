@@ -9,7 +9,7 @@ using Cocoa.CodeAnalysis.Syntax.Green;
 using Cocoa.Targeting;
 using System.Collections.Immutable;
 using System.Linq;
-namespace Cocoa.CodeGen.Managed.Writer
+namespace Cocoa.CodeGen.Managed
 {
     /// <summary>
     /// managed（dotnet/IL）后端发射入口（拆分后独立项目 Cocoa.CodeGen.IL）。

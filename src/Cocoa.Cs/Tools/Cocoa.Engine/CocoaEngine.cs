@@ -5,7 +5,7 @@ using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Syntax.Nodes;
 using Cocoa.CodeAnalysis.Syntax.Green;
 using Cocoa.CodeGen.Interpreter;
-using Cocoa.CodeGen.Managed.Writer;
+using Cocoa.CodeGen.Managed;
 
 namespace Cocoa.Engine
 {

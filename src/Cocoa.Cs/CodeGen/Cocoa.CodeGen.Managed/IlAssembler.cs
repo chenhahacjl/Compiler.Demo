@@ -6,7 +6,7 @@ using Cocoa.IlMetadata;
 using Cocoa.CodeAnalysis;
 
 
-namespace Cocoa.CodeGen.Managed.Writer
+namespace Cocoa.CodeGen.Managed
 {
     /// <summary>
     /// IL 编码器：IlInstruction 序列 → 方法体字节。按 OperandType 全集分派；

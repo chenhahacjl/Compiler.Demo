@@ -5,7 +5,7 @@ using Cocoa.IlMetadata;
 using Cocoa.CodeAnalysis;
 
 
-namespace Cocoa.CodeGen.Managed.Writer
+namespace Cocoa.CodeGen.Managed
 {
     /// <summary>
     /// IL 后端的 .NET 框架引用集中管理（功能层 IL 实现的归属地，native 侧对应 RuntimeEmitterLir）：

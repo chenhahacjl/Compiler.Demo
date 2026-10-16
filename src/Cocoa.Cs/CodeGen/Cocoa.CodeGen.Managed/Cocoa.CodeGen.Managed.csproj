@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>Cocoa.CodeGen.Managed.Writer</RootNamespace>
+    <RootNamespace>Cocoa.CodeGen.Managed</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

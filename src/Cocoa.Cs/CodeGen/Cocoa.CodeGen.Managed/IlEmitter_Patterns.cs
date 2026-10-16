@@ -9,7 +9,7 @@ using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Syntax.Nodes;
 using Cocoa.CodeAnalysis.Syntax.Green;
-namespace Cocoa.CodeGen.Managed.Writer
+namespace Cocoa.CodeGen.Managed
 {
     /// <summary>
     /// 模式匹配/类型测试表达式 IL 发射（自 IlEmitter.Statements 拆出：is/as/declaration/relational/logical/property 模式）。

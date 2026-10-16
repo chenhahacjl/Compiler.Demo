@@ -1,4 +1,4 @@
-using Cocoa.CodeGen.Managed.Writer;
+using Cocoa.CodeGen.Managed;
 using Cocoa.CodeGen.Interpreter;
 using Cocoa.CodeGen.Native;
 using Cocoa.CodeGen.PE;

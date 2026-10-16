@@ -1,6 +1,6 @@
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeGen.Interpreter;
-using Cocoa.CodeGen.Managed.Writer;
+using Cocoa.CodeGen.Managed;
 using Cocoa.CodeGen.Native;
 
 namespace Cocoa.IDE;

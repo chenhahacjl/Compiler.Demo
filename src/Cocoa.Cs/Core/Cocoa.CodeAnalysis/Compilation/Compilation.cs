@@ -40,7 +40,7 @@ namespace Cocoa.CodeAnalysis
         private readonly bool _linkCodDynamically;
 
         /// <summary>
-        /// managed（dotnet/IL）后端发射委托（拆分后由 <c>Cocoa.CodeGen.Managed.Writer</c> 经 <see cref="RegisterManagedEmitter"/> 注入；
+        /// managed（dotnet/IL）后端发射委托（拆分后由 <c>Cocoa.CodeGen.Managed</c> 经 <see cref="RegisterManagedEmitter"/> 注入；
         /// Core 不引用后端，发射能力经此委托接入）。volatile：注册发生在宿主启动、读取在编译线程（重构阶段 1a/A7）。
         /// 幂等：重复注册（同进程多宿主/多引擎实例）以首次为准，防全局覆写。
         /// </summary>
@@ -467,7 +467,7 @@ namespace Cocoa.CodeAnalysis
                 .ToArray();
 
             var backendDiagnostics = _managedEmitter == null
-                ? ImmutableArray.Create(Diagnostic.Error(ZeroLocation, "managed 后端未注册（Cocoa.CodeGen.Managed.Writer 未初始化）"))
+                ? ImmutableArray.Create(Diagnostic.Error(ZeroLocation, "managed 后端未注册（Cocoa.CodeGen.Managed 未初始化）"))
                 : _managedEmitter(program, moduleName, ilReferences, outputPath, target, emitLibrary, program.CodAssemblies, false, versionInfo, resourceOptions);
 
             // 成功路径也带上 GlobalScope 警告（using 未解析等），供 CLI 打印

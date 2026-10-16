@@ -12,7 +12,7 @@ using System.Diagnostics;
 using System.IO;
 using Xunit;
 
-using Cocoa.CodeGen.Managed.Writer;
+using Cocoa.CodeGen.Managed;
 namespace Cocoa.Tests.CodeGen.ThreeBackend
 {
     /// <summary>

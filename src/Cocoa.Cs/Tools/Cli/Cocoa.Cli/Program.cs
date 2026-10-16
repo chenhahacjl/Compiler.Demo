@@ -1,6 +1,6 @@
 using Cocoa.CodeAnalysis;
 using Cocoa.Targeting;
-using Cocoa.CodeGen.Managed.Writer;
+using Cocoa.CodeGen.Managed;
 using Cocoa.CodeGen.Interpreter;
 using Cocoa.CodeGen.Native;
 using Cocoa.CodeAnalysis.Syntax;

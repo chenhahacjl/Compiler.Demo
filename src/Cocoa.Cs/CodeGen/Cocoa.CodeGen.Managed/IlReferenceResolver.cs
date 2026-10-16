@@ -6,7 +6,7 @@ using System.Linq;
 using Cocoa.CodeAnalysis;
 using Cocoa.Targeting;
 
-namespace Cocoa.CodeGen.Managed.Writer
+namespace Cocoa.CodeGen.Managed
 {
     /// <summary>
     /// 按 IlTarget 解析默认引用程序集：

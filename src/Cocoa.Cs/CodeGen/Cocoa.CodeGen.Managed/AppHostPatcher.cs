@@ -8,7 +8,7 @@ using System.Text;
 using Cocoa.CodeAnalysis;
 
 
-namespace Cocoa.CodeGen.Managed.Writer
+namespace Cocoa.CodeGen.Managed
 {
     /// <summary>
     /// netcore apphost 生成器（对齐 dotnet SDK 的 Microsoft.NET.HostModel.AppHost.HostWriter）。

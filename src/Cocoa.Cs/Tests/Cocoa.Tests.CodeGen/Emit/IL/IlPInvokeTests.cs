@@ -8,7 +8,7 @@ using System.Reflection.PortableExecutable;
 using Cocoa.Targeting;
 using Xunit;
 
-using Cocoa.CodeGen.Managed.Writer;
+using Cocoa.CodeGen.Managed;
 using Cocoa.IlMetadata;
 namespace Cocoa.Tests.CodeGen.Emit.IL
 {

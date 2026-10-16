@@ -10,7 +10,7 @@ using System.IO;
 using Cocoa.CodeAnalysis;
 using Cocoa.Targeting;
 
-namespace Cocoa.CodeGen.Managed.Writer
+namespace Cocoa.CodeGen.Managed
 {
     /// <summary>
     /// `.coa` → 托管库 dll 发射（动态链接阶段 A1）：加载语义层程序集，直接构造无入口的

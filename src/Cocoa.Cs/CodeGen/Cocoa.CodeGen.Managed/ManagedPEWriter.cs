@@ -9,7 +9,7 @@ using Cocoa.IlMetadata;
 using Cocoa.CodeAnalysis;
 using Cocoa.Targeting;
 
-namespace Cocoa.CodeGen.Managed.Writer
+namespace Cocoa.CodeGen.Managed
 {
     /// <summary>
     /// 托管 PE 写入器：组装 .text 段（CLR 头 + 方法体 + 元数据根 + 流）+ IMAGE_COR20_HEADER + PE 壳。

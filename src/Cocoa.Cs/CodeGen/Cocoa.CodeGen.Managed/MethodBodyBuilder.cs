@@ -3,7 +3,7 @@ using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.IlMetadata;
 using System.Collections.Generic;
 
-namespace Cocoa.CodeGen.Managed.Writer
+namespace Cocoa.CodeGen.Managed
 {
     /// <summary>
     /// 单个方法体的 IL 发射状态（4.1）：把 <c>IlEmitter</c> 的"方法体发射状态"（局部变量槽、临时槽、

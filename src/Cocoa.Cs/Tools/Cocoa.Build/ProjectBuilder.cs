@@ -1,7 +1,7 @@
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.Targeting;
-using Cocoa.CodeGen.Managed.Writer;
+using Cocoa.CodeGen.Managed;
 using Cocoa.CodeGen.PE;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Syntax.Nodes;

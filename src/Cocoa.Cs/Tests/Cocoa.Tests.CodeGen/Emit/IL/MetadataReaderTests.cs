@@ -2,7 +2,7 @@
 using Xunit;
 
 using Cocoa.IlMetadata;
-using Cocoa.CodeGen.Managed.Writer;
+using Cocoa.CodeGen.Managed;
 namespace Cocoa.Tests.CodeGen.Emit.IL
 {
     public class MetadataReaderTests

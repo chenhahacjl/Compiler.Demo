@@ -13,7 +13,7 @@ using Cocoa.CodeAnalysis.Syntax.Green;
 using Cocoa.CodeAnalysis;
 
 
-namespace Cocoa.CodeGen.Managed.Writer
+namespace Cocoa.CodeGen.Managed
 {
     /// <summary>
     /// IL 路径发射器：绑定树 → 自研 IL 组件（IlAssembler/MetadataBuilder/ManagedPEWriter）。
