@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 using Cocoa.CodeAnalysis;
-using Cocoa.CodeAnalysis.Evaluation;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Syntax.Nodes;

@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
 
-namespace Cocoa.CodeAnalysis.Evaluation
+namespace Cocoa.CodeAnalysis
 {
     /// <summary>
     /// 求值结果
