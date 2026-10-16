@@ -10,7 +10,7 @@ using System.IO;
 using System.Linq;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis
+namespace Cocoa.Tests.SelfHosting.CodeAnalysis
 {
     /// <summary>
     /// 6e-M32 Tier-2：co 编译器（自举）Binder 函数级 attribute 查询面对拍。

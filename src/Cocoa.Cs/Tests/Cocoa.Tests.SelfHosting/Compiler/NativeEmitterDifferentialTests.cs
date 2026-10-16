@@ -13,7 +13,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Xunit;
 
-namespace Cocoa.Tests.Compiler
+namespace Cocoa.Tests.SelfHosting.Compiler
 {
     /// <summary>
     /// 阶段 7 增量五 M5-a4：自举 NativeEmitter（绑定树 → LIR 文本）与 C# 差分。

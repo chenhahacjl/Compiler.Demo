@@ -10,7 +10,7 @@ using System.IO;
 using System.Text;
 using Xunit;
 
-namespace Cocoa.Tests.Compiler
+namespace Cocoa.Tests.SelfHosting.Compiler
 {
     /// <summary>
     /// 阶段 7 增量五 M5-a2：B0 端到端——自举编译器 Cli（Cocoa.Co.cosln）的 `run` 子命令

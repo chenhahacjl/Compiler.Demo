@@ -11,7 +11,7 @@ using System.Linq;
 using System.Text;
 using Xunit;
 
-namespace Cocoa.Tests.Compiler
+namespace Cocoa.Tests.SelfHosting.Compiler
 {
     /// <summary>
     /// 黄金生成工具（环境变量 COCOA_REGEN_GOLDENS=1 时触发）：捕获自举侧输出

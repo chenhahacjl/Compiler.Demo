@@ -13,7 +13,7 @@ using System.Linq;
 using System.Text;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis
+namespace Cocoa.Tests.SelfHosting.CodeAnalysis
 {
     /// <summary>
     /// M5-a5 批 2：自举 MetadataEncode.EncodeType/EncodeMethodSignature/EncodeLocalVarSignature/

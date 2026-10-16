@@ -12,7 +12,7 @@ using System.IO;
 using System.Linq;
 using Xunit;
 
-namespace Cocoa.Tests.Compiler
+namespace Cocoa.Tests.SelfHosting.Compiler
 {
     /// <summary>
     /// 阶段 7 增量五（M5-b0）：自举测试项目（Cocoa.Co/Cocoa.Tests）的 C# 引导 harness。

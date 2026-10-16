@@ -8,7 +8,7 @@ using System.IO;
 using System.Text;
 using Xunit;
 
-namespace Cocoa.Tests.Compiler
+namespace Cocoa.Tests.SelfHosting.Compiler
 {
     /// <summary>
     /// M5-a4 续作：把 13 corpus 的 C# 符号化 dump 落盘为参考金签（COCOA_DUMP_SYM），

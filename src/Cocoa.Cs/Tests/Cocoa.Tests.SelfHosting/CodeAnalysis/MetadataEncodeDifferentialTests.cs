@@ -13,7 +13,7 @@ using System.Reflection;
 using System.Text;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis
+namespace Cocoa.Tests.SelfHosting.CodeAnalysis
 {
     /// <summary>
     /// 阶段 7 增量五 M5-a3：自举 MetadataEncode（ECMA-335 叶子编码）与 C# MetadataBuilder.Encode 差分。

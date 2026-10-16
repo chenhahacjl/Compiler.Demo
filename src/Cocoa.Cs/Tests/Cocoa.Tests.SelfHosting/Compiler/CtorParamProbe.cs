@@ -4,7 +4,7 @@ using System.Linq;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Cocoa.Tests.Compiler
+namespace Cocoa.Tests.SelfHosting.Compiler
 {
     /// <summary>带参实例构造器（public constructor(a, b)）：newobj → 真实 ctor 行 → 字段初始化 → 方法读取。</summary>
     public class CtorParamProbe

@@ -12,7 +12,7 @@ using System.Linq;
 using System.Text;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis
+namespace Cocoa.Tests.SelfHosting.CodeAnalysis
 {
     /// <summary>
     /// 阶段 7 增量一 M7-a2：自举 Lexer 与 C# 版 <see cref="CocoaLexer"/>（共享 LexerBase）逐 token 差分。

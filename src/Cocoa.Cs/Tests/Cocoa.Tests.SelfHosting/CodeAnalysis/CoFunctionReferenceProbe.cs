@@ -10,7 +10,7 @@ using System.IO;
 using System.Linq;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis
+namespace Cocoa.Tests.SelfHosting.CodeAnalysis
 {
     /// <summary>
     /// A 可行性探针 2：co 编译器（自持）对方法组/函数引用的支持——

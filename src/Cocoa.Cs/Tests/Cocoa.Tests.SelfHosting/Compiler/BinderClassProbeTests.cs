@@ -10,7 +10,7 @@ using System.IO;
 using System.Linq;
 using Xunit;
 
-namespace Cocoa.Tests.Compiler
+namespace Cocoa.Tests.SelfHosting.Compiler
 {
     /// <summary>
     /// 类里程碑·binder 地基：自举 binder 绑定 `class` 声明（实例字段/方法）+ 实例表达式（new/this/成员调用）。

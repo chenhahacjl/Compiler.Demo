@@ -12,7 +12,7 @@ using System.Linq;
 using System.Text;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis
+namespace Cocoa.Tests.SelfHosting.CodeAnalysis
 {
     /// <summary>
     /// 阶段 7 增量五 M5-a3：自举 IlOpCodeTable 与 C# IlOpCodeTable 差分。

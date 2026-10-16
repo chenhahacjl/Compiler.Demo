@@ -15,7 +15,7 @@ using System.Reflection.PortableExecutable;
 using System.Text;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis
+namespace Cocoa.Tests.SelfHosting.CodeAnalysis
 {
     /// <summary>
     /// 阶段 7 增量五 M5-a3：自举 IlEmitter（绑定树 → IL）与 C# IlEmitter 差分。

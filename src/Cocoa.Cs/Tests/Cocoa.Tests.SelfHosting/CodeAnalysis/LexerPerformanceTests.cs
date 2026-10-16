@@ -11,7 +11,7 @@ using System.IO;
 using System.Text;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis
+namespace Cocoa.Tests.SelfHosting.CodeAnalysis
 {
     /// <summary>
     /// 阶段 7 增量一 M7-a3：≥1MB 语料秒级性能护栏（验证自举 Lexer 无 O(n²) 回归）。

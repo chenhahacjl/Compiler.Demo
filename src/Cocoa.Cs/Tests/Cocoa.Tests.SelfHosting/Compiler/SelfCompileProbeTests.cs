@@ -8,7 +8,7 @@ using System.Reflection.PortableExecutable;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Cocoa.Tests.Compiler
+namespace Cocoa.Tests.SelfHosting.Compiler
 {
     /// <summary>
     /// 阶段 8 自举探针（B1 → B2 fixpoint）。

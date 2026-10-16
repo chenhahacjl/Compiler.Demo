@@ -11,7 +11,7 @@ using System.Text;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Cocoa.Tests.CodeAnalysis
+namespace Cocoa.Tests.SelfHosting.CodeAnalysis
 {
     /// <summary>
     /// 阶段 7 增量三 M9：自举 Binder 差分。

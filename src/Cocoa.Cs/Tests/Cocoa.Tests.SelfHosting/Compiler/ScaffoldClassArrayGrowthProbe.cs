@@ -10,7 +10,7 @@ using System.IO;
 using System.Linq;
 using Xunit;
 
-namespace Cocoa.Tests.Compiler
+namespace Cocoa.Tests.SelfHosting.Compiler
 {
     public class ScaffoldClassArrayGrowthProbe
     {

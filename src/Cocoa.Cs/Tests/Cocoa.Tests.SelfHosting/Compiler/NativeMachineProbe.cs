@@ -9,7 +9,7 @@ using System.Text;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Cocoa.Tests.Compiler
+namespace Cocoa.Tests.SelfHosting.Compiler
 {
     /// <summary>
     /// M5-a4 切片 2 金签探针：corpus[0]/[1]（单函数，entry==Main）→ EmitNative →

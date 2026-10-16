@@ -13,7 +13,7 @@ using System.Linq;
 using System.Text;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis
+namespace Cocoa.Tests.SelfHosting.CodeAnalysis
 {
     /// <summary>
     /// 阶段 7 增量五 M5-a3：自举 IlAssembler 与 C# IlAssembler 差分（逐字节 hex）。

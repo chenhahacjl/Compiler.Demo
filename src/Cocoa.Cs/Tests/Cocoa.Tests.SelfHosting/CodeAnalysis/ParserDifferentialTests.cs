@@ -12,7 +12,7 @@ using System.Text;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Cocoa.Tests.CodeAnalysis
+namespace Cocoa.Tests.SelfHosting.CodeAnalysis
 {
     /// <summary>
     /// 阶段 7 增量二 M8：自举 Parser 差分。

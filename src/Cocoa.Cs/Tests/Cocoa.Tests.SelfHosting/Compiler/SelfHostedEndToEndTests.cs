@@ -12,7 +12,7 @@ using System.Reflection;
 using System.Text;
 using Xunit;
 
-namespace Cocoa.Tests.Compiler
+namespace Cocoa.Tests.SelfHosting.Compiler
 {
     /// <summary>
     /// M5-a5 批 2：受限端到端——纯算术顶层 `Main(): i32` 走完整自举链（Binder → IlEmitter/IlAssembler →

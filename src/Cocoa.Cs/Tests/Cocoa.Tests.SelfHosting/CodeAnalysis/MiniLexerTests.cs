@@ -13,7 +13,7 @@ using System.IO;
 using System.Text;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis
+namespace Cocoa.Tests.SelfHosting.CodeAnalysis
 {
     /// <summary>
     /// 自举第 ⑦ 步开工：mini-Lexer 三后端锁定（Evaluator/IL/native x64）。

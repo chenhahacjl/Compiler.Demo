@@ -11,7 +11,7 @@ using System.Linq;
 using System.Text;
 using Xunit;
 
-namespace Cocoa.Tests.Compiler
+namespace Cocoa.Tests.SelfHosting.Compiler
 {
     /// <summary>
     /// 阶段 7 增量五 M5-a1：自举 Interpreter 与 C# Evaluator 活差分。

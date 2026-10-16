@@ -4,7 +4,7 @@ using System.IO;
 using System.Text;
 using Xunit;
 
-namespace Cocoa.Tests.Compiler
+namespace Cocoa.Tests.SelfHosting.Compiler
 {
     /// <summary>
     /// 阶段 7 增量一 M7-a4：B0 骨架冒烟——用 C# 编译器把 `Cocoa.Co/Cocoa.Co.cosln`

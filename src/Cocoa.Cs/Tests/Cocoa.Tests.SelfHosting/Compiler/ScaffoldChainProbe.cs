@@ -11,7 +11,7 @@ using System.Linq;
 using System.Reflection.Metadata;
 using Xunit;
 
-namespace Cocoa.Tests.Compiler
+namespace Cocoa.Tests.SelfHosting.Compiler
 {
     public class ScaffoldChainProbe
     {

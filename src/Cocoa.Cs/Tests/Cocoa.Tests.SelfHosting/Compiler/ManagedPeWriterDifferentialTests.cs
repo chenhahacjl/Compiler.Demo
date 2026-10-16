@@ -14,7 +14,7 @@ using System.Reflection.PortableExecutable;
 using System.Text;
 using Xunit;
 
-namespace Cocoa.Tests.Compiler
+namespace Cocoa.Tests.SelfHosting.Compiler
 {
     /// <summary>
     /// 阶段 7 增量五 M5-a5 批 1：自举 ManagedPeWriter（.text 组装 + PE 壳）与 C#
