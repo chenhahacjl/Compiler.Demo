@@ -101,7 +101,7 @@ namespace Cocoa.CodeAnalysis.Binder
                 }
 
                 // 6f-3：跨库同名类型（非库限定）拒绝解析——非限定/裸全名使用即绑定期诊断
-                if (_ambiguousCodTypeNames.Contains(name))
+                if (_ambiguousCoaTypeNames.Contains(name))
                 {
                     return null;
                 }
@@ -134,7 +134,7 @@ namespace Cocoa.CodeAnalysis.Binder
                 var fullName = ns.Length == 0 ? name : ns + "." + name;
 
                 // 6f-3：跨库同名类型非限定使用拒绝解析（绑定期歧义诊断；消歧走 `using X = 库名.全名`）
-                if (_ambiguousCodTypeNames.Contains(fullName))
+                if (_ambiguousCoaTypeNames.Contains(fullName))
                 {
                     continue;
                 }
@@ -227,7 +227,7 @@ namespace Cocoa.CodeAnalysis.Binder
 
             var libraryToken = name.Substring(0, dotIndex);
             var remainder = name.Substring(dotIndex + 1);
-            foreach (var library in _codLibraries)
+            foreach (var library in _coaLibraries)
             {
                 if (!IsLibraryTokenMatch(library, libraryToken))
                 {

@@ -179,7 +179,7 @@ namespace Cocoa.Build
 
             // 动态链接（阶段 A2）：dotnet 后端消费 `.coa` 时以外部 dll 依赖接入（产物不内联库体）；
             // native 后端保持编译期合并（PE 静态链接）；cocoa 库产物自身不涉及
-            var linkCodDynamically = backend.IsManaged() && format != ProjectOutputFormat.Cocoa;
+            var linkCoaDynamically = backend.IsManaged() && format != ProjectOutputFormat.Cocoa;
 
             var fingerprint = BuildCache.ComputeFingerprint(
                 expansion.Files,
@@ -190,9 +190,9 @@ namespace Cocoa.Build
             if (useIncremental && BuildCache.IsUpToDate(cachePath, fingerprint))
             {
                 // 动态链接自愈：增量命中也检查被消费库的托管 dll 是否缺失/过期——被误删时现场再生
-                if (linkCodDynamically)
+                if (linkCoaDynamically)
                 {
-                    EnsureManagedDlls(CollectReferencedCodLibraries(references), outputDirectory, IlTarget.Parse(dotnetRuntime!) ?? IlTarget.Default, messageWriter);
+                    EnsureManagedDlls(CollectReferencedCoaLibraries(references), outputDirectory, IlTarget.Parse(dotnetRuntime!) ?? IlTarget.Default, messageWriter);
                 }
 
                 CopyContentToOutput(project, outputDirectory, warningsAsErrors, messageWriter, ref warningsFailed);
@@ -211,8 +211,8 @@ namespace Cocoa.Build
             {
                 var syntaxTrees = expansion.Files.Select(f => SyntaxTree.Load(f)).ToArray();
                 compilation = project.Entry == null
-                    ? Compilation.Create(references.ToArray(), linkCodDynamically, syntaxTrees)
-                    : Compilation.Create(project.Entry, references.ToArray(), linkCodDynamically, syntaxTrees);
+                    ? Compilation.Create(references.ToArray(), linkCoaDynamically, syntaxTrees)
+                    : Compilation.Create(project.Entry, references.ToArray(), linkCoaDynamically, syntaxTrees);
 
                 // 版本信息（.coproj 元数据 → PE .rsrc / IL Assembly 属性）：规避杀软误报 + 产物右键属性可见
                 var versionInfo = BuildPeVersionInfo(project);
@@ -338,9 +338,9 @@ namespace Cocoa.Build
 
                 // 动态链接（阶段 A）：被消费的 `.coa` 库按需生成托管 dll 并部署——
                 // 含系统库（SystemLibrary 自动发现）。缺失或 stamp（cod sha256）过期 → 现场再生，自愈误删
-                if (linkCodDynamically)
+                if (linkCoaDynamically)
                 {
-                    if (!EnsureManagedDlls(compilation.CodLibraries, outputDirectory, IlTarget.Parse(dotnetRuntime!) ?? IlTarget.Default, messageWriter))
+                    if (!EnsureManagedDlls(compilation.CoaLibraries, outputDirectory, IlTarget.Parse(dotnetRuntime!) ?? IlTarget.Default, messageWriter))
                     {
                         return new ProjectBuildResult(success: false, upToDate: false);
                     }
@@ -565,10 +565,10 @@ namespace Cocoa.Build
 
                 var managedDll = Path.Combine(outputDirectory, name + ".dll");
                 var stampPath = managedDll + ".stamp";
-                var codHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(sourcePath))).ToLowerInvariant();
+                var coaHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(sourcePath))).ToLowerInvariant();
                 var stamped = File.Exists(stampPath) ? File.ReadAllText(stampPath).Trim() : "";
 
-                if (File.Exists(managedDll) && stamped == codHash)
+                if (File.Exists(managedDll) && stamped == coaHash)
                 {
                     continue;
                 }
@@ -581,7 +581,7 @@ namespace Cocoa.Build
                     continue;
                 }
 
-                File.WriteAllText(stampPath, codHash);
+                File.WriteAllText(stampPath, coaHash);
             }
 
             return ok;
@@ -604,10 +604,10 @@ namespace Cocoa.Build
 
                 var managedDll = Path.Combine(outputDirectory, library.Name + ".dll");
                 var stampPath = managedDll + ".stamp";
-                var codHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(library.SourcePath))).ToLowerInvariant();
+                var coaHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(library.SourcePath))).ToLowerInvariant();
                 var stamped = File.Exists(stampPath) ? File.ReadAllText(stampPath).Trim() : "";
 
-                if (File.Exists(managedDll) && stamped == codHash)
+                if (File.Exists(managedDll) && stamped == coaHash)
                 {
                     continue;
                 }
@@ -620,14 +620,14 @@ namespace Cocoa.Build
                     continue;
                 }
 
-                File.WriteAllText(stampPath, codHash);
+                File.WriteAllText(stampPath, coaHash);
             }
 
             return ok;
         }
 
         /// <summary>增量命中路径的轻量库清单：项目引用的 .coa + 系统库（不做完整绑定）。</summary>
-        private static IEnumerable<(string Name, string SourcePath)> CollectReferencedCodLibraries(IReadOnlyList<string> references)
+        private static IEnumerable<(string Name, string SourcePath)> CollectReferencedCoaLibraries(IReadOnlyList<string> references)
         {
             foreach (var reference in references)
             {

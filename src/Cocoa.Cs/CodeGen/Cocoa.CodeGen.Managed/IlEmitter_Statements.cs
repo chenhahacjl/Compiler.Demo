@@ -838,9 +838,9 @@ namespace Cocoa.CodeGen.Managed
                 return;
             }
 
-            if (_codAssemblies.TryGetValue(method, out var codAssembly))
+            if (_coaAssemblies.TryGetValue(method, out var coaAssembly))
             {
-                il.Emit(IlOpCodeTable.Get("Call"), CodMethodRef(method, codAssembly));
+                il.Emit(IlOpCodeTable.Get("Call"), CoaMethodRef(method, coaAssembly));
                 return;
             }
 

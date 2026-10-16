@@ -714,7 +714,7 @@ namespace Cocoa.CodeAnalysis.Binder
             List<(InterfaceDeclarationSyntax Syntax, string Namespace)> allInterfaces,
             List<(EnumDeclarationSyntax Syntax, string Namespace)> allEnums,
             List<(FunctionDeclarationSyntax Syntax, string Namespace, string? Dll)> pendingFunctions,
-            ImmutableArray<CoaProgram> codLibraries)
+            ImmutableArray<CoaProgram> coaLibraries)
         {
             if (usingDirectives.Count == 0)
             {
@@ -747,7 +747,7 @@ namespace Cocoa.CodeAnalysis.Binder
             foreach (var (_, ns) in allInterfaces) AddNamespacePrefixes(ns);
             foreach (var (_, ns) in allEnums) AddNamespacePrefixes(ns);
             foreach (var (_, ns, _) in pendingFunctions) AddNamespacePrefixes(ns);
-            foreach (var library in codLibraries)
+            foreach (var library in coaLibraries)
             {
                 foreach (var ns in library.Namespaces)
                 {
@@ -1385,11 +1385,11 @@ namespace Cocoa.CodeAnalysis.Binder
         /// <summary>把 `.coa` 库的公共符号注入作用域（v1 无命名空间 → 裸注册；非空命名空间留扩展位，.coa v2 时启用）。</summary>
         /// <summary>6f-3：跨用户库同名类型全名集（类/枚举/泛型定义）——同一全名被 ≥2 个不同用户库声明即歧义。
         /// 系统库（System*）权威内置、允许覆盖/补充，不参与判定（与装载侧 DetectAmbiguousTypes 一致）。</summary>
-        internal static ImmutableHashSet<string> ComputeAmbiguousCodTypeNames(ImmutableArray<CoaProgram> codLibraries)
+        internal static ImmutableHashSet<string> ComputeAmbiguousCoaTypeNames(ImmutableArray<CoaProgram> coaLibraries)
         {
             var byFullName = new Dictionary<string, CoaProgram>(StringComparer.Ordinal);
             var ambiguous = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var library in codLibraries)
+            foreach (var library in coaLibraries)
             {
                 if (library.Name.StartsWith("System", StringComparison.OrdinalIgnoreCase))
                 {
@@ -1413,18 +1413,18 @@ namespace Cocoa.CodeAnalysis.Binder
             return ambiguous.ToImmutableHashSet();
         }
 
-        private static void InjectCodSymbols(BoundScope scope, ImmutableArray<CoaProgram> codLibraries)
+        private static void InjectCoaSymbols(BoundScope scope, ImmutableArray<CoaProgram> coaLibraries)
         {
-            if (codLibraries.IsDefaultOrEmpty)
+            if (coaLibraries.IsDefaultOrEmpty)
             {
                 return;
             }
 
             // 6f-3：跨用户库同名类型（类/枚举/泛型定义）全名集——非限定使用拒绝注入（绑定期诊断），
             // 消歧经 `using X = 库名.全名` 库限定解析（LookupType.TryResolveLibraryScopedType）。
-            var ambiguousCodTypeNames = ComputeAmbiguousCodTypeNames(codLibraries);
+            var ambiguousCoaTypeNames = ComputeAmbiguousCoaTypeNames(coaLibraries);
 
-            foreach (var library in codLibraries)
+            foreach (var library in coaLibraries)
             {
                 foreach (var function in library.Functions)
                 {
@@ -1443,7 +1443,7 @@ namespace Cocoa.CodeAnalysis.Binder
 
                 foreach (var enumType in library.Enums)
                 {
-                    if (ambiguousCodTypeNames.Contains(enumType.FullName))
+                    if (ambiguousCoaTypeNames.Contains(enumType.FullName))
                     {
                         continue;
                     }
@@ -1463,7 +1463,7 @@ namespace Cocoa.CodeAnalysis.Binder
                     }
 
                     // 6f-3：跨库同名类型拒绝注入（非限定使用即诊断；库限定别名解析唯一化）
-                    if (ambiguousCodTypeNames.Contains(classType.FullName))
+                    if (ambiguousCoaTypeNames.Contains(classType.FullName))
                     {
                         continue;
                     }

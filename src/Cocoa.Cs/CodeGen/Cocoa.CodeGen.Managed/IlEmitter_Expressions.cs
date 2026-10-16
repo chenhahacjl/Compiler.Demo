@@ -1280,9 +1280,9 @@ namespace Cocoa.CodeGen.Managed
                     EmitFunctionDeclaration(node.Method);
                 }
 
-                if (_codAssemblies.TryGetValue(node.Method, out var codAssembly))
+                if (_coaAssemblies.TryGetValue(node.Method, out var coaAssembly))
                 {
-                    il.Emit(IlOpCodeTable.Get("Call"), CodMethodRef(node.Method, codAssembly));
+                    il.Emit(IlOpCodeTable.Get("Call"), CoaMethodRef(node.Method, coaAssembly));
                     return;
                 }
 
@@ -1574,16 +1574,16 @@ namespace Cocoa.CodeGen.Managed
                 EmitExpression(il, argument);
             }
 
-            if (_codAssemblies.TryGetValue(classType, out var codObjectAssembly))
+            if (_coaAssemblies.TryGetValue(classType, out var coaObjectAssembly))
             {
                 // 6e-Step D-b：动态链接 + cod 普通实例类 → Newobj MemberRef（库托管 dll 宿主 TypeRef）
-                var codCtor = node.Constructor ?? classType.GetMethod(classType.Name);
-                if (codCtor == null)
+                var coaCtor = node.Constructor ?? classType.GetMethod(classType.Name);
+                if (coaCtor == null)
                 {
                     throw new System.Exception($"cod 类型 {classType.Name} 无构造函数。");
                 }
 
-                il.Emit(IlOpCodeTable.Get("Newobj"), CodMethodRef(codCtor, codObjectAssembly));
+                il.Emit(IlOpCodeTable.Get("Newobj"), CoaMethodRef(coaCtor, coaObjectAssembly));
                 return;
             }
 
@@ -1666,7 +1666,7 @@ namespace Cocoa.CodeGen.Managed
             il.Emit(IlOpCodeTable.Get("Ldarg"), (ushort)0);
         }
 
-        private readonly Dictionary<(string asm, string type, string name), IlFieldRef> _codFieldRefs =
+        private readonly Dictionary<(string asm, string type, string name), IlFieldRef> _coaFieldRefs =
             new Dictionary<(string, string, string), IlFieldRef>();
 
         /// <summary>6e-Step D-b：cod 类的字段 token——本地 TypeDef 用 _fieldDefs；cod 类走库 dll 宿主 TypeRef 的 FieldRef。
@@ -1674,13 +1674,13 @@ namespace Cocoa.CodeGen.Managed
         private object _fieldToken(FieldSymbol field)
         {
             var owner = field.ContainingClass;
-            if (owner != null && _codAssemblies.TryGetValue(owner, out var asm))
+            if (owner != null && _coaAssemblies.TryGetValue(owner, out var asm))
             {
                 var cacheKey = (asm, owner.Namespace + "." + owner.Name, field.Name);
-                if (!_codFieldRefs.TryGetValue(cacheKey, out var reference))
+                if (!_coaFieldRefs.TryGetValue(cacheKey, out var reference))
                 {
-                    reference = _metadata.DefineFieldRef(CodTypeRef(asm, owner.Namespace, owner.Name), field.Name, ToIlType(field.Type));
-                    _codFieldRefs[cacheKey] = reference;
+                    reference = _metadata.DefineFieldRef(CoaTypeRef(asm, owner.Namespace, owner.Name), field.Name, ToIlType(field.Type));
+                    _coaFieldRefs[cacheKey] = reference;
                 }
 
                 return reference;
@@ -1746,9 +1746,9 @@ namespace Cocoa.CodeGen.Managed
             }
 
             // 6e-M25：跨库基类 .ctor 链（System.UI.WindowHandle extends System.Core.Handle → call Handle::.ctor）
-            if (_codAssemblies.TryGetValue(target, out var codAssembly))
+            if (_coaAssemblies.TryGetValue(target, out var coaAssembly))
             {
-                il.Emit(IlOpCodeTable.Get("Call"), CodMethodRef(target, codAssembly));
+                il.Emit(IlOpCodeTable.Get("Call"), CoaMethodRef(target, coaAssembly));
                 return;
             }
 

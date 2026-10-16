@@ -20,7 +20,7 @@ namespace Cocoa.CodeAnalysis
     /// 命名空间与类型解析（4.2 自 Compilation.cs 拆出，partial 分文件）：全局命名空间树构建、GetTypeByMetadataName/GetNamespace 等查询。
     /// </summary>
     /// <summary>
-    /// 程序集与 .coa 库引用管理的实例部分：SourceAssembly/ReferencedAssemblies（惰性缓存）+ ValidateCodBackendRequirements。
+    /// 程序集与 .coa 库引用管理的实例部分：SourceAssembly/ReferencedAssemblies（惰性缓存）+ ValidateCoaBackendRequirements。
     /// 静态部分（库加载/拓扑序/序列化门禁判据）已拆至 <see cref="AssemblyReferenceManager"/>。
     /// </summary>
     public class Compilation
@@ -29,15 +29,15 @@ namespace Cocoa.CodeAnalysis
         private readonly string _entryPointName;
         private readonly string[] _references;
         private readonly ImmutableArray<MetadataReference> _metadataReferences;
-        private readonly ImmutableArray<CoaProgram> _codLibraries;
-        private readonly ImmutableArray<string> _ambiguousCodTypeNames;
+        private readonly ImmutableArray<CoaProgram> _coaLibraries;
+        private readonly ImmutableArray<string> _ambiguousCoaTypeNames;
 
         /// <summary>6f-3：跨用户库同名类型（类/枚举/泛型定义）全名集——非限定使用即绑定期歧义；
         /// 消歧经 `using X = 库名.全名` 库限定解析。</summary>
-        public ImmutableArray<string> AmbiguousCodTypeNames => _ambiguousCodTypeNames;
+        public ImmutableArray<string> AmbiguousCoaTypeNames => _ambiguousCoaTypeNames;
 
         /// <summary>动态链接（阶段 A2）：dotnet 后端消费 `.coa` 时不内联库体，发射外部 Ref 指向各库 dll。</summary>
-        private readonly bool _linkCodDynamically;
+        private readonly bool _linkCoaDynamically;
 
         /// <summary>
         /// managed（dotnet/IL）后端发射委托（拆分后由 <c>Cocoa.CodeGen.Managed</c> 经 <see cref="RegisterManagedEmitter"/> 注入；
@@ -86,78 +86,78 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>绑定全局作用域（经 <see cref="CocoaBinder"/>.BindGlobalScope 静态编排）。</summary>
-        public BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<SyntaxTree> syntaxTrees, string entryPointName, string[]? references, ImmutableArray<CoaProgram> codLibraries)
-            => CocoaBinder.BindGlobalScope(isScript, previous, syntaxTrees, entryPointName, references, codLibraries);
+        public BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<SyntaxTree> syntaxTrees, string entryPointName, string[]? references, ImmutableArray<CoaProgram> coaLibraries)
+            => CocoaBinder.BindGlobalScope(isScript, previous, syntaxTrees, entryPointName, references, coaLibraries);
 
         /// <summary>绑定程序（含单态化/降级；见 <see cref="BindGlobalScope"/>）。</summary>
-        public BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> codLibraries, bool linkCodDynamically, NamespaceSymbol? globalNamespace)
-            => CocoaBinder.BindProgram(isScript, previous, globalScope, codLibraries, linkCodDynamically, globalNamespace);
+        public BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> coaLibraries, bool linkCoaDynamically, NamespaceSymbol? globalNamespace)
+            => CocoaBinder.BindProgram(isScript, previous, globalScope, coaLibraries, linkCoaDynamically, globalNamespace);
 
-        protected Compilation(bool isScript, Compilation? previous, string entryPointName, string[]? references, bool linkCodDynamically = false, params SyntaxTree[] syntaxTrees)
+        protected Compilation(bool isScript, Compilation? previous, string entryPointName, string[]? references, bool linkCoaDynamically = false, params SyntaxTree[] syntaxTrees)
         {
             IsScript = isScript;
             Previous = previous;
             _entryPointName = entryPointName;
-            _linkCodDynamically = linkCodDynamically;
+            _linkCoaDynamically = linkCoaDynamically;
             _references = (references ?? Array.Empty<string>())
                 .Where(r => !r.EndsWith(".coa", StringComparison.OrdinalIgnoreCase))
                 .ToArray();
             _metadataReferences = (references ?? Array.Empty<string>())
                 .Select(r => new MetadataReference(r))
                 .ToImmutableArray();
-            var loadedLibraries = AssemblyReferenceManager.LoadCodLibraries(references);
-            _codLibraries = loadedLibraries.Libraries;
-            _ambiguousCodTypeNames = loadedLibraries.AmbiguousTypeNames;
+            var loadedLibraries = AssemblyReferenceManager.LoadCoaLibraries(references);
+            _coaLibraries = loadedLibraries.Libraries;
+            _ambiguousCoaTypeNames = loadedLibraries.AmbiguousTypeNames;
             SyntaxTrees = syntaxTrees.ToImmutableArray();
         }
 
 
         public static Compilation Create(params SyntaxTree[] syntaxTrees)
         {
-            return CreateCompilation(isScript: false, previous: null, entryPointName: "Main", references: null, linkCodDynamically: false, syntaxTrees);
+            return CreateCompilation(isScript: false, previous: null, entryPointName: "Main", references: null, linkCoaDynamically: false, syntaxTrees);
         }
 
         public static Compilation Create(string[] references, params SyntaxTree[] syntaxTrees)
         {
-            return CreateCompilation(isScript: false, previous: null, entryPointName: "Main", references, linkCodDynamically: false, syntaxTrees);
+            return CreateCompilation(isScript: false, previous: null, entryPointName: "Main", references, linkCoaDynamically: false, syntaxTrees);
         }
 
         /// <summary>动态链接变体（阶段 A2）：dotnet 后端消费 `.coa` 时不内联，运行期依赖各库 dll。</summary>
-        public static Compilation Create(string[] references, bool linkCodDynamically, params SyntaxTree[] syntaxTrees)
+        public static Compilation Create(string[] references, bool linkCoaDynamically, params SyntaxTree[] syntaxTrees)
         {
-            return CreateCompilation(isScript: false, previous: null, entryPointName: "Main", references, linkCodDynamically, syntaxTrees);
+            return CreateCompilation(isScript: false, previous: null, entryPointName: "Main", references, linkCoaDynamically, syntaxTrees);
         }
 
         public static Compilation Create(string entryPointName, params SyntaxTree[] syntaxTrees)
         {
-            return CreateCompilation(isScript: false, previous: null, entryPointName, references: null, linkCodDynamically: false, syntaxTrees);
+            return CreateCompilation(isScript: false, previous: null, entryPointName, references: null, linkCoaDynamically: false, syntaxTrees);
         }
 
         public static Compilation Create(string entryPointName, string[] references, params SyntaxTree[] syntaxTrees)
         {
-            return CreateCompilation(isScript: false, previous: null, entryPointName, references, linkCodDynamically: false, syntaxTrees);
+            return CreateCompilation(isScript: false, previous: null, entryPointName, references, linkCoaDynamically: false, syntaxTrees);
         }
 
         /// <summary>动态链接变体（阶段 A2）：带入口名的 dotnet 消费方，`.coa` 库以外部 dll 依赖接入。</summary>
-        public static Compilation Create(string entryPointName, string[] references, bool linkCodDynamically, params SyntaxTree[] syntaxTrees)
+        public static Compilation Create(string entryPointName, string[] references, bool linkCoaDynamically, params SyntaxTree[] syntaxTrees)
         {
-            return CreateCompilation(isScript: false, previous: null, entryPointName, references, linkCodDynamically, syntaxTrees);
+            return CreateCompilation(isScript: false, previous: null, entryPointName, references, linkCoaDynamically, syntaxTrees);
         }
 
         public static Compilation CreateScript(Compilation? previous, params SyntaxTree[] syntaxTrees)
         {
-            return CreateCompilation(isScript: true, previous, entryPointName: "Main", references: null, linkCodDynamically: false, syntaxTrees);
+            return CreateCompilation(isScript: true, previous, entryPointName: "Main", references: null, linkCoaDynamically: false, syntaxTrees);
         }
 
         /// <summary>带引用的脚本编译（REPL #import 场景）：references 为 `.coa` 库/程序集路径。</summary>
         public static Compilation CreateScript(Compilation? previous, string[]? references, params SyntaxTree[] syntaxTrees)
         {
-            return CreateCompilation(isScript: true, previous, entryPointName: "Main", references: references, linkCodDynamically: false, syntaxTrees);
+            return CreateCompilation(isScript: true, previous, entryPointName: "Main", references: references, linkCoaDynamically: false, syntaxTrees);
         }
 
         /// <summary>构造编译对象（单语言，直接实例化）。</summary>
-        private static Compilation CreateCompilation(bool isScript, Compilation? previous, string entryPointName, string[]? references, bool linkCodDynamically, SyntaxTree[] syntaxTrees)
-            => new Compilation(isScript, previous, entryPointName, references, linkCodDynamically, syntaxTrees);
+        private static Compilation CreateCompilation(bool isScript, Compilation? previous, string entryPointName, string[]? references, bool linkCoaDynamically, SyntaxTree[] syntaxTrees)
+            => new Compilation(isScript, previous, entryPointName, references, linkCoaDynamically, syntaxTrees);
 
         public bool IsScript { get; }
         public Compilation? Previous { get; }
@@ -167,7 +167,7 @@ namespace Cocoa.CodeAnalysis
         public ImmutableArray<VariableSymbol> Variables => GlobalScope.Variables;
 
         /// <summary>已加载的 `.coa` 库（含系统库；动态链接 CopyLocal 依据）。</summary>
-        public ImmutableArray<CoaProgram> CodLibraries => _codLibraries;
+        public ImmutableArray<CoaProgram> CoaLibraries => _coaLibraries;
 
         public BoundGlobalScope GlobalScope
         {
@@ -179,7 +179,7 @@ namespace Cocoa.CodeAnalysis
                     return scope;
                 }
 
-                var globalScope = BindGlobalScope(IsScript, Previous?.GlobalScope, SyntaxTrees, _entryPointName, _references, _codLibraries);
+                var globalScope = BindGlobalScope(IsScript, Previous?.GlobalScope, SyntaxTrees, _entryPointName, _references, _coaLibraries);
                 Interlocked.CompareExchange(ref _globalScope, globalScope, null);
                 // CAS 后重读（与 SourceAssembly 同模式）：并发绑定结果竞争失败方返回胜者
                 return _globalScope!;
@@ -241,7 +241,7 @@ namespace Cocoa.CodeAnalysis
         {
             var previous = Previous == null ? null : Previous.GetProgram();
 
-            var program = BindProgram(IsScript, previous, GlobalScope, _codLibraries, _linkCodDynamically, GlobalNamespace);
+            var program = BindProgram(IsScript, previous, GlobalScope, _coaLibraries, _linkCoaDynamically, GlobalNamespace);
 
             // Y A2-F1：规范 IR 契约（DEBUG）——消费边界不得有高 Bound 节点泄漏
             Lowering.CanonicalIr.Verify(program);
@@ -468,7 +468,7 @@ namespace Cocoa.CodeAnalysis
 
             var backendDiagnostics = _managedEmitter == null
                 ? ImmutableArray.Create(Diagnostic.Error(ZeroLocation, "managed 后端未注册（Cocoa.CodeGen.Managed 未初始化）"))
-                : _managedEmitter(program, moduleName, ilReferences, outputPath, target, emitLibrary, program.CodAssemblies, false, versionInfo, resourceOptions);
+                : _managedEmitter(program, moduleName, ilReferences, outputPath, target, emitLibrary, program.CoaAssemblies, false, versionInfo, resourceOptions);
 
             // 成功路径也带上 GlobalScope 警告（using 未解析等），供 CLI 打印
             return diagnostics.Concat(backendDiagnostics).ToImmutableArray();
@@ -586,7 +586,7 @@ namespace Cocoa.CodeAnalysis
             // 6e-M33 起放行同库可序列化基类的继承链（Handle 族）——仅剩真不可序列化类（接口/多继承基类等）报错）
             if (program.Classes.Length > 0)
             {
-                var offendingClass = program.Classes.FirstOrDefault(c => !AssemblyReferenceManager.IsCodSerializableClass(c));
+                var offendingClass = program.Classes.FirstOrDefault(c => !AssemblyReferenceManager.IsCoaSerializableClass(c));
                 if (offendingClass != null)
                 {
                     var location = offendingClass.Declaration?.GetDeclarationNameLocation() ?? ZeroLocation;
@@ -636,7 +636,7 @@ var globals = GlobalScope.Variables.OfType<GlobalVariableSymbol>().ToImmutableAr
                 .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
                 .ToImmutableArray();
 
-            var containerClasses = program.Classes.Where(AssemblyReferenceManager.IsCodSerializableClass).ToImmutableArray();
+            var containerClasses = program.Classes.Where(AssemblyReferenceManager.IsCoaSerializableClass).ToImmutableArray();
 
             // 6e-M24：文档化符号全集 = 顶层函数/类型/全局 + 类（含泛型定义）成员 + 枚举。
             // 类成员文档（方法含构造/属性/字段/事件）是 stdlib 文档主体，必须纳入。
@@ -668,7 +668,7 @@ var globals = GlobalScope.Variables.OfType<GlobalVariableSymbol>().ToImmutableAr
                 }
             }
 
-            var codProgram = new CoaProgram(
+            var coaProgram = new CoaProgram(
                 functions,
                 globals,
                 enums,
@@ -693,7 +693,7 @@ var globals = GlobalScope.Variables.OfType<GlobalVariableSymbol>().ToImmutableAr
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outputPath))!);
             using (var writer = new StreamWriter(outputPath))
             {
-                CoaSerializer.Write(writer, codProgram);
+                CoaSerializer.Write(writer, coaProgram);
             }
 
             // 6e-M24：XML documentation 文件生成
@@ -922,11 +922,11 @@ var globals = GlobalScope.Variables.OfType<GlobalVariableSymbol>().ToImmutableAr
                 var tree = NamespaceSymbol.CreateGlobal();
                 AddTypesToNamespace(tree, GlobalScope.Enums);
                 AddTypesToNamespace(tree, GlobalScope.Classes);
-                AddTypesToNamespace(tree, _codLibraries.SelectMany(l => l.Enums));
-                AddTypesToNamespace(tree, _codLibraries.SelectMany(l => l.Classes));
-                AddTypesToNamespace(tree, _codLibraries.SelectMany(l => l.GenericDefinitions));
+                AddTypesToNamespace(tree, _coaLibraries.SelectMany(l => l.Enums));
+                AddTypesToNamespace(tree, _coaLibraries.SelectMany(l => l.Classes));
+                AddTypesToNamespace(tree, _coaLibraries.SelectMany(l => l.GenericDefinitions));
                 AddFunctionsToNamespace(tree, GlobalScope.Functions.Where(f => f.ContainingClass == null));
-                AddFunctionsToNamespace(tree, _codLibraries.SelectMany(l => l.Functions).Where(f => f.ContainingClass == null));
+                AddFunctionsToNamespace(tree, _coaLibraries.SelectMany(l => l.Functions).Where(f => f.ContainingClass == null));
                 Interlocked.CompareExchange(ref _globalNamespace, tree, null);
                 // CAS 后重读（与 SourceAssembly 同模式）
                 return _globalNamespace!;
@@ -995,15 +995,15 @@ var globals = GlobalScope.Variables.OfType<GlobalVariableSymbol>().ToImmutableAr
         {
             get
             {
-                if (_referencedAssemblies.IsDefault && (_references.Length > 0 || _codLibraries.Length > 0))
+                if (_referencedAssemblies.IsDefault && (_references.Length > 0 || _coaLibraries.Length > 0))
                 {
-                    var builder = ImmutableArray.CreateBuilder<AssemblySymbol>(_references.Length + _codLibraries.Length);
+                    var builder = ImmutableArray.CreateBuilder<AssemblySymbol>(_references.Length + _coaLibraries.Length);
                     foreach (var path in _references)
                     {
                         builder.Add(new AssemblySymbol(Path.GetFileNameWithoutExtension(path), isSource: false, display: path));
                     }
 
-                    foreach (var library in _codLibraries)
+                    foreach (var library in _coaLibraries)
                     {
                         var name = string.IsNullOrEmpty(library.Name)
                             ? Path.GetFileNameWithoutExtension(library.SourcePath ?? "reference")
@@ -1019,14 +1019,14 @@ var globals = GlobalScope.Variables.OfType<GlobalVariableSymbol>().ToImmutableAr
         }
 
         /// <summary>校验 `.coa` 库的 `requires` 与消费方后端匹配。</summary>
-        public ImmutableArray<Diagnostic> ValidateCodBackendRequirements(bool isNative)
+        public ImmutableArray<Diagnostic> ValidateCoaBackendRequirements(bool isNative)
         {
-            if (!isNative || _codLibraries.IsDefaultOrEmpty)
+            if (!isNative || _coaLibraries.IsDefaultOrEmpty)
             {
                 return ImmutableArray<Diagnostic>.Empty;
             }
 
-            foreach (var library in _codLibraries)
+            foreach (var library in _coaLibraries)
             {
                 if (library.Requires == CoaRequirement.DotNet)
                 {

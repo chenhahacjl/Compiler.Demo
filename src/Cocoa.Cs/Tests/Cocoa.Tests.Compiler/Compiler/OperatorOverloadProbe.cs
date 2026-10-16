@@ -60,7 +60,7 @@ namespace Cocoa.Tests.Compiler
                 previous: null,
                 compilation.GlobalScope,
                 ImmutableArray<Cocoa.CodeAnalysis.Serialization.CoaProgram>.Empty,
-                linkCodDynamically: false,
+                linkCoaDynamically: false,
                 globalNamespace: null);
         }
 

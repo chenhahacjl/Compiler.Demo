@@ -29,21 +29,21 @@ namespace Cocoa.CodeGen.Managed
                 return;
             }
 
-            // facade 类成员：优先重定向到 BCL（解析失败回退下方 codAssemblies 的 Cocoa 体）
+            // facade 类成员：优先重定向到 BCL（解析失败回退下方 coaAssemblies 的 Cocoa 体）
             if (TryEmitFacadeBclCall(il, node))
             {
                 return;
             }
 
             // 动态链接（阶段 A3）：cod 顶层函数 → <CocoaTopLevel>.MemberRef 外部调用
-            if (_codAssemblies.TryGetValue(node.Function, out var codAssembly))
+            if (_coaAssemblies.TryGetValue(node.Function, out var coaAssembly))
             {
                 foreach (var argument in node.Arguments)
                 {
                     EmitExpression(il, argument);
                 }
 
-                il.Emit(IlOpCodeTable.Get("Call"), CodMethodRef(node.Function, codAssembly));
+                il.Emit(IlOpCodeTable.Get("Call"), CoaMethodRef(node.Function, coaAssembly));
                 return;
             }
 
@@ -95,7 +95,7 @@ namespace Cocoa.CodeGen.Managed
         /// <summary>
         /// facade 类成员在 IL 端重定向到 BCL：按 ContainingClass.FullName + 方法名 + 实参类型
         /// 调 _framework.FindMethod → callvirt/call 到 BCL；解析失败返回 false（调用方回退到
-        /// codAssemblies 的 Cocoa 体）。泛型 facade 的重定向（直构 MemberRef）见后续实现。
+        /// coaAssemblies 的 Cocoa 体）。泛型 facade 的重定向（直构 MemberRef）见后续实现。
         /// 规则见 docs-dev/对象模型设计.md §5.4。
         /// </summary>
 private bool IsFacadeRedirect(NamedTypeSymbol classType)

@@ -24,9 +24,9 @@ namespace Cocoa.CodeGen.Managed
             Compilation.RegisterManagedEmitter(Emit);
         }
 
-        private static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath, IlTarget target, bool emitLibrary, ImmutableDictionary<object, string>? codAssemblies, bool publishPublicSurface, Cocoa.CodeAnalysis.PeVersionInfo? versionInfo, Cocoa.CodeAnalysis.PeResourceOptions? resourceOptions)
+        private static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath, IlTarget target, bool emitLibrary, ImmutableDictionary<object, string>? coaAssemblies, bool publishPublicSurface, Cocoa.CodeAnalysis.PeVersionInfo? versionInfo, Cocoa.CodeAnalysis.PeResourceOptions? resourceOptions)
         {
-            return IlEmitter.Emit(program, moduleName, references, outputPath, target, emitLibrary, codAssemblies, versionInfo, resourceOptions, publishPublicSurface);
+            return IlEmitter.Emit(program, moduleName, references, outputPath, target, emitLibrary, coaAssemblies, versionInfo, resourceOptions, publishPublicSurface);
         }
     }
 }

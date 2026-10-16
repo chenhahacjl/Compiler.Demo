@@ -49,7 +49,7 @@ namespace Cocoa.CodeAnalysis
                     _compilation.IsScript,
                     null,
                     _compilation.GlobalScope,
-                    _compilation.CodLibraries,
+                    _compilation.CoaLibraries,
                     false,
                     _compilation.GlobalNamespace);
 

@@ -105,7 +105,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
             var requires = CoaRequirement.Any;
             var platforms = ImmutableArray.CreateBuilder<string>();
             var dotnetRefs = ImmutableArray.CreateBuilder<string>();
-            var codRefs = ImmutableArray.CreateBuilder<string>();
+            var coaRefs = ImmutableArray.CreateBuilder<string>();
             var imports = ImmutableArray.CreateBuilder<string>();
             var namespaces = ImmutableArray.CreateBuilder<string>();
             var docs = ImmutableDictionary.CreateBuilder<string, string>();
@@ -139,7 +139,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                                     dotnetRefs.Add(CoaText.Unescape(_tokens.ExpectString()));
                                     break;
                                 case "refcoa":
-                                    codRefs.Add(CoaText.Unescape(_tokens.ExpectString()));
+                                    coaRefs.Add(CoaText.Unescape(_tokens.ExpectString()));
                                     break;
                                 case "import":
                                     imports.Add(CoaText.Unescape(_tokens.ExpectString()));
@@ -190,7 +190,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                 platforms.ToImmutable(),
                 dotnetRefs.ToImmutable(),
                 imports.ToImmutable(),
-                codRefs.ToImmutable(),
+                coaRefs.ToImmutable(),
                 namespaces.ToImmutable(),
                 _context.GenericDefinitions.ToImmutable(),
                 functionKeys: _context.LocalFunctionKeys.ToImmutableDictionary(),

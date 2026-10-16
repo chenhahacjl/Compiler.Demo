@@ -20,7 +20,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             ImmutableArray<string> platforms,
             ImmutableArray<string> dotnetReferences,
             ImmutableArray<string> nativeImports,
-            ImmutableArray<string> codReferences,
+            ImmutableArray<string> coaReferences,
             ImmutableArray<string> namespaces,
             ImmutableArray<NamedTypeSymbol> genericDefinitions = default,
             ImmutableDictionary<FunctionSymbol, BoundBlockStatement>? genericOpenBodies = null,
@@ -37,7 +37,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             Platforms = platforms;
             DotnetReferences = dotnetReferences;
             NativeImports = nativeImports;
-            CodReferences = codReferences;
+            CoaReferences = coaReferences;
             Namespaces = namespaces;
             GenericDefinitions = genericDefinitions.IsDefault ? ImmutableArray<NamedTypeSymbol>.Empty : genericDefinitions;
             GenericOpenBodies = genericOpenBodies ?? ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Empty;
@@ -81,7 +81,7 @@ namespace Cocoa.CodeAnalysis.Serialization
         public ImmutableArray<string> NativeImports { get; }
 
         /// <summary>依赖的被引用 `.coa`（递归加载）。</summary>
-        public ImmutableArray<string> CodReferences { get; }
+        public ImmutableArray<string> CoaReferences { get; }
 
         /// <summary>库声明的命名空间。</summary>
         public ImmutableArray<string> Namespaces { get; }

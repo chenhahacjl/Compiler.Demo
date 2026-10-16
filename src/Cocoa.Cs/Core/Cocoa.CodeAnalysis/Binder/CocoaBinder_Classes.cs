@@ -1430,7 +1430,7 @@ namespace Cocoa.CodeAnalysis.Binder
             }
         }
 
-        public void RegisterCodGenericDefinitionsForSeed(ImmutableArray<CoaProgram> libraries)
+        public void RegisterCoaGenericDefinitionsForSeed(ImmutableArray<CoaProgram> libraries)
         {
             // 6e 跨库里程碑：cod 泛型定义注册为单态化种子解析候选（源码同名泛型定义已先注册占位，
             // TryDeclareClass 同名静默跳过——源码优先于 cod，源内联集合测试不被打扰；

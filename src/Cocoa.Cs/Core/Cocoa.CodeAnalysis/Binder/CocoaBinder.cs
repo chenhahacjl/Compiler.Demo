@@ -37,8 +37,8 @@ namespace Cocoa.CodeAnalysis.Binder
         private List<string> _usingNamespaces => _context.UsingNamespaces;
         private List<string> _usingStatics => _context.UsingStatics;
         private Dictionary<string, string> _usingAliases => _context.UsingAliases;
-        private ImmutableArray<CoaProgram> _codLibraries => _context.CodLibraries;
-        private ImmutableHashSet<string> _ambiguousCodTypeNames => _context.AmbiguousCodTypeNames;
+        private ImmutableArray<CoaProgram> _coaLibraries => _context.CoaLibraries;
+        private ImmutableHashSet<string> _ambiguousCoaTypeNames => _context.AmbiguousCoaTypeNames;
         private NamespaceSymbol? _globalNamespace => _context.GlobalNamespace;
         internal OperatorRegistry _operators => _context.Operators;
         private Dictionary<FunctionSymbol, NamedTypeSymbol> _environmentClasses => _context.EnvironmentClasses;
@@ -102,7 +102,7 @@ namespace Cocoa.CodeAnalysis.Binder
         /// <summary>设置声明绑定上下文（BindGlobalScope 阶段 3/3.2/3.5 调用）。</summary>
         internal void SetBindingClass(NamedTypeSymbol? classType) => _bindingClass = classType;
 
-        internal CocoaBinder(bool isScript, BoundScope? parent, FunctionSymbol? function, ImmutableArray<string> references, ImmutableArray<string> usingNamespaces, Func<string, TypeSymbol?> builtinTypeResolver, ImmutableArray<string> usingStatics = default, ImmutableDictionary<string, string> usingAliases = null!, ImmutableArray<CoaProgram> codLibraries = default, NamespaceSymbol? globalNamespace = null, OperatorRegistry? operators = null)
+        internal CocoaBinder(bool isScript, BoundScope? parent, FunctionSymbol? function, ImmutableArray<string> references, ImmutableArray<string> usingNamespaces, Func<string, TypeSymbol?> builtinTypeResolver, ImmutableArray<string> usingStatics = default, ImmutableDictionary<string, string> usingAliases = null!, ImmutableArray<CoaProgram> coaLibraries = default, NamespaceSymbol? globalNamespace = null, OperatorRegistry? operators = null)
         {
             _scopeStack = ScopeStack.Create(parent);
             _subject.Function = function;
@@ -114,7 +114,7 @@ namespace Cocoa.CodeAnalysis.Binder
                 usingNamespaces,
                 usingStatics,
                 usingAliases,
-                codLibraries,
+                coaLibraries,
                 globalNamespace,
                 operators ?? new OperatorRegistry(),
                 new DiagnosticBag());
@@ -128,7 +128,7 @@ namespace Cocoa.CodeAnalysis.Binder
             }
         }
 
-        public static BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<CoreSyntax.SyntaxTree> syntaxTrees, string entryPointName = "Main", string[]? references = null, ImmutableArray<CoaProgram> codLibraries = default)
+        public static BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<CoreSyntax.SyntaxTree> syntaxTrees, string entryPointName = "Main", string[]? references = null, ImmutableArray<CoaProgram> coaLibraries = default)
         {
             // 6e-M19 M2-c：System.Object 成员面注入（幂等）——须先于类成员绑定，
             // 用户类 override 解析与成员沿链上溯依赖 Object 四虚方法已就位
@@ -139,7 +139,7 @@ namespace Cocoa.CodeAnalysis.Binder
             NamedTypeSymbol.EnsureDelegateBaseTypes();
 
             var parentScope = CreateParentScope(previous);
-            InjectCodSymbols(parentScope, codLibraries);
+            InjectCoaSymbols(parentScope, coaLibraries);
 
             // 6e-M22 C5+：内建 Delegate/MulticastDelegate 注册进根作用域（类型位置可用）
             parentScope.TryDeclareClass(NamedTypeSymbol.SystemDelegate);
@@ -148,7 +148,7 @@ namespace Cocoa.CodeAnalysis.Binder
             // 脚本链（REPL）：using 延续先前提交（对齐 csi）；非脚本编译每次独立
             var seedUsings = isScript && previous != null ? previous.UsingNamespaces : ImmutableArray<string>.Empty;
             var seedStatics = isScript && previous != null ? previous.UsingStatics : default(ImmutableArray<string>);
-            var binder = new CocoaBinder(isScript, parentScope, null, references?.ToImmutableArray() ?? ImmutableArray<string>.Empty, seedUsings, BuiltinTypes.Lookup, seedStatics, codLibraries: codLibraries);
+            var binder = new CocoaBinder(isScript, parentScope, null, references?.ToImmutableArray() ?? ImmutableArray<string>.Empty, seedUsings, BuiltinTypes.Lookup, seedStatics, coaLibraries: coaLibraries);
 
             binder.Diagnostics.AddRange(syntaxTrees.SelectMany(st => st.Diagnostics));
             if (binder.Diagnostics.HasErrors())
@@ -216,7 +216,7 @@ namespace Cocoa.CodeAnalysis.Binder
             }
 
             // 阶段 1.4：using 命名空间解析警告（6e-M15）——在程序/引用/.coa 库中都找不到时发警告
-            binder.ReportUnresolvedUsings(usingDirectives, allClasses, allInterfaces, allEnums, pendingFunctions, codLibraries);
+            binder.ReportUnresolvedUsings(usingDirectives, allClasses, allInterfaces, allEnums, pendingFunctions, coaLibraries);
 
             // 阶段 1.5：绑定枚举（顶层 + 命名空间内）
             foreach (var (syntax, ns) in allEnums)
@@ -511,10 +511,10 @@ namespace Cocoa.CodeAnalysis.Binder
             };
         }
 
-        public static BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> codLibraries = default, bool linkCodDynamically = false, NamespaceSymbol? globalNamespace = null)
+        public static BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> coaLibraries = default, bool linkCoaDynamically = false, NamespaceSymbol? globalNamespace = null)
         {
             var parentScope = CreateParentScope(globalScope);
-            InjectCodSymbols(parentScope, codLibraries);
+            InjectCoaSymbols(parentScope, coaLibraries);
 
             if (globalScope.Diagnostics.HasErrors())
             {
@@ -540,7 +540,7 @@ namespace Cocoa.CodeAnalysis.Binder
                     {
                         // S-7：泛型开放体随库携带为 raw（结构化 HIR）——读侧并入 cod.Bodies，
                         // 消费方 Monomorphizer 替换展开后由其捷径补 Lower（见 Monomorphizer 三个替换点）。
-                        var (rawOpenBody, _, _, _) = BuildFunctionBody(isScript, parentScope, function, globalScope, codLibraries, globalNamespace);
+                        var (rawOpenBody, _, _, _) = BuildFunctionBody(isScript, parentScope, function, globalScope, coaLibraries, globalNamespace);
                         genericOpenBodies.Add(function, rawOpenBody);
                     }
 
@@ -565,7 +565,7 @@ namespace Cocoa.CodeAnalysis.Binder
                     continue;
                 }
 
-                var (rawBody, loweredBody, bodyDiagnostics, functionTupleCtors) = BuildFunctionBody(isScript, parentScope, function, globalScope, codLibraries, globalNamespace);
+                var (rawBody, loweredBody, bodyDiagnostics, functionTupleCtors) = BuildFunctionBody(isScript, parentScope, function, globalScope, coaLibraries, globalNamespace);
                 functionBodies.Add(function, loweredBody);
                 rawBodies.Add(function, rawBody);
                 foreach (var tupleCtorBody in functionTupleCtors)
@@ -578,7 +578,7 @@ namespace Cocoa.CodeAnalysis.Binder
 
             // 6e-M20 G2 单态化展开：语法扫描收集活实例化 → 实例化类方法体重绑（T→实参）→ 类并入发射清单
             // 6e-G7 S1：泛型定义单独携带（仅 .coa gcls 消费）
-            var (emittedClasses, genericDefinitions) = Monomorphizer.Expand(globalScope, parentScope, isScript, codLibraries, functionBodies, diagnostics);
+            var (emittedClasses, genericDefinitions) = Monomorphizer.Expand(globalScope, parentScope, isScript, coaLibraries, functionBodies, diagnostics);
 
             // 6e-M22 C4：lambda 提升后处理——函数值携带的已绑定体入 Functions 清单
             // （BoundProgram.Functions == bodies 键集）；体中嵌套 lambda 一并发现，工作表至不动点
@@ -657,15 +657,15 @@ namespace Cocoa.CodeAnalysis.Binder
             // `.coa` 库接入（语义层）：
             // 内联模式（默认/native/Evaluator）：库函数体合并进消费方 functionBodies，消费方同名优先；
             // 动态链接模式（dotnet 后端，阶段 A2）：不合并——符号经 AssemblyRef/MemberRef 指向各库 dll。
-            // 两种模式下符号注入（BindGlobalScope→InjectCodSymbols）一致，绑定期无差别。
+            // 两种模式下符号注入（BindGlobalScope→InjectCoaSymbols）一致，绑定期无差别。
             // S-7：.coa 存 raw 结构化 HIR（含 for/while/if），链接合并前统一 Lower 为 MIR，
             // 保持 program.Functions 规范契约（三后端/求值器/CanonicalIr.Verify 零改动）。
-            var codAssemblies = ImmutableDictionary<object, string>.Empty;
-            if (!codLibraries.IsDefaultOrEmpty)
+            var coaAssemblies = ImmutableDictionary<object, string>.Empty;
+            if (!coaLibraries.IsDefaultOrEmpty)
             {
-                if (!linkCodDynamically)
+                if (!linkCoaDynamically)
                 {
-                    foreach (var library in codLibraries)
+                    foreach (var library in coaLibraries)
                     {
                         foreach (var (fn, body) in library.Bodies)
                         {
@@ -691,7 +691,7 @@ namespace Cocoa.CodeAnalysis.Binder
                     // 溯源表：cod 符号 → 库程序集名。extern(P/Invoke) 本地声明；内建单例走消费方
                     // 本地运行时分发（BuiltinKind 分派），二者均不外链。
                     var provenance = ImmutableDictionary.CreateBuilder<object, string>(ReferenceEqualityComparer.Instance);
-                    foreach (var library in codLibraries)
+                    foreach (var library in coaLibraries)
                     {
                         foreach (var fn in library.Functions)
                         {
@@ -717,7 +717,7 @@ namespace Cocoa.CodeAnalysis.Binder
                         }
                     }
 
-                    codAssemblies = provenance.ToImmutable();
+                    coaAssemblies = provenance.ToImmutable();
                 }
             }
 
@@ -737,7 +737,7 @@ namespace Cocoa.CodeAnalysis.Binder
                 .ToImmutableArray();
             emittedClasses = emittedClasses.Concat(tupleClasses).ToImmutableArray();
 
-            return new BoundProgram(previous, diagnostics.ToImmutable(), globalScope.MainFunction, globalScope.ScriptFunction, functionBodies.ToImmutable(), emittedClasses, codAssemblies, genericDefinitions, genericOpenBodies.ToImmutable(), rawBodies.ToImmutable());
+            return new BoundProgram(previous, diagnostics.ToImmutable(), globalScope.MainFunction, globalScope.ScriptFunction, functionBodies.ToImmutable(), emittedClasses, coaAssemblies, genericDefinitions, genericOpenBodies.ToImmutable(), rawBodies.ToImmutable());
         }
 
         /// <summary>绑定树先序递归枚举（6e-M22 C4）：lambda 后处理走查用。</summary>
@@ -758,7 +758,7 @@ namespace Cocoa.CodeAnalysis.Binder
         /// 单函数体构建（6e-M20 自 BindProgram 抽取复用）：方法体绑定 + 构造链/字段初始化器前缀 + 降级 + AllPathsReturn 检查。
         /// 返回 <c>(raw, lowered, diagnostics)</c>：raw 为 S-7 HIR（.coa 持久化用，未 Lower）；lowered 为 MIR（三后端/求值器消费）。
         /// </summary>
-        private static (BoundBlockStatement Raw, BoundBlockStatement Body, ImmutableArray<Diagnostic> Diagnostics, ImmutableDictionary<FunctionSymbol, BoundBlockStatement> TupleCtors) BuildFunctionBody(bool isScript, BoundScope parentScope, FunctionSymbol function, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> codLibraries, NamespaceSymbol? globalNamespace)
+        private static (BoundBlockStatement Raw, BoundBlockStatement Body, ImmutableArray<Diagnostic> Diagnostics, ImmutableDictionary<FunctionSymbol, BoundBlockStatement> TupleCtors) BuildFunctionBody(bool isScript, BoundScope parentScope, FunctionSymbol function, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> coaLibraries, NamespaceSymbol? globalNamespace)
         {
             var bodySyntax = ((FunctionDeclarationSyntax?)function.Declaration)?.Body;
             var bodyLocation = (CoreSyntax.SyntaxNode?)((FunctionDeclarationSyntax?)function.Declaration)?.Identifier ?? function.Syntax;
@@ -769,7 +769,7 @@ namespace Cocoa.CodeAnalysis.Binder
                 bodyLocation = (CoreSyntax.SyntaxNode?)ctorSyntax.ConstructorKeyword ?? ctorSyntax.OpenParenthesisToken;
             }
 
-            var binder = new CocoaBinder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces, BuiltinTypes.Lookup, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries, globalNamespace, operators: globalScope.Operators);
+            var binder = new CocoaBinder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces, BuiltinTypes.Lookup, globalScope.UsingStatics, globalScope.UsingAliases, coaLibraries, globalNamespace, operators: globalScope.Operators);
             if (!function.IsLambda)
             {
                 // 6e-M22 C5：非 lambda 函数 = 环境宿主（其体内 lambda 的捕获变量由该环境对象承载）
@@ -894,7 +894,7 @@ namespace Cocoa.CodeAnalysis.Binder
         /// Monomorphizer 专用：以实例化方法为容器重绑泛型定义语法。
         /// 与 BuildFunctionBody 同管道，另注入类型参数名→实参映射（T→int 等）。
         /// </summary>
-        internal static (BoundBlockStatement Body, ImmutableArray<Diagnostic> Diagnostics) BuildFunctionBodyForMonomorphization(bool isScript, BoundScope parentScope, FunctionSymbol function, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> codLibraries, Dictionary<string, TypeSymbol> typeArgumentsByName)
+        internal static (BoundBlockStatement Body, ImmutableArray<Diagnostic> Diagnostics) BuildFunctionBodyForMonomorphization(bool isScript, BoundScope parentScope, FunctionSymbol function, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> coaLibraries, Dictionary<string, TypeSymbol> typeArgumentsByName)
         {
             var bodySyntax = ((FunctionDeclarationSyntax?)function.Declaration)?.Body;
             var bodyLocation = (CoreSyntax.SyntaxNode?)((FunctionDeclarationSyntax?)function.Declaration)?.Identifier ?? function.Syntax;
@@ -905,7 +905,7 @@ namespace Cocoa.CodeAnalysis.Binder
                 bodyLocation = (CoreSyntax.SyntaxNode?)ctorSyntax.ConstructorKeyword ?? ctorSyntax.OpenParenthesisToken;
             }
 
-            var binder = new CocoaBinder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces, BuiltinTypes.Lookup, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries, operators: globalScope.Operators);
+            var binder = new CocoaBinder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces, BuiltinTypes.Lookup, globalScope.UsingStatics, globalScope.UsingAliases, coaLibraries, operators: globalScope.Operators);
             if (!function.IsLambda)
             {
                 // 6e-M22 C5：非 lambda 函数 = 环境宿主（其体内 lambda 的捕获变量由该环境对象承载）

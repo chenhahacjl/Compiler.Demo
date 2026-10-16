@@ -1879,7 +1879,7 @@ namespace Cocoa.CodeAnalysis.Binder
                 return viaLookup;
             }
 
-            foreach (var library in _codLibraries)
+            foreach (var library in _coaLibraries)
             {
                 foreach (var candidate in library.Classes)
                 {

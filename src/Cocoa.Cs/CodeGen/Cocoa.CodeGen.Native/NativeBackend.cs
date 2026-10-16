@@ -94,7 +94,7 @@ namespace Cocoa.CodeGen.Native
                 }
             }
 
-            var backendDiagnostics = compilation.ValidateCodBackendRequirements(isNative: true);
+            var backendDiagnostics = compilation.ValidateCoaBackendRequirements(isNative: true);
             if (backendDiagnostics.Length > 0)
             {
                 diagnostics = backendDiagnostics;

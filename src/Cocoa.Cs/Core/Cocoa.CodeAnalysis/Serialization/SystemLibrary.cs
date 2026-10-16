@@ -13,7 +13,7 @@ namespace Cocoa.CodeAnalysis.Serialization
     /// 向后兼容）或目录（枚举 `System*.coa`）；缺省时先从 exe 目录向上探测仓库中央库仓
     /// `libs/`（开发期 bins 副本缺失/过旧时的兜底，见 <see cref="FindLibsStore"/>），
     /// 未命中回落 `AppContext.BaseDirectory`。缺文件降级（stdlib 不可用但不崩，绑定走空表）。
-    /// 编译器内建嵌入，与用户 `-r` 引用的 `.coa` 库（_codLibraries）独立。
+    /// 编译器内建嵌入，与用户 `-r` 引用的 `.coa` 库（_coaLibraries）独立。
     ///
     /// 多程序集模型（仿 .NET 共享框架）：核心实现集中单一 `System.Core.coa`（Object/String/Math/
     /// Console 等，对应 C# System.Private.CoreLib）；未来大功能模块（System.Net.coa / System.Json.coa，

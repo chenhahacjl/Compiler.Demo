@@ -26,7 +26,7 @@ namespace Cocoa.Tests.Compiler
                 platforms: default,
                 dotnetReferences: default,
                 nativeImports: default,
-                codReferences: codReferences.ToImmutableArray(),
+                coaReferences: codReferences.ToImmutableArray(),
                 namespaces: default);
             program.Name = name;
             return program;

@@ -11,11 +11,11 @@ namespace Cocoa.CodeAnalysis
     /// <summary>
     /// 程序集与 `.coa` 库引用管理的静态部分（自 Compilation.AssemblyReferenceManager 拆出独立类）：
     /// 库加载/拓扑序/歧义检测 + `.coa` 序列化门禁判据。实例态（SourceAssembly/ReferencedAssemblies/
-    /// ValidateCodBackendRequirements）仍留在 Compilation。
+    /// ValidateCoaBackendRequirements）仍留在 Compilation。
     /// </summary>
     public static class AssemblyReferenceManager
     {
-        public static (ImmutableArray<CoaProgram> Libraries, ImmutableArray<string> AmbiguousTypeNames) LoadCodLibraries(string[]? references)
+        public static (ImmutableArray<CoaProgram> Libraries, ImmutableArray<string> AmbiguousTypeNames) LoadCoaLibraries(string[]? references)
         {
             var builder = ImmutableArray.CreateBuilder<CoaProgram>();
 
@@ -46,7 +46,7 @@ namespace Cocoa.CodeAnalysis
         /// <summary>
         /// 6e-Step E（同名歧义）：跨库同名类型检测——两个及以上「已被引用」的用户 `.coa` 公开同一全名类型
         /// （类/枚举/泛型定义）时，装载不再抛错（6f-3 别名消歧可行），改为登记歧义全名集：
-        /// 消费方「非限定使用」经 InjectCodSymbols 拒绝注入 → 绑定期诊断；`using X = 库名.全名` 走库限定解析。
+        /// 消费方「非限定使用」经 InjectCoaSymbols 拒绝注入 → 绑定期诊断；`using X = 库名.全名` 走库限定解析。
         /// </summary>
         public static (ImmutableArray<CoaProgram> Libraries, ImmutableArray<string> AmbiguousTypeNames) DetectAmbiguousTypes(ImmutableArray<CoaProgram> libraries)
         {
@@ -96,7 +96,7 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>
-        /// 6e-Step E：`.coa` 库引用拓扑序（Kahn）——按各自 `CodReferences`（refcod 清单）构造依赖图，
+        /// 6e-Step E：`.coa` 库引用拓扑序（Kahn）——按各自 `CoaReferences`（refcod 清单）构造依赖图，
         /// 被依赖库先行（读侧 external 按序合并，首次命中实例复用）。环检测报错；未加载依赖计为无约束（宽松）。
         /// 排序稳定：同层保持原相对顺序。
         /// </summary>
@@ -123,7 +123,7 @@ namespace Cocoa.CodeAnalysis
 
             for (var i = 0; i < libraries.Length; i++)
             {
-                foreach (var reference in libraries[i].CodReferences)
+                foreach (var reference in libraries[i].CoaReferences)
                 {
                     if (!byName.TryGetValue(NormalizeReference(reference), out var dependency))
                     {
@@ -225,7 +225,7 @@ namespace Cocoa.CodeAnalysis
         /// 无实例字段/实例构造/属性/显式基类/实例方法。等价"编译期透明的互操作分组"，
         /// 不涉对象模型。
         /// </summary>
-        public static bool IsCodSerializableClass(NamedTypeSymbol classType)
+        public static bool IsCoaSerializableClass(NamedTypeSymbol classType)
         {
             // 6e-Step D-a：闭包环境类（Binder 合成 __Env_*，捕获成员为实例字段）随库携带——
             // 含实例字段/隐式构造，但其本体的捕获字段列与 lambda 方法（归 fn）序列化路径已具备。
@@ -251,7 +251,7 @@ namespace Cocoa.CodeAnalysis
             // base 限制 System.Object（无多继承依赖），6e-M33 放宽为「base 亦同库可序列化」（Handle 族 FileHandle extends Handle），
             // 仍需真实实例语义（否则落入纯容器判定，杜绝容器默认构造器泄漏）。
             if (!classType.IsInterface &&
-                (classType.BaseType == null || classType.BaseType.IsSystemObjectRoot || IsCodSerializableClass(classType.BaseType)) &&
+                (classType.BaseType == null || classType.BaseType.IsSystemObjectRoot || IsCoaSerializableClass(classType.BaseType)) &&
                 (classType.Fields.Any(f => !f.IsStatic) ||
                  classType.Events.Length > 0 ||
                  classType.Methods.Any(m => !m.IsStatic && !m.IsConstructor)))

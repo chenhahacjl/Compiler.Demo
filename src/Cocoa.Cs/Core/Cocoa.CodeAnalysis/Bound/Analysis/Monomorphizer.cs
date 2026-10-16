@@ -46,16 +46,16 @@ namespace Cocoa.CodeAnalysis.Bound
             BoundGlobalScope globalScope,
             BoundScope parentScope,
             bool isScript,
-            ImmutableArray<CoaProgram> codLibraries,
+            ImmutableArray<CoaProgram> coaLibraries,
             ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Builder functionBodies,
             ImmutableArray<Diagnostic>.Builder diagnostics)
         {
             // 1. 活实例化种子：语法扫描泛型类型子句 + new/调用站点的显式实参
-            var helperBinder = new CocoaBinder(isScript, parentScope, null, globalScope.References, globalScope.UsingNamespaces, BuiltinTypes.Lookup, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries);
+            var helperBinder = new CocoaBinder(isScript, parentScope, null, globalScope.References, globalScope.UsingNamespaces, BuiltinTypes.Lookup, globalScope.UsingStatics, globalScope.UsingAliases, coaLibraries);
             // 6e 跨库里程碑：源码泛型定义先注册（同名占位，cod 后注册静默跳过）——保证源内联集合类
             // 优先于 System.Collections.coa 同名 gcls。
             helperBinder.RegisterSourceGenericDefinitionsForSeed(globalScope);
-            helperBinder.RegisterCodGenericDefinitionsForSeed(codLibraries);
+            helperBinder.RegisterCoaGenericDefinitionsForSeed(coaLibraries);
             var seeded = new HashSet<InstantiatedTypeSymbol>();
             var methodSeeds = new List<(FunctionSymbol Instantiated, FunctionSymbol Definition, ImmutableArray<TypeSymbol> Arguments)>();
             var seenMethods = new HashSet<FunctionSymbol>();
@@ -129,7 +129,7 @@ namespace Cocoa.CodeAnalysis.Bound
                     }
 
                     var (methodBody, methodBodyDiagnostics) = CocoaBinder.BuildFunctionBodyForMonomorphization(
-                        isScript, parentScope, instantiatedMethod, globalScope, codLibraries, typeArgumentsByName);
+                        isScript, parentScope, instantiatedMethod, globalScope, coaLibraries, typeArgumentsByName);
 
                     functionBodies[instantiatedMethod] = methodBody;
                     diagnostics.AddRange(methodBodyDiagnostics);
@@ -210,7 +210,7 @@ namespace Cocoa.CodeAnalysis.Bound
                     if (definition.Declaration == null)
                     {
                         BoundBlockStatement? openBody = null;
-                        foreach (var library in codLibraries)
+                        foreach (var library in coaLibraries)
                         {
                             if (library.Bodies.TryGetValue(definitionMethod, out var candidate))
                             {
@@ -230,7 +230,7 @@ namespace Cocoa.CodeAnalysis.Bound
                     }
 
                     var (body, bodyDiagnostics) = CocoaBinder.BuildFunctionBodyForMonomorphization(
-                        isScript, parentScope, instantiatedMethod, globalScope, codLibraries, typeArgumentsByName);
+                        isScript, parentScope, instantiatedMethod, globalScope, coaLibraries, typeArgumentsByName);
 
                     functionBodies[instantiatedMethod] = body;
                     diagnostics.AddRange(bodyDiagnostics);
@@ -247,16 +247,16 @@ namespace Cocoa.CodeAnalysis.Bound
                     {
                         // 6e 跨库里程碑：cod 库属性访问器（getter 无 Declaration/Syntax）→ 与 177-194 同款捷径：
                         // 用库携带的开放绑定体做替换展开，避免 BuildFunctionBodyForMonomorphization 在 null 语法上 NRE。
-                        if (TrySubstituteCodAccessor(definitionProperty.Getter, definition, instantiated, instantiatedProperty.Getter, codLibraries, out var codGetterBody))
+                        if (TrySubstituteCoaAccessor(definitionProperty.Getter, definition, instantiated, instantiatedProperty.Getter, coaLibraries, out var coaGetterBody))
                         {
                             // S-7：库体为 raw —— 替换展开后 Lower 为 MIR
                             functionBodies[instantiatedProperty.Getter] =
-                                Lowerer.Lower(instantiatedProperty.Getter, codGetterBody);
+                                Lowerer.Lower(instantiatedProperty.Getter, coaGetterBody);
                         }
                         else
                         {
                             var (getterBody, getterDiagnostics) = CocoaBinder.BuildFunctionBodyForMonomorphization(
-                                isScript, parentScope, instantiatedProperty.Getter, globalScope, codLibraries, typeArgumentsByName);
+                                isScript, parentScope, instantiatedProperty.Getter, globalScope, coaLibraries, typeArgumentsByName);
                             functionBodies[instantiatedProperty.Getter] = getterBody;
                             diagnostics.AddRange(getterDiagnostics);
                         }
@@ -266,16 +266,16 @@ namespace Cocoa.CodeAnalysis.Bound
                         !instantiatedProperty.Setter.IsExtern && !instantiatedProperty.Setter.IsAbstract)
                     {
                         // 同上：cod 库 setter 开放体替换捷径
-                        if (TrySubstituteCodAccessor(definitionProperty.Setter, definition, instantiated, instantiatedProperty.Setter, codLibraries, out var codSetterBody))
+                        if (TrySubstituteCoaAccessor(definitionProperty.Setter, definition, instantiated, instantiatedProperty.Setter, coaLibraries, out var coaSetterBody))
                         {
                             // S-7：库体为 raw —— 替换展开后 Lower 为 MIR
                             functionBodies[instantiatedProperty.Setter] =
-                                Lowerer.Lower(instantiatedProperty.Setter, codSetterBody);
+                                Lowerer.Lower(instantiatedProperty.Setter, coaSetterBody);
                         }
                         else
                         {
                             var (setterBody, setterDiagnostics) = CocoaBinder.BuildFunctionBodyForMonomorphization(
-                                isScript, parentScope, instantiatedProperty.Setter, globalScope, codLibraries, typeArgumentsByName);
+                                isScript, parentScope, instantiatedProperty.Setter, globalScope, coaLibraries, typeArgumentsByName);
                             functionBodies[instantiatedProperty.Setter] = setterBody;
                             diagnostics.AddRange(setterDiagnostics);
                         }
@@ -298,12 +298,12 @@ namespace Cocoa.CodeAnalysis.Bound
         /// 从库携带的 Bodies 取定义访问器开放体，经 BoundTreeSubstituter 替换为实例化访问器体。
         /// 与 176-194 方法分支同款逻辑；cod 来源定义走捷径避免 BuildFunctionBodyForMonomorphization NRE。
         /// </summary>
-        private static bool TrySubstituteCodAccessor(
+        private static bool TrySubstituteCoaAccessor(
             FunctionSymbol definitionAccessor,
             NamedTypeSymbol definition,
             InstantiatedTypeSymbol instantiated,
             FunctionSymbol instantiatedAccessor,
-            ImmutableArray<CoaProgram> codLibraries,
+            ImmutableArray<CoaProgram> coaLibraries,
             out BoundBlockStatement body)
         {
             body = null!;
@@ -314,7 +314,7 @@ namespace Cocoa.CodeAnalysis.Bound
                 return false;
             }
 
-            foreach (var library in codLibraries)
+            foreach (var library in coaLibraries)
             {
                 if (library.Bodies.TryGetValue(definitionAccessor, out var openBody))
                 {

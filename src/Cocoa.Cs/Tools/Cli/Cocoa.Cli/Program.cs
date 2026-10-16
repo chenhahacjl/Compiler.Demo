@@ -389,7 +389,7 @@ namespace Cocoa.Cli
                     outputDir = ".";
                 }
 
-                if (!EnsureManagedDlls(compilation.CodLibraries, outputDir, effectiveTarget, nowarnCodes))
+                if (!EnsureManagedDlls(compilation.CoaLibraries, outputDir, effectiveTarget, nowarnCodes))
                 {
                     return 1;
                 }
@@ -426,8 +426,8 @@ namespace Cocoa.Cli
 
                 var managedDll = Path.Combine(outputDirectory, library.Name + ".dll");
                 var stampPath = managedDll + ".stamp";
-                var codHash = System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(library.SourcePath));
-                var hashText = Convert.ToHexString(codHash).ToLowerInvariant();
+                var coaHash = System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(library.SourcePath));
+                var hashText = Convert.ToHexString(coaHash).ToLowerInvariant();
                 var stamped = File.Exists(stampPath) ? File.ReadAllText(stampPath).Trim() : "";
 
                 if (File.Exists(managedDll) && stamped == hashText)

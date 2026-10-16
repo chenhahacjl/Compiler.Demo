@@ -157,7 +157,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                 containingClass != null && !fn.IsStatic &&
                 !SystemObjectMembers.IsBuiltinSystemClass(containingClass) &&
                 !containingClass.IsGenericDefinition &&
-                !IsPlainInstanceCodClass(containingClass))
+                !IsPlainInstanceCoaClass(containingClass))
             {
                 return;
             }
@@ -212,7 +212,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
         // 6e-Step D-b：普通实例类（base=Object 无属性）实例方法/构造随库携带——事件类触发/订阅体依赖。
         // 收紧：需真实实例语义（实例字段/非构造实例方法/事件），杜绝纯静态容器类的隐式默认构造器泄漏进库。
         // 6e-M33：base 放宽为「同库普通实例类」（Handle 族 FileHandle extends Handle 继承链），递归判定终止于 Object。
-        private static bool IsPlainInstanceCodClass(NamedTypeSymbol classType)
+        private static bool IsPlainInstanceCoaClass(NamedTypeSymbol classType)
         {
             if (classType == null || classType.TypeKind == TypeKind.Interface)
             {
@@ -220,7 +220,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
             }
 
             if (classType.BaseType != null && !classType.BaseType.IsSystemObjectRoot &&
-                !IsPlainInstanceCodClass(classType.BaseType))
+                !IsPlainInstanceCoaClass(classType.BaseType))
             {
                 return false;
             }

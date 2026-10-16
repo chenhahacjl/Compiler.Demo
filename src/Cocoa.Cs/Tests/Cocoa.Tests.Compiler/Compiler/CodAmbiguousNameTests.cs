@@ -56,7 +56,7 @@ namespace Shared
             // 6f-3：装载不再抛错，歧义全名登记到编译
             var compilation = Compilation.Create(new[] { lib1, lib2 },
                 SyntaxTree.Parse("function Main(): i32 { return 0 }"));
-            Assert.Contains("Shared.Conflict", compilation.AmbiguousCodTypeNames);
+            Assert.Contains("Shared.Conflict", compilation.AmbiguousCoaTypeNames);
 
             // 非限定使用（`using Shared` + `Conflict`）→ 绑定期诊断，不再静默 first-wins
             var usingCompilation = Compilation.Create(new[] { lib1, lib2 }, SyntaxTree.Parse(@"
@@ -80,7 +80,7 @@ function Main(): i32
             var lib1 = WriteLib(dir, "LibOne", "1");
             var lib2 = WriteLib(dir, "LibTwo", "2");
 
-            var compilation = Compilation.Create(new[] { lib1, lib2 }, linkCodDynamically: true,
+            var compilation = Compilation.Create(new[] { lib1, lib2 }, linkCoaDynamically: true,
                 SyntaxTree.Parse(@"
 using C = LibOne.Shared.Conflict
 function Main(): i32
@@ -104,8 +104,8 @@ function Main(): i32
             var dir = NewDir();
             var lib1 = WriteLib(dir, "LibOne", "1");
 
-            // 真用途：动态链接消费（linkCodDynamically）——实例化库类、调用实例方法并产出可执行 dll 引用
-            var compilation = Compilation.Create(new[] { lib1 }, linkCodDynamically: true,
+            // 真用途：动态链接消费（linkCoaDynamically）——实例化库类、调用实例方法并产出可执行 dll 引用
+            var compilation = Compilation.Create(new[] { lib1 }, linkCoaDynamically: true,
                 SyntaxTree.Parse(@"
 using Shared
 function Main(): i32

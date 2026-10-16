@@ -152,7 +152,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                 _output.Field(CoaText.Str(d));
                 _output.End();
             }
-            foreach (var c in program.CodReferences.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+            foreach (var c in program.CoaReferences.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
             {
                 _output.Open("refcoa");
                 _output.Field(CoaText.Str(c));

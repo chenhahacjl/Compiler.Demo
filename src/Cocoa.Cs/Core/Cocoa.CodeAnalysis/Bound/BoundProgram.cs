@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Bound
 {
     public sealed class BoundProgram
     {
-        public BoundProgram(BoundProgram? previous, ImmutableArray<Diagnostic> diagnostics, FunctionSymbol? mainFunction, FunctionSymbol? scriptFunction, ImmutableDictionary<FunctionSymbol, BoundBlockStatement> functions, ImmutableArray<NamedTypeSymbol> classes, ImmutableDictionary<object, string>? codAssemblies = null, ImmutableArray<NamedTypeSymbol>? genericDefinitions = null, ImmutableDictionary<FunctionSymbol, BoundBlockStatement>? genericOpenBodies = null, ImmutableDictionary<FunctionSymbol, BoundBlockStatement>? rawFunctions = null)
+        public BoundProgram(BoundProgram? previous, ImmutableArray<Diagnostic> diagnostics, FunctionSymbol? mainFunction, FunctionSymbol? scriptFunction, ImmutableDictionary<FunctionSymbol, BoundBlockStatement> functions, ImmutableArray<NamedTypeSymbol> classes, ImmutableDictionary<object, string>? coaAssemblies = null, ImmutableArray<NamedTypeSymbol>? genericDefinitions = null, ImmutableDictionary<FunctionSymbol, BoundBlockStatement>? genericOpenBodies = null, ImmutableDictionary<FunctionSymbol, BoundBlockStatement>? rawFunctions = null)
         {
             Previous = previous;
             Diagnostics = diagnostics;
@@ -13,7 +13,7 @@ namespace Cocoa.CodeAnalysis.Bound
             ScriptFunction = scriptFunction;
             Functions = functions;
             Classes = classes;
-            CodAssemblies = codAssemblies ?? ImmutableDictionary<object, string>.Empty;
+            CoaAssemblies = coaAssemblies ?? ImmutableDictionary<object, string>.Empty;
             GenericDefinitions = genericDefinitions ?? ImmutableArray<NamedTypeSymbol>.Empty;
             GenericOpenBodies = genericOpenBodies ?? ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Empty;
             RawFunctions = rawFunctions ?? ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Empty;
@@ -31,7 +31,7 @@ namespace Cocoa.CodeAnalysis.Bound
         /// 非空时 IlEmitter 对这些符号合成 AssemblyRef/TypeRef/MemberRef 指向同名 dll，
         /// 而非内联实现；键为 NamedTypeSymbol / FunctionSymbol（extern 与 builtin 单例不入表）。
         /// </summary>
-        public ImmutableDictionary<object, string> CodAssemblies { get; }
+        public ImmutableDictionary<object, string> CoaAssemblies { get; }
 
         /// <summary>
         /// 泛型定义类（6e-G7 S1）：模板壳，IL/native 发射清单排除；仅 EmitCocoa 序列化为 gcls 条目。

@@ -26,11 +26,11 @@ namespace Cocoa.CodeGen.Managed
         private readonly string _moduleName;
 
         // 动态链接（阶段 A3）：cod 来源符号 → 库程序集名；据此合成 AssemblyRef/TypeRef/MemberRef 指向各库 dll
-        private readonly ImmutableDictionary<object, string> _codAssemblies;
-        private readonly Dictionary<string, IlAssemblyRef> _codAssemblyRefs = new Dictionary<string, IlAssemblyRef>();
+        private readonly ImmutableDictionary<object, string> _coaAssemblies;
+        private readonly Dictionary<string, IlAssemblyRef> _coaAssemblyRefs = new Dictionary<string, IlAssemblyRef>();
 
         /// <summary>cod 顶层函数重载组（同库内同 (ns,name) 的函数 >1）：方法名追加参数类型后缀，与库侧发射规则一致。</summary>
-        private readonly HashSet<(string asm, string ns, string name)> _codOverloadedGroups = new();
+        private readonly HashSet<(string asm, string ns, string name)> _coaOverloadedGroups = new();
         private readonly Dictionary<FunctionSymbol, IlMethodDef> _methods = new Dictionary<FunctionSymbol, IlMethodDef>();
 
         /// <summary>4.1：当前方法体发射状态（局部槽/标签/异常保护区/return 出口/闭包局部），经转发访问。</summary>
@@ -89,12 +89,12 @@ namespace Cocoa.CodeGen.Managed
         private static bool IsClosureEnvironmentClass(NamedTypeSymbol classType)
             => Cocoa.CodeAnalysis.Contracts.ClosureContract.IsEnvironmentClass(classType);
 
-        private IlEmitter(string moduleName, string[] references, ImmutableDictionary<object, string>? codAssemblies = null, Cocoa.CodeAnalysis.PeVersionInfo? versionInfo = null, Cocoa.CodeAnalysis.PeResourceOptions? resourceOptions = null)
+        private IlEmitter(string moduleName, string[] references, ImmutableDictionary<object, string>? coaAssemblies = null, Cocoa.CodeAnalysis.PeVersionInfo? versionInfo = null, Cocoa.CodeAnalysis.PeResourceOptions? resourceOptions = null)
         {
             _moduleName = moduleName;
-            _codAssemblies = codAssemblies ?? ImmutableDictionary<object, string>.Empty;
+            _coaAssemblies = coaAssemblies ?? ImmutableDictionary<object, string>.Empty;
             _resourceOptions = resourceOptions;
-            BuildCodOverloadGroups();
+            BuildCoaOverloadGroups();
             _metadata = new MetadataBuilder(moduleName, moduleName, versionInfo);
             _framework = new IlFramework(_metadata, references);
             _delegateShapes = new DelegateShapeCache(_metadata, _framework);
@@ -121,22 +121,22 @@ namespace Cocoa.CodeGen.Managed
 
         public static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath, IlTarget target, bool emitLibrary)
         {
-            return Emit(program, moduleName, references, outputPath, target, emitLibrary, program.CodAssemblies);
+            return Emit(program, moduleName, references, outputPath, target, emitLibrary, program.CoaAssemblies);
         }
 
-        public static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath, IlTarget target, bool emitLibrary, ImmutableDictionary<object, string>? codAssemblies, bool publishPublicSurface = false)
+        public static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath, IlTarget target, bool emitLibrary, ImmutableDictionary<object, string>? coaAssemblies, bool publishPublicSurface = false)
         {
-            return Emit(program, moduleName, references, outputPath, target, emitLibrary, codAssemblies, versionInfo: null, resourceOptions: null, publishPublicSurface);
+            return Emit(program, moduleName, references, outputPath, target, emitLibrary, coaAssemblies, versionInfo: null, resourceOptions: null, publishPublicSurface);
         }
 
-        internal static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath, IlTarget target, bool emitLibrary, ImmutableDictionary<object, string>? codAssemblies, Cocoa.CodeAnalysis.PeVersionInfo? versionInfo, Cocoa.CodeAnalysis.PeResourceOptions? resourceOptions, bool publishPublicSurface = false)
+        internal static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath, IlTarget target, bool emitLibrary, ImmutableDictionary<object, string>? coaAssemblies, Cocoa.CodeAnalysis.PeVersionInfo? versionInfo, Cocoa.CodeAnalysis.PeResourceOptions? resourceOptions, bool publishPublicSurface = false)
         {
             if (program.Diagnostics.HasErrors())
             {
                 return program.Diagnostics;
             }
 
-            var emitter = new IlEmitter(moduleName, references, codAssemblies, versionInfo, resourceOptions);
+            var emitter = new IlEmitter(moduleName, references, coaAssemblies, versionInfo, resourceOptions);
 
             return emitter.Emit(program, outputPath, target, emitLibrary, publishPublicSurface);
         }
@@ -1273,27 +1273,27 @@ namespace Cocoa.CodeGen.Managed
                 }
 
                 // 动态链接：cod 容器类 → 指向其库 dll 的 TypeRef
-                if (_codAssemblies.TryGetValue(classType, out var codAssembly))
+                if (_coaAssemblies.TryGetValue(classType, out var coaAssembly))
                 {
-                    return IlType.Class(CodClassRef(classType, codAssembly));
+                    return IlType.Class(CoaClassRef(classType, coaAssembly));
                 }
 
                 // 6f-1 库类兜底：溯源表按 identity 索引，消费侧绑定可能经重建符号持有不同实例，
                 // 依全名唯一性补一次匹配（与 6e-M23 泛型 owner 反解同系）。
-                if (codAssembly == null)
+                if (coaAssembly == null)
                 {
-                    foreach (var entry in _codAssemblies)
+                    foreach (var entry in _coaAssemblies)
                     {
                         if (entry.Key is NamedTypeSymbol named && named.FullName == classType.FullName)
                         {
-                            codAssembly = entry.Value;
+                            coaAssembly = entry.Value;
                             break;
                         }
                     }
 
-                    if (codAssembly != null)
+                    if (coaAssembly != null)
                     {
-                        return IlType.Class(CodClassRef(classType, codAssembly));
+                        return IlType.Class(CoaClassRef(classType, coaAssembly));
                     }
                 }
 
@@ -1357,18 +1357,18 @@ namespace Cocoa.CodeGen.Managed
             return type.Name.Replace("[", "_").Replace("]", "_");
         }
 
-        private readonly Dictionary<(string asm, string ns, string name), IlTypeRef> _codTypeRefs = new Dictionary<(string asm, string ns, string name), IlTypeRef>();
+        private readonly Dictionary<(string asm, string ns, string name), IlTypeRef> _coaTypeRefs = new Dictionary<(string asm, string ns, string name), IlTypeRef>();
 
         /// <summary>复制库侧顶层函数重载分组规则（同 (asm, ns, name) 计数 >1 即成组）。</summary>
-        private void BuildCodOverloadGroups()
+        private void BuildCoaOverloadGroups()
         {
-            if (_codAssemblies.IsEmpty)
+            if (_coaAssemblies.IsEmpty)
             {
                 return;
             }
 
             var counts = new Dictionary<(string asm, string ns, string name), int>();
-            foreach (var pair in _codAssemblies)
+            foreach (var pair in _coaAssemblies)
             {
                 if (pair.Key is FunctionSymbol fn && fn.ContainingClass == null && !fn.IsConstructor)
                 {
@@ -1381,41 +1381,41 @@ namespace Cocoa.CodeGen.Managed
             {
                 if (group.Value > 1)
                 {
-                    _codOverloadedGroups.Add(group.Key);
+                    _coaOverloadedGroups.Add(group.Key);
                 }
             }
         }
 
-        private IlAssemblyRef CodAssemblyRef(string assemblyName)
+        private IlAssemblyRef CoaAssemblyRef(string assemblyName)
         {
-            if (!_codAssemblyRefs.TryGetValue(assemblyName, out var reference))
+            if (!_coaAssemblyRefs.TryGetValue(assemblyName, out var reference))
             {
                 reference = _metadata.DefineAssemblyRef(assemblyName, new Version(0, 0, 0, 0), Array.Empty<byte>(), null, flags: 0);
-                _codAssemblyRefs[assemblyName] = reference;
+                _coaAssemblyRefs[assemblyName] = reference;
             }
 
             return reference;
         }
 
         /// <summary>库侧顶层函数容器 TypeRef（名字含尖括号，非法标识符故不与用户类型冲突）。</summary>
-        private IlTypeRef CodTopLevelTypeRef(string assemblyName)
+        private IlTypeRef CoaTopLevelTypeRef(string assemblyName)
         {
-            return CodTypeRef(assemblyName, "", "<CocoaTopLevel>");
+            return CoaTypeRef(assemblyName, "", "<CocoaTopLevel>");
         }
 
-        private IlTypeRef CodClassRef(NamedTypeSymbol classType, string assemblyName)
+        private IlTypeRef CoaClassRef(NamedTypeSymbol classType, string assemblyName)
         {
             // 与库侧 TypeDef 命名同构：Namespace/Name 原样拆分
-            return CodTypeRef(assemblyName, classType.Namespace, classType.Name);
+            return CoaTypeRef(assemblyName, classType.Namespace, classType.Name);
         }
 
-        private IlTypeRef CodTypeRef(string assemblyName, string namespaceName, string name)
+        private IlTypeRef CoaTypeRef(string assemblyName, string namespaceName, string name)
         {
             var key = (assemblyName, namespaceName, name);
-            if (!_codTypeRefs.TryGetValue(key, out var reference))
+            if (!_coaTypeRefs.TryGetValue(key, out var reference))
             {
-                reference = _metadata.DefineTypeRef(CodAssemblyRef(assemblyName), namespaceName, name);
-                _codTypeRefs[key] = reference;
+                reference = _metadata.DefineTypeRef(CoaAssemblyRef(assemblyName), namespaceName, name);
+                _coaTypeRefs[key] = reference;
             }
 
             return reference;
@@ -1425,24 +1425,24 @@ namespace Cocoa.CodeGen.Managed
         /// cod 函数的 MemberRef 合成：类方法挂宿主类 TypeRef（方法名 EmitName 原样）；顶层函数挂
         /// &lt;CocoaTopLevel&gt; TypeRef（EmitName 全名 + 重载后缀，规则与库侧发射一致）。
         /// </summary>
-        private IlMethodRef CodMethodRef(FunctionSymbol function, string assemblyName)
+        private IlMethodRef CoaMethodRef(FunctionSymbol function, string assemblyName)
         {
             IlTypeRef declaringType;
             string methodName;
             if (function.ContainingClass != null)
             {
-                declaringType = CodClassRef(function.ContainingClass, assemblyName);
+                declaringType = CoaClassRef(function.ContainingClass, assemblyName);
                 methodName = function.IsConstructor
                     ? (function.IsStatic ? ".cctor" : ".ctor")
                     : function.EmitName;
             }
             else
             {
-                declaringType = CodTopLevelTypeRef(assemblyName);
+                declaringType = CoaTopLevelTypeRef(assemblyName);
                 methodName = function.IsConstructor
                     ? (function.IsStatic ? ".cctor" : ".ctor")
                     : function.EmitName;
-                if (_codOverloadedGroups.Contains((assemblyName, function.Namespace, function.Name)))
+                if (_coaOverloadedGroups.Contains((assemblyName, function.Namespace, function.Name)))
                 {
                     methodName += "$" + string.Join("$", function.Parameters.Select(p => EncodeTypeNameForMethodName(p.Type)));
                 }

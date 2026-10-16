@@ -54,7 +54,7 @@ namespace Cocoa.CodeGen.Managed
             return EmitManagedDllCore(cod, dllPath, target, builder.ToImmutable());
         }
 
-        private static ImmutableArray<Diagnostic> EmitManagedDllCore(CoaProgram cod, string dllPath, IlTarget target, ImmutableDictionary<object, string> codAssemblies)
+        private static ImmutableArray<Diagnostic> EmitManagedDllCore(CoaProgram cod, string dllPath, IlTarget target, ImmutableDictionary<object, string> coaAssemblies)
         {
             // 6e 跨库里程碑：gcls 开放方法（泛型定义/泛型方法，开放类型参数无法编码 IL）不进库发射——
             // 否则其 ContainingClass（泛型定义类）被当作普通类发射，遇 K/T 报 Unexpected type K。
@@ -93,12 +93,12 @@ namespace Cocoa.CodeGen.Managed
                 ?? new[] { typeof(object).Assembly.Location, typeof(Console).Assembly.Location };
 
             // 动态链接库：分发面即公共契约——internal 门面也发布为 public（消费方跨程序集调用必需）
-            return IlEmitter.Emit(program, moduleName, references, dllPath, target, emitLibrary: true, codAssemblies: codAssemblies, publishPublicSurface: true);
+            return IlEmitter.Emit(program, moduleName, references, dllPath, target, emitLibrary: true, coaAssemblies: coaAssemblies, publishPublicSurface: true);
         }
 
         /// <summary>
         /// 6f-2：外部库符号 → Managed dll 程序集名 溯源目录（动态链接 A3）。与 CocoaBinder 动态 provenance
-        /// 同构：A1 库发射时跨库调用（本库体调用 System.Core 等）需在 codAssemblies 命中才能输出
+        /// 同构：A1 库发射时跨库调用（本库体调用 System.Core 等）需在 coaAssemblies 命中才能输出
         /// `Call [X.Managed]member` 而非落到本地方法定义。用户库间依赖后续经 refcod 拓扑扩展。
         /// </summary>
         private static ImmutableDictionary<object, string> BuildExternalProvenance(ImmutableArray<CoaProgram> external)

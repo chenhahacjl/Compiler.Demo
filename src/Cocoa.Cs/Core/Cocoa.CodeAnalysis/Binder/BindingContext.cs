@@ -21,7 +21,7 @@ namespace Cocoa.CodeAnalysis.Binder
             ImmutableArray<string> usingNamespaces,
             ImmutableArray<string> usingStatics,
             ImmutableDictionary<string, string> usingAliases,
-            ImmutableArray<CoaProgram> codLibraries,
+            ImmutableArray<CoaProgram> coaLibraries,
             NamespaceSymbol? globalNamespace,
             OperatorRegistry operators,
             DiagnosticBag diagnostics)
@@ -40,8 +40,8 @@ namespace Cocoa.CodeAnalysis.Binder
                 UsingAliases = new Dictionary<string, string>(usingAliases);
             }
 
-            CodLibraries = codLibraries.IsDefault ? ImmutableArray<CoaProgram>.Empty : codLibraries;
-            AmbiguousCodTypeNames = CocoaBinder.ComputeAmbiguousCodTypeNames(CodLibraries);
+            CoaLibraries = coaLibraries.IsDefault ? ImmutableArray<CoaProgram>.Empty : coaLibraries;
+            AmbiguousCoaTypeNames = CocoaBinder.ComputeAmbiguousCoaTypeNames(CoaLibraries);
             GlobalNamespace = globalNamespace;
             Operators = operators;
             Diagnostics = diagnostics;
@@ -69,10 +69,10 @@ namespace Cocoa.CodeAnalysis.Binder
         public Dictionary<string, string> UsingAliases { get; } = new Dictionary<string, string>();
 
         /// <summary>cod 库集合（跨库符号解析）。</summary>
-        public ImmutableArray<CoaProgram> CodLibraries { get; }
+        public ImmutableArray<CoaProgram> CoaLibraries { get; }
 
         /// <summary>跨用户库同名类型全名集（非限定使用拒绝解析）。</summary>
-        public ImmutableHashSet<string> AmbiguousCodTypeNames { get; }
+        public ImmutableHashSet<string> AmbiguousCoaTypeNames { get; }
 
         /// <summary>全局命名空间树（声明阶段后可用；函数体绑定注入）。</summary>
         public NamespaceSymbol? GlobalNamespace { get; }
