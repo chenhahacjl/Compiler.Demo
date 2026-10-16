@@ -263,7 +263,7 @@ namespace MyLib
         [Fact]
         public void Cod_Read_Rejects_UnknownVersion()
         {
-            var source = "(cod COCOA 99)\n";
+            var source = "(coa COCOA 99)\n";
             var exception = Assert.Throws<InvalidDataException>(() => CoaSerializer.Read(source + ChecksumLine(source)));
             Assert.Contains("version 99", exception.Message);
             Assert.Contains("rebuild", exception.Message);
@@ -697,7 +697,7 @@ function Main(): i32
             var deep = Path.Combine(root, "x", "y", "bin");
             Directory.CreateDirectory(deep);
             Directory.CreateDirectory(Path.Combine(root, "libs"));
-            File.WriteAllText(Path.Combine(root, "libs", "System.Core.coa"), "(cod COCOA 1)");
+            File.WriteAllText(Path.Combine(root, "libs", "System.Core.coa"), "(coa COCOA 1)");
 
             var isolatedRoot = Path.Combine(Path.GetTempPath(), "cocoa-libs-probe", Guid.NewGuid().ToString("N"));
             var isolated = Path.Combine(isolatedRoot, "plain", "deeper");

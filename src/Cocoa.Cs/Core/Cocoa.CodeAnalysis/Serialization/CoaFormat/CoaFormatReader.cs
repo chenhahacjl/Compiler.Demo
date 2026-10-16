@@ -87,7 +87,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
 
         private CoaProgram ReadProgram()
         {
-            _tokens.Expect("cod");
+            _tokens.Expect("coa");
 
             var magic = _tokens.ExpectString();
             if (magic != CoaFormatWriter.Magic)
@@ -138,7 +138,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                                 case "refdll":
                                     dotnetRefs.Add(CoaText.Unescape(_tokens.ExpectString()));
                                     break;
-                                case "refcod":
+                                case "refcoa":
                                     codRefs.Add(CoaText.Unescape(_tokens.ExpectString()));
                                     break;
                                 case "import":

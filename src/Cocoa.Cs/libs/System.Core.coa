@@ -1,4 +1,4 @@
-(cod COCOA 1
+(coa COCOA 1
   (symbols
     (enum System.IO.FileMode bclTarget:System.IO.FileMode members:6
       (Append 6)
@@ -18261,4 +18261,4 @@
     (doc T:System.String <summary>Represents\sa\ssequence\sof\scharacters.\sProvides\sstring\smanipulation\smethods.</summary>)
   )
 )
-(checksum sha256:675cdf523b0d8a6e89c29b50c9733222ada6d58f28fd45e8f5fed5fccf95e87d)
+(checksum sha256:97f5148020d3682e71bef93307ffe05bf814dd5bcc855fa1b6684f0393822844)

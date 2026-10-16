@@ -1,8 +1,8 @@
 @echo off
-REM ¹¹½¨ Cocoa SDK£¨±ê×¼¿â£©£ºsrc\Cocoa.SDK\Cocoa.SDK.cosln£¨System.Core\*.co£©-> src\Cocoa.SDK\out\System.Core.coa
-REM £¨Ä¿Â¼·¢ÏÖ¼ÓÔØ£ºÎ´À´µÄ´óÄ£¿éÈç System.Net.coa/System.Json.coa
-REM  ÔÚ Cocoa.SDK.cosln Àï¼Ó×Ô¼ºµÄ .coproj ¼´¿É×Ô¶¯¹¹½¨£©
-REM ÓÃ·¨£ºtools\build-sdk.cmd
+REM ï¿½ï¿½ï¿½ï¿½ Cocoa SDKï¿½ï¿½ï¿½ï¿½×¼ï¿½â£©ï¿½ï¿½src\Cocoa.SDK\Cocoa.SDK.coslnï¿½ï¿½System.Core\*.coï¿½ï¿½-> src\Cocoa.SDK\out\System.Core.coa
+REM ï¿½ï¿½Ä¿Â¼ï¿½ï¿½ï¿½Ö¼ï¿½ï¿½Ø£ï¿½Î´ï¿½ï¿½ï¿½Ä´ï¿½Ä£ï¿½ï¿½ï¿½ï¿½ System.Net.coa/System.Json.coa
+REM  ï¿½ï¿½ Cocoa.SDK.cosln ï¿½ï¿½ï¿½ï¿½Ô¼ï¿½ï¿½ï¿½ .coproj ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+REM ï¿½Ã·ï¿½ï¿½ï¿½tools\build-sdk.cmd
 setlocal
 set "ROOT=%~dp0.."
 set "SDK=%ROOT%\src\Cocoa.SDK"
@@ -10,24 +10,24 @@ set "OUT=%SDK%\out"
 
 if not exist "%OUT%" mkdir "%OUT%"
 
-dotnet build "%ROOT%\src\Cocoa.Cs\Cli\Cocoa.Cli" --nologo || exit /b 1
-dotnet run --project "%ROOT%\src\Cocoa.Cs\Cli\Cocoa.Cli" --no-build -- build -p "%SDK%\Cocoa.SDK.cosln" --no-incremental || exit /b 1
+dotnet build "%ROOT%\src\Cocoa.Cs\Tools\Cli\Cocoa.Cli" --nologo || exit /b 1
+dotnet run --project "%ROOT%\src\Cocoa.Cs\Tools\Cli\Cocoa.Cli" --no-build -- build -p "%SDK%\Cocoa.SDK.cosln" --no-incremental || exit /b 1
 
-REM ÊÕ¼¯µ½ÖÐÑë¿â²Ö src\Cocoa.Cs\libs£¨Èë¿â£»Directory.Build.targets ¹¹½¨Ê±×Ô¶¯·Ö·¢µ½¸÷ bin£¬
-REM SystemLibrary ÏòÉÏÌ½²â¶µµ×¸²¸Ç¹¹½¨Ç°¿ÕÈ±£©
+REM ï¿½Õ¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ src\Cocoa.Cs\libsï¿½ï¿½ï¿½ï¿½â£»Directory.Build.targets ï¿½ï¿½ï¿½ï¿½Ê±ï¿½Ô¶ï¿½ï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½ binï¿½ï¿½
+REM SystemLibrary ï¿½ï¿½ï¿½ï¿½Ì½ï¿½â¶µï¿½×¸ï¿½ï¿½Ç¹ï¿½ï¿½ï¿½Ç°ï¿½ï¿½È±ï¿½ï¿½
 set "LIBS=%ROOT%\src\Cocoa.Cs\libs"
 if not exist "%LIBS%" mkdir "%LIBS%"
-REM ÊÕ¼¯ËùÓÐÄ£¿é£¨System.Core + System.Collections£»collections ×Ô 6b/M0-1c Æð¿ÉÐòÁÐ»¯£©
+REM ï¿½Õ¼ï¿½ï¿½ï¿½ï¿½ï¿½Ä£ï¿½é£¨System.Core + System.Collectionsï¿½ï¿½collections ï¿½ï¿½ 6b/M0-1c ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð»ï¿½ï¿½ï¿½
 copy /y "%OUT%\System.Core.coa" "%LIBS%\System.Core.coa" >nul
 if exist "%OUT%\System.Collections.coa" copy /y "%OUT%\System.Collections.coa" "%LIBS%\System.Collections.coa" >nul
 if exist "%OUT%\System.IO.coa" copy /y "%OUT%\System.IO.coa" "%LIBS%\System.IO.coa" >nul
 
-REM ÊÕ¼¯µ½ÖÐÑë¿â²Ö tools\cocoa-sdk£¨×îÐÂ¿ÉÔËÐÐ°æ SDK ¿ìÕÕ£©
+REM ï¿½Õ¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ tools\cocoa-sdkï¿½ï¿½ï¿½ï¿½ï¿½Â¿ï¿½ï¿½ï¿½ï¿½Ð°ï¿½ SDK ï¿½ï¿½ï¿½Õ£ï¿½
 set "SDKOUT=%ROOT%\tools\cocoa-sdk"
 if not exist "%SDKOUT%" mkdir "%SDKOUT%"
 copy /y "%OUT%\System.Core.coa" "%SDKOUT%\System.Core.coa" >nul
 if exist "%OUT%\System.Collections.coa" copy /y "%OUT%\System.Collections.coa" "%SDKOUT%\System.Collections.coa" >nul
 if exist "%OUT%\System.IO.coa" copy /y "%OUT%\System.IO.coa" "%SDKOUT%\System.IO.coa" >nul
 
-REM ÍÐ¹Ü dll ²»Ô¤¹¹½¨£ºÏû·Ñ·½°´Ðè´Ó coa ¶èÐÔÉú³É£¨ProjectBuilder.EnsureManagedDlls£©
+REM ï¿½Ð¹ï¿½ dll ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ coa ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É£ï¿½ProjectBuilder.EnsureManagedDllsï¿½ï¿½
 endlocal

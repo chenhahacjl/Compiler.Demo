@@ -86,7 +86,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
 
             var buffer = new StringWriter();
             _output = new CoaTextWriter(buffer);
-            _output.Open("cod");
+            _output.Open("coa");
             _output.Field(Magic);
             _output.Field(Version);
 
@@ -154,7 +154,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
             }
             foreach (var c in program.CodReferences.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
             {
-                _output.Open("refcod");
+                _output.Open("refcoa");
                 _output.Field(CoaText.Str(c));
                 _output.End();
             }
