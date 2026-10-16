@@ -255,11 +255,11 @@ namespace Cocoa.Build
             }
 
             if (overrides.AssemblyName != null) state.Set("AssemblyName", overrides.AssemblyName);
-            if (overrides.Output != null) state.Set("OutputType", overrides.Output.ToString());
+            if (overrides.Output is { } output) state.Set("OutputType", output.ToString());
             if (overrides.Platform != null) state.Set("Platform", overrides.Platform);
             if (overrides.TargetFramework != null) state.Set("TargetFramework", overrides.TargetFramework);
-            if (overrides.TargetOs != null) state.Set("TargetOS", overrides.TargetOs.ToString().ToLowerInvariant());
-            if (overrides.Configuration != null) state.Set("Configuration", overrides.Configuration.ToString());
+            if (overrides.TargetOs is { } targetOs) state.Set("TargetOS", targetOs.ToString().ToLowerInvariant());
+            if (overrides.Configuration is { } configuration) state.Set("Configuration", configuration.ToString());
             if (overrides.OutputPath != null) state.Set("OutputPath", overrides.OutputPath);
         }
 
