@@ -227,7 +227,7 @@ namespace Cocoa.Build
                         return new ProjectBuildResult(success: true, upToDate: false);
                     }
 
-                    if (!TryParseTargetPlatform(options.PlatformOverride, effectiveCpu.ToString(), out var platform, out var platformError))
+                    if (!TryParseTargetPlatform(project.TargetOs, options.PlatformOverride, effectiveCpu.ToString(), out var platform, out var platformError))
                     {
                         messageWriter.WriteLine($"error: {platformError}");
                         return ProjectBuildResult.Failed;
@@ -660,20 +660,22 @@ namespace Cocoa.Build
             return CodeBackend.ManagedNet;
         }
 
-        /// <summary>解析 native 目标平台：`x86`/`x64`。`AnyCPU`（默认或缺省）须显式 `--platform`。</summary>
-        private static bool TryParseTargetPlatform(string? overrideText, string projectPlatform, out TargetPlatform platform, out string? error)
+        /// <summary>解析 native 目标平台：`x86`/`x64`（TargetOS 取自项目）。`AnyCPU`（默认或缺省）须显式 `--platform`。</summary>
+        private static bool TryParseTargetPlatform(TargetOS os, string? overrideText, string projectPlatform, out TargetPlatform platform, out string? error)
         {
             var text = (overrideText ?? projectPlatform)?.Trim();
             switch (text?.ToLowerInvariant())
             {
                 case "x86":
-                    platform = new TargetPlatform(TargetOS.Windows, Architecture.X86);
-                    error = null;
-                    return true;
                 case "x64":
-                    platform = new TargetPlatform(TargetOS.Windows, Architecture.X64);
-                    error = null;
-                    return true;
+                    {
+                        var cpu = text.ToLowerInvariant() == "x86" ? Cpu.X86 : Cpu.X64;
+                        var triple = TargetTriple.Create(os, cpu);
+                        // native 消费仍走 TargetPlatform（OS + Architecture）；Abi 由 TargetTriple 承载（T1 落地后消费）
+                        platform = new TargetPlatform(os, cpu == Cpu.X86 ? Architecture.X86 : Architecture.X64);
+                        error = null;
+                        return true;
+                    }
                 case "anycpu":
                 case null:
                 case "":
