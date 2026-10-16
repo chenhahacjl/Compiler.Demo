@@ -403,13 +403,10 @@ namespace Cocoa.CodeGen.Native
         {
             var size = RegisterSize(instruction.Dst!);
             var ordinal = (int)instruction.A.Imm;
-            var source = ordinal switch
-            {
-                0 => X64Register.ECX,
-                1 => X64Register.EDX,
-                2 => _isX64 ? X64Register.R8 : X64Register.ESI,
-                _ => _isX64 ? X64Register.R9 : X64Register.EDI,
-            };
+            // T1：入口参数寄存器经 ABI 描述符（x64: rcx,rdx,r8,r9；x86: ecx,edx,esi,edi）
+            var source = ordinal < _abi.ArgumentRegisterCount
+                ? AbiToRegister(_abi.ArgumentRegisters[ordinal])
+                : X64Register.EAX;
             _a.Mov(ToSize(size), X64Register.EAX, source);
             StoreSlot(instruction.Dst!, X64Register.EAX);
         }
@@ -1316,27 +1313,11 @@ namespace Cocoa.CodeGen.Native
             var size = ToSize(RegisterSize(instruction.B.Register!));
             LoadSlot(X64Register.EAX, instruction.B.Register!, RegisterSize(instruction.B.Register!));
             var ordinal = (int)instruction.A.Imm;
-            switch (ordinal)
+            if (ordinal < _abi.ArgumentRegisterCount)
             {
-                case 0:
-                    _a.Mov(size, X64Register.RCX, X64Register.RAX);
-                    break;
-                case 1:
-                    _a.Mov(size, X64Register.RDX, X64Register.RAX);
-                    break;
-                case 2:
-                    _a.Mov(size, _isX64 ? X64Register.R8 : X64Register.ESI, X64Register.RAX);
-                    break;
-                case 3:
-                    if (_isX64)
-                    {
-                        _a.Mov(size, X64Register.R9, X64Register.RAX);
-                    }
-                    else
-                    {
-                        _a.Mov(size, X64Register.EDI, X64Register.RAX);
-                    }
-                    break;
+                // T1：参数寄存器序经 ABI 描述符（x64: rcx,rdx,r8,r9；x86: ecx,edx,esi,edi）
+                var dest = AbiToRegister(_abi.ArgumentRegisters[ordinal]);
+                _a.Mov(size, dest, X64Register.RAX);
             }
         }
 
@@ -1815,13 +1796,10 @@ namespace Cocoa.CodeGen.Native
                 for (var i = 0; i < Math.Min(argCount, 4) && i < _sysArgs.Count; i++)
                 {
                     LoadSlot(X64Register.EAX, _sysArgs[i], RegisterSize(_sysArgs[i]));
-                    var target = i switch
-                    {
-                        0 => X64Register.RCX,
-                        1 => X64Register.RDX,
-                        2 => X64Register.R8,
-                        _ => X64Register.R9,
-                    };
+                    // T1：SysCall 参数寄存器序经 ABI 描述符
+                    var target = i < _abi.ArgumentRegisterCount
+                        ? AbiToRegister(_abi.ArgumentRegisters[i])
+                        : X64Register.RAX;
                     _a.Mov(ToSize(RegisterSize(_sysArgs[i])), target, X64Register.RAX);
                 }
 

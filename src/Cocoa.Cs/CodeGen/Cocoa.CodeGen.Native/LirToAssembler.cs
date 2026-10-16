@@ -39,6 +39,7 @@ namespace Cocoa.CodeGen.Native
         private readonly LirProgram _program;
         private readonly int _entryLabel;
         private readonly TargetPlatform _platform;
+        private readonly IAbiDescriptor _abi;
         private readonly bool _isX64;
         private readonly int _slotSize;
         private readonly int _paramOffset;
@@ -77,14 +78,48 @@ namespace Cocoa.CodeGen.Native
             _program = program;
             _entryLabel = entryLabel;
             _platform = platform;
+            // T1：ABI 数据经描述符（WinX64/WinX86），消除对调用约定的硬编码；值照抄现行为，产物不变。
+            _abi = platform.Arch == Architecture.X64 ? (IAbiDescriptor)WinX64Abi.Instance : WinX86Abi.Instance;
             _isX64 = platform.Arch == Architecture.X64;
-            _slotSize = _isX64 ? 8 : 4;
-            _paramOffset = _isX64 ? 16 : 8;
-            _stackLimitOffset = _isX64 ? 0x10 : 0x08;
+            _slotSize = _abi.SlotSize;
+            _paramOffset = _abi.ParamOffset;
+            _stackLimitOffset = _abi.StackLimitOffset;
             _emitStub = emitStub;
         }
 
         private X64Size SlotSize => _slotSize == 8 ? X64Size.Qword : X64Size.Dword;
+
+        /// <summary>ABI 物理寄存器 → 具体 ISA 寄存器（x64 高位 / x86 低位）。</summary>
+        private X64Register AbiToRegister(AbiRegister reg, bool prefer32 = false)
+        {
+            var r = reg switch
+            {
+                AbiRegister.Rax => X64Register.RAX,
+                AbiRegister.Rcx => X64Register.RCX,
+                AbiRegister.Rdx => X64Register.RDX,
+                AbiRegister.R8 => X64Register.R8,
+                AbiRegister.R9 => X64Register.R9,
+                AbiRegister.Rdi => X64Register.RDI,
+                AbiRegister.Rsi => X64Register.RSI,
+                AbiRegister.Eax => X64Register.EAX,
+                AbiRegister.Ecx => X64Register.ECX,
+                AbiRegister.Edx => X64Register.EDX,
+                AbiRegister.Esi => X64Register.ESI,
+                AbiRegister.Edi => X64Register.EDI,
+                _ => X64Register.RAX,
+            };
+            return prefer32 ? To32(r) : r;
+        }
+
+        private static X64Register To32(X64Register reg) => reg switch
+        {
+            X64Register.RAX => X64Register.EAX,
+            X64Register.RCX => X64Register.ECX,
+            X64Register.RDX => X64Register.EDX,
+            X64Register.RDI => X64Register.EDI,
+            X64Register.RSI => X64Register.ESI,
+            _ => reg,
+        };
 
         public static LirEmitResult Emit(IAssembler a, LirProgram program, int entryLabel, TargetPlatform platform,
             Action<IReadOnlyList<PefileImport>, int>? emitStub)
