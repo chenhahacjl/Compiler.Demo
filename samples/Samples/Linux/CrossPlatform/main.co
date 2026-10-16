@@ -1,0 +1,11 @@
+// CrossPlatform -- 共享主程序：只依赖门面名 Platform.Pid()（两端 partial class 声明同名 extern）。
+// 构建时按 $(TargetOS) 条件选源：windows → Platform_win.co（GetCurrentProcessId），linux → Platform_linux.co（getpid）。
+
+using System
+
+function Main(): i32
+{
+    var pid = Platform.Pid()
+    System.Console.WriteLine(pid > 0)
+    return 0
+}

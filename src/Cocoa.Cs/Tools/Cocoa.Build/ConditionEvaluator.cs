@@ -195,11 +195,24 @@ namespace Cocoa.Build
             position++;
             return token.Kind switch
             {
-                TokenKind.String => token.Text,
+                // 字符串字面量 `'$(X)'` 恰为属性引用写法（文档惯用带引号形式）→ 按属性取值；
+                // 其余字面量原样返回。未定义属性按空串（`==' '` 守卫惯用法由此两端一致）。
+                TokenKind.String => ResolveQuotedProperty(token.Text, lookup) ?? token.Text,
                 TokenKind.Property => lookup(token.Text) ?? string.Empty,
                 TokenKind.Word => token.Text,
                 _ => throw new ProjectFileFormatException($"unexpected token '{token.Text}' in Condition"),
             };
+        }
+
+        /// <summary>若字面量恰为 `$(Prop)` 形态（含 `$()`），解析为属性引用；否则返回 null。</summary>
+        private static string? ResolveQuotedProperty(string text, Func<string, string?> lookup)
+        {
+            if (text.Length > 3 && text[0] == '$' && text[1] == '(' && text[^1] == ')')
+            {
+                return lookup(text.Substring(2, text.Length - 3)) ?? string.Empty;
+            }
+
+            return null;
         }
 
         private static bool MatchWord(IReadOnlyList<Token> tokens, ref int position, string word)

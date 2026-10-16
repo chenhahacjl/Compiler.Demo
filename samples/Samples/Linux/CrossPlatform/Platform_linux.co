@@ -1,0 +1,11 @@
+// CrossPlatform -- Linux 平台 import 声明（随 $(TargetOS)=linux 条件源引入）。
+// 共享门面名 Pid()，entry 别名指向平台真实导出（getpid）。
+
+public partial class Platform
+{
+    import libc
+    {
+        static stdcall function Pid(): i32
+            extern(entry = getpid)
+    }
+}

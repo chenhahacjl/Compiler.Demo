@@ -1,0 +1,27 @@
+<Project Version="1">
+  <PropertyGroup Label="Language">
+    <Language>Cocoa</Language>
+  </PropertyGroup>
+  <PropertyGroup Label="Assembly">
+    <AssemblyName>CrossPlatform</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label="Target">
+    <Backend>native</Backend>
+    <Platform>x64</Platform>
+  </PropertyGroup>
+  <PropertyGroup Label="Output">
+    <OutputType>Executable</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Label="Build">
+    <OutputPath>out</OutputPath>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(TargetOS)' == 'windows'">
+    <Source Include="Platform_win.co" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetOS)' == 'linux'">
+    <Source Include="Platform_linux.co" />
+  </ItemGroup>
+  <ItemGroup>
+    <Source Include="main.co" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,11 @@
+// CrossPlatform -- Windows 平台 import 声明（随 $(TargetOS)=windows 条件源引入）。
+// 共享门面名 Pid()，entry 别名指向平台真实导出（GetCurrentProcessId）。
+
+public partial class Platform
+{
+    import kernel32.dll
+    {
+        static stdcall function Pid(): i32
+            extern(entry = GetCurrentProcessId)
+    }
+}

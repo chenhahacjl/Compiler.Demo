@@ -85,17 +85,8 @@ namespace Cocoa.Build
         {
             var state = new State();
 
-            // 1. 外部覆盖（.user / CLI）优先
-            if (overrides != null)
-            {
-                if (overrides.AssemblyName != null) state.Set("AssemblyName", overrides.AssemblyName);
-                if (overrides.Output != null) state.Set("OutputType", overrides.Output.ToString());
-                if (overrides.Platform != null) state.Set("Platform", overrides.Platform);
-                if (overrides.TargetFramework != null) state.Set("TargetFramework", overrides.TargetFramework);
-                if (overrides.TargetOs != null) state.Set("TargetOS", overrides.TargetOs.ToString());
-                if (overrides.Configuration != null) state.Set("Configuration", overrides.Configuration.ToString());
-                if (overrides.OutputPath != null) state.Set("OutputPath", overrides.OutputPath);
-            }
+            // 1. 外部覆盖（.user / CLI）预置
+            ApplyOverrides(state, overrides);
 
             // 2. 无条件属性组
             foreach (var group in spec.PropertyGroups)
@@ -106,8 +97,14 @@ namespace Cocoa.Build
                 }
             }
 
+            // 2.3 外部覆盖重新应用——CLI 参数 / .user 覆盖优先级高于项目无条件声明（`.coproj` < `.user` < CLI）。
+            //     若不重放，项目无条件 `<TargetOS>/<Platform>/…` 会压掉 --os/--platform 等（既有优先级缺陷）。
+            ApplyOverrides(state, overrides);
+
             // 2.5 派生变量注入（供条件组/项组 Condition 引用）：
-            //     $(TargetTriple) = {os}-{cpu}（如 windows-x64）；$(Runtime) = fx | net | <空>（native）
+            //     $(TargetTriple) = {os}-{cpu}（如 windows-x64）；$(Runtime) = fx | net | <空>（native）；
+            //     同时给 $(TargetOS) 注入缺省（未声明/未覆盖时 = windows）并归一小写——条件 `'$(TargetOS)' == 'linux'`
+            //     无声明时不再失配。
             InjectDerivedVariables(state);
 
             // 3. 条件属性组（含 `== ''` 守卫）与所有项组
@@ -249,11 +246,30 @@ namespace Cocoa.Build
             };
         }
 
+        /// <summary>外部覆盖写入求值状态（CLI 参数 / `.user`）；字段非空才覆盖。</summary>
+        private static void ApplyOverrides(State state, UserProjectOverrides? overrides)
+        {
+            if (overrides == null)
+            {
+                return;
+            }
+
+            if (overrides.AssemblyName != null) state.Set("AssemblyName", overrides.AssemblyName);
+            if (overrides.Output != null) state.Set("OutputType", overrides.Output.ToString());
+            if (overrides.Platform != null) state.Set("Platform", overrides.Platform);
+            if (overrides.TargetFramework != null) state.Set("TargetFramework", overrides.TargetFramework);
+            if (overrides.TargetOs != null) state.Set("TargetOS", overrides.TargetOs.ToString().ToLowerInvariant());
+            if (overrides.Configuration != null) state.Set("Configuration", overrides.Configuration.ToString());
+            if (overrides.OutputPath != null) state.Set("OutputPath", overrides.OutputPath);
+        }
+
         /// <summary>派生变量注入：$(TargetTriple) = {os}-{cpu}；$(Runtime) = fx|net|<空>（native）。供 Condition 引用（在无条件属性组之后、条件组求值之前调用）。</summary>
         private static void InjectDerivedVariables(State state)
         {
             var os = (state.Get("TargetOS") ?? "Windows").ToLowerInvariant();
             var arch = (state.Get("Arch") ?? state.Get("Platform") ?? "anycpu").ToLowerInvariant();
+            // 归一 + 缺省注入：$(TargetOS) 未声明/未覆盖时默认为 windows，使条件模型与 BuildModel 默认一致。
+            state.Set("TargetOS", os);
             state.Set("TargetTriple", $"{os}-{arch}");
             state.Set("Runtime", RuntimeToken(state.Get("TargetFramework")));
         }

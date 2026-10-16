@@ -8,6 +8,29 @@
 
 ---
 
+## 未发布（2026-10-16）
+
+### 跨平台：import 按目标 OS 区分（对称门禁 + 条件选源）✅
+- **对称门禁**：windows 目标编译期拒绝 Linux 动态库（`.so`/libc/libm）extern——`import libc` 在 Windows 立即报「windows 目标不支持 extern .so 库」，杜绝运行期 `LoadLibrary` 坏 exe（镜像 linux 目标对非 shim Windows DLL 的既有拒绝；`NativeBackend.TryValidate`）。
+- **`$(TargetOS)` 条件变量修通**：① `--os` 覆盖路径注入改为小写（此前 PascalCase "Linux" 致 `'$(TargetOS)'=='linux'` 失配）；② `ConditionEvaluator` 支持带引号属性引用 `'$(X)'`（此前只当字面量，文档写法恒假）；③ 未声明时缺省注入 `$(TargetOS)=windows` 供条件引用；④ CLI/`.user` 覆盖在无条件属性组后重放（修复「项目无条件 `<TargetOS>` 压掉 `--os`」的优先级缺陷）。
+- **跨平台选源模式**：同一工程按 `<ItemGroup Condition="$(TargetOS)=='linux'">` 引入各平台 `import` 声明——`partial class` 门面（`Platform.Pid()`）+ `extern(entry=…)` 别名绑定平台真实导出（`GetCurrentProcessId`/`getpid`）；`--os` 驱动 `ProjectBuilder` 重载重求值条件源；互斥导入不同批进绑定、不触发对称门禁。
+- **样例**：`samples/Samples/Linux/CrossPlatform`（同一 `main.co` 双端构建：linux→ELF+WSL `Pid()>0` / windows→PE+本机 `Pid()>0`）。
+- 测试：`WindowsTarget_SoImport_IsRejected` + `Condition_TargetOs_SelectsPlatformSource_BothDrivingPaths`（两驱动路径×两种属性写法）+ `ConditionalPlatformSourceTests`（双端构建 ELF/PE + 对称门禁负例）。
+
+---
+
+## 未发布（2026-10-16）
+
+### 跨平台：Linux native 后端（T0-T3 + N3/N4 动态链接与互操作面）✅
+- **目标模型（T0）**：`TargetTriple` 单一事实源（删双 OS 枚举）+ `.coproj` 校验矩阵（`Backend` 三分 native/managed-fx/managed-net、四维 `IlTarget`、`TargetOS`/`Arch` 组内校验），设计定稿见 [`coproj目标属性设计.md`](docs-dev/plan/coproj目标属性设计.md)。
+- **ABI 去平台化（T1/T2）**：`IAbiDescriptor`（WinX64/WinX86/SysVAmd64）+ `PlatformDllResolver`，kernel32 内联收口；`IObjectWriter` 接口 + `PeObjectWriter`（CheckSum 真算 + TimeDateStamp）。
+- **最小可执行 ELF（T3.3 ~ T3/N2）**：`ElfObjectWriter`（ET_EXEC 非 PIE）→ SysV 运行时薄层（裸 syscall：控制台 UTF-8 链/堆 mmap/input/ReadKey raw-mode/文件/env/argv/进程/clock）→ `cocoa build --os linux` → `cocoa inspect` ELF 内嵌 `.cocoa` 元数据节（N5）+ Linux SHA-256 纯 LIR + SelfIntrospect（N5b）→ GuessNumber 跨平台（kernel32 extern shim 四符号映射）。
+- **glibc 动态链接（N3）**：`.so` 导入打通——`DT_NEEDED` + `R_X86_64_GLOB_DAT` 数据段 IAT 槽（等价 Windows IAT）；`import libc { ... }` 可调真实 C 函数；`ldd` 解析 libc.so.6；验证器 `tools/verify-linux-wsl.ps1`（免 VM）。
+- **extern 互操作面（N4，本批）**：① extern **string 实参**在 Linux 编组为 NUL 结尾 UTF-8 `char*`（`ExternUtf8Ptr0-3`，Windows 侧 `ExternWidePtr0-3` LPCWSTR 保持）；② extern **f64/f32 参数与返回**经 xmm 寄存器（SysV xmm0-7 / Win64 xmm0-3 同步修复，`IAbiDescriptor.FloatArgRegisterCount` + `EmitSysCall` 类型独立寄存器计数 + XMM0 返回）；③ 签名自检 x64 放行浮点（x86 仍拒）。
+- **样本/门禁**：`samples/Samples/Linux/{LibcInterop,LibmMath}`（WSL 实机 `puts`/`strlen`/`getpid`/`fflush` + `sqrt`/`pow`/`sin` 通过）；`LinuxEmitE2eTests` string/f64 extern 结构断言 + `X64AssemblerEncodingTests` MOVD/PINSRD 字节断言 + `RuntimePrimitiveCoverageTests` 覆盖 Linux；Cocoa.Tests 全量（CodeAnalysis 1999 + CodeGen 1025 + Compiler 309）通过，Windows `.text`/`.data` 黄金字节不变。
+
+---
+
 ## 未发布（2026-10-14）
 
 ### 编译器：native 产物 PE 版本资源（.rsrc VS_VERSIONINFO）+ 资源读取器修正

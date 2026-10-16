@@ -19,6 +19,13 @@ namespace Cocoa.Build
     {
         public static ProjectBuildResult Build(CocoaProjectFile project, ProjectBuildOptions options, TextWriter messageWriter)
         {
+            // 跨平台 import 选源：`--os` 覆盖与项目声明不符 → 重载并重求值条件源（`<ItemGroup Condition="$(TargetOS)==…">`）。
+            // 覆盖合并 `.user`（`.coproj` < `.user` < CLI），重求值后 project.TargetOs 与覆盖一致。
+            if (options.TargetOsOverride != null && options.TargetOsOverride != project.TargetOs)
+            {
+                project = CocoaProjectFile.Load(project.FilePath, new UserProjectOverrides { TargetOs = options.TargetOsOverride });
+            }
+
             var format = options.FormatOverride ?? project.Output;
 
             var projectTfm = options.DotnetRuntimeOverride ?? project.DotnetRuntime;

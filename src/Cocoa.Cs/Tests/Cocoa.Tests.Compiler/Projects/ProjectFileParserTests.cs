@@ -257,6 +257,46 @@ namespace Cocoa.Tests.Projects
             Assert.True(release.Optimize);
         }
 
+        [Fact]
+        public void Condition_TargetOs_SelectsPlatformSource_BothDrivingPaths()
+        {
+            // 跨平台 import 选源：同一工程按 `$(TargetOS)` 条件选平台源文件。
+            // 两条驱动路径（项目声明 <TargetOS>linux</TargetOS> 与命令行覆盖 TargetOsOverride）都须命中
+            // `'$(TargetOS)' == 'linux'`（带引号写法按属性解析；覆盖路径此前注入 PascalCase "Linux"
+            // 大小写敏感失配——已归一为小写）。windows 组同时用未加引号 `$(TargetOS) == 'windows'` 变体验证。
+            var text = "<Project Version=\"1\">\n" +
+                       "  <PropertyGroup Label=\"Language\"><Language>Cocoa</Language></PropertyGroup>\n" +
+                       "  <PropertyGroup Label=\"Target\"><Backend>native</Backend><Platform>x64</Platform></PropertyGroup>\n" +
+                       "  <PropertyGroup Label=\"Assembly\"><AssemblyName>App</AssemblyName></PropertyGroup>\n" +
+                       "  <PropertyGroup Label=\"Output\"><OutputType>Executable</OutputType></PropertyGroup>\n" +
+                       "  <ItemGroup Condition=\"$(TargetOS) == 'windows'\"><Source Include=\"platform_win.co\" /></ItemGroup>\n" +
+                       "  <ItemGroup Condition=\"'$(TargetOS)' == 'linux'\"><Source Include=\"platform_linux.co\" /></ItemGroup>\n" +
+                       "  <ItemGroup><Source Include=\"main.co\" /></ItemGroup>\n" +
+                       "</Project>";
+            var spec = ProjectFileParser.ParseProjectSpec(text, "x.coproj");
+
+            // ① 命令行覆盖 --os linux（此前存 "Linux" PascalCase 会失配 → 旧行为 linux 源缺失）
+            var cli = ProjectEvaluator.Evaluate(spec, new UserProjectOverrides { TargetOs = TargetOS.Linux });
+            Assert.Equal(TargetOS.Linux, cli.TargetOs);
+            Assert.Contains("platform_linux.co", cli.SourcePatterns);
+            Assert.DoesNotContain("platform_win.co", cli.SourcePatterns);
+
+            // ② 项目声明 <TargetOS>linux</TargetOS>（声明路径本就是小写），无覆盖 → 选 linux 源
+            var declaredText = text.Replace(
+                "<PropertyGroup Label=\"Target\"><Backend>native</Backend><Platform>x64</Platform></PropertyGroup>",
+                "<PropertyGroup Label=\"Target\"><Backend>native</Backend><Platform>x64</Platform><TargetOS>linux</TargetOS></PropertyGroup>");
+            var declared = ProjectEvaluator.Evaluate(ProjectFileParser.ParseProjectSpec(declaredText, "x.coproj"), new UserProjectOverrides());
+            Assert.Equal(TargetOS.Linux, declared.TargetOs);
+            Assert.Contains("platform_linux.co", declared.SourcePatterns);
+            Assert.DoesNotContain("platform_win.co", declared.SourcePatterns);
+
+            // ③ 覆盖 --os windows → 选 windows 源（未加引号 `$(TargetOS)` 属性引用变体）
+            var win = ProjectEvaluator.Evaluate(spec, new UserProjectOverrides { TargetOs = TargetOS.Windows });
+            Assert.Equal(TargetOS.Windows, win.TargetOs);
+            Assert.Contains("platform_win.co", win.SourcePatterns);
+            Assert.DoesNotContain("platform_linux.co", win.SourcePatterns);
+        }
+
         private static CocoaProjectFile Parse(string text, string fileName)
         {
             return ProjectFileParser.ParseProject(text, fileName);

@@ -99,6 +99,16 @@ namespace Cocoa.Build
 
         public static CocoaProjectFile Load(string path)
         {
+            return Load(path, null);
+        }
+
+        /// <summary>
+        /// 贪取项目并合并覆盖：`.user` 用户级覆盖优先，随后 CLI 覆盖以其非空字段覆盖（`.coproj` &lt; `.user` &lt; CLI）。
+        /// 覆盖中的 <see cref="UserProjectOverrides.TargetOs"/>（--os）会重新求值 `<ItemGroup Condition="$(TargetOS)==…">`
+        /// 的条件源，使跨平台 import 选源随构建目标生效。
+        /// </summary>
+        public static CocoaProjectFile Load(string path, UserProjectOverrides? cliOverrides)
+        {
             var text = File.ReadAllText(path);
             var spec = ProjectFileParser.ParseProjectSpec(text, path);
 
@@ -109,7 +119,25 @@ namespace Cocoa.Build
                 overrides = ProjectFileParser.ParseUserOverrides(File.ReadAllText(userPath), userPath);
             }
 
+            ApplyOverrides(overrides, cliOverrides);
+
             return ProjectEvaluator.Evaluate(spec, overrides);
+        }
+
+        private static void ApplyOverrides(UserProjectOverrides target, UserProjectOverrides? cli)
+        {
+            if (cli == null)
+            {
+                return;
+            }
+
+            if (cli.AssemblyName != null) target.AssemblyName = cli.AssemblyName;
+            if (cli.Output != null) target.Output = cli.Output;
+            if (cli.Platform != null) target.Platform = cli.Platform;
+            if (cli.TargetFramework != null) target.TargetFramework = cli.TargetFramework;
+            if (cli.TargetOs != null) target.TargetOs = cli.TargetOs;
+            if (cli.Configuration != null) target.Configuration = cli.Configuration;
+            if (cli.OutputPath != null) target.OutputPath = cli.OutputPath;
         }
 
         /// <summary>解析输出目录（相对项目文件目录），未配置时默认项目目录。</summary>

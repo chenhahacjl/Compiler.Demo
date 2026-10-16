@@ -117,6 +117,20 @@ namespace Cocoa.CodeGen.Native
                     return 1;
                 }
             }
+            else if (platform.OS == TargetOS.Windows)
+            {
+                // 对称门禁：windows 目标——Linux 动态库（.so/libc/libm）编译期拒绝，杜绝运行期 LoadLibrary 坏 exe
+                // （镜像 linux 目标对 Windows DLL 的既有拒绝）。
+                var unsupportedExtern = program.Functions.Keys.FirstOrDefault(f =>
+                    f.IsExtern && PlatformDllResolver.IsLinuxLibrary(f.DllName ?? ""));
+                if (unsupportedExtern != null)
+                {
+                    var location = unsupportedExtern.Declaration?.GetDeclarationNameLocation()
+                                   ?? new TextLocation(compilation.SyntaxTrees[0].Text, new TextSpan(0, 0));
+                    diagnostics = ImmutableArray.Create(Diagnostic.Error(location, $"windows 目标不支持 extern .so 库：'{unsupportedExtern.DllName}'（.so/libc/libm 仅 linux-x64 可用）。"));
+                    return 1;
+                }
+            }
 
             var objectFaceBag = new DiagnosticBag();
             NativeObjectModelValidator.Validate(program, objectFaceBag, new TextLocation(compilation.SyntaxTrees[0].Text, new TextSpan(0, 0)));

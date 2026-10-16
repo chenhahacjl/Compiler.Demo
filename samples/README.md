@@ -26,6 +26,7 @@ cocoa build -p samples/<路径>/<项目>.coproj [-b dotnet]
 | `Libraries/CodLibrary` | .coa Cocoa 程序集库（`output = cocoa`）+ 消费方 app |
 | `Classes/CSharpClass` | Cocoa 式类语法预览：字段/属性/构造函数/static |
 | `Samples/UI` | System.UI 立即模式 UI 库：BasicUI · AdvancedUI · NativeUI · DeclarativeUI |
+| `Samples/Linux` | Linux native（`--os linux` ELF）：LibcInterop · LibmMath · CrossPlatform（WSL 实机验证） |
 
 ## 示例索引
 
@@ -73,6 +74,32 @@ System.UI 立即模式 UI 库（阶段 1-5，见 [`docs/UI库手册.md`](../docs
 | AdvancedUI | 完整控件集 + 输入/滚轮 + 子区域滚动 + 运行期主题切换 | IL |
 | NativeUI | native 最小控件集（x64） | native |
 | DeclarativeUI | 声明式语法糖：`UIView.Body` + `Ui.VStack/HStack/Group/Panel` | IL |
+
+## Linux 原生示例（Samples/Linux）
+
+Linux native 后端（T3/N3/N4，产出 ELF）专属示例，需 `--os linux` + WSL/VM 实机验证（不在默认 `samples.cosln` 聚合内）：
+
+```bash
+# 构建（Windows 宿主交叉产出 ELF）
+cocoa build -p samples/Samples/Linux/LibcInterop/LibcInterop.coproj -b native --os linux
+cocoa build -p samples/Samples/Linux/LibmMath/LibmMath.coproj -b native --os linux
+cocoa build -p samples/Samples/Linux/CrossPlatform/CrossPlatform.coproj -b native --os linux
+
+# WSL 实机运行（tools/verify-linux-wsl.ps1，输出 COCOA_VERIFY_OK）
+powershell -File tools/verify-linux-wsl.ps1 samples/Samples/Linux/LibcInterop/out/LibcInterop
+powershell -File tools/verify-linux-wsl.ps1 samples/Samples/Linux/LibmMath/out/LibmMath
+powershell -File tools/verify-linux-wsl.ps1 samples/Samples/Linux/CrossPlatform/out/CrossPlatform
+
+# 跨平台工程也可直接打 Windows（同一份源码按 $(TargetOS) 选源，产 PE 本机运行）
+cocoa build -p samples/Samples/Linux/CrossPlatform/CrossPlatform.coproj -b native --os windows
+./samples/Samples/Linux/CrossPlatform/out/CrossPlatform.exe
+```
+
+| 示例 | 演示内容 | 关键输出 |
+|------|---------|---------|
+| LibcInterop | 外部 `.so`（libc.so.6）导入：`puts`/`strlen`（UTF-8 string 编组）、`getpid`、`fflush(NULL)`、System.IO facade 文件往返 | `hello from libc`、`5`、`True`、`True` |
+| LibmMath | `libm.so.6` 动态导入 + f64 xmm ABI：`sqrt`/`pow`/`sin` 固定值断言 | `True` × 3 |
+| CrossPlatform | 同一工程按目标 OS 选源：`partial class` 门面 `Platform.Pid()`（`extern(entry=…)` 别名），linux→`getpid` / windows→`GetCurrentProcessId`；互斥 import 不触发对称门禁 | linux/windows 本机均 `True` |
 
 ## 库示例（Libraries）
 
