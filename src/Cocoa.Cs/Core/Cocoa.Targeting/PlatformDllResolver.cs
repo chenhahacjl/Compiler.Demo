@@ -40,5 +40,43 @@ namespace Cocoa.Targeting
                 _ => null,
             };
         }
+
+        /// <summary>
+        /// N3：逻辑库名是否为真实 Linux 动态库（可经 DT_NEEDED + GLOB_DAT 动态解析）。
+        /// 规则：非 Windows 风格（不以 .dll 结尾），非 kernel32；且是 .so/常见 C 库名。
+        /// </summary>
+        public static bool IsLinuxLibrary(string logicalDll)
+        {
+            if (string.IsNullOrEmpty(logicalDll))
+            {
+                return false;
+            }
+
+            var lower = logicalDll.ToLowerInvariant();
+            if (lower.EndsWith(".dll", StringComparison.Ordinal) || lower.StartsWith("kernel32", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            return lower.EndsWith(".so", StringComparison.Ordinal)
+                || lower.Contains(".so.")
+                || lower.IndexOf('/') >= 0
+                || lower == "libc"
+                || lower == "libm";
+        }
+
+        /// <summary>
+        /// N3：Linux 逻辑库名 → 加载器 SONAME（DT_NEEDED）。语言层 `import` 名仅接受标识符（无数字后缀），
+        /// 故 `libc` → `libc.so.6`、`libm` → `libm.so.6`；其余原样（含路径的 .so 名）。
+        /// </summary>
+        public static string ResolveLinuxSoname(string logicalDll)
+        {
+            return logicalDll switch
+            {
+                "libc" or "libc.so" => "libc.so.6",
+                "libm" or "libm.so" => "libm.so.6",
+                _ => logicalDll,
+            };
+        }
     }
 }

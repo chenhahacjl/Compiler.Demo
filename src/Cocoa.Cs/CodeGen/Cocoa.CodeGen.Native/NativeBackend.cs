@@ -101,17 +101,19 @@ namespace Cocoa.CodeGen.Native
                 return 1;
             }
 
-            // T3：linux 目标零导入（裸 syscall 运行时）——仅 kernel32 四符号（GetTickCount/Sleep/Beep/ExitProcess）
-            // 经 shim 映射到运行时实现；其余 extern（DLL 导入）编译期明确拒绝。
+            // T3：linux 目标——kernel32 四符号（GetTickCount/Sleep/Beep/ExitProcess）经 shim 映射到运行时；
+            // 其余 extern：仅允许真实 Linux 动态库（DT_NEEDED + GLOB_DAT 解析，N3）；Windows DLL 编译期拒绝。
             if (platform.OS == TargetOS.Linux)
             {
                 var unsupportedExtern = program.Functions.Keys.FirstOrDefault(f =>
-                    f.IsExtern && PlatformDllResolver.LinuxKernel32Shim(f.EntryPoint ?? f.Name) == null);
+                    f.IsExtern
+                    && PlatformDllResolver.LinuxKernel32Shim(f.EntryPoint ?? f.Name) == null
+                    && !PlatformDllResolver.IsLinuxLibrary(f.DllName ?? ""));
                 if (unsupportedExtern != null)
                 {
                     var location = unsupportedExtern.Declaration?.GetDeclarationNameLocation()
                                    ?? new TextLocation(compilation.SyntaxTrees[0].Text, new TextSpan(0, 0));
-                    diagnostics = ImmutableArray.Create(Diagnostic.Error(location, $"linux-x64 目标暂不支持 extern（DLL）导入：'{unsupportedExtern.Name}'（仅 kernel32 GetTickCount/Sleep/Beep/ExitProcess shim 可用，T3）。"));
+                    diagnostics = ImmutableArray.Create(Diagnostic.Error(location, $"linux-x64 目标不支持 extern DLL：'{unsupportedExtern.DllName}'（仅 shim 四符号与 Linux .so 库可用，N3）。"));
                     return 1;
                 }
             }

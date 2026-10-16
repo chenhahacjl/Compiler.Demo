@@ -1,45 +1,36 @@
-# N3（glibc 动态链接）诊断留档（2026-10-16）
+# N3（glibc 动态链接）实现记录（已打通）
 
-> 状态：**未完成，回退待续**。本文件记录已实现的动态链接 ELF 结构与加载器崩溃诊断，
-> 供下个会话据此定位 glibc 主可执行 link_map 基址计算问题。
+> 状态：**已完成**（2026-10-16 实机验证：`ldd` 解析 libc.so.6 + getpid/abs 调用成功）。
 
-## 已实现（验证进行中，随后回退）
+## 交付
 
-- `ElfObjectWriter.WriteWithDynamicImports`：非 PIE ET_EXEC + 动态链接段
-  - 程序头：PT_LOAD×2 + PT_INTERP + PT_DYNAMIC + PT_GNU_STACK（5 个）
-  - 节：`.interp`(`/lib64/ld-linux-x86-64.so.2`)、`.dynstr`、`.dynsym`（SHT 未标 DYNSYM）、
-    SysV `.hash`（nbucket=1 + chain 回溯）、`.dynamic`（DT_NEEDED/HASH/STRTAB/SYMTAB/STRSZ/SYMENT/RELA…）、
-    `.rela.dyn`（每导入一条 `R_X86_64_GLOB_DAT` → 数据段 IAT 槽）
+`ElfObjectWriter.WriteWithDynamicImports`：非 PIE ET_EXEC + 动态链接段
+- 程序头：PT_LOAD×2 + PT_INTERP + PT_DYNAMIC + PT_GNU_STACK（5 个）
+- 节：`.interp`(`/lib64/ld-linux-x86-64.so.2`)、`.dynstr`、`.dynsym`（SHT 未标 DYNSYM，仅影响 readelf 显示）、
+  SysV `.hash`（nbucket=1 + chain 回溯）、`.dynamic`（DT_NEEDED/HASH/STRTAB/SYMTAB/STRSZ/SYMENT/RELA…）、
+  `.rela.dyn`（每导入一条 `R_X86_64_GLOB_DAT` → 数据段 IAT 槽）
 - `ObjectWriteOptions.Imports`（`List<DynamicImport>(Library, Symbol, SlotDataOffset)`）
 - `PlatformDllResolver.IsLinuxLibrary` / `ResolveLinuxSoname`（`libc`→`libc.so.6`）
 - `NativeBackend` Linux extern 守卫放开 `.so` 库（保留 4 符号 kernel32 shim）
-- 语言侧 `import libc { static stdcall function getpid(): i32 }` → 动态导入
+- 语言侧 `import libc { static stdcall function getpid(): i32 }` → 动态导入；
+  代码经 `call [rip+IAT槽]` 间接调用（等价 Windows IAT 语义）
 
-## 已修正
+## 踩坑序列（本文件作为后续 ELF 动态链接的 checklist）
 
-1. `Elf64_Dyn` tag/value 字节序（先 tag 后 value）。
-2. `.dynamic` 与 `.rela.dyn` 段重叠（`relaSeg` 现置于 dynamic 之后）。
-3. **PT_LOAD#0 从 offset=0/vaddr=base 起覆盖 ELF 头+phdr 页**（动态加载器须映射读 phdr；
-   静态 ELF 无加载器故此前未暴露）。修后 `strace` 由 `SIGSEGV @0x400040` 推进。
+1. **`Elf64_Dyn` 字节序**：`d_tag(i64) @0` 先写，`d_val(u64) @8` 后写。
+2. **`.dynamic` 与 `.rela.dyn` 段重叠**：`relaSeg` 须置于 `dynamicSeg + dynamicSize` 之后
+   （dynamicSize 先在布局前按条目数算好，rela 条目的 vaddr 依赖它——先算大小再布局）。
+3. **PT_LOAD#0 须从 offset=0/vaddr=base 起覆盖 ELF 头+phdr 页**：动态加载器要映射读 phdr，
+   静态 ELF 无加载器故不暴露（早期 `strace SIGSEGV @0x400040`）。
+4. **`DT_NEEDED` 的 d_val = dynstr 偏移（相对 DT_STRTAB），非绝对 vaddr**！
+   glibc 算 `strtab + d_val`，写成 vaddr 会翻倍越界（`0x8D4781 = 2×dynstr+1` → `_dl_dst_count` 崩）。
+5. **`DT_RELACOUNT` 切不可对非 RELATIVE 前缀设值**：glibc 把 .rela.dyn 前 RELACOUNT 条
+   **一律当作 R_*_RELATIVE（`l_addr + addend`）处理**——GLOB_DAT 条目若排在前面会被写 0
+   → 入口 `call [槽]` 跳 0x0 崩溃（本实现最终根因；去掉该 tag 即通）。
 
-## 当前症状（gdb 已定位）
+## 验证
 
-```
-strace: execve → brk → mmap → access(/etc/ld.so.preload) → SIGSEGV(0x8d4781)
-gdb   : 0x... in strchr (ld-linux) ← _dl_dst_count ← _dl_map_object_deps ← dl_main
-```
-
-崩溃地址 `0x8D4781 = 2 × 0x46A3C0 + 1`（`0x46A3C0` = 本 ELF `.dynstr` vaddr）。
-推断：glibc 处理 DT_NEEDED 时 `_dl_dst_count` 拿到的字符串指针 ≈ `l_addr + d_ptr`，
-其中主可执行 `l_addr` 约为 dynstr vaddr（非预期 0）→ 指针翻倍越界。
-
-`readelf -h/-l/-d/-S` 对结构全部解析正确；与 gcc 参考动态 ELF 相比唯一显著差异：
-gcc 用 **DT_GNU_HASH**，本实现用 SysV **DT_HASH**（glibc 仍应兼容，待证）。
-
-## 下一步候选（下个会话）
-
-1. 验证/改发 DT_GNU_HASH（`.gnu.hash` 布局：header + bloom + bucket + chain）。
-2. 深入 glibc `_dl_map_object_from_fd` 对主可执行 `l_addr` 的计算路径；
-   确认非 PIE ET_EXEC `l_addr` 应为 0，查为何被置为 dynstr vaddr。
-3. 逐项对齐 gcc 参考 ELF 的 dynamic 表（加 DT_FLAGS_1/DF_1_PIE?、DT_DEBUG、GNU_RELRO 等）。
-4. 备选最小化路径：放弃动态链接，保留静态交付（当前主线的完整可用状态）。
+- `ldd /tmp/dyn` → `libc.so.6 => /lib64/libc.so.6` + `ld-linux-x86-64.so.2`
+- `/tmp/dyn` → `True`(getpid>0) / `True`(abs(-42)==42) / RC=0
+- 静态（零导入）路径全量回归：sha 向量 + SelfIntrospect + GuessNumber 实机不变
+- 全量套件绿 + Windows `.text`/`.data` 黄金哈希不变

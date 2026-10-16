@@ -9,7 +9,13 @@ namespace Cocoa.Targeting
     public readonly record struct TargetEntry(int Entry, uint Rva, uint Size);
 
     /// <summary>
-    /// 对象写出目标配置（格式中立）：机器/基址/子系统/入口 + 节 + 数据目录。
+    /// 动态导入描述（N3 glibc 动态链接）：符号 + 宿主库（DT_NEEDED SONAME）+ 数据槽在 data 段内偏移。
+    /// 加载器经 .rela.dyn GLOB_DAT 把符号地址写入槽（对应 Windows IAT 语义）。
+    /// </summary>
+    public readonly record struct DynamicImport(string Library, string Symbol, int SlotDataOffset);
+
+    /// <summary>
+    /// 对象写出目标配置（格式中立）：机器/基址/子系统/入口 + 节 + 数据目录 + 动态导入。
     /// PE（PeImageBuilder）与 ELF（ElfObjectWriter）经此描述镜像骨架。
     /// </summary>
     public sealed class ObjectWriteOptions
@@ -41,6 +47,9 @@ namespace Cocoa.Targeting
 
         /// <summary>数据目录/程序头条目。</summary>
         public List<TargetEntry> Entries { get; } = new();
+
+        /// <summary>动态导入（N3 glibc 动态链接；null/空 = 零导入静态交付）。</summary>
+        public List<DynamicImport>? Imports { get; set; }
 
         /// <summary>PE 特有附加特性（Machine/FileCharacteristics 等由实现按 Cpu/Os 推导）。</summary>
         public ushort AdditionalFileCharacteristics { get; set; }

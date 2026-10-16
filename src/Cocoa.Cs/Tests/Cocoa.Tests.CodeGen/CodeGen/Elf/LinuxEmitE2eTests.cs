@@ -191,5 +191,44 @@ function Main(): i32
             var bytes = System.IO.File.ReadAllBytes(outputPath);
             Assert.Equal(new byte[] { 0x7F, (byte)'E', (byte)'L', (byte)'F' }, new[] { bytes[0], bytes[1], bytes[2], bytes[3] });
         }
+
+        [Fact]
+        public void LinuxNative_DynamicImport_EmitsInterpDynamic()
+        {
+            // N3：extern .so 导入 → 动态链接 ELF（PT_INTERP/PT_DYNAMIC 程序头存在）。
+            Emit(@"using System
+
+class L
+{
+    import libc
+    {
+        static stdcall function getpid(): i32
+            extern()
+    }
+}
+
+function Main(): i32
+{
+    var pid = L.getpid()
+    System.Console.WriteLine(pid > 0)
+    return 0
+}", "dynamic-import");
+
+            var bytes = System.IO.File.ReadAllBytes(OutputPath("dynamic-import"));
+            var phoff = System.Buffers.Binary.BinaryPrimitives.ReadUInt64LittleEndian(bytes.AsSpan(0x20));
+            var phnum = System.Buffers.Binary.BinaryPrimitives.ReadUInt16LittleEndian(bytes.AsSpan(0x38));
+            Assert.Equal(5, phnum); // LOAD LOAD INTERP DYNAMIC GNU_STACK
+            var hasInterp = false;
+            var hasDynamic = false;
+            for (var i = 0; i < phnum; i++)
+            {
+                var t = System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(bytes.AsSpan((int)(phoff + (ulong)i * 56)));
+                if (t == 3) hasInterp = true;
+                if (t == 2) hasDynamic = true;
+            }
+
+            Assert.True(hasInterp, "PT_INTERP missing");
+            Assert.True(hasDynamic, "PT_DYNAMIC missing");
+        }
     }
 }

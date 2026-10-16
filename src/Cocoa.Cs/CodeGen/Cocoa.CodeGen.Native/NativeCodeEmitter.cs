@@ -61,8 +61,22 @@ namespace Cocoa.CodeGen.Native
 
             if (isLinux)
             {
-                // T3 linux 交付：ELF ET_EXEC（非 PIE）——无导入表/重定位/资源；含 .cocoa 元数据节（inspect 用）。
-                Cocoa.CodeGen.Elf.ElfFileWriter.Write(outputPath, code, a.GetData(), entryPointRva, dataRva, cocoaMetadata);
+                // T3/N3：linux ELF ET_EXEC（非 PIE）——含 .cocoa 元数据节；非空 imports 时发动态链接段
+                //（PT_INTERP/PT_DYNAMIC/.dynsym/.rela.dyn，GLOB_DAT 填入 IAT 槽）。
+                System.Collections.Generic.List<Cocoa.Targeting.DynamicImport>? dynImports = null;
+                if (result.Imports.Count > 0)
+                {
+                    dynImports = new System.Collections.Generic.List<Cocoa.Targeting.DynamicImport>();
+                    foreach (var import in result.Imports)
+                    {
+                        dynImports.Add(new Cocoa.Targeting.DynamicImport(
+                            Cocoa.Targeting.PlatformDllResolver.ResolveLinuxSoname(import.DllName),
+                            import.Name,
+                            import.IatOffset));
+                    }
+                }
+
+                Cocoa.CodeGen.Elf.ElfFileWriter.Write(outputPath, code, a.GetData(), entryPointRva, dataRva, cocoaMetadata, dynImports);
                 return;
             }
 
