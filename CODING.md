@@ -84,7 +84,7 @@ ManagedBackend.Register(); NativeBackend.Register(); InterpreterBackend.Register
 - `Directory.Build.props`：`TreatWarningsAsErrors=true`，全局 `NoWarn = CS0108;CA1416;xUnit2013;xUnit1026`。
    nullable 债务压制组已全部清零（`Cocoa.Cli` 2026-09、`Cocoa.Build` 2026-10），无项目级 NoWarn 例外。
 - **棘轮只进不退**：禁止新增大范围 NoWarn；确需抑制 → 单条目 + 行内注释 + 登记债务清单。
-- 测试基线：全量 **53,364 通过 / 1 跳过**（2026-09-15 历史口径）；现行快速回路（不含自举）实测 **3,338 通过**（2026-10-17：CodeAnalysis 1,999 / CodeGen 1,026 / Compiler 313）。自举差分套件含迁移期漂移（`Cocoa.CodeAnalysis.Binder`→`Binding` 已修，Binder 对拍 parity 待续）。
+- 测试基线：全量 **53,364 通过 / 1 跳过**（2026-09-15 历史口径）；现行快速回路（不含自举）实测 **3,340 通过**（2026-10-17：CodeAnalysis 1,999 / CodeGen 1,026 / Compiler 315）。自举差分套件含迁移期漂移（`Cocoa.CodeAnalysis.Binder`→`Binding` 已修，Binder 对拍 parity 待续）。
 
 ## 8. 验证与提交纪律
 
