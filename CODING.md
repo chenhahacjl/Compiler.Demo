@@ -78,6 +78,16 @@ ManagedBackend.Register(); NativeBackend.Register(); InterpreterBackend.Register
 - 现行范例：`CocoaBinder`（主文件 + Statements/Expressions/Declarations/TypeResolution/Attributes）、`CocoaParser`（主文件 + Types/Statements/Members）、`RuntimeFunctionEmitter`（.Strings/.System/.IO/.Arrays/.Numerics/.Int64，入口包装类 `RuntimeEmitterLir` 留在主文件）、`MirToLir`/`IlEmitter`/`Evaluator`/`LirToAssembler`（按语句/表达式/转换分片）。
 - 已合并为单文件的范例（2026-10 结构优化）：`CocoaLexer`、`CocoaGreenNodeFactory`、`MetadataBuilder`、`AssemblyReader`、`X64Assembler`、`Compilation`——拆分理由薄弱的非必要分片回单文件。
 - 拆分纪律：**纯移动零逻辑**、独立 commit、`--no-incremental` 全量构建 + 测试。
+- **partial 文件命名统一用点号** `Type.Role.cs`（下划线 `Type_Role.cs` 为历史债务，见 `docs-dev/plan/优化方案.md` B1，逐步清零）。
+- **类名不带 `Cocoa` 语言前缀**（前端类为 `Lexer`/`Parser`/`Binder` 等，与 `Syntax*`/`Green*` 一致；`Cocoa` 前缀仅保留在工程/命名空间层级）。历史遗留的 `Cocoa` 前缀类逐步去除（同上 B4）。
+
+### 6.1 Core 命名空间例外（Roslyn 惯例，保留）
+
+以下命名空间与目录名**有意不一致**，对齐 Roslyn 的公开 API 惯例，不视为缺陷、不再重命名：
+
+- `Cocoa.CodeAnalysis/Compilation/`、`Cocoa.CodeAnalysis/Diagnostic/` → 用**根命名空间** `Cocoa.CodeAnalysis`（类比 `Microsoft.CodeAnalysis.Compilation`/`Diagnostic`）。
+- `Cocoa.CodeAnalysis/Bound/**` 各子目录 → 平铺为 `Cocoa.CodeAnalysis.Bound`（内部绑定层，目录仅作文件归置）。
+- `Cocoa.CodeAnalysis/Binder/` → 类名 `CocoaBinder` **保留**（去前缀后 `Binder` 与命名空间 `Cocoa.CodeAnalysis.Binder` 同名冲突；`Lexer`/`Parser`/`GreenNodeFactory` 已去前缀）。
 
 ## 7. NoWarn 棘轮与测试基线
 

@@ -28,6 +28,7 @@
 | [plan/语言特性对照表.md](plan/语言特性对照表.md) | **语言面权威表**：C# 语义 × 双轨（C# / .co）逐特性状态，源码实证（`SyntaxKind` / 绑定器 / 发射器 / 测试），含 Attribute·反射·运算符重载三专题与 20 项补齐路线 |
 | [plan/未完成盘点.md](plan/未完成盘点.md) | 全仓未开发/未完成/已后置内容总账（自举主线 / stdlib 遗留 / 语言面 / native 硬边界 / Evaluator / 语义债务 / 远期），逐项状态·阻塞·证据 |
 | [plan/重构执行计划.md](plan/重构执行计划.md) | 重构步骤与进度表（⬜/🔄/✅/⏭️ 标记） |
+| [plan/优化方案.md](plan/优化方案.md) | Cocoa.Cs 五轴治理（架构/结构/命名/质量）方案与执行清单（2026-10-17 定稿，A/B/C 三阶段推进中） |
 | [plan/Cocoa.IDE设计.md](plan/Cocoa.IDE设计.md) | 类 Visual Studio 桌面 IDE：Avalonia 11 路线 + 功能矩阵 |
 | [plan/UI库规划.md](plan/UI库规划.md) | UI 生态系统：Handle 句柄类型 + System.UI 立即模式库（6e-M25；**阶段 1–5 已完成**：核心 + Win32 GDI 轮询后端 + 完整控件集/输入/滚动 + 主题/样式栈 + WinForms 命名 + native extern 编组 + 声明式语法糖/一控件一文件；示例 BasicUI/AdvancedUI/NativeUI/DeclarativeUI；实施记录见 §13–§17） |
 | [plan/Stage5-语言特性补全路线图.md](plan/Stage5-语言特性补全路线图.md) | Stage 5 语言特性补全路线（Phase 1-5 + 模式匹配 + using 已实现；被后续阶段覆盖，历史参考） |
