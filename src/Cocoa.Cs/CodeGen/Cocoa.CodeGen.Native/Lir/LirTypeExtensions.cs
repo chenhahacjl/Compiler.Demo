@@ -1,6 +1,6 @@
 namespace Cocoa.CodeGen.Native.Lir
 {
-    public static class LirTypeExtensions
+    internal static class LirTypeExtensions
     {
         /// <summary>类型字节宽：4 或 8（x86 8 字节值占双槽）。</summary>
         public static int Size(this LirType type) => type switch

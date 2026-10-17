@@ -3,7 +3,7 @@
 namespace Cocoa.CodeGen.Native.Lir
 {
     /// <summary>虚拟寄存器：无上限，由后端（LirToAssembler）分配物理寄存器或栈槽；携带类型驱动宽度。</summary>
-    public sealed class LirVirtualRegister
+    internal sealed class LirVirtualRegister
     {
         public LirVirtualRegister(int id, LirType type)
         {

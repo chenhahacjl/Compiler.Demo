@@ -1,7 +1,7 @@
 namespace Cocoa.CodeGen.Native.Lir
 {
     /// <summary>IR 操作数：立即数 / 虚拟寄存器 / 标签 / 数据符号 / 函数 / 运行时函数名。</summary>
-    public readonly struct LirOperand
+    internal readonly struct LirOperand
     {
         public static readonly LirOperand None = new LirOperand(LirOperandKind.None, 0, null, null);
 

@@ -6,7 +6,7 @@ namespace Cocoa.CodeGen.Native.Lir
     /// IR 指令操作码（三地址码）。覆盖现有 NativeCodeEmitter 的全部发射语义，
     /// 以虚拟寄存器 + 栈式 ABI 表达；平台差异收敛到 IR → IAssembler 映射。
     /// </summary>
-    public enum LirOpCode
+    internal enum LirOpCode
     {
         // 数据移动
         Const,       // Const <dst> <imm>            — 立即数加载

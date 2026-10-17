@@ -1,7 +1,7 @@
 namespace Cocoa.CodeGen.Native.Lir
 {
     /// <summary>数据段项（运行时数据与字符串字面量统一建模）。</summary>
-    public sealed class LirDataItem
+    internal sealed class LirDataItem
     {
         public LirDataItem(string key, LirDataKind kind, int intValue, string? text, byte[]? bytes)
         {

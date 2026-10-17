@@ -8,7 +8,7 @@ namespace Cocoa.CodeGen.Native.Lir
     /// 块内只含非分支指令（Label/Jmp/Jcc/Ret 不进入 Instructions）。
     /// 一个块可挂多个 label 别名（顺序 Label 折叠、以及 Ret 的 EndLabelId 与前置标签同址）。
     /// </summary>
-    public sealed class LirBasicBlock
+    internal sealed class LirBasicBlock
     {
         private readonly List<int> _labels = new();
 

@@ -5,7 +5,7 @@ using System.Text;
 namespace Cocoa.CodeGen.Native.Lir
 {
     /// <summary>IR 文本打印器：输出平台无关的中间表示（.coa 雏形）。</summary>
-    public static class LirPrinter
+    internal static class LirPrinter
     {
         public static string Format(LirInstruction instruction)
         {

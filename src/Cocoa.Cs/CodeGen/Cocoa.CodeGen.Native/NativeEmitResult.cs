@@ -7,7 +7,7 @@ namespace Cocoa.CodeGen.Native
     /// 快照与 <see cref="MirToLir.Generate(BoundProgram, TargetPlatform)"/> 共享同一次发射，
     /// 是 M3 CocoaMetadataBuilder 的符号来源。
     /// </summary>
-    public sealed class NativeEmitResult
+    internal sealed class NativeEmitResult
     {
         internal NativeEmitResult(LirProgram program, EmittedSymbolSnapshot snapshot)
         {

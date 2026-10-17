@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Cocoa.CodeGen.Native.Lir
 {
     /// <summary>块尾控制传输：无条件跳转 / 条件跳转（false 落入下一块）/ 返回（指向 EndLabelId）。</summary>
-    public sealed class LirTerminator
+    internal sealed class LirTerminator
     {
         public LirTerminatorKind Kind { get; private set; }
 

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Cocoa.CodeGen.Native.Lir
 {
     /// <summary>整个 IR 程序：函数表 + 数据段 + 运行时配置 + 入口函数名。</summary>
-    public sealed class LirProgram
+    internal sealed class LirProgram
     {
         private readonly Dictionary<string, int> _dataIndex = new();
 

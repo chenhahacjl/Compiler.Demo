@@ -7,7 +7,7 @@ namespace Cocoa.CodeGen.Native.Lir
     /// Load/Store 经 <see cref="LirMem"/> 构造，携带偏移与字节宽。
     /// <see cref="SinglePrecision"/> 标记 F* 浮点指令按 32 位单精度（SSE ss 族）发射（6e-M21 Phase 5b）。
     /// </summary>
-    public sealed class LirInstruction
+    internal sealed class LirInstruction
     {
         public LirOpCode OpCode { get; }
         public LirVirtualRegister? Dst { get; }

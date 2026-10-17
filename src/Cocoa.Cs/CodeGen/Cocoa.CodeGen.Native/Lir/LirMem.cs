@@ -1,7 +1,7 @@
 namespace Cocoa.CodeGen.Native.Lir
 {
     /// <summary>内存访问（Load/Store）专用工厂。</summary>
-    public static class LirMem
+    internal static class LirMem
     {
         public static LirInstruction Load(LirVirtualRegister dst, LirVirtualRegister baseReg, int offset, int byteSize)
         {

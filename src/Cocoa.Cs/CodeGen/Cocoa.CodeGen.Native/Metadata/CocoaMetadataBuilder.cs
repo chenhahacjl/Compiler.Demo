@@ -12,7 +12,7 @@ namespace Cocoa.CodeGen.Native.Metadata
     /// `.cocoa` 根的七个流：#Types / #Methods / #Fields / #Attrs + #Strings / #Blob + #Docs。
     /// 表行定宽（行号交叉引用）、字符串/实参走堆偏移、属性实参对齐 CLR CustomAttribute Value blob。
     /// </summary>
-    public sealed class CocoaMetadataBuilder
+    internal sealed class CocoaMetadataBuilder
     {
         private readonly ImmutableArray<NamedTypeSymbol> _liveClasses;
         private readonly ImmutableDictionary<FunctionSymbol, Lir.LirFunction> _functions;

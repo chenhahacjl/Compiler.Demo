@@ -3,7 +3,7 @@ using System.Collections.Generic;
 namespace Cocoa.CodeGen.Native.Lir
 {
     /// <summary>IR 函数：指令列表 + 虚拟寄存器登记表。生成期写线性 Instructions；消费期经 Blocks 显式 CFG。</summary>
-    public sealed class LirFunction
+    internal sealed class LirFunction
     {
         private List<LirBasicBlock>? _blocks;
         private readonly List<LirVirtualRegister> _registers = new();

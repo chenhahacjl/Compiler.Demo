@@ -1,6 +1,6 @@
 namespace Cocoa.CodeGen.Native.Lir
 {
-    public enum LirOperandKind
+    internal enum LirOperandKind
     {
         None,
         Constant,

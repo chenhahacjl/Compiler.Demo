@@ -1,7 +1,7 @@
 namespace Cocoa.CodeGen.Native.Lir
 {
     /// <summary>虚拟寄存器分配器：顺序发放全局唯一 id。</summary>
-    public sealed class LirVirtualRegisterAllocator
+    internal sealed class LirVirtualRegisterAllocator
     {
         private int _nextId;
 

@@ -27,7 +27,7 @@ namespace Cocoa.CodeGen.Native
         /// M2 公开符号快照出口：校验 + 发射 + 捕获「发射后实际符号集」快照（不写盘）。
         /// 与 <see cref="EmitNative"/> 共享同一校验与发射路径；校验失败抛 <see cref="InvalidOperationException"/>。
         /// </summary>
-        public static NativeEmitResult GenerateWithSnapshot(Compilation compilation, TargetPlatform platform)
+        internal static NativeEmitResult GenerateWithSnapshot(Compilation compilation, TargetPlatform platform)
         {
             if (TryValidate(compilation, platform, out var program, out var diagnostics) != 0)
             {
