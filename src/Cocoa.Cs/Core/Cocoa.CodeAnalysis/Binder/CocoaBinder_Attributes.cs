@@ -59,11 +59,11 @@ namespace Cocoa.CodeAnalysis.Binder
 
                 if (isError)
                 {
-                    _diagnostics.ReportError(location, text);
+                    _diagnostics.ReportError(location, text, "COC1007");
                 }
                 else
                 {
-                    _diagnostics.ReportWarning(location, text);
+                    _diagnostics.ReportWarning(location, text, "COC2006");
                 }
 
                 return;

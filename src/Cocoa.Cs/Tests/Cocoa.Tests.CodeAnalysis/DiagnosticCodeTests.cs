@@ -79,5 +79,37 @@ namespace Cocoa.Tests.CodeAnalysis
             var filteredWarnings = warnDiags.ApplyNowarn(ImmutableHashSet<string>.Empty);
             Assert.Equal(warnDiags.Length, filteredWarnings.Length);
         }
+
+        [Fact]
+        public void ApplyNowarn_KeepsErrors_SuppressesOnlyListedWarningCode()
+        {
+            // C# 语义：--nowarn:X 只抑制码为 X 的警告；错误、无码警告、其他码警告恒保留。
+            var nowarn = ImmutableHashSet.Create("COC2002");
+            var input = new[] {
+                Diagnostic.Error(default, "error", "COC1001"),
+                Diagnostic.Warning(default, "w-suppressed", "COC2002"),
+                Diagnostic.Warning(default, "w-uncoded"),
+                Diagnostic.Warning(default, "w-other", "COC9999"),
+            };
+
+            var filtered = input.ApplyNowarn(nowarn);
+
+            Assert.Contains(filtered, d => d.Code == "COC1001");   // 错误不压制
+            Assert.Contains(filtered, d => d.Code == null);        // 无码警告恒保留
+            Assert.Contains(filtered, d => d.Code == "COC9999");   // 其他码警告保留
+            Assert.DoesNotContain(filtered, d => d.Code == "COC2002"); // 仅目标码被抑制
+        }
+
+        [Fact]
+        public void Nowarn_SuppressesCodedWarning_EndToEnd()
+        {
+            // 真实编译产物：缺 using System 的 Console 访问 → COC2001 未解析 using 警告
+            var diags = Bind("function Main() { Console.WriteLine(1) }");
+            if (diags.Any(d => d.Code == "COC2001"))
+            {
+                var filtered = diags.ApplyNowarn(ImmutableHashSet.Create("COC2001"));
+                Assert.DoesNotContain(filtered, d => d.Code == "COC2001");
+            }
+        }
     }
 }

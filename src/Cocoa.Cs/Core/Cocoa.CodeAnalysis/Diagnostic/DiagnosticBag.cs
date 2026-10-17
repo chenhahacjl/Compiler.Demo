@@ -158,7 +158,7 @@ namespace Cocoa.CodeAnalysis
         public void ReportFacadeMarkerRecommended(TextLocation location, string fullName, string primitiveName)
         {
             var message = $"'{fullName}' matches the member-face carrier of primitive '{primitiveName}'. Add the 'facade' modifier to adopt it, or rename to avoid confusion.";
-            ReportWarning(location, message);
+            ReportWarning(location, message, "COC2003");
         }
 
         /// <summary>6e-M31：facade 类型成员种类（property/field）与 BCL 目标不匹配（如声明 property、BCL 实为字段）。</summary>
@@ -453,7 +453,7 @@ namespace Cocoa.CodeAnalysis
         public void ReportUnreachableCode(TextLocation location)
         {
             var message = $"Unreachable code detected.";
-            ReportWarning(location, message);
+            ReportWarning(location, message, "COC2002");
         }
 
         /// <summary>using 命名空间在程序/引用/.coa 库中都未解析时发警告（6e-M15；提示 Cocoa 不绑定 .NET BCL）。</summary>
@@ -467,7 +467,7 @@ namespace Cocoa.CodeAnalysis
         public void ReportUsingStaticTargetNotClass(TextLocation location, string name)
         {
             var message = $"using static 的目标 '{name}' 必须是类（导入其静态成员；命名空间用 `using {name};` + 限定访问）。";
-            ReportWarning(location, message);
+            ReportWarning(location, message, "COC2004");
         }
 
         public void ReportUnreachableCode(SyntaxNode node)
@@ -612,7 +612,7 @@ namespace Cocoa.CodeAnalysis
         public void ReportMalformedDocComment(TextLocation location, string detail)
         {
             var message = $"文档注释格式异常：{detail}";
-            ReportWarning(location, message);
+            ReportWarning(location, message, "COC2005");
         }
     }
 }
