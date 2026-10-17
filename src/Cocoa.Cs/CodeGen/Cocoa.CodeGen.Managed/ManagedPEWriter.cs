@@ -421,20 +421,5 @@ namespace Cocoa.CodeGen.Managed
             writer.Write((uint)0);                 // ManagedNativeHeader
         }
 
-        private static int Align4(int value) => (value + 3) & ~3;
-
-        private static void WriteUInt16(Stream stream, ushort value)
-        {
-            stream.WriteByte((byte)value);
-            stream.WriteByte((byte)(value >> 8));
-        }
-
-        private static void WriteInt32(Stream stream, int value)
-        {
-            stream.WriteByte((byte)value);
-            stream.WriteByte((byte)(value >> 8));
-            stream.WriteByte((byte)(value >> 16));
-            stream.WriteByte((byte)(value >> 24));
-        }
     }
 }

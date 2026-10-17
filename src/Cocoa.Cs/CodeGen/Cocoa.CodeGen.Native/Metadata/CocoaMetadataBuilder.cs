@@ -76,14 +76,14 @@ namespace Cocoa.CodeGen.Native.Metadata
             var headerBlockSize = magicHeaderSize;
             foreach (var (name, _) in streams)
             {
-                headerBlockSize += 8 + Align4(Encoding.ASCII.GetByteCount(name) + 1);
+                headerBlockSize += 8 + PeBinary.Align4(Encoding.ASCII.GetByteCount(name) + 1);
             }
 
             var offsets = MetadataRootStream.ComputeOffsets(headerBlockSize, streams);
             var lastDataEnd = headerBlockSize;
             foreach (var (name, data) in streams)
             {
-                var end = offsets[streams.IndexOf((name, data))] + Align4(data.Length);
+                var end = offsets[streams.IndexOf((name, data))] + PeBinary.Align4(data.Length);
                 if (end > lastDataEnd)
                 {
                     lastDataEnd = end;
@@ -140,17 +140,17 @@ namespace Cocoa.CodeGen.Native.Metadata
 
                 // 类型行
                 var baseOffset = cls.BaseType == null ? 0 : InternString(cls.BaseType.FullName);
-                WriteInt32(_types, _types.Count, InternString(cls.FullName));
+                PeBinary.WriteInt32(_types, InternString(cls.FullName));
                 _types.Add((byte)cls.TypeKind);
                 _types.AddRange(new byte[3]); // pad
-                WriteInt32(_types, _types.Count, baseOffset);
-                WriteInt32(_types, _types.Count, methodStart);
-                WriteInt32(_types, _types.Count, methods.Length);
-                WriteInt32(_types, _types.Count, fieldStart);
-                WriteInt32(_types, _types.Count, fields.Length);
+                PeBinary.WriteInt32(_types, baseOffset);
+                PeBinary.WriteInt32(_types, methodStart);
+                PeBinary.WriteInt32(_types, methods.Length);
+                PeBinary.WriteInt32(_types, fieldStart);
+                PeBinary.WriteInt32(_types, fields.Length);
                 var attrRow = EmitAttrs(cls.Attributes);
-                WriteInt32(_types, _types.Count, attrRow);
-                WriteInt32(_types, _types.Count, cls.Attributes.Length);
+                PeBinary.WriteInt32(_types, attrRow);
+                PeBinary.WriteInt32(_types, cls.Attributes.Length);
 
                 foreach (var m in methods)
                 {
@@ -229,23 +229,23 @@ namespace Cocoa.CodeGen.Native.Metadata
             var line = GetLine(symbol);
             var attrRow = EmitAttrs(symbol.Attributes);
 
-            WriteInt32(_methods, _methods.Count, fullName);
-            WriteInt32(_methods, _methods.Count, ownerOffset);
-            WriteInt32(_methods, _methods.Count, returnOffset);
-            WriteInt32(_methods, _methods.Count, line);
+            PeBinary.WriteInt32(_methods, fullName);
+            PeBinary.WriteInt32(_methods, ownerOffset);
+            PeBinary.WriteInt32(_methods, returnOffset);
+            PeBinary.WriteInt32(_methods, line);
             _methods.Add((byte)(symbol.IsStatic ? 1 : 0));
             _methods.AddRange(new byte[3]); // pad
-            WriteInt32(_methods, _methods.Count, attrRow); // 行 24B 定宽
+            PeBinary.WriteInt32(_methods, attrRow); // 行 24B 定宽
         }
 
         private void WriteFieldRow(FieldSymbol symbol)
         {
-            WriteInt32(_fields, _fields.Count, InternString(symbol.Name));
-            WriteInt32(_fields, _fields.Count, InternString(TypeDisplayName(symbol.Type)));
-            WriteInt32(_fields, _fields.Count, InternString(symbol.ContainingClass.FullName));
+            PeBinary.WriteInt32(_fields, InternString(symbol.Name));
+            PeBinary.WriteInt32(_fields, InternString(TypeDisplayName(symbol.Type)));
+            PeBinary.WriteInt32(_fields, InternString(symbol.ContainingClass.FullName));
             _fields.Add((byte)(symbol.IsStatic ? 1 : 0));
             _fields.AddRange(new byte[3]); // pad
-            WriteInt32(_fields, _fields.Count, EmitAttrs(symbol.Attributes)); // 行 20B 定宽
+            PeBinary.WriteInt32(_fields, EmitAttrs(symbol.Attributes)); // 行 20B 定宽
         }
 
         /// <summary>写一组属性行（定宽 16B），返回首行号（无属性返回 0）。</summary>
@@ -262,9 +262,9 @@ namespace Cocoa.CodeGen.Native.Metadata
                 var typeName = InternString(attr.Type.FullName);
                 var blobOffset = EmitArgumentBlob(attr.Arguments);
 
-                WriteInt32(_attrs, _attrs.Count, typeName);
-                WriteInt32(_attrs, _attrs.Count, blobOffset);
-                WriteInt32(_attrs, _attrs.Count, attr.Arguments.Length);
+                PeBinary.WriteInt32(_attrs, typeName);
+                PeBinary.WriteInt32(_attrs, blobOffset);
+                PeBinary.WriteInt32(_attrs, attr.Arguments.Length);
                 _attrs.AddRange(new byte[4]); // pad
             }
 
@@ -283,7 +283,7 @@ namespace Cocoa.CodeGen.Native.Metadata
             foreach (var (type, value) in args)
             {
                 var typeName = Encoding.UTF8.GetBytes(TypeDisplayName(type));
-                WriteUInt32(blob, blob.Count, (uint)typeName.Length);
+                PeBinary.WriteUInt32(blob, (uint)typeName.Length);
                 blob.AddRange(typeName);
                 WriteArgumentValue(blob, type, value);
             }
@@ -303,7 +303,7 @@ namespace Cocoa.CodeGen.Native.Metadata
             var offset = _blobs.Count;
             _blobOffsets[ImmutableArray.Create(bytes)] = offset;
             // 长度前缀（u32）+ 内容
-            WriteUInt32(_blobs, _blobs.Count, (uint)bytes.Length);
+            PeBinary.WriteUInt32(_blobs, (uint)bytes.Length);
             _blobs.AddRange(bytes);
             return offset;
         }
@@ -314,14 +314,14 @@ namespace Cocoa.CodeGen.Native.Metadata
             {
                 case string s:
                     var sb = Encoding.UTF8.GetBytes(s);
-                    WriteUInt32(blob, blob.Count, (uint)sb.Length);
+                    PeBinary.WriteUInt32(blob, (uint)sb.Length);
                     blob.AddRange(sb);
                     break;
                 case bool b:
                     blob.Add((byte)(b ? 1 : 0));
                     break;
                 case int i:
-                    WriteInt32(blob, blob.Count, i);
+                    PeBinary.WriteInt32(blob, i);
                     break;
                 case double d:
                     blob.AddRange(BitConverter.GetBytes(d));
@@ -355,8 +355,8 @@ namespace Cocoa.CodeGen.Native.Metadata
 
         private void WriteDocEntry(int docIdOffset, int textOffset)
         {
-            WriteInt32(_docs, _docs.Count, docIdOffset);
-            WriteInt32(_docs, _docs.Count, textOffset);
+            PeBinary.WriteInt32(_docs, docIdOffset);
+            PeBinary.WriteInt32(_docs, textOffset);
         }
 
         // ------------------------------------------------------------------
@@ -401,29 +401,5 @@ namespace Cocoa.CodeGen.Native.Metadata
 
         private static string TypeDisplayName(TypeSymbol type)
             => type is NamedTypeSymbol named ? named.FullName : type.Name;
-
-        private static int Align4(int value) => (value + 3) & ~3;
-
-        private static void WriteInt32(List<byte> bytes, int index, int value)
-        {
-            bytes.Add((byte)value);
-            bytes.Add((byte)(value >> 8));
-            bytes.Add((byte)(value >> 16));
-            bytes.Add((byte)(value >> 24));
-        }
-
-        private static void WriteUInt32(List<byte> bytes, int index, uint value)
-        {
-            bytes.Add((byte)value);
-            bytes.Add((byte)(value >> 8));
-            bytes.Add((byte)(value >> 16));
-            bytes.Add((byte)(value >> 24));
-        }
-
-        private static void WriteUInt16(List<byte> bytes, int index, ushort value)
-        {
-            bytes.Add((byte)value);
-            bytes.Add((byte)(value >> 8));
-        }
     }
 }

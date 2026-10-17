@@ -47,5 +47,39 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
                 bytes[offset + i] = (byte)(value >> (i * 8));
             }
         }
+
+        public static int Align4(int value) => (value + 3) & ~3;
+
+        public static void WriteUInt16(Stream stream, ushort value)
+        {
+            stream.WriteByte((byte)value);
+            stream.WriteByte((byte)(value >> 8));
+        }
+
+        public static void WriteUInt32(Stream stream, int value)
+        {
+            stream.WriteByte((byte)value);
+            stream.WriteByte((byte)(value >> 8));
+            stream.WriteByte((byte)(value >> 16));
+            stream.WriteByte((byte)(value >> 24));
+        }
+
+        public static void WriteInt32(Stream stream, int value) => WriteUInt32(stream, value);
+
+        public static void WriteUInt16(List<byte> bytes, ushort value)
+        {
+            bytes.Add((byte)value);
+            bytes.Add((byte)(value >> 8));
+        }
+
+        public static void WriteUInt32(List<byte> bytes, uint value)
+        {
+            bytes.Add((byte)value);
+            bytes.Add((byte)(value >> 8));
+            bytes.Add((byte)(value >> 16));
+            bytes.Add((byte)(value >> 24));
+        }
+
+        public static void WriteInt32(List<byte> bytes, int value) => WriteUInt32(bytes, (uint)value);
     }
 }
