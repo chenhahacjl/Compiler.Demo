@@ -12,6 +12,7 @@ using Cocoa.IDE.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using Cocoa.Text;
 namespace Cocoa.IDE.ViewModels;
 
 public partial class MainViewModel : ObservableObject

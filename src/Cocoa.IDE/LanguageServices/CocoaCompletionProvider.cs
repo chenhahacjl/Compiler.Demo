@@ -3,11 +3,11 @@ using AvaloniaEdit.CodeCompletion;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Editing;
 using Cocoa.CodeAnalysis;
-using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Binder;
 using Cocoa.CodeAnalysis.Bound;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
-using CocoaUsing = Cocoa.CodeAnalysis.Syntax.UsingDirectiveSyntax;
+using CocoaUsing = Cocoa.CodeAnalysis.Syntax.Nodes.UsingDirectiveSyntax;
 
 namespace Cocoa.IDE.LanguageServices;
 

@@ -5,6 +5,7 @@ using Cocoa.CodeAnalysis.Extensions;
 using Cocoa.IDE.LanguageServices;
 using CommunityToolkit.Mvvm.ComponentModel;
 
+using Cocoa.Text;
 namespace Cocoa.IDE.ViewModels;
 
 /// <summary>文档大纲面板：随活动标签内容刷新，展示符号树并支持点击跳转。</summary>

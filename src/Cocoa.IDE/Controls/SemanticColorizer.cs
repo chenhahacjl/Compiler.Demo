@@ -8,6 +8,7 @@ using Cocoa.CodeAnalysis.Authoring;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Extensions;
 
+using Cocoa.Text;
 namespace Cocoa.IDE.Controls;
 
 /// <summary>M6a3：基于编译器 <see cref="Classifier"/> 的语义着色。

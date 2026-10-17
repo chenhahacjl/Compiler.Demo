@@ -63,10 +63,11 @@ public partial class ProjectPropertiesViewModel : ObservableObject
         Backend = project.Backend switch
         {
             CodeBackend.Native => "Native",
-            CodeBackend.DotNet => "Managed",
+            CodeBackend.ManagedFx => "Managed",
+            CodeBackend.ManagedNet => "Managed",
             _ => "(默认 Managed)",
         };
-        Platform = project.Platform;
+        Platform = project.Cpu.ToString();
         TargetFramework = project.DotnetRuntime ?? "";
         TargetOs = project.TargetOs.ToString();
         OutputPath = project.OutputPath ?? "";

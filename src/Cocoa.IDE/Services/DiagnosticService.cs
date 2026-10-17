@@ -5,6 +5,7 @@ using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Extensions;
 using Avalonia.Threading;
 
+using Cocoa.Text;
 namespace Cocoa.IDE.Services;
 
 /// <summary>M3 实时诊断：键入防抖 → 后台重解析 + 单文件编译 → 推送诊断。</summary>
