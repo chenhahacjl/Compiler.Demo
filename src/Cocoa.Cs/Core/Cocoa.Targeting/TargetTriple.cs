@@ -3,25 +3,14 @@ using System;
 namespace Cocoa.Targeting
 {
     /// <summary>
-    /// 目标三元组（单一事实源）：OS × Cpu × Abi。native 后端消费 OS+Cpu 选 ABI/对象格式；
-    /// managed 后端仅用 Os（决定宿主可用性）与 Cpu（PE 形态）。Abi 由 (Os,Cpu) 推导，`x86_64-unknown-linux-gnu` 风格解析。
+    /// 目标三元组：OS × Cpu。Abi 由 native 后端按 (Os, Cpu) 直接选择具体描述符（WinX64Abi/SysVAmd64Abi 等），
+    /// 不再经枚举中转（见 LirToAssembler）。managed 后端仅用 Os（宿主可用性）与 Cpu（PE 形态）。
     /// </summary>
-    public readonly record struct TargetTriple(TargetOS Os, Cpu Cpu, TargetAbi Abi)
+    public readonly record struct TargetTriple(TargetOS Os, Cpu Cpu)
     {
-        public static TargetTriple Default => new(TargetOS.Windows, Cpu.X64, TargetAbi.WinX64);
+        public static TargetTriple Default => new(TargetOS.Windows, Cpu.X64);
 
-        /// <summary>由 (Os, Cpu) 推导 ABI（当前支持 windows-x64/x86 与 linux-x64 预留）。</summary>
-        public static TargetTriple Create(TargetOS os, Cpu cpu)
-        {
-            var abi = (os, cpu) switch
-            {
-                (TargetOS.Windows, Cpu.X64) => TargetAbi.WinX64,
-                (TargetOS.Windows, Cpu.X86) => TargetAbi.WinX86,
-                (TargetOS.Linux, Cpu.X64) => TargetAbi.SysVAmd64,
-                _ => TargetAbi.Unknown,
-            };
-            return new TargetTriple(os, cpu, abi);
-        }
+        public static TargetTriple Create(TargetOS os, Cpu cpu) => new(os, cpu);
 
         /// <summary>字符串形式：`{os}-{cpu}`（如 `windows-x64`），供 .coproj Condition 的 $(TargetTriple)。</summary>
         public override string ToString()
@@ -92,14 +81,5 @@ namespace Cocoa.Targeting
             triple = Create(os, cpu);
             return true;
         }
-    }
-
-    /// <summary>ABI（native 专属；managed 为 AnyCPU/portable 不适用）。</summary>
-    public enum TargetAbi
-    {
-        Unknown,
-        WinX64,
-        WinX86,
-        SysVAmd64,
     }
 }

@@ -8,7 +8,7 @@ namespace Cocoa.Targeting
         public static TargetPlatform Default => new(TargetOS.Windows, Architecture.X64);
 
         public static string SupportedTargets =>
-            "windows-x64, windows-x86, linux-x64, linux-x86, macos-x64, macos-x86";
+            "windows-x64, windows-x86, linux-x64";
 
         public static bool TryParse(string text, out TargetPlatform platform)
         {
