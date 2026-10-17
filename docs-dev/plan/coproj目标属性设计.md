@@ -10,7 +10,7 @@
 ## 1. 设计目标
 
 1. **跨产物诚实**：`.coproj` 一个文件声明三种产物链（native / managed-fx / managed-net），`Backend` 显式必填，缺省报错。
-2. **目标维度正交**：`TargetOS`（OS）× `Arch`（CPU）× `TargetFramework`（运行时版本）各司其职，不再由 TFM 兼任架构（`pe32 = Cpu != X64` 取代 `pe32 = IsNetFx`）。
+2. **目标维度正交**：`TargetOS`（OS）× `Arch`（CPU）× `TargetFramework`（运行时版本）各司其职，不再由 TFM 兼任架构（`pe32 = Arch != Architecture.X64` 取代 `pe32 = IsNetFx`）。
 3. **零跨后端特例**：校验只在 Backend 对应**组内**进行；组外属性写不写无关（非禁写、非忽略），从根源消除矛盾组合校验。
 
 ## 2. 属性模型（分组）
@@ -20,7 +20,7 @@
 | 属性 | 类型 | 可选值 | 默认 | 说明 |
 |---|---|---|---|---|
 | `TargetOS` | enum | `windows` · `linux` | `windows` | 决定 PE/ELF 文件格式；native+linux 自 T3 起启用（最小可执行 ELF：控制台链 + kernel32 四符号 shim） |
-| `Arch` | enum | `anycpu` · `x86` · `x64` | `anycpu` | 原 `Platform` 更名；决定 `Cpu{AnyCPU,X86,X64}`。native 下 `anycpu` 报错（须显式 `--arch x86/x64`） |
+| `Arch` | enum | `anycpu` · `x86` · `x64` | `anycpu` | 原 `Platform` 更名；决定 `Architecture{AnyCPU,X64,X86}`。native 下 `anycpu` 报错（须显式 `--arch x86/x64`） |
 
 ### B. 生产链（显式必填）
 
@@ -145,7 +145,7 @@
 | 属性 | 落到 | 批次 |
 |---|---|---|
 | `Backend` 三值 | `Cocoa.Targeting/CodeBackend{Native,ManagedFx,ManagedNet}` + `ProjectEvaluator.ParseBackend` | T0a |
-| `Arch` | `Cocoa.Targeting/Cpu{AnyCPU,X86,X64}` + `CocoaProjectFile.Cpu`（XML 键 `Arch`，兼容 `Platform`） | T0a |
+| `Arch` | `Cocoa.Targeting/Architecture{AnyCPU,X64,X86}` + `CocoaProjectFile.Cpu`（XML 键 `Arch`，兼容 `Platform`） | T0a |
 | `TargetFramework` | `IlTarget(Runtime×Version×Cpu×Prefer32Bit)` 四维 | T0a |
 | `Prefer32Bit` | `IlTarget.Prefer32Bit` → COR20 `32BITPREFERRED` | T0a |
 | `TargetOS` | 删 `CocoaTargetOs`，并入 `TargetOs` | T0b |

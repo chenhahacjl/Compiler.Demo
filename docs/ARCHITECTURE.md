@@ -37,7 +37,7 @@
 - 测试：`Cocoa.Tests.{CodeAnalysis, CodeGen, Compiler, SelfHosting}` 四分。
 - 依赖方向严格单向；后端**反向引用** `Cocoa.CodeAnalysis` 消费 `BoundProgram`，Core 不引用后端（§六）。
 
-> **工程结构（已实施）**：目录为 4 分类（`Core/` `CodeGen/` `Tools/` `Tests/`）；`Cocoa.CodeGen.PE`/`Cocoa.CodeGen.Elf` 已合并为 `Cocoa.CodeGen.ObjectFormat`（`.PE`/`.Elf` 子命名空间）、`Cocoa.CodeGen.Managed.Writer`→`Cocoa.CodeGen.Managed`、`Native.Lir` 降为 `Native/Lir/`、`Cocoa.Metadata`→`Cocoa.IlMetadata`；`Cocoa.Targeting` 承载 `TargetTriple/Cpu/IAbiDescriptor/IPlatformRuntime/IObjectWriter`。详见 [`coproj目标属性设计.md`](../docs-dev/plan/coproj目标属性设计.md)。
+> **工程结构（已实施）**：目录为 4 分类（`Core/` `CodeGen/` `Tools/` `Tests/`）；`Cocoa.CodeGen.PE`/`Cocoa.CodeGen.Elf` 已合并为 `Cocoa.CodeGen.ObjectFormat`（`.PE`/`.Elf` 子命名空间）、`Cocoa.CodeGen.Managed.Writer`→`Cocoa.CodeGen.Managed`、`Native.Lir` 降为 `Native/Lir/`、`Cocoa.Metadata`→`Cocoa.IlMetadata`；`Cocoa.Targeting` 承载 `TargetTriple/Architecture/IAbiDescriptor/IPlatformRuntime/IObjectWriter`。详见 [`coproj目标属性设计.md`](../docs-dev/plan/coproj目标属性设计.md)。
 
 ## 三、后端与运行时
 

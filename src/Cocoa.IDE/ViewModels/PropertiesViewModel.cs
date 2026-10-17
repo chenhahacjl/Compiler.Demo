@@ -47,7 +47,7 @@ public partial class PropertiesViewModel : ObservableObject
             {
                 var p = CocoaProjectFile.Load(node.FullPath);
                 Items.Add(new PropertyItemViewModel("项目", "输出类型", p.Output.ToString()));
-                Items.Add(new PropertyItemViewModel("项目", "平台", p.Cpu.ToString()));
+                Items.Add(new PropertyItemViewModel("项目", "平台", p.Arch.ToString()));
                 Items.Add(new PropertyItemViewModel("项目", "目标框架", p.DotnetRuntime ?? "(默认)"));
                 Items.Add(new PropertyItemViewModel("项目", "配置", p.Configuration.ToString()));
                 Items.Add(new PropertyItemViewModel("项目", "输出路径", p.GetOutputDirectory()));

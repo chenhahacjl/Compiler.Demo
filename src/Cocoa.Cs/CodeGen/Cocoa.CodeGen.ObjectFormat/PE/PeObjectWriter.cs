@@ -22,10 +22,10 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
 
         public byte[] Write(ObjectWriteOptions options)
         {
-            var pe32 = options.Cpu != Cpu.X64;
-            var machine = options.Cpu switch
+            var pe32 = options.Arch != Architecture.X64;
+            var machine = options.Arch switch
             {
-                Cpu.X64 => PeMachine.AMD64,
+                Architecture.X64 => PeMachine.AMD64,
                 _ => PeMachine.I386,
             };
             var imageBase = options.ImageBase;

@@ -16,7 +16,7 @@ namespace Cocoa.Tests.CodeGen.Elf
         private static ObjectWriteOptions Build()
         {
             var options = new ObjectWriteOptions(
-                TargetOS.Linux, Cpu.X64, 0x400000UL, 0, 0x1048, 0x1000, 0x1000);
+                TargetOS.Linux, Architecture.X64, 0x400000UL, 0, 0x1048, 0x1000, 0x1000);
             options.Sections.Add(new SectionSpec(".text", new byte[0x200], 0x1000, 0));
             options.Sections.Add(new SectionSpec(".data", new byte[] { 1, 2, 3, 4 }, 0x2000, 0));
             return options;

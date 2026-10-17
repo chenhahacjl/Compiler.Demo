@@ -67,7 +67,7 @@ public partial class ProjectPropertiesViewModel : ObservableObject
             CodeBackend.ManagedNet => "Managed",
             _ => "(默认 Managed)",
         };
-        Platform = project.Cpu.ToString();
+        Platform = project.Arch.ToString();
         TargetFramework = project.DotnetRuntime ?? "";
         TargetOs = project.TargetOs.ToString();
         OutputPath = project.OutputPath ?? "";

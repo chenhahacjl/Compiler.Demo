@@ -482,6 +482,11 @@ namespace Cocoa.CodeAnalysis
         /// </summary>
         public ImmutableArray<Diagnostic> EmitNative(string moduleName, string outputPath, TargetPlatform platform = default, ushort subsystem = 3 /* PeSubsystem.WindowsCui */, PeResourceOptions? resourceOptions = null)
         {
+            if (platform == default)
+            {
+                platform = TargetPlatform.Default;
+            }
+
             if (_nativeEmitter == null)
             {
                 return ImmutableArray.Create(Diagnostic.Error(ZeroLocation, "native 后端未注册（Cocoa.CodeGen.Native 未初始化）"));

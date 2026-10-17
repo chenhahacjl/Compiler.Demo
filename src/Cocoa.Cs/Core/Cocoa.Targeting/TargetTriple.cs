@@ -3,16 +3,16 @@ using System;
 namespace Cocoa.Targeting
 {
     /// <summary>
-    /// 目标三元组：OS × Cpu。Abi 由 native 后端按 (Os, Cpu) 直接选择具体描述符（WinX64Abi/SysVAmd64Abi 等），
-    /// 不再经枚举中转（见 LirToAssembler）。managed 后端仅用 Os（宿主可用性）与 Cpu（PE 形态）。
+    /// 目标三元组：OS × Architecture。Abi 由 native 后端按 (Os, Arch) 直接选择具体描述符（WinX64Abi/SysVAmd64Abi 等），
+    /// 不再经枚举中转（见 LirToAssembler）。managed 后端仅用 Os（宿主可用性）与 Arch（PE 形态）。
     /// </summary>
-    public readonly record struct TargetTriple(TargetOS Os, Cpu Cpu)
+    public readonly record struct TargetTriple(TargetOS Os, Architecture Arch)
     {
-        public static TargetTriple Default => new(TargetOS.Windows, Cpu.X64);
+        public static TargetTriple Default => new(TargetOS.Windows, Architecture.X64);
 
-        public static TargetTriple Create(TargetOS os, Cpu cpu) => new(os, cpu);
+        public static TargetTriple Create(TargetOS os, Architecture arch) => new(os, arch);
 
-        /// <summary>字符串形式：`{os}-{cpu}`（如 `windows-x64`），供 .coproj Condition 的 $(TargetTriple)。</summary>
+        /// <summary>字符串形式：`{os}-{arch}`（如 `windows-x64`），供 .coproj Condition 的 $(TargetTriple)。</summary>
         public override string ToString()
         {
             var os = Os switch
@@ -22,17 +22,17 @@ namespace Cocoa.Targeting
                 TargetOS.MacOS => "macos",
                 _ => "unknown",
             };
-            var cpu = Cpu switch
+            var arch = Arch switch
             {
-                Cpu.AnyCPU => "anycpu",
-                Cpu.X86 => "x86",
-                Cpu.X64 => "x64",
+                Architecture.AnyCPU => "anycpu",
+                Architecture.X86 => "x86",
+                Architecture.X64 => "x64",
                 _ => "unknown",
             };
-            return $"{os}-{cpu}";
+            return $"{os}-{arch}";
         }
 
-        /// <summary>解析 `os-cpu`（如 `windows-x64` / `linux-arm64` 预留）；Abi 由 (Os,Cpu) 推导。</summary>
+        /// <summary>解析 `os-arch`（如 `windows-x64` / `linux-arm64` 预留）；Abi 由 (Os,Arch) 推导。</summary>
         public static bool TryParse(string text, out TargetTriple triple)
         {
             triple = Default;
@@ -59,26 +59,26 @@ namespace Cocoa.Targeting
                     return false;
             }
 
-            Cpu cpu;
+            Architecture arch;
             switch (parts[1].ToLowerInvariant())
             {
                 case "anycpu":
-                    cpu = Cpu.AnyCPU;
+                    arch = Architecture.AnyCPU;
                     break;
                 case "x86":
                 case "x32":
                 case "i386":
-                    cpu = Cpu.X86;
+                    arch = Architecture.X86;
                     break;
                 case "x64":
                 case "amd64":
-                    cpu = Cpu.X64;
+                    arch = Architecture.X64;
                     break;
                 default:
                     return false;
             }
 
-            triple = Create(os, cpu);
+            triple = Create(os, arch);
             return true;
         }
     }

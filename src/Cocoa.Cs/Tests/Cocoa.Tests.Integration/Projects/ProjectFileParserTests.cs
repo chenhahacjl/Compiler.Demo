@@ -36,7 +36,7 @@ namespace Cocoa.Tests.Integration.Projects
             Assert.Equal("MyApp", project.Name);
             Assert.Equal(ProjectOutputFormat.Library, project.Output);
             Assert.Equal(TargetOS.Windows, project.TargetOs);
-            Assert.Equal("X86", project.Cpu.ToString());
+            Assert.Equal("X86", project.Arch.ToString());
             Assert.Equal("net48", project.DotnetRuntime);
             Assert.Equal(ProjectConfiguration.Release, project.Configuration);
             Assert.Equal("bin", project.OutputPath);
@@ -64,7 +64,7 @@ namespace Cocoa.Tests.Integration.Projects
             Assert.Equal("Greeter", project.AssemblyName);
             Assert.Equal(ProjectOutputFormat.Executable, project.Output);
             Assert.Equal(TargetOS.Windows, project.TargetOs);
-            Assert.Equal("AnyCPU", project.Cpu.ToString());
+            Assert.Equal("AnyCPU", project.Arch.ToString());
             Assert.Equal(ProjectConfiguration.Debug, project.Configuration);
             Assert.Null(project.DotnetRuntime);
             Assert.Null(project.OutputPath);
@@ -230,7 +230,7 @@ namespace Cocoa.Tests.Integration.Projects
                        "</Project>";
 
             var project = ProjectFileParser.ParseProject(text, "x.coproj");
-            Assert.Equal("AnyCPU", project.Cpu.ToString());
+            Assert.Equal("AnyCPU", project.Arch.ToString());
         }
 
         [Fact]
@@ -348,7 +348,7 @@ namespace Cocoa.Tests.Integration.Projects
 
             var project = CocoaProjectFile.Load(projectPath);
 
-            Assert.Equal("X64", project.Cpu.ToString());
+            Assert.Equal("X64", project.Arch.ToString());
             Assert.Equal("local-bin", project.OutputPath);
             Assert.Equal(ProjectConfiguration.Release, project.Configuration);
         }

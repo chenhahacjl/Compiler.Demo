@@ -164,7 +164,7 @@ namespace Cocoa.Build
                 ParseOutput(state.Get("OutputType") ?? "Executable"),
                 backend,
                 ParseTargetOs(state.Get("TargetOS") ?? "Windows"),
-                ParseCpu(archText),
+                ParseArch(archText),
                 ParseBool(state.Get("Prefer32Bit") ?? "false"),
                 state.Get("StartupObject"),
                 targetFramework,
@@ -235,13 +235,13 @@ namespace Cocoa.Build
             };
         }
 
-        private static Cpu ParseCpu(string text)
+        private static Architecture ParseArch(string text)
         {
             return text.ToLowerInvariant() switch
             {
-                "anycpu" => Cpu.AnyCPU,
-                "x86" => Cpu.X86,
-                "x64" => Cpu.X64,
+                "anycpu" => Architecture.AnyCPU,
+                "x86" => Architecture.X86,
+                "x64" => Architecture.X64,
                 _ => throw new ProjectFileFormatException($"invalid Arch '{text}'. Expected: anycpu, x86, x64"),
             };
         }

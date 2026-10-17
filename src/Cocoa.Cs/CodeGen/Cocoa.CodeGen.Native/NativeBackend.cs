@@ -57,6 +57,13 @@ namespace Cocoa.CodeGen.Native
         /// </summary>
         private static int TryValidate(Compilation compilation, TargetPlatform platform, out BoundProgram program, out ImmutableArray<Diagnostic> diagnostics)
         {
+            // AnyCPU 非合法 native 目标（native 需定 ISA）；防 default 值/直接调用漏检导致 IAT/寄存器宽不一致的损坏产物。
+            if (platform.Arch == Architecture.AnyCPU)
+            {
+                program = null!;
+                diagnostics = ImmutableArray.Create(Diagnostic.Error(default, "native 后端不接受 Arch 'AnyCPU'；请显式指定 x86 或 x64"));
+                return 1;
+            }
             var parseDiagnostics = compilation.SyntaxTrees.SelectMany(st => st.Diagnostics);
 
             var preliminary = parseDiagnostics.Concat(compilation.GlobalScope.Diagnostics).ToImmutableArray();

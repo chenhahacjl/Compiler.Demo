@@ -22,7 +22,7 @@ namespace Cocoa.CodeGen.ObjectFormat.Elf
         public static void Write(string outputPath, byte[] code, byte[] data, int entryPointRva, int dataRva, byte[]? cocoaMetadata = null, System.Collections.Generic.IReadOnlyList<Cocoa.Targeting.DynamicImport>? imports = null)
         {
             var options = new ObjectWriteOptions(
-                TargetOS.Linux, Cpu.X64, (ulong)ImageBase,
+                TargetOS.Linux, Architecture.X64, (ulong)ImageBase,
                 0 /* PE subsystem：ELF 不使用 */,
                 (uint)entryPointRva,
                 SectionAlignment, SectionAlignment);

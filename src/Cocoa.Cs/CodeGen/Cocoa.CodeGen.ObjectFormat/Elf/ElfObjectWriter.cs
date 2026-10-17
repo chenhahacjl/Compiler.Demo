@@ -67,7 +67,7 @@ namespace Cocoa.CodeGen.ObjectFormat.Elf
 
         public byte[] Write(ObjectWriteOptions options)
         {
-            if (options.Cpu != Cpu.X64)
+            if (options.Arch != Architecture.X64)
             {
                 throw new InvalidOperationException("ElfObjectWriter: linux ELF64 目标仅支持 x64。");
             }

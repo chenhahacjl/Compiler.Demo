@@ -8,15 +8,15 @@ namespace Cocoa.Tests.CodeGen.PE
 {
     public class PeObjectWriterTests
     {
-        private static ObjectWriteOptions BasicOptions(Cpu cpu)
+        private static ObjectWriteOptions BasicOptions(Architecture arch)
         {
             var options = new ObjectWriteOptions(
-                TargetOS.Windows, cpu,
-                cpu == Cpu.X64 ? 0x140000000UL : 0x400000UL,
+                TargetOS.Windows, arch,
+                arch == Architecture.X64 ? 0x140000000UL : 0x400000UL,
                 3 /* WindowsCui */,
                 0x1000, 0x1000, 0x200)
             {
-                AdditionalFileCharacteristics = (ushort)(PeFileCharacteristics.ExecutableImage | (cpu == Cpu.X64 ? 0 : PeFileCharacteristics.Machine32Bit)),
+                AdditionalFileCharacteristics = (ushort)(PeFileCharacteristics.ExecutableImage | (arch == Architecture.X64 ? 0 : PeFileCharacteristics.Machine32Bit)),
             };
             options.Sections.Add(new SectionSpec(".text", new byte[0x200], 0x1000, 0x60000020));
             return options;
@@ -25,7 +25,7 @@ namespace Cocoa.Tests.CodeGen.PE
         [Fact]
         public void Writes_Pe32Plus_With_CheckSum_And_TimeStamp()
         {
-            var image = PeObjectWriter.Instance.Write(BasicOptions(Cpu.X64));
+            var image = PeObjectWriter.Instance.Write(BasicOptions(Architecture.X64));
 
             // PE 头
             var eLfanew = BitConverter.ToInt32(image, 0x3C);
@@ -49,9 +49,9 @@ namespace Cocoa.Tests.CodeGen.PE
         [Fact]
         public void Writes_Pe32_For_AnyCpuX86()
         {
-            foreach (var cpu in new[] { Cpu.AnyCPU, Cpu.X86 })
+            foreach (var arch in new[] { Architecture.AnyCPU, Architecture.X86 })
             {
-                var image = PeObjectWriter.Instance.Write(BasicOptions(cpu));
+                var image = PeObjectWriter.Instance.Write(BasicOptions(arch));
                 var eLfanew = BitConverter.ToInt32(image, 0x3C);
                 Assert.Equal(0x10B, BitConverter.ToUInt16(image, eLfanew + 24)); // PE32 magic
                 var checksum = BitConverter.ToUInt32(image, eLfanew + 4 + 20 + 64);
@@ -62,7 +62,7 @@ namespace Cocoa.Tests.CodeGen.PE
         [Fact]
         public void Image_Is_Readable_By_PeImageReader()
         {
-            var image = PeObjectWriter.Instance.Write(BasicOptions(Cpu.X64));
+            var image = PeObjectWriter.Instance.Write(BasicOptions(Architecture.X64));
             var reader = PeImageReader.TryOpen(image);
             Assert.NotNull(reader);
             Assert.True(reader!.IsPe32Plus);

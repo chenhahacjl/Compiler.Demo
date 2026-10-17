@@ -39,15 +39,15 @@ namespace Cocoa.Build
             var effectiveTargetOs = options.TargetOsOverride ?? project.TargetOs;
 
             // 有效 Cpu：CLI --platform 覆盖优先（校验与消费均基于此）
-            var effectiveCpu = project.Cpu;
+            var effectiveArch = project.Arch;
             if (!string.IsNullOrEmpty(options.PlatformOverride))
             {
-                effectiveCpu = options.PlatformOverride.ToLowerInvariant() switch
+                effectiveArch = options.PlatformOverride.ToLowerInvariant() switch
                 {
-                    "x86" => Cpu.X86,
-                    "x64" => Cpu.X64,
-                    "anycpu" => Cpu.AnyCPU,
-                    _ => project.Cpu,
+                    "x86" => Architecture.X86,
+                    "x64" => Architecture.X64,
+                    "anycpu" => Architecture.AnyCPU,
+                    _ => project.Arch,
                 };
             }
 
@@ -56,7 +56,7 @@ namespace Cocoa.Build
             var isCoaLibrary = format == ProjectOutputFormat.Cocoa;
             if (!isCoaLibrary && backend == CodeBackend.Native)
             {
-                if (effectiveCpu == Cpu.AnyCPU)
+                if (effectiveArch == Architecture.AnyCPU)
                 {
                     messageWriter.WriteLine("error: Arch 'AnyCPU' cannot be used with the native backend; specify x86 or x64");
                     return ProjectBuildResult.Failed;
@@ -94,13 +94,13 @@ namespace Cocoa.Build
                     return ProjectBuildResult.Failed;
                 }
 
-                if (backend == CodeBackend.ManagedFx && effectiveCpu == Cpu.X64)
+                if (backend == CodeBackend.ManagedFx && effectiveArch == Architecture.X64)
                 {
                     messageWriter.WriteLine("error: managed-fx does not support Arch 'x64'; use anycpu or x86");
                     return ProjectBuildResult.Failed;
                 }
 
-                if (project.Prefer32Bit && effectiveCpu != Cpu.AnyCPU)
+                if (project.Prefer32Bit && effectiveArch != Architecture.AnyCPU)
                 {
                     messageWriter.WriteLine("error: Prefer32Bit is only valid with Arch 'AnyCPU'");
                     return ProjectBuildResult.Failed;
@@ -168,7 +168,7 @@ namespace Cocoa.Build
             var optionTokens = new[]
             {
                 $"format={format}",
-                $"platform={options.PlatformOverride ?? effectiveCpu.ToString()}",
+                $"platform={options.PlatformOverride ?? effectiveArch.ToString()}",
                 $"os={effectiveTargetOs}",
                 $"backend={backend}",
                 $"configuration={options.ConfigurationOverride ?? project.Configuration}",
@@ -239,13 +239,13 @@ namespace Cocoa.Build
                         return new ProjectBuildResult(success: true, upToDate: false);
                     }
 
-                    if (effectiveTargetOs == TargetOS.Linux && effectiveCpu != Cpu.X64)
+                    if (effectiveTargetOs == TargetOS.Linux && effectiveArch != Architecture.X64)
                     {
                         messageWriter.WriteLine("error: linux native target currently supports x64 only (ELF64)");
                         return ProjectBuildResult.Failed;
                     }
 
-                    if (!TryParseTargetPlatform(effectiveTargetOs, options.PlatformOverride, effectiveCpu.ToString(), out var platform, out var platformError))
+                    if (!TryParseTargetPlatform(effectiveTargetOs, options.PlatformOverride, effectiveArch.ToString(), out var platform, out var platformError))
                     {
                         messageWriter.WriteLine($"error: {platformError}");
                         return ProjectBuildResult.Failed;
@@ -687,10 +687,10 @@ namespace Cocoa.Build
                 case "x86":
                 case "x64":
                     {
-                        var cpu = text.ToLowerInvariant() == "x86" ? Cpu.X86 : Cpu.X64;
-                        var triple = TargetTriple.Create(os, cpu);
+                        var arch = text.ToLowerInvariant() == "x86" ? Architecture.X86 : Architecture.X64;
+                        var triple = TargetTriple.Create(os, arch);
                         // native 消费仍走 TargetPlatform（OS + Architecture）；Abi 由 TargetTriple 承载（T1 落地后消费）
-                        platform = new TargetPlatform(os, cpu == Cpu.X86 ? Architecture.X86 : Architecture.X64);
+                        platform = new TargetPlatform(os, arch);
                         error = null;
                         return true;
                     }

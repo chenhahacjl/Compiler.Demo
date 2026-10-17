@@ -197,7 +197,7 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
             // T3：经 PeObjectWriter 写出——回填 TimeDateStamp + CheckSum（CheckSumMappedFile 语义）
             var objOptions = new Cocoa.Targeting.ObjectWriteOptions(
                 Cocoa.Targeting.TargetOS.Windows,
-                pe32 ? Cocoa.Targeting.Cpu.X86 : Cocoa.Targeting.Cpu.X64,
+                pe32 ? Cocoa.Targeting.Architecture.X86 : Cocoa.Targeting.Architecture.X64,
                 (ulong)ImageBaseOf(architecture),
                 (ushort)subsystem,
                 (uint)entryPointRva,

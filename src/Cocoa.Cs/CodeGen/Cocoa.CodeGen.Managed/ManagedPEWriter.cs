@@ -401,7 +401,7 @@ namespace Cocoa.CodeGen.Managed
             const uint Cor32BitRequired = 0x0002;
             const uint Cor32BitPreferred = 0x00020000;
             var flags = CorIlOnly;
-            if (target.Cpu == Cpu.X86) flags |= Cor32BitRequired;
+            if (target.Arch == Architecture.X86) flags |= Cor32BitRequired;
             if (target.Prefer32Bit) flags |= Cor32BitPreferred;
 
             writer.Write((uint)CorHeaderSize);     // cb

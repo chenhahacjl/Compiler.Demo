@@ -20,10 +20,10 @@ namespace Cocoa.Targeting
     /// </summary>
     public sealed class ObjectWriteOptions
     {
-        public ObjectWriteOptions(TargetOS os, Cpu cpu, ulong imageBase, ushort subsystem, uint addressOfEntryPoint, uint sectionAlignment, uint fileAlignment)
+        public ObjectWriteOptions(TargetOS os, Architecture arch, ulong imageBase, ushort subsystem, uint addressOfEntryPoint, uint sectionAlignment, uint fileAlignment)
         {
             Os = os;
-            Cpu = cpu;
+            Arch = arch;
             ImageBase = imageBase;
             Subsystem = subsystem;
             AddressOfEntryPoint = addressOfEntryPoint;
@@ -32,7 +32,7 @@ namespace Cocoa.Targeting
         }
 
         public TargetOS Os { get; }
-        public Cpu Cpu { get; }
+        public Architecture Arch { get; }
         public ulong ImageBase { get; }
         public ushort Subsystem { get; }
         public uint AddressOfEntryPoint { get; }
