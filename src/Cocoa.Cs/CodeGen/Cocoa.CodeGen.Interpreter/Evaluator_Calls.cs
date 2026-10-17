@@ -861,15 +861,32 @@ namespace Cocoa.CodeGen.Interpreter
         {
             if (node.IsTypeOf)
             {
-                return ClrTypeOf(node.TypeArgument);
+                return ResolveTypeOf(node.TypeArgument);
             }
 
             throw new Exception(
                 $"sizeof({node.TypeArgument.Name})：解释器不支持用户值类型的大小查询（需托管布局信息）。");
         }
 
-        /// <summary>类型符号 → 宿主 <see cref="System.Type"/>：按全名解析，解析不到回退 <see cref="object"/>。</summary>
-        private static System.Type ClrTypeOf(Symbols.TypeSymbol type)
+        /// <summary>
+        /// <c>typeof(T)</c> 的求值器语义（C# 对齐）：宿主可解析（基元 / BCL / SDK facade）→ 真实 <see cref="System.Type"/>；
+        /// 用户定义类（无 CLR 宿主类型）→ interned <see cref="EvaluatorTypeInfo"/>，保证
+        /// <c>typeof(A) == typeof(B)</c> 与 <c>x.GetType() == typeof(C)</c> 的引用相等成立
+        /// （C#：同一类型恒为同一 Type 实例）。
+        /// </summary>
+        private static object ResolveTypeOf(Symbols.TypeSymbol type)
+        {
+            if (TryResolveHostType(type) is { } host)
+            {
+                return host;
+            }
+
+            var fullName = type is Symbols.NamedTypeSymbol named ? named.FullName : type.Name;
+            return EvaluatorTypeInfo.Get(fullName);
+        }
+
+        /// <summary>类型符号 → 宿主 <see cref="System.Type"/>；解析不到返回 null（用户定义类由 ResolveTypeOf 走 EvaluatorTypeInfo）。</summary>
+        private static System.Type? TryResolveHostType(Symbols.TypeSymbol type)
         {
             // 基元：Cocoa 用物理名简写（i32/i64/f64...），非 CLR 类型名，按 SpecialType 映射对齐 IL 后端
             // （IL 的 typeof(i32) → System.Int32 via IsInstTypeToken；此处须同一宿主类型）。
@@ -907,7 +924,7 @@ namespace Cocoa.CodeGen.Interpreter
                 }
             }
 
-            return System.Type.GetType("System." + type.Name, throwOnError: false) ?? typeof(object);
+            return System.Type.GetType("System." + type.Name, throwOnError: false);
         }
 
         private object? EvaluateAsExpression(BoundAsExpression node)        {

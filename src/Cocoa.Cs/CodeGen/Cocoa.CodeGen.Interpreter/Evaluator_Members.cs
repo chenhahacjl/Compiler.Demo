@@ -293,7 +293,7 @@ namespace Cocoa.CodeGen.Interpreter
                     var other = EvaluateExpression(node.Arguments[0]);
                     return ReferenceEquals(instance, other);
                 case BuiltinKind.ObjectGetType:
-                    return new EvaluatorTypeInfo(instance.Class.FullName);
+                    return EvaluatorTypeInfo.Get(instance.Class.FullName);
                 default:
                     throw new Exception($"Unexpected builtin kind {kind} on instance");
             }
