@@ -670,20 +670,43 @@ namespace Cocoa.CodeAnalysis.Binder
                 }
 
                 // x++/++x → x = x + 1；x--/--x → x = x - 1
+                // 内建优先；用户定义 `op_+`/`op_-` 回落（C# §12.21.2 语义：无显式复合赋值运算符时按 `x = x op 1` 脱糖）
                 var operatorTokenKind = operatorToken.Kind == CoreSyntax.SyntaxKind.PlusPlusToken
                     ? CoreSyntax.SyntaxKind.PlusToken
                     : CoreSyntax.SyntaxKind.MinusToken;
                 var boundOperator = BoundBinaryOperator.Bind(operatorTokenKind, variable.Type, variable.Type);
 
+                BoundBinaryOperator? userDefined = null;
                 if (boundOperator == null)
+                {
+                    var declaredKind = OperatorNames.FromToken(operatorTokenKind);
+                    if (declaredKind.HasValue)
+                    {
+                        var method = _operators.ResolveBinary(declaredKind.Value, variable.Type, TypeSymbol.Int32);
+                        if (method != null)
+                        {
+                            userDefined = BoundBinaryOperator.ForUserDefined(
+                                BoundBinaryOperator.Translate(operatorTokenKind),
+                                variable.Type,
+                                TypeSymbol.Int32,
+                                OperatorNames.IsComparison(declaredKind.Value) ? TypeSymbol.Boolean : method.ReturnType,
+                                method);
+                        }
+                    }
+                }
+
+                if (boundOperator == null && userDefined == null)
                 {
                     _diagnostics.ReportUndefinedBinaryOperator(operatorToken.Location, operatorToken.Text, variable.Type, variable.Type);
                     return new BoundErrorExpression(syntax);
                 }
 
                 var one = new BoundLiteralExpression(syntax, 1);
-                var convertedOne = BindConversion(operatorToken.Location, one, variable.Type);
-                var binary = new BoundBinaryExpression(syntax, variableTarget, boundOperator, convertedOne);
+                // 内建路径：常量 1 转换到左操作数类型；用户路径：op_+(T, i32) 右操作数保持 i32 字面量
+                var right = boundOperator != null
+                    ? BindConversion(operatorToken.Location, one, variable.Type)
+                    : one;
+                var binary = new BoundBinaryExpression(syntax, variableTarget, boundOperator ?? userDefined!, right);
 
                 return new BoundAssignmentExpression(syntax, variable, binary);
             }

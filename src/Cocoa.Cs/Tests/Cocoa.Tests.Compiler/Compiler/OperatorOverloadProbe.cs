@@ -426,6 +426,51 @@ namespace Cocoa.Tests.Compiler
         }
 
         [Fact]
+        public void Increment_FallsBackToUserDefinedAddition_EndToEnd()
+        {
+            // `c++` 无显式 op_++ → 脱糖 `c = c + 1` 回落用户 op_+(Vec, i32)（C# 语义）
+            var result = RunMain(
+                "class Vec {" + Nl +
+                "    public field X: i32" + Nl +
+                "    public static function operator +(a: Vec, delta: i32): Vec {" + Nl +
+                "        var r = new Vec()" + Nl +
+                "        r.X = a.X + delta" + Nl +
+                "        return r" + Nl +
+                "    }" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var c = new Vec()" + Nl +
+                "    c.X = 4" + Nl +
+                "    c++" + Nl +
+                "    return c.X" + Nl +
+                "}", "OpIncrementAdd");
+
+            Assert.Equal(5, result);
+        }
+
+        [Fact]
+        public void Decrement_FallsBackToUserDefinedSubtraction_EndToEnd()
+        {
+            var result = RunMain(
+                "class Vec {" + Nl +
+                "    public field X: i32" + Nl +
+                "    public static function operator -(a: Vec, delta: i32): Vec {" + Nl +
+                "        var r = new Vec()" + Nl +
+                "        r.X = a.X - delta" + Nl +
+                "        return r" + Nl +
+                "    }" + Nl +
+                "}" + Nl +
+                "function Main(args: string[]): i32 {" + Nl +
+                "    var c = new Vec()" + Nl +
+                "    c.X = 9" + Nl +
+                "    c--" + Nl +
+                "    return c.X" + Nl +
+                "}", "OpDecrementSub");
+
+            Assert.Equal(8, result);
+        }
+
+        [Fact]
         public void CompoundAssignment_FallsBackToUserDefinedSubtraction_EndToEnd()
         {
             // `c -= b` → 脱糖 `c = c - b` 回落用户 op_
