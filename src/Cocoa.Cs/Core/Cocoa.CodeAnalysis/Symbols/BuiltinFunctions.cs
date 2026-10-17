@@ -49,7 +49,22 @@ namespace Cocoa.CodeAnalysis.Symbols
             new BuiltinSpec(BuiltinKind.SetCurrentDirectory, "SetCurrentDirectory", TypeSymbol.Void, new[] { ("path", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.Sha256Hash, "Sha256Hash", TypeSymbol.ArrayOf(TypeSymbol.UInt8), new[] { ("data", TypeSymbol.ArrayOf(TypeSymbol.UInt8)) }),
             new BuiltinSpec(BuiltinKind.LaunchProcess, "LaunchProcess", TypeSymbol.Int32, new[] { ("path", TypeSymbol.String), ("args", TypeSymbol.String), ("workdir", TypeSymbol.String) }),
-            new BuiltinSpec(BuiltinKind.SelfIntrospect, "SelfIntrospect", TypeSymbol.Boolean, System.Array.Empty<(string, TypeSymbol)>()));
+            new BuiltinSpec(BuiltinKind.SelfIntrospect, "SelfIntrospect", TypeSymbol.Boolean, System.Array.Empty<(string, TypeSymbol)>()),
+
+            // ---- System.Object / System.Type 成员（6e-M19 M2-c，统一入表；SystemObjectMembers 持单例并注册到类）----
+            new BuiltinSpec(BuiltinKind.ObjectToString, "ToString", TypeSymbol.String, System.Array.Empty<(string, TypeSymbol)>(), BuiltinCategory.SystemMember),
+            new BuiltinSpec(BuiltinKind.ObjectGetHashCode, "GetHashCode", TypeSymbol.Int32, System.Array.Empty<(string, TypeSymbol)>(), BuiltinCategory.SystemMember),
+            new BuiltinSpec(BuiltinKind.ObjectEquals, "Equals", TypeSymbol.Boolean, new (string Name, TypeSymbol Type)[] { ("other", TypeSymbol.Object) }, BuiltinCategory.SystemMember),
+            new BuiltinSpec(BuiltinKind.ObjectGetType, "GetType", NamedTypeSymbol.SystemType, System.Array.Empty<(string, TypeSymbol)>(), BuiltinCategory.SystemMember),
+            new BuiltinSpec(BuiltinKind.ObjectStaticEquals, "Equals", TypeSymbol.Boolean, new (string Name, TypeSymbol Type)[] { ("a", TypeSymbol.Object), ("b", TypeSymbol.Object) }, BuiltinCategory.SystemMember),
+            new BuiltinSpec(BuiltinKind.ObjectReferenceEquals, "ReferenceEquals", TypeSymbol.Boolean, new (string Name, TypeSymbol Type)[] { ("a", TypeSymbol.Object), ("b", TypeSymbol.Object) }, BuiltinCategory.SystemMember),
+            new BuiltinSpec(BuiltinKind.TypeName, "get_Name", TypeSymbol.String, System.Array.Empty<(string, TypeSymbol)>(), BuiltinCategory.SystemMember),
+            new BuiltinSpec(BuiltinKind.TypeFullName, "get_FullName", TypeSymbol.String, System.Array.Empty<(string, TypeSymbol)>(), BuiltinCategory.SystemMember),
+            new BuiltinSpec(BuiltinKind.TypeIsClass, "get_IsClass", TypeSymbol.Boolean, System.Array.Empty<(string, TypeSymbol)>(), BuiltinCategory.SystemMember),
+            new BuiltinSpec(BuiltinKind.TypeIsValueType, "get_IsValueType", TypeSymbol.Boolean, System.Array.Empty<(string, TypeSymbol)>(), BuiltinCategory.SystemMember),
+            new BuiltinSpec(BuiltinKind.TypeGetMethods, "GetMethods", TypeSymbol.ArrayOf(TypeSymbol.String), System.Array.Empty<(string, TypeSymbol)>(), BuiltinCategory.SystemMember),
+            new BuiltinSpec(BuiltinKind.TypeGetMethod, "GetMethod", TypeSymbol.String, new (string Name, TypeSymbol Type)[] { ("name", TypeSymbol.String) }, BuiltinCategory.SystemMember),
+            new BuiltinSpec(BuiltinKind.TypeHasMethod, "HasMethod", TypeSymbol.Boolean, new (string Name, TypeSymbol Type)[] { ("name", TypeSymbol.String) }, BuiltinCategory.SystemMember));
 
         /// <summary>
         /// 输出字符串并换行: void WriteLine(any text)（Console.WriteLine）
@@ -142,11 +157,11 @@ namespace Cocoa.CodeAnalysis.Symbols
         }
 
         /// <summary>
-        /// 获取所有内置函数
+        /// 获取所有内置函数（功能层）
         /// </summary>
         /// <returns></returns>
         public static IEnumerable<FunctionSymbol> GetAll()
-            => _specs.Select(s => GetByKind(s.Kind)!);
+            => SpecsOf(BuiltinCategory.Function).Select(s => GetByKind(s.Kind)!);
 
         /// <summary>按种类查找内置函数。</summary>
         public static FunctionSymbol? GetByKind(BuiltinKind kind)
@@ -197,7 +212,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>按名查找内置函数（`.coa` 反序列化时复用单例，保证发射器识别内置；大小写不敏感——syscall 声明可用 PascalCase 如 `Random` 命中 `random`）。</summary>
         public static FunctionSymbol? GetByName(string name)
         {
-            foreach (var spec in _specs)
+            foreach (var spec in SpecsOf(BuiltinCategory.Function))
             {
                 if (string.Equals(spec.Name, name, System.StringComparison.OrdinalIgnoreCase))
                 {
@@ -209,9 +224,32 @@ namespace Cocoa.CodeAnalysis.Symbols
         }
 
         /// <summary>按 BuiltinKind 枚举名解析（`.coa` v3 序列化用名称字符串，替代 int——改名不再依赖枚举顺序）。</summary>
-        internal static BuiltinKind? GetByKindName(string name)
+        internal static BuiltinKind? GetByKindName(string name) => FindByKindName(name, BuiltinCategory.Function);
+
+        /// <summary>System.Object/Type 成员的 Kind 名解析（`.coa` 反序列化成员符号时用）。</summary>
+        internal static BuiltinKind? GetMemberByKindName(string name) => FindByKindName(name, BuiltinCategory.SystemMember);
+
+        /// <summary>单一描述符表按 Kind 查规格（含成员）。</summary>
+        internal static BuiltinSpec? FindSpec(BuiltinKind kind)
         {
             foreach (var spec in _specs)
+            {
+                if (spec.Kind == kind)
+                {
+                    return spec;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>按分类枚举规格。</summary>
+        private static IEnumerable<BuiltinSpec> SpecsOf(BuiltinCategory category)
+            => _specs.Where(s => s.Category == category);
+
+        private static BuiltinKind? FindByKindName(string name, BuiltinCategory category)
+        {
+            foreach (var spec in SpecsOf(category))
             {
                 if (string.Equals(spec.Kind.ToString(), name, System.StringComparison.OrdinalIgnoreCase))
                 {

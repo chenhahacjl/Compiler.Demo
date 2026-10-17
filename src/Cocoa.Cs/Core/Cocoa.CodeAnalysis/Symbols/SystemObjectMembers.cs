@@ -13,23 +13,6 @@ namespace Cocoa.CodeAnalysis.Symbols
     /// </summary>
     public static class SystemObjectMembers
     {
-        private static readonly BuiltinSpec[] _specs =
-        {
-            new BuiltinSpec(BuiltinKind.ObjectToString, "ToString", TypeSymbol.String, System.Array.Empty<(string, TypeSymbol)>()),
-            new BuiltinSpec(BuiltinKind.ObjectGetHashCode, "GetHashCode", TypeSymbol.Int32, System.Array.Empty<(string, TypeSymbol)>()),
-            new BuiltinSpec(BuiltinKind.ObjectEquals, "Equals", TypeSymbol.Boolean, new (string Name, TypeSymbol Type)[] { ("other", TypeSymbol.Object) }),
-            new BuiltinSpec(BuiltinKind.ObjectGetType, "GetType", NamedTypeSymbol.SystemType, System.Array.Empty<(string, TypeSymbol)>()),
-            new BuiltinSpec(BuiltinKind.ObjectStaticEquals, "Equals", TypeSymbol.Boolean, new (string Name, TypeSymbol Type)[] { ("a", TypeSymbol.Object), ("b", TypeSymbol.Object) }),
-            new BuiltinSpec(BuiltinKind.ObjectReferenceEquals, "ReferenceEquals", TypeSymbol.Boolean, new (string Name, TypeSymbol Type)[] { ("a", TypeSymbol.Object), ("b", TypeSymbol.Object) }),
-            new BuiltinSpec(BuiltinKind.TypeName, "get_Name", TypeSymbol.String, System.Array.Empty<(string, TypeSymbol)>()),
-            new BuiltinSpec(BuiltinKind.TypeFullName, "get_FullName", TypeSymbol.String, System.Array.Empty<(string, TypeSymbol)>()),
-            new BuiltinSpec(BuiltinKind.TypeIsClass, "get_IsClass", TypeSymbol.Boolean, System.Array.Empty<(string, TypeSymbol)>()),
-            new BuiltinSpec(BuiltinKind.TypeIsValueType, "get_IsValueType", TypeSymbol.Boolean, System.Array.Empty<(string, TypeSymbol)>()),
-            new BuiltinSpec(BuiltinKind.TypeGetMethods, "GetMethods", TypeSymbol.ArrayOf(TypeSymbol.String), System.Array.Empty<(string, TypeSymbol)>()),
-            new BuiltinSpec(BuiltinKind.TypeGetMethod, "GetMethod", TypeSymbol.String, new (string Name, TypeSymbol Type)[] { ("name", TypeSymbol.String) }),
-            new BuiltinSpec(BuiltinKind.TypeHasMethod, "HasMethod", TypeSymbol.Boolean, new (string Name, TypeSymbol Type)[] { ("name", TypeSymbol.String) }),
-        };
-
         private static bool _initialized;
 
         /// <summary>实例虚 ToString(): string。</summary>
@@ -134,19 +117,8 @@ namespace Cocoa.CodeAnalysis.Symbols
             _ => null,
         };
 
-        /// <summary>按枚举名解析种类（`.coa` v1 序列化用名称字符串，改名不依赖枚举顺序）。</summary>
-        internal static BuiltinKind? GetByKindName(string name)
-        {
-            foreach (var spec in _specs)
-            {
-                if (string.Equals(spec.Kind.ToString(), name, System.StringComparison.OrdinalIgnoreCase))
-                {
-                    return spec.Kind;
-                }
-            }
-
-            return null;
-        }
+        /// <summary>按枚举名解析种类（`.coa` v1 序列化用名称字符串，改名不依赖枚举顺序）——统一表 <see cref="BuiltinFunctions"/>。</summary>
+        internal static BuiltinKind? GetByKindName(string name) => BuiltinFunctions.GetMemberByKindName(name);
 
         private static FunctionSymbol CreateInstance(BuiltinKind kind)
         {
@@ -172,7 +144,7 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         private static FunctionSymbol Create(BuiltinKind kind)
         {
-            var spec = _specs.First(s => s.Kind == kind);
+            var spec = BuiltinFunctions.FindSpec(kind)!;
             var parameters = spec.Parameters.Select((p, i) => new ParameterSymbol(p.Name, p.Type, i)).ToImmutableArray();
             return new FunctionSymbol(spec.Name, parameters, spec.ReturnType, containingClass: NamedTypeSymbol.SystemObject, builtinKind: kind);
         }
