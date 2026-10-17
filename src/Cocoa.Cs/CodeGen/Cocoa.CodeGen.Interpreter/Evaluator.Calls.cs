@@ -180,7 +180,7 @@ namespace Cocoa.CodeGen.Interpreter
 
         /// <summary>
         /// byref 实参槽求值（6e-M23 R5）：copy-in 当前值入 Box，登记回写动作；
-        /// 鍚屼竴娆¤皟鐢ㄧ殑鐩稿悓瀛樺偍锛堝埆鍚嶅幓閲嶉敭锛夊叡浜悓涓€ Box锛屼繚璇佷笁鍚庣鍒悕璇箟涓€鑷淬€?
+        /// 同一次调用的相同存储（别名去重键）共享同一 Box，保证三后端别名语义一致。
         /// </summary>
         private ByRefBox EvaluateByRefSlot(BoundByRefArgument node)
         {
@@ -552,7 +552,7 @@ namespace Cocoa.CodeGen.Interpreter
                     return proc.ExitCode;
                 }
 
-                // 6e-M19 M2-c锛歋ystem.Object 闈闈欐€佹柟娉曪紙CLR 鐩撮€氾級
+                // 6e-M19 M2-c：System.Object 。静态方法（CLR 直通）
                 case BuiltinKind.ObjectStaticEquals:
                     var equalsLeft = EvaluateExpression(arguments[0]);
                     var equalsRight = EvaluateExpression(arguments[1]);

@@ -1,4 +1,4 @@
-// Cocoa UI �?· System.UI（namespace System.UI�?// ImGuiDrawList —�?顶点/索引并行数组（模�?vector，无 struct 数组依赖）�?// 顶点：pos(x,y) + uv(u,v) + col(packed ABGR i32)；索引三角形列表�?
+// Cocoa UI 。· System.UI（namespace System.UI。// ImGuiDrawList —。顶点/索引并行数组（模。vector，无 struct 数组依赖）。// 顶点：pos(x,y) + uv(u,v) + col(packed ABGR i32)；索引三角形列表。
 namespace System.UI
 {
     public class ImGuiDrawList
@@ -171,7 +171,7 @@ namespace System.UI
             _idxCount = _idxCount + 1
         }
 
-        /// <summary>实心矩形�? 顶点 + 6 索引）�?/summary>
+        /// <summary>实心矩形。 顶点 + 6 索引）。/summary>
         public function AddRectFilled(minX: f32, minY: f32, maxX: f32, maxY: f32, col: i32): void
         {
             var loX = minX
@@ -223,7 +223,7 @@ namespace System.UI
             AddIndex(start + 3)
         }
 
-        /// <summary>矩形边框（四�?1px 实心边）�?/summary>
+        /// <summary>矩形边框（四。1px 实心边）。/summary>
         public function AddRect(minX: f32, minY: f32, maxX: f32, maxY: f32, col: i32): void
         {
             let one: f32 = f32(1.0)
@@ -234,7 +234,7 @@ namespace System.UI
             AddRectFilled(maxX - one, minY, maxX, maxY, col)
         }
 
-        /// <summary>gdi 翻译输出：顶�?x/y/color 读取（供后端遍历，见 Win32GDIBackend）�?/summary>
+        /// <summary>gdi 翻译输出：顶。x/y/color 读取（供后端遍历，见 Win32GDIBackend）。/summary>
         public function PosX(i: i32): f32
         {
             return _posX[i]

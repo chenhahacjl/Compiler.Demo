@@ -29,7 +29,7 @@ namespace Cocoa.CodeAnalysis.Syntax.Nodes
         public SeparatedSyntaxList<ParameterSyntax> Parameters { get; }
         public SyntaxToken CloseParenthesisToken { get; }
 
-        /// <summary>鏋勯€犻摼鍏抽敭瀛楋紙`: base` / `: this`锛沶ull = 鏃犳樉寮忛摼锛夈€?/summary>
+        /// <summary>构造链关键字（`: base` / `: this`；null = 无显式链）。/summary>
         public SyntaxToken? InitializerKeyword { get; }
 
         /// <summary>构造链实参。</summary>

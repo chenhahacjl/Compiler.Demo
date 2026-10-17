@@ -1,5 +1,5 @@
-﻿// Cocoa 鑷妇 CodeGen 路 姹傚€艰繍琛屾椂锛堥樁娈?7 澧為噺浜?M5-a1锛夆€斺€旀暟鍊?瀛楃涓茶В鏋愪笌鏍煎紡鍖栬緟鍔┿€?// 娉ㄦ剰 Cocoa 璇█绾︽潫锛氭棤 object 瑁呯澶氭€侊紙object 鐗规€у彟琛岀珛椤癸級锛屾晠鍊肩敤 Tagged Value 绫绘壙杞斤紱
-// 瑙ｆ瀽鐢?i32(char) ASCII 鍒ゅ畾锛坈har 姣旇緝杩愮畻绗﹀彈闄愶級銆?
+?// Cocoa 自举 CodeGen · 求值运行时（阶。7 增量。M5-a1）——数。字符串解析与格式化辅助。// 注意 Cocoa 语言约束：无 object 装箱多态（object 特性另行立项），故值用 Tagged Value 类承载；
+// 解析。i32(char) ASCII 判定（char 比较运算符受限）。
 namespace Cocoa.CodeGen
 {
     class EvaluatorRuntime

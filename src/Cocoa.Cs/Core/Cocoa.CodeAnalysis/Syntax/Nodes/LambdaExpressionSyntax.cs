@@ -30,12 +30,12 @@ namespace Cocoa.CodeAnalysis.Syntax.Nodes
 
         public SyntaxToken? CloseParenthesisToken { get; }
 
-        /// <summary>鍙傛暟鏄惁鍏ㄩ儴鏄惧紡鏍囨敞绫诲瀷锛圕# 瑙勫垯锛氫换涓€鏄惧紡鍒欓』鍏ㄩ儴鏄惧紡锛夈€?/summary>
+        /// <summary>参数是否全部显式标注类型（C# 规则：任一显式则须全部显式）。/summary>
         public bool HasExplicitParameterTypes { get; }
 
         public SyntaxToken ArrowToken { get; }
 
-        /// <summary>lambda 浣擄細琛ㄨ揪寮忔垨鍧楄鍙ャ€?/summary>
+        /// <summary>lambda 体：表达式或块语句。/summary>
         /// <summary>lambda 体：表达式或块语句（语言根类型，Kind 返回 <see cref="SyntaxKind"/>）。</summary>
         public SyntaxNode Body { get; }
 

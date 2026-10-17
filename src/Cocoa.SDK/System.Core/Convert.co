@@ -1,4 +1,4 @@
-﻿// Cocoa 绯荤粺鏍囧噯搴?路 System.Core 閫昏緫灞傦紙namespace System锛?// class Convert 鈥斺€?缂栫爜鍘熻锛?e-G7 鈶 鑷寘鍚細绾?Cocoa 瀹炵幇锛屼笁鍚庣澶╃劧鍙敤锛屼笉渚濊禆 BCL crypto锛夈€?// hex锛氬瓧鑺?鈫?鍗佸叚杩涘埗瀛楃涓诧紙澶у啓锛夛紱base64锛氬瓧鑺?鈫?Base64 瀛楃涓诧紙RFC 4648锛屾爣鍑嗗瓧姣嶈〃 + '=' 濉厖锛夈€?// 娉細涓夊悗绔?`&&`/`||` 闈炵煭璺眰鍊硷紝鏁呭惊鐜敤鍗曟潯浠?+ break 瑙勯伩瓒婄晫銆?
+?// Cocoa 系统标准。· System.Core 逻辑层（namespace System。// class Convert —。编码原语。e-G7 ⑤a 自包含：。Cocoa 实现，三后端天然可用，不依赖 BCL crypto）。// hex：字。。十六进制字符串（大写）；base64：字。。Base64 字符串（RFC 4648，标准字母表 + '=' 填充）。// 注：三后。`&&`/`||` 非短路求值，故循环用单条。+ break 规避越界。
 
 namespace System
 {
@@ -7,10 +7,10 @@ namespace System
     public class Convert
     {
         // ----------------------------------------------------------------
-        // 鍗佸叚杩涘埗
+        // 十六进制
         // ----------------------------------------------------------------
 
-        /// <summary>瀛楄妭鏁扮粍 鈫?澶у啓鍗佸叚杩涘埗瀛楃涓诧紙"0F2A..."锛夈€?/summary>
+        /// <summary>字节数组 。大写十六进制字符串（"0F2A..."）。/summary>
         public static function ToHexString(bytes: u8[]): string
         {
             if bytes.Length == 0 return ""
@@ -27,7 +27,7 @@ namespace System
             return StringSyscall.StringFromChars(chars)
         }
 
-        /// <summary>鍗佸叚杩涘埗瀛楃涓诧紙澶у啓/灏忓啓鍧囧彲锛夆啋 瀛楄妭鏁扮粍锛涘鏁伴暱搴︽垨闈炴硶瀛楃 鈫?绌烘暟缁勩€?/summary>
+        /// <summary>十六进制字符串（大写/小写均可）→ 字节数组；奇数长度或非法字符 。空数组。/summary>
         public static function FromHexString(s: string): u8[]
         {
             if s.Length % 2 != 0 return new u8[0]
@@ -53,14 +53,14 @@ namespace System
         }
 
         // ----------------------------------------------------------------
-        // Base64锛圧FC 4648锛?        // ----------------------------------------------------------------
+        // Base64一一RFC 4648һ        // ----------------------------------------------------------------
 
         private static function Base64Alphabet(): string
         {
             return "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
         }
 
-        /// <summary>瀛楄妭鏁扮粍 鈫?Base64 瀛楃涓诧紙'=' 濉厖锛夈€?/summary>
+        /// <summary>字节数组 。Base64 字符串（'=' 填充）。/summary>
         public static function ToBase64String(bytes: u8[]): string
         {
             if bytes.Length == 0 return ""
@@ -103,7 +103,7 @@ namespace System
             return StringSyscall.StringFromChars(chars)
         }
 
-        /// <summary>Base64 瀛楃涓?鈫?瀛楄妭鏁扮粍锛涢潪娉曞瓧绗?闀垮害 鈫?绌烘暟缁勩€?/summary>
+        /// <summary>Base64 字符。。字节数组；非法字。长度 。空数组。/summary>
         public static function FromBase64String(s: string): u8[]
         {
             var pad = 0

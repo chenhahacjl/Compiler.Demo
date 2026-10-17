@@ -1,4 +1,4 @@
-﻿// Cocoa 鑷妇 CodeGen 路 鏍戦亶鍘嗘眰鍊煎櫒锛堥樁娈?7 澧為噺浜?M5-a1锛夆€斺€?// 娑堣垂鑷妇 Binder 鐨勯檷绾у悗缁戝畾鏍戯紙鍚?Label/Goto/ConditionalGoto锛夛紝瀵归綈 C# Evaluator 璇箟銆?// 鍊兼ā鍨嬶細Tagged Value锛坘ind 鍒嗘淳锛屾棤 object 澶氭€侊級銆?// 鏀寔璇彞锛欱lock/Return/ExpressionStatement/VariableDeclaration/Label/Goto/ConditionalGoto锛?// 琛ㄨ揪寮忥細Literal/Variable/Assignment/Unary/Binary/Call锛堢敤鎴峰嚱鏁伴€掑綊 + 灏戦噺鍐呯疆锛夈€?// Console.* 鍐呯疆鎹曡幏杩?_output锛堝樊鍒嗘瘮瀵圭敤锛屼笉鐩村嚭鎺у埗鍙帮級銆?
+?// Cocoa 自举 CodeGen · 树遍历求值器（阶。7 增量。M5-a1）—。// 消费自举 Binder 的降级后绑定树（。Label/Goto/ConditionalGoto），对齐 C# Evaluator 语义。// 值模型：Tagged Value（kind 分派，无 object 多态）。// 支持语句：Block/Return/ExpressionStatement/VariableDeclaration/Label/Goto/ConditionalGoto。// 表达式：Literal/Variable/Assignment/Unary/Binary/Call（用户函数递归 + 少量内置）。// Console.* 内置捕获。_output（差分比对用，不直出控制台）。
 using Cocoa.CodeAnalysis.Syntax
 
 namespace Cocoa.CodeGen

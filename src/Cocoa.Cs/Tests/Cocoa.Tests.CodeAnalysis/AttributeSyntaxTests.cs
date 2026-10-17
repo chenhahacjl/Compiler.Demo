@@ -7,7 +7,7 @@ using Xunit;
 namespace Cocoa.Tests.CodeAnalysis
 {
     /// <summary>
-    /// 6e-M32 Tier-2 attribute 璇硶锛氬叏鎴愬憳浣嶆寕杞斤紙绫?鍑芥暟/瀛楁/灞炴€?鏋氫妇锛? 瀛楅潰閲忓疄鍙傘€?    /// P1锛氳В鏋愬眰楠岃瘉銆?    /// </summary>
+    /// 6e-M32 Tier-2 attribute 语法：全成员位挂载（。函数/字段/属。枚举。 字面量实参。    /// P1：解析层验证。    /// </summary>
     public class AttributeSyntaxTests
     {
         [Fact]

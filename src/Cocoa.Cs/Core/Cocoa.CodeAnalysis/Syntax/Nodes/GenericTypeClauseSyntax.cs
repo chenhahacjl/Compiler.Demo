@@ -25,7 +25,7 @@ namespace Cocoa.CodeAnalysis.Syntax.Nodes
         public ImmutableArray<TypeClauseSyntax> TypeArguments { get; }
         public SyntaxToken GreaterThanToken { get; }
 
-        /// <summary>璋冭瘯鏄剧ず鍚嶏細`List<int>`锛堝惈宓屽/鏁扮粍锛夈€?/summary>
+        /// <summary>调试显示名：`List<int>`（含嵌套/数组）。/summary>
         public string DisplayName
         {
             get

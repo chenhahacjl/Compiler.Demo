@@ -6,7 +6,7 @@ using Cocoa.CodeAnalysis.Syntax;
 namespace Cocoa.CodeAnalysis.Syntax.Nodes
 {
     /// <summary>
-    /// 鎺ュ彛瀹氫箟鑺傜偣锛歚public interface IEnumerable&lt;T&gt;: IBase where T: class { ... }`锛堟垚鍛樹负鏃犳柟娉曚綋鐨勫嚱鏁扮鍚嶄笌灞炴€ц闂櫒锛夈€?
+    /// 接口定义节点：`public interface IEnumerable&lt;T&gt;: IBase where T: class { ... }`（成员为无方法体的函数签名与属性访问器）。
     /// </summary>
     public sealed partial class InterfaceDeclarationSyntax : MemberSyntax
     {

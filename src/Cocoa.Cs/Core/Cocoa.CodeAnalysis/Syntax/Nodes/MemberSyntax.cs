@@ -13,7 +13,7 @@ namespace Cocoa.CodeAnalysis.Syntax.Nodes
             Modifiers = modifiers;
         }
 
-        /// <summary>澹版槑淇グ绗︼紙public/private/stdcall/cdecl 绛夛紝椤哄簭鏃犲叧锛夈€?/summary>
+        /// <summary>声明修饰符（public/private/stdcall/cdecl 等，顺序无关）。/summary>
         public ImmutableArray<SyntaxToken> Modifiers { get; }
     }
 }

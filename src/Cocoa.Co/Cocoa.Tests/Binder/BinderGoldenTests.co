@@ -1,4 +1,4 @@
-// 鑷妇娴嬭瘯锛欱inder 绗﹀彿/璇婃柇/缁戝畾鏍戦粍閲戜覆锛堥樁娈?7 澧為噺浜?M5-b0锛夆€斺€旂敱 GoldenGenerator 鎹曡幏鑷妇渚ц緭鍑虹敓鎴愶紝鍕挎墜鏀广€俓n// 15 绗﹀彿璇枡锛圖escribeSymbols锛? 9 鏃犳晥璇枡锛堣瘖鏂锛? 13 bound 璇枡锛圖escribeBoundTrees锛夈€俓n
+// 一Ծٲ一一ԣ一Binder 一一一一/一一一/一一一一一ƽ𴮣一一ס一7 一一一一一一M5-b0一一一一一一一一 GoldenGenerator 一一一一一Ծٲ一一一一一一一ɣ一一一一ָġ一\n// 15 一一一一一一一ϣ一DescribeSymbols一一 9 一一Ч一一一ϣ一一一一一С一 13 bound 一一一ϣ一DescribeBoundTrees一一一一\n
 using Cocoa.CodeAnalysis.Syntax
 using Cocoa.CodeAnalysis.Binding
 

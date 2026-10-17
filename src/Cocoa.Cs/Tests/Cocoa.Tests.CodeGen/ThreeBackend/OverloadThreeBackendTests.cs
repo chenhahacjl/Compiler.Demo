@@ -17,8 +17,8 @@ using Xunit;
 namespace Cocoa.Tests.CodeGen.ThreeBackend
 {
     /// <summary>
-    /// 閲嶈浇涓夊悗绔攣瀹氾細鏋勯€犲櫒閲嶈浇锛堝０鏄庣绛惧悕鏌ラ噸 + 璋冪敤绔寜鍙傛暟绫诲瀷閫夋嫨锛変笌椤跺眰鍑芥暟閲嶈浇
-    /// 锛圔oundScope 绛惧悕鏀捐 + native FunctionIrName 椤跺眰 mangle锛夈€?    /// </summary>
+    /// 重载三后端锁定：构造器重载（声明端签名查重 + 调用端按参数类型选择）与顶层函数重载
+    /// （BoundScope 签名放行 + native FunctionIrName 顶层 mangle）。    /// </summary>
     public class OverloadThreeBackendTests
     {
         private static string[] References() => new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location };

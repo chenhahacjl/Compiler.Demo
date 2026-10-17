@@ -20,16 +20,16 @@ namespace Cocoa.CodeAnalysis.Syntax.Nodes
 
         public ExpressionSyntax Expression { get; }
 
-        /// <summary><c>,</c>锛堝榻愬紩瀵肩锛夈€?/summary>
+        /// <summary><c>,</c>（对齐引导符）。/summary>
         public SyntaxToken? CommaToken { get; }
 
         /// <summary>对齐宽度（有符号整数字面量）。</summary>
         public ExpressionSyntax? Alignment { get; }
 
-        /// <summary><c>:</c>锛堟牸寮忓紩瀵肩锛夈€?/summary>
+        /// <summary><c>:</c>（格式引导符）。/summary>
         public SyntaxToken? ColonToken { get; }
 
-        /// <summary>鏍煎紡璇存槑绗︼紙瀛楃涓插瓧闈㈤噺锛夈€?/summary>
+        /// <summary>格式说明符（字符串字面量）。/summary>
         public SyntaxToken? FormatToken { get; }
 
         public override IEnumerable<SyntaxNode> GetChildren()

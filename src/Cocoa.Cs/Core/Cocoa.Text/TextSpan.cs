@@ -1,7 +1,7 @@
 namespace Cocoa.Text
 {
     /// <summary>
-    /// 鏂囨湰鑼冨洿
+    /// 文本范围
     /// </summary>
     public struct TextSpan
     {

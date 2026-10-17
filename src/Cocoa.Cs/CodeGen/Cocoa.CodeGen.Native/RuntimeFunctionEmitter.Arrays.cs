@@ -15,8 +15,8 @@ namespace Cocoa.CodeGen.Native
         // ------------------------------------------------------------------
 
         // ------------------------------------------------------------------
-        // NewArray(size:4, elementSize:4, vtable:ps) 鈫?ptr:8
-        // 甯冨眬锛堝榻?.NET 鏁扮粍瀵硅薄锛夛細[0)=vtablePtr [4..8)=pad [8..12)=闀垮害 [12..16)=pad [16..)=鍏冪礌鍖?8瀵归綈)
+        // NewArray(size:4, elementSize:4, vtable:ps) →一ptr:8
+        // 布局（对。.NET 数组对象）：[0)=vtablePtr [4..8)=pad [8..12)=长度 [12..16)=pad [16..)=元素。8对齐)
         // ------------------------------------------------------------------
 
         private void EmitNewArray()
@@ -55,9 +55,9 @@ namespace Cocoa.CodeGen.Native
         }
 
         // ------------------------------------------------------------------
-        // SliceArray(src:8, start:4, count:4, elemSize:4) 鈫?ptr:8
-        // N1锛欳opyRange 鍘熻鈥斺€旀妸婧愭暟缁勫厓绱犲尯 [start, start+count) 澶嶅埗杩涙柊鏁扮粍銆?
-        // Index/Range 鍒囩墖锛坆inder 闄嶇骇璺緞锛変笌鏃?SDK 鍥為€€鍏变韩锛涘瓧鑺傜矑搴︽嫹璐濋€傞厤鍏ㄩ儴鍏冪礌瀹藉害銆?
+        // SliceArray(src:8, start:4, count:4, elemSize:4) →一ptr:8
+        // N1：CopyRange 原语——把源数组元素区 [start, start+count) 复制进新数组。
+        // Index/Range 切片（binder 降级路径）与。SDK 回退共享；字节粒度拷贝适配全部元素宽度。
         // ------------------------------------------------------------------
 
         private void EmitSliceArray()
@@ -67,13 +67,13 @@ namespace Cocoa.CodeGen.Native
             var count = _args[2];
             var elementSize = _args[3];
 
-            // dst = NewArray(count, elemSize, srcVtable)鈥斺€斿垏鐗囦繚鎸佹簮鏁扮粍绫诲瀷锛堝鍒?vtable 澶达級
+            // dst = NewArray(count, elemSize, srcVtable)——切片保持源数组类型（复。vtable 头）
             var srcVtable = NewPtr();
             Load(srcVtable, src, 0, _isX64 ? 8 : 4);
             var dst = NewPtr();
             CallRuntime(dst, "NewArray", count, elementSize, srcVtable);
 
-            // 瓒婄晫鍗抽€€鍑猴細start >= 0銆乧ount >= 0銆乻tart + count <= src.Length
+            // 越界即退出：start >= 0、count >= 0、start + count <= src.Length
             var srcLength = NewReg(4);
             Load(srcLength, src, NativeObjectModel.ArrayLengthOffset, 4);
             var error = NewLabel();
@@ -87,7 +87,7 @@ namespace Cocoa.CodeGen.Native
             Cmp(end, srcLength);
             Jcc(LirCond.Greater, error);
 
-            // 瀛楄妭绮掑害閫愬瓧鑺傛嫹璐濓細dst 瀛楄妭鍖篬i] = src 瀛楄妭鍖篬(start路elemSize) + i]
+            // 字节粒度逐字节拷贝：dst 字节区[i] = src 字节区[(start·elemSize) + i]
             var totalBytes = NewReg(4);
             Imul(totalBytes, count, elementSize);
             var srcByteBase = NewReg(4);
@@ -133,11 +133,11 @@ namespace Cocoa.CodeGen.Native
         }
 
         // ------------------------------------------------------------------
-        // ArrayCopyElements(src:8, dst:8, dstStart:4, elemSize:4) 鈫?void
-        // C-闆嗗悎 spread锛氶泦鍚堣〃杈惧紡 `[..a, 4]` 杩愯鏃舵妸婧愭暟缁?a 鍏ㄩ儴鍏冪礌鎷疯礉鍒?
-        // 鐩爣鏁扮粍鐨?[dstStart, dstStart+src.Length) 澶勩€俢ount 鐢?src.Length 鍐呴儴鎺ㄥ
-        // 锛堥伩鍏嶇 5 鏍堝弬鈥斺€攛64 ABI 瀵勫瓨鍣ㄥ彧鍒?R9锛?+ 璧版爤锛? 鍙傚叏绋嬪瘎瀛樺櫒锛夈€?
-        // 瀛楄妭绮掑害锛堝榻?SliceArray锛夛紝瓒婄晫鍗虫墦鍗?bounds 娑堟伅骞堕€€鍑恒€?
+        // ArrayCopyElements(src:8, dst:8, dstStart:4, elemSize:4) →一void
+        // C-集合 spread：集合表达式 `[..a, 4]` 运行时把源数。a 全部元素拷贝。
+        // 目标数组。[dstStart, dstStart+src.Length) 处。count 。src.Length 内部推导
+        // （避免第 5 栈参——x64 ABI 寄存器只。R9。+ 走栈。 参全程寄存器）。
+        // 字节粒度（对。SliceArray），越界即打。bounds 消息并退出。
         // ------------------------------------------------------------------
 
         private void EmitArrayCopyElements()
@@ -156,7 +156,7 @@ namespace Cocoa.CodeGen.Native
             var done = NewLabel();
             var exit = NewLabel();
 
-            // 瓒婄晫锛歞stStart >= 0 && dstStart + src.Length <= dst.Length
+            // 越界：dstStart >= 0 && dstStart + src.Length <= dst.Length
             Cmp(dstStart, 0);
             Jcc(LirCond.Less, error);
             var dstEnd = NewReg(4);
@@ -206,7 +206,7 @@ namespace Cocoa.CodeGen.Native
         }
 
         // ------------------------------------------------------------------
-        // ArrayBoundsCheck(index:4, length:4) 鈫?瓒婄晫鏃舵姤閿欓€€鍑?
+        // ArrayBoundsCheck(index:4, length:4) →越界时报错退。
         // ------------------------------------------------------------------
 
         private void EmitArrayBoundsCheck()
@@ -239,10 +239,10 @@ namespace Cocoa.CodeGen.Native
         }
 
         // ------------------------------------------------------------------
-        // BuildArgs() 鈫?ptr锛坰tring[]锛?
-        // 缁?GetCommandLineW 璇诲彇鍛戒护琛岋紙UTF-16锛夛紝璺宠繃绋嬪簭鍚嶏紝鎸?MS 椋庢牸瑙ｆ瀽
-        // 鍓╀綑鍙傛暟锛氱┖鐧斤紙绌烘牸/鍒惰〃绗︼級鍒嗛殧锛涘紩鍙峰寘瑁圭殑绌虹櫧涓嶅垎鍓诧紱寮曞彿鏈韩鍦?
-        // 鍙傛暟鍐呭涓墺绂汇€傛瀯閫?string[]锛堝竷灞€鍚?NewArray锛夛紝澶辫触锛圤OM锛夎繑鍥?0銆?
+        // BuildArgs() →一ptr一一string[]一。
+        // 。GetCommandLineW 读取命令行（UTF-16），跳过程序名，。MS 风格解析
+        // 剩余参数：空白（空格/制表符）分隔；引号包裹的空白不分割；引号本身。
+        // 参数内容中剥离。构。string[]（布局。NewArray），失败（OOM）返。0。
         // ------------------------------------------------------------------
 
         private void EmitBuildArgs()
@@ -258,7 +258,7 @@ namespace Cocoa.CodeGen.Native
             var ch = NewReg(4);
             var count = C(4, 0);
 
-            // ---- 瀹氫綅绋嬪簭鍚嶅悗鐨勭涓€涓弬鏁颁綅缃紙first锛?---
+            // ---- 定位程序名后的第一个参数位置（first。---
             var skipProg = NewLabel();
             var skipProgCheck = NewLabel();
             var skipProgNext = NewLabel();
@@ -287,7 +287,7 @@ namespace Cocoa.CodeGen.Native
             var first = NewPtr();
             Mov(first, p);
 
-            // ---- pass 1: 璁℃暟锛坈ount锛?---
+            // ---- pass 1: 计数（count。---
             var countWs = NewLabel();
             var countWsNext = NewLabel();
             var countDone = NewLabel();
@@ -334,7 +334,7 @@ namespace Cocoa.CodeGen.Native
 
             Mark(countDone);
 
-            // ---- 鍒嗛厤鏁扮粍 ----
+            // ---- 分配数组 ----
             var elementSizeReg = C(4, elementSize);
             var arr = NewPtr();
             var splitArrayVt = NewPtr();
@@ -350,7 +350,7 @@ namespace Cocoa.CodeGen.Native
             Cmp(arr, 0);
             Jcc(LirCond.Equal, oom);
 
-            // ---- pass 2: 閫愪釜鍙傛暟鏋勯€?string 骞跺啓鍏ユ暟缁?----
+            // ---- pass 2: 逐个参数构。string 并写入数。----
             Mov(p, first);
             var slot = NewPtr();
             var slotBase = NewPtr();
@@ -411,7 +411,7 @@ namespace Cocoa.CodeGen.Native
             AddI(lenChars, lenChars, 1);
             Jmp(buildTokNext);
 
-            // ---- 鏋勯€犲瓧绗︿覆锛欰lloc(lenChars*2+12 瀵归綈 4)锛屽墺绂诲紩鍙锋嫹璐?----
+            // ---- 构造字符串：Alloc(lenChars*2+12 对齐 4)，剥离引号拷。----
             Mark(buildStr);
             var bytes = NewReg(4);
             Mov(bytes, lenChars);
@@ -469,7 +469,7 @@ namespace Cocoa.CodeGen.Native
         }
 
         // ------------------------------------------------------------------
-        // Sha256Hash(data:8) 鈫?u8[] (32 bytes)
+        // Sha256Hash(data:8) →一u8[] (32 bytes)
         // Uses one-shot BCryptHash (Win10 1803+): BCryptHash(alg, NULL, 0, pbData, cbData, pbOutput, cbOutput)
         // Array layout: [0..4) length; [8..) element data (8-byte aligned)
         // ------------------------------------------------------------------
@@ -587,8 +587,8 @@ namespace Cocoa.CodeGen.Native
             EndFunction(_currentFunction!, 8);
         }
 
-        // LaunchProcess(path:8, args:8, workdir:8) 鈫?i32 exit code
-        // CreateProcessW锛坘ernel32锛?0 鍙傦級+ WaitForSingleObject + GetExitCodeProcess锛泈orkdir 缁?lpCurrentDirectory銆?
+        // LaunchProcess(path:8, args:8, workdir:8) →一i32 exit code
+        // CreateProcessW（kernel32。0 参）+ WaitForSingleObject + GetExitCodeProcess；workdir 。lpCurrentDirectory。
         private void EmitLaunchProcess()
         {
             var errLabel = NewLabel();
@@ -649,7 +649,7 @@ namespace Cocoa.CodeGen.Native
             Add(termAddr, termAddr, termBytes);
             Store(termAddr, 0, nullCh, 2);
 
-            // CreateProcessW锛歭pCurrentDirectory 鐩存帴缁?workdir锛堥潪绌衡啋WidePtrZ锛涚┖鈫扤ULL锛?
+            // CreateProcessW：lpCurrentDirectory 直接。workdir（非空→WidePtrZ；空→NULL。
             var wdWide = NewPtr();
             var wdLen = NewReg(4);
             Load(wdLen, workdir, NativeObjectModel.StringLengthOffset, 4);
@@ -663,7 +663,7 @@ namespace Cocoa.CodeGen.Native
             Mov(wdWide, NullPtr());
             Mark(wdReady);
 
-            // STARTUPINFOW锛坃fileBuffer3 鍩哄潃锛夛細娓呴浂鍐嶈 dwcbSize锛坸64=0x68銆亁86=0x44锛涚紦鍐查浂鍒濆鍖栦笉浣滃亣璁撅級
+            // STARTUPINFOW（_fileBuffer3 基址）：清零再设 dwcbSize（x64=0x68、x86=0x44；缓冲零初始化不作假设）
             var siPtr = NewPtr();
             LeaData(siPtr, _fileBuffer3);
             var siDwords = _isX64 ? 26 : 17;
@@ -685,12 +685,12 @@ namespace Cocoa.CodeGen.Native
             Jmp(clearLoop);
             Mark(clearDone);
             Store(siPtr, 0, C(4, _isX64 ? 0x68 : 0x44), 4);
-            // PROCESS_INFORMATION锛堢揣闅?si锛涢€€鍑虹爜妲藉啀 + 0x10锛?
+            // PROCESS_INFORMATION（紧。si；退出码槽再 + 0x10。
             var piPtr = NewPtr();
             LeaData(piPtr, _fileBuffer3);
             AddI(piPtr, piPtr, _isX64 ? 0x68 : 0x44);
 
-            // CreateProcessW(NULL, cmdWbuf, NULL, NULL, FALSE, 0, NULL, wdWide, &si, &pi) 鈫?鍚屾绛夊緟 + 鍙栭€€鍑虹爜
+            // CreateProcessW(NULL, cmdWbuf, NULL, NULL, FALSE, 0, NULL, wdWide, &si, &pi) →同步等待 + 取退出码
             var ok = NewReg(4);
             SysCallDll(ok, PlatformDllResolver.Kernel32, "CreateProcessW", 10, false,
                 NullPtr(), cmdWbuf, NullPtr(), NullPtr(), C(4, 0), C(4, 0), NullPtr(), wdWide, siPtr, piPtr);

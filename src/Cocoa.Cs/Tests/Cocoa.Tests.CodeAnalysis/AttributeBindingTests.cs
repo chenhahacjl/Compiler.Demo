@@ -12,7 +12,7 @@ using Xunit;
 namespace Cocoa.Tests.CodeAnalysis
 {
     /// <summary>
-    /// 6e-M32 Tier-2 attribute 缁戝畾寮曟搸锛氱渷鐣ヨВ鏋愩€佸睘鎬х被鍒ゅ畾锛堝熀閾?System.Attribute锛夈€?    /// 瀹炲弬 .ctor 鏍￠獙銆佹涔?鏈煡鍚?鍙傛暟涓嶅尮閰嶈瘖鏂€佸叏鐩爣鎸傝浇锛堝嚱鏁?绫?鏋氫妇/瀛楁/灞炴€э級銆?    /// </summary>
+    /// 6e-M32 Tier-2 attribute 绑定引擎：省略解析、属性类判定（基。System.Attribute）。    /// 实参 .ctor 校验、歧。未知。参数不匹配诊断、全目标挂载（函。。枚举/字段/属性）。    /// </summary>
     public class AttributeBindingTests
     {
 private static (BoundGlobalScope Scope, string[] Errors) Bind(string source)

@@ -1,4 +1,4 @@
-// 鑷妇娴嬭瘯锛歅arser 鏍?dump 榛勯噾涓诧紙闃舵 7 澧為噺浜?M5-b0锛夆€斺€旂敱 GoldenGenerator 鎹曡幏鑷妇渚ц緭鍑虹敓鎴愶紝鍕挎墜鏀广€俓n// 39 鏈夋晥璇枡 + 6 鏃犳晥璇枡锛涙爲 dump + 璇婃柇锛坄error:` 鍓嶇紑锛夐€愬瓧鑺傛瘮瀵广€俓n
+// 自举测试：Parser 。dump 黄金串（阶段 7 增量。M5-b0）——由 GoldenGenerator 捕获自举侧输出生成，勿手改。\n// 39 有效语料 + 6 无效语料；树 dump + 诊断（`error:` 前缀）逐字节比对。\n
 using Cocoa.CodeAnalysis.Syntax
 
 namespace Cocoa.CodeAnalysis.Tests

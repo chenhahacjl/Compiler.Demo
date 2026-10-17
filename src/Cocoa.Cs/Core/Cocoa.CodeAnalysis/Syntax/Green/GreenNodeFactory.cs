@@ -5,7 +5,7 @@ using Cocoa.CodeAnalysis.Syntax;
 namespace Cocoa.CodeAnalysis.Syntax.Green
 {
     /// <summary>
-    /// Cocoa 缁库啋绫诲瀷鍖栫孩鑺傜偣宸ュ巶锛圫-5 P2-4 闅忚縼璇█搴擄級锛氭寜 <see cref="GreenNode.RawKind"/> 娲惧彂鍒拌瑷€鑺傜偣绫汇€?
+    /// Cocoa 绿→类型化红节点工厂（S-5 P2-4 随迁语言库）：按 <see cref="GreenNode.RawKind"/> 派发到语言节点类。
     /// </summary>
     internal sealed class GreenNodeFactory
     {
@@ -314,7 +314,7 @@ namespace Cocoa.CodeAnalysis.Syntax.Green
             position += _green.GetSlot(slot)!.Width;
             slot++;
 
-            // 瀹炲弬妲斤細openParen 涓?closeParen锛堟湯妲斤級涔嬮棿锛宯ode/sep 浜ゆ浛锛岀洿鎺?SeparatedSyntaxList
+            // 实参槽：openParen 。closeParen（末槽）之间，node/sep 交替，直。SeparatedSyntaxList
             var nodesAndSeparators = ImmutableArray.CreateBuilder<SyntaxNode>();
             for (var i = slot; i < _green.SlotCount - 1; i++)
             {
@@ -446,7 +446,7 @@ namespace Cocoa.CodeAnalysis.Syntax.Green
             return new ElementAccessExpressionSyntax(syntaxTree, expression, openBracket, index, closeBracket);
         }
 
-        /// <summary>璋冪敤灏炬锛坱ypeArgs? + openParen + 瀹炲弬 SeparatedSyntaxList + closeParen锛夆€斺€擟all/MemberCall/ObjectCreation 鍏辩敤銆?/summary>
+        /// <summary>调用尾段（typeArgs? + openParen + 实参 SeparatedSyntaxList + closeParen）——Call/MemberCall/ObjectCreation 共用。/summary>
         private (TypeArgumentListSyntax? TypeArguments, SyntaxToken OpenParenthesis, SeparatedSyntaxList<ExpressionSyntax> Arguments, SyntaxToken CloseParenthesis) BuildCallTail(
             SyntaxTree syntaxTree, int position, int slot)
         {
@@ -488,7 +488,7 @@ namespace Cocoa.CodeAnalysis.Syntax.Green
             TypeClauseSyntax type;
             if (slot < _green.SlotCount && IsTypeLikeSlot(_green.GetSlot(slot)!.Kind))
             {
-                // 绫诲瀷鍓嶇疆锛?cs锛歚int x`锛?
+                // 类型前置。cs：`int x`。
                 type = (TypeClauseSyntax)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
                 position += _green.GetSlot(slot)!.Width;
                 slot++;
@@ -496,7 +496,7 @@ namespace Cocoa.CodeAnalysis.Syntax.Green
             }
             else
             {
-                // 鍚嶇О鍓嶇疆锛?co锛歚x: i32`锛?
+                // 名称前置。co：`x: i32`。
                 identifier = (SyntaxToken)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
                 position += _green.GetSlot(slot)!.Width;
                 slot++;
@@ -1034,7 +1034,7 @@ namespace Cocoa.CodeAnalysis.Syntax.Green
                 slot++;
             }
 
-            // 鍒悕锛歚using Alias = Foo.Bar` 鈫?aliasToken + EqualsToken 鍓嶇紑
+            // 别名：`using Alias = Foo.Bar` 。aliasToken + EqualsToken 前缀
             SyntaxToken? aliasToken = null;
             SyntaxToken? equalsToken = null;
             if (slot + 1 < _green.SlotCount && _green.GetSlot(slot)!.Kind == SyntaxKind.IdentifierToken && _green.GetSlot(slot + 1)!.Kind == SyntaxKind.EqualsToken)
@@ -1171,7 +1171,7 @@ namespace Cocoa.CodeAnalysis.Syntax.Green
                 initializerKeyword = (SyntaxToken)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
                 position += _green.GetSlot(slot)!.Width;
                 slot++;
-                position += _green.GetSlot(slot)!.Width; // 璺宠繃 initializer openParen
+                position += _green.GetSlot(slot)!.Width; // 跳过 initializer openParen
                 slot++;
                 var initArgsBuilder = ImmutableArray.CreateBuilder<SyntaxNode>();
                 while (slot < _green.SlotCount && _green.GetSlot(slot)!.Kind != SyntaxKind.CloseParenthesisToken)
@@ -1181,7 +1181,7 @@ namespace Cocoa.CodeAnalysis.Syntax.Green
                     slot++;
                 }
 
-                position += _green.GetSlot(slot)!.Width; // 璺宠繃 initializer closeParen
+                position += _green.GetSlot(slot)!.Width; // 跳过 initializer closeParen
                 slot++;
                 initializerArguments = new SeparatedSyntaxList<ExpressionSyntax>(initArgsBuilder.ToImmutable());
             }
@@ -1580,7 +1580,7 @@ namespace Cocoa.CodeAnalysis.Syntax.Green
             return new AttributeSyntax(syntaxTree, openBracket, name, openParenthesis, arguments.ToImmutable(), closeParenthesis, closeBracket);
         }
 
-        /// <summary>鎶?[startIndex..endIndex] 妲戒綅鎵归噺杞负绫诲瀷鍖栫孩鑺傜偣鏁扮粍锛堢敤浜?Block 璇彞 / 闆嗗悎瀛愯妭鐐癸級銆?/summary>
+        /// <summary>。[startIndex..endIndex] 槽位批量转为类型化红节点数组（用。Block 语句 / 集合子节点）。/summary>
         private ImmutableArray<T> BuildSlotArray<T>(SyntaxTree syntaxTree, int startPosition, int startIndex, int endIndex)
             where T : SyntaxNode
         {
@@ -1755,7 +1755,7 @@ namespace Cocoa.CodeAnalysis.Syntax.Green
                 slot++;
             }
 
-            // 鍩虹被 TypeClause.Identifier 妲斤紙= elementType.Identifier锛夌洿鎺ヨ烦杩?
+            // 基类 TypeClause.Identifier 槽（= elementType.Identifier）直接跳。
             var elementPosition = position + _green.GetSlot(slot)!.Width;
             slot++;
             var elementType = (TypeClauseSyntax)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, elementPosition);
@@ -1837,9 +1837,9 @@ namespace Cocoa.CodeAnalysis.Syntax.Green
             position += _green.GetSlot(slot)!.Width;
             slot++;
 
-            // 婧愬簭妲藉竷灞€锛堜笌 DelegateDeclarationSyntax.ToGreen 涓€鑷达級锛?
-            // .co锛歞elegate 鍚?( 鍙傛暟 ) [: 杩斿洖绫诲瀷]锛?cs锛歞elegate 杩斿洖绫诲瀷 鍚?( 鍙傛暟 ) [;]
-            // 鍒ゅ埆锛歚.cs` 鍓嶇疆杩斿洖绫诲瀷妲戒负绫诲瀷鏃忥紱`.co` 鎭掍负鏍囪瘑绗?
+            // 源序槽布局（与 DelegateDeclarationSyntax.ToGreen 一致）。
+            // .co：delegate 。( 参数 ) [: 返回类型]。cs：delegate 返回类型 。( 参数 ) [;]
+            // 判别：`.cs` 前置返回类型槽为类型族；`.co` 恒为标识。
             var isCoForm = !IsTypeLikeSlot(_green.GetSlot(slot)!.Kind);
             TypeClauseSyntax? returnType = null;
             SyntaxToken identifier;
@@ -1860,7 +1860,7 @@ namespace Cocoa.CodeAnalysis.Syntax.Green
                 slot++;
             }
 
-            // 6e-M22 delegate 鐪熷疄绫诲瀷鍖栵細绫诲瀷鍙傛暟鍒楄〃妲斤紙identifier 涓?openParen 涔嬮棿锛屼袱褰㈡€佺粺涓€婧愬簭锛?
+            // 6e-M22 delegate 真实类型化：类型参数列表槽（identifier 。openParen 之间，两形态统一源序。
             TypeParameterListSyntax? typeParameters = null;
             if (slot < _green.SlotCount && _green.GetSlot(slot)!.Kind == SyntaxKind.TypeParameterList)
             {

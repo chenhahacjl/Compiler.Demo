@@ -6,7 +6,7 @@ using Cocoa.CodeAnalysis.Syntax;
 namespace Cocoa.CodeAnalysis.Syntax.Nodes
 {
     /// <summary>
-    /// 灞炴€у０鏄庯細`public property Name: string { get {...} set {...} }`锛堟垨鑷姩 `{ get; set }`锛夈€?
+    /// 属性声明：`public property Name: string { get {...} set {...} }`（或自动 `{ get; set }`）。
     /// </summary>
     public sealed partial class PropertyDeclarationSyntax : MemberSyntax
     {

@@ -1,4 +1,4 @@
-﻿// Cocoa 鑷妇娴嬭瘯锛氳瘝娉曡〃闈紙绉绘 Cocoa.Cs/MiniLexerTests锛孧5-b0锛夆€斺€?// 涓や釜鍐呭祵璇枡 + 榛勯噾 token 娴侊紙Describe 鏍煎紡 `KIND text line:col`锛夐€愯姣斿銆?
+?// Cocoa 自举测试：词法表面（移植 Cocoa.Cs/MiniLexerTests，M5-b0）—。// 两个内嵌语料 + 黄金 token 流（Describe 格式 `KIND text line:col`）逐行比对。
 using Cocoa.CodeAnalysis.Syntax
 
 namespace Cocoa.CodeAnalysis.Tests

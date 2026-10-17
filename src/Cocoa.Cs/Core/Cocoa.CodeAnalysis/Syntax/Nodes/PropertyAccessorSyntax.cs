@@ -6,7 +6,7 @@ using Cocoa.CodeAnalysis.Syntax;
 namespace Cocoa.CodeAnalysis.Syntax.Nodes
 {
     /// <summary>
-    /// 灞炴€ц闂櫒锛歚get { ... }` / `set { ... }`锛坄;` = 鑷姩锛夛紝鍙甫鍙鎬т慨楗扮锛坄private set;`锛夈€?
+    /// 属性访问器：`get { ... }` / `set { ... }`（`;` = 自动），可带可见性修饰符（`private set;`）。
     /// </summary>
     public sealed partial class PropertyAccessorSyntax : SyntaxNode
     {

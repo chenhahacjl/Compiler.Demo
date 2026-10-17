@@ -7,8 +7,8 @@ using System.Runtime.CompilerServices;
 namespace Cocoa.Tests.CodeGen
 {
     /// <summary>
-    /// 娴嬭瘯绋嬪簭闆嗘ā鍧楀垵濮嬪寲锛氭敞鍐屾媶鍒嗗悗鐨?managed/native 鍚庣鍙戝皠濮旀墭涓庤В閲婂櫒姹傚€煎鎵樸€?
-    /// Core 涓嶅紩鐢ㄥ悗绔紝缁忓鎵樻帴鍏ワ紱娴嬭瘯鐩存帴璋冪敤 Compilation.Emit/EmitNative/Evaluate 鍓嶅繀椤诲凡娉ㄥ唽銆?
+    /// 测试程序集模块初始化：注册拆分后。managed/native 后端发射委托与解释器求值委托。
+    /// Core 不引用后端，经委托接入；测试直接调用 Compilation.Emit/EmitNative/Evaluate 前必须已注册。
     /// </summary>
     internal static class BackendRegistration
     {

@@ -2,7 +2,7 @@ using System
 using System.UI
 using System.UI.Backends
 
-// 6e-M25 阶段 2 AdvancedUI：System.UI 综合示例（IL 后端）�?// 左侧导航（树/折叠�? 右侧内容（控�?+ 可滚动列表）；运行期切换�?浅主题；ESC 退出�?
+// 6e-M25 阶段 2 AdvancedUI：System.UI 综合示例（IL 后端）。// 左侧导航（树/折叠。 右侧内容（控。+ 可滚动列表）；运行期切换。浅主题；ESC 退出。
 function Main(): i32
 {
     var gui = new ImGui(8192, 128)
