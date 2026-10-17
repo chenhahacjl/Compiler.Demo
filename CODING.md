@@ -24,9 +24,10 @@
 | `Cocoa.Build` | `Cocoa.Build` | 同名 | 项目系统：`.coproj`/`.cosln` 解析、ProjectBuilder/SolutionBuilder、BuildCache、Glob |
 | `Cocoa.Cli` | `Cocoa.Cli` | **`cocoa`** | 主 CLI（子命令 new/build/run/list/add/remove/clean/-i） |
 | `Cocoa.Cli.Repl` | `Cocoa.Cli.Repl` | 同名 | REPL：终端渲染、补全、元命令 |
+| `Cocoa.Engine` | `Cocoa.Engine`（`Hosting/` 分类） | 同名 | 嵌入式脚本引擎：DoString / Call / RegisterCallback / Output 事件 |
 | `Cocoa.Tests.CodeAnalysis` | `Cocoa.Tests.CodeAnalysis` | — | 前端/绑定/文档/流分析单元测试 + ThreeBackend 集成 |
 | `Cocoa.Tests.CodeGen` | `Cocoa.Tests.CodeGen`（`ThreeBackend`/`Emit`/`CodeGen` 子命名空间） | — | 三后端与发射测试（IL/PE/Native/Elf） |
-| `Cocoa.Tests.Integration` | `Cocoa.Tests.Integration`（`Engine`/`Projects` 子命名空间） | — | CLI 与项目系统测试 |
+| `Cocoa.Tests.Integration` | `Cocoa.Tests.Integration`（`Projects` 子命名空间） | — | CLI 与项目系统测试 |
 | `Cocoa.Tests.SelfHosting` | `Cocoa.Tests.SelfHosting` | — | 自举/差分测试（阶段 8：Bootstrapper*/Corpus_*/Scaffold*/*DifferentialTests/Golden，独立工程）；**渐进迁移源**——逐个用 `.co` 重写进 `src/Cocoa.Co/Cocoa.Tests/*.co` 后删除，归零即自举测试框架成熟 |
 
 ## 3. 依赖方向

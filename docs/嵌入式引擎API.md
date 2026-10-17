@@ -31,7 +31,7 @@
 ```xml
 <!-- csproj -->
 <ItemGroup>
-  <ProjectReference Include="..\..\src\Cocoa.Cs\Tools\Cocoa.Engine\Cocoa.Engine.csproj" />
+  <ProjectReference Include="..\..\src\Cocoa.Cs\Hosting/Cocoa.Engine\Cocoa.Engine.csproj" />
 </ItemGroup>
 ```
 

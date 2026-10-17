@@ -18,7 +18,9 @@
     <Project Path="Tools/Cli/Cocoa.Cli/Cocoa.Cli.csproj" />
     <Project Path="Tools/Cli/Cocoa.Cli.Repl/Cocoa.Cli.Repl.csproj" />
     <Project Path="Tools/Cocoa.Build/Cocoa.Build.csproj" />
-    <Project Path="Tools/Cocoa.Engine/Cocoa.Engine.csproj" />
+  </Folder>
+  <Folder Name="/Hosting/">
+    <Project Path="Hosting/Cocoa.Engine/Cocoa.Engine.csproj" />
   </Folder>
   <Folder Name="/Tests/">
     <Project Path="Tests/Cocoa.Tests.CodeAnalysis/Cocoa.Tests.CodeAnalysis.csproj" />
