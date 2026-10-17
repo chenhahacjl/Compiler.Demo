@@ -11,7 +11,7 @@ using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
 using Xunit;
 
-namespace Cocoa.Tests.CodeGen.Emit.IL
+namespace Cocoa.Tests.CodeGen.Emit.Il
 {
     /// <summary>
     /// 6e-M32 Tier-2：用户 attribute 发射（CustomAttribute 表）。

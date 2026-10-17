@@ -6,7 +6,7 @@ using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
-    internal sealed partial class CocoaParser
+    internal sealed partial class Parser
     {
         // ==================== Types ====================
 

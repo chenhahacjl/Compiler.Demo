@@ -1,8 +1,9 @@
 using System;
 using System.IO;
 using System.Linq;
+using Cocoa.Cli.Repl.Terminal;
 
-namespace Cocoa.Cli.Repl;
+namespace Cocoa.Cli.Repl.Services;
 
 /// <summary>元命令（# 开头）的注册表与执行器；#exit/#cls 由引擎直接处理（涉及运行循环与整屏 UI）。</summary>
 internal sealed class MetaCommandExecutor

@@ -7,8 +7,9 @@ using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Syntax.Nodes;
 using Cocoa.CodeAnalysis.Syntax.Green;
+using Cocoa.Cli.Repl.Terminal;
 
-namespace Cocoa.Cli.Repl;
+namespace Cocoa.Cli.Repl.Services;
 
 /// <summary>REPL 会话状态：已提交的编译链、变量值与显示开关。</summary>
 internal sealed class ReplSession

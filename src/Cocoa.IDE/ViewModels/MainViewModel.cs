@@ -6,7 +6,7 @@ using Avalonia.Platform.Storage;
 using Cocoa.Build;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Syntax;
-using Cocoa.CodeAnalysis.Text;
+using Cocoa.CodeAnalysis.Extensions;
 using Cocoa.CodeGen.Interpreter;
 using Cocoa.IDE.Services;
 using CommunityToolkit.Mvvm.ComponentModel;

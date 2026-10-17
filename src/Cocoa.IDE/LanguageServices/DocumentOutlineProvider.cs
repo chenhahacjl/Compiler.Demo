@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using System.Linq;
 using Cocoa.CodeAnalysis.Syntax;
-using Cocoa.CodeAnalysis.Text;
+using Cocoa.CodeAnalysis.Extensions;
 
 namespace Cocoa.IDE.LanguageServices;
 

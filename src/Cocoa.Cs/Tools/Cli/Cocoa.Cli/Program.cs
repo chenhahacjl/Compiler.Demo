@@ -1,5 +1,5 @@
 using Cocoa.CodeAnalysis;
-using Cocoa.CodeAnalysis.Text;
+using Cocoa.CodeAnalysis.Extensions;
 using Cocoa.Targeting;
 using Cocoa.CodeGen.Managed;
 using Cocoa.CodeGen.Interpreter;
@@ -76,7 +76,7 @@ namespace Cocoa.Cli
 
         private static void RunInteractive()
         {
-            using var engine = new Cocoa.Cli.Repl.ReplEngine();
+            using var engine = new Cocoa.Cli.Repl.Terminal.ReplEngine();
             engine.Run();
         }
 

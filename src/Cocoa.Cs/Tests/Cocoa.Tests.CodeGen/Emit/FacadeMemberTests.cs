@@ -30,7 +30,7 @@ function Main()
         public void Facade_ToString_AllPrimitiveTypes_Il()
         {
             // native 路径由 CLI e2e（tools/build-sdk 后手动/冒烟）覆盖；此处锁 IL 后端回归
-            var (exitCode, stdout) = Cocoa.Tests.CodeGen.Emit.IL.IlEndToEndTests.EmitAndRun(Source, "FacadeToString");
+            var (exitCode, stdout) = Cocoa.Tests.CodeGen.Emit.Il.IlEndToEndTests.EmitAndRun(Source, "FacadeToString");
             Assert.Equal(0, exitCode);
             Assert.Contains("42", stdout);
             Assert.Contains("9000000000", stdout);
@@ -58,7 +58,7 @@ function Main()
     Console.WriteLine(u8.MaxValue)
     Console.WriteLine(i32.MinValue)
 }";
-            var (exitCode, stdout) = Cocoa.Tests.CodeGen.Emit.IL.IlEndToEndTests.EmitAndRun(source, "FacadeParseCmp");
+            var (exitCode, stdout) = Cocoa.Tests.CodeGen.Emit.Il.IlEndToEndTests.EmitAndRun(source, "FacadeParseCmp");
             Assert.Equal(0, exitCode);
             Assert.Contains("123", stdout);
             Assert.Contains("-456", stdout);
@@ -88,7 +88,7 @@ function Main()
     Console.WriteLine(f32.MaxValue)
     Console.WriteLine(char.MaxValue)
 }";
-            var (exitCode, stdout) = Cocoa.Tests.CodeGen.Emit.IL.IlEndToEndTests.EmitAndRun(source, "FacadeNumericConstants");
+            var (exitCode, stdout) = Cocoa.Tests.CodeGen.Emit.Il.IlEndToEndTests.EmitAndRun(source, "FacadeNumericConstants");
             Assert.Equal(0, exitCode);
             Assert.Contains("65535", stdout);
             Assert.Contains("0", stdout);
@@ -125,7 +125,7 @@ function Main()
     Console.WriteLine(Double.Parse(""3.14""))
     Console.WriteLine(Char.IsDigit('7'))
 }";
-            var (exitCode, stdout) = Cocoa.Tests.CodeGen.Emit.IL.IlEndToEndTests.EmitAndRun(source, "FacadePrimitiveMembers");
+            var (exitCode, stdout) = Cocoa.Tests.CodeGen.Emit.Il.IlEndToEndTests.EmitAndRun(source, "FacadePrimitiveMembers");
             Assert.Equal(0, exitCode);
             Assert.Contains("True", stdout);
             Assert.Contains("False", stdout);

@@ -12,7 +12,7 @@ using System.Linq;
 namespace Cocoa.CodeGen.Managed
 {
     /// <summary>
-    /// managed（dotnet/IL）后端发射入口（拆分后独立项目 Cocoa.CodeGen.IL）。
+    /// managed（dotnet/IL）后端发射入口（拆分后独立项目 Cocoa.CodeGen.Managed）。
     /// 承载原 <c>Compilation.Emit</c> 的 IL 发射逻辑；
     /// 经 <see cref="Compilation.RegisterManagedEmitter"/> 注册到 Core，Core 自身不引用本后端。
     /// </summary>

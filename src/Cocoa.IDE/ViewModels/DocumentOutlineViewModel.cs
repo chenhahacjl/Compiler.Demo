@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Syntax;
-using Cocoa.CodeAnalysis.Text;
+using Cocoa.CodeAnalysis.Extensions;
 using Cocoa.IDE.LanguageServices;
 using CommunityToolkit.Mvvm.ComponentModel;
 

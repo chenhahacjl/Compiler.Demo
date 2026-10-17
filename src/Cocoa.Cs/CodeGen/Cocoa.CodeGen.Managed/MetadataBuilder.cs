@@ -8,7 +8,7 @@ using System.Text;
 
 namespace Cocoa.CodeGen.Managed
 {
-    public sealed class MetadataBuilder : IIlRefIssuer
+    public sealed class MetadataBuilder : IlRefIssuer
     {
         private const string RuntimeVersion = "v4.0.30319";
 

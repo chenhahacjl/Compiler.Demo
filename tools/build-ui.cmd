@@ -1,14 +1,14 @@
 @echo off
-REM ¹¹½¨ Cocoa.UI£¨System.UI.coproj£©-> tools\cocoa-ui
-REM Òýµ¼£ºC# cocoa CLI ±àÒë src\Cocoa.UI\System.UI.coproj£¬ÔÙ¸´ÖÆ out
-REM ÓÃ·¨£ºtools\build-ui.cmd
+REM æž„å»º Cocoa.UIï¼ˆSystem.UI.coprojï¼‰-> tools\cocoa-ui
+REM å¼•å¯¼ï¼šC# cocoa CLI ç¼–è¯‘ src\Cocoa.UI\System.UI.coprojï¼Œå†å¤åˆ¶ out
+REM ç”¨æ³•ï¼štools\build-ui.cmd
 setlocal
 set "ROOT=%~dp0.."
 set "UI=%ROOT%\src\Cocoa.UI"
 set "OUT=%ROOT%\tools\cocoa-ui"
 
-dotnet build "%ROOT%\src\Cocoa.Cs\Cli\Cocoa.Cli" --nologo || exit /b 1
-dotnet run --project "%ROOT%\src\Cocoa.Cs\Cli\Cocoa.Cli" --no-build -- build -p "%UI%\System.UI.coproj" --no-incremental || exit /b 1
+dotnet build "%ROOT%\src\Cocoa.Cs\Tools\Cli\Cocoa.Cli" --nologo || exit /b 1
+dotnet run --project "%ROOT%\src\Cocoa.Cs\Tools\Cli\Cocoa.Cli" --no-build -- build -p "%UI%\System.UI.coproj" --no-incremental || exit /b 1
 
 if not exist "%OUT%" mkdir "%OUT%"
 copy /y "%UI%\out\System.UI.coa" "%OUT%\System.UI.coa" >nul

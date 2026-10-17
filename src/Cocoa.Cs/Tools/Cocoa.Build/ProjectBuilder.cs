@@ -1,6 +1,6 @@
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Serialization;
-using Cocoa.CodeAnalysis.Text;
+using Cocoa.CodeAnalysis.Extensions;
 using Cocoa.Targeting;
 using Cocoa.CodeGen.Managed;
 using Cocoa.CodeGen.ObjectFormat.PE;

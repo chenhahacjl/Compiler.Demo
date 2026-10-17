@@ -15,7 +15,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\Cocoa.Cs\Cocoa.Engine\Cocoa.Engine.csproj" />
+    <ProjectReference Include="..\..\..\src\Cocoa.Cs\Tools\Cocoa.Engine\Cocoa.Engine.csproj" />
   </ItemGroup>
 
   <!-- 系统库开箱可用：把 System.Core.coa 复制到宿主输出目录（SystemLibrary.Load 从 bin 目录发现） -->

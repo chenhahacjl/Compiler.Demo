@@ -15,7 +15,7 @@ using Xunit;
 namespace Cocoa.Tests.SelfHosting.CodeAnalysis
 {
     /// <summary>
-    /// 阶段 7 增量一 M7-a2：自举 Lexer 与 C# 版 <see cref="CocoaLexer"/>（共享 LexerBase）逐 token 差分。
+    /// 阶段 7 增量一 M7-a2：自举 Lexer 与 C# 版 <see cref="Lexer"/>（共享 LexerBase）逐 token 差分。
     /// 口径：**非 trivia 逐 token 严格**（kind 映射名 / offset / 长度 / 行列）；trivia（空白/注释/文档注释）
     /// 本轮只记录差异清单（见 自举实施计划.md），不断言。
     /// 语料：samples/ 下全部 .co + 内嵌边界用例。

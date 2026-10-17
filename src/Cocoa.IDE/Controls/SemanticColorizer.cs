@@ -6,7 +6,7 @@ using AvaloniaEdit.Document;
 using AvaloniaEdit.Rendering;
 using Cocoa.CodeAnalysis.Authoring;
 using Cocoa.CodeAnalysis.Syntax;
-using Cocoa.CodeAnalysis.Text;
+using Cocoa.CodeAnalysis.Extensions;
 
 namespace Cocoa.IDE.Controls;
 

@@ -9,7 +9,7 @@ using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Syntax.Nodes;
 using Cocoa.CodeAnalysis.Syntax.Green;
-using Cocoa.Tests.CodeGen.Emit.IL;
+using Cocoa.Tests.CodeGen.Emit.Il;
 using Xunit;
 
 namespace Cocoa.Tests.CodeGen.ThreeBackend

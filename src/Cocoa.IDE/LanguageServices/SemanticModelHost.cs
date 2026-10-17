@@ -21,7 +21,7 @@ public sealed class SemanticModelHost
     /// <summary>用当前文本重建多文件编译（含工程源文件集与引用，跨文件 F12/Hover/补全解析）。</summary>
     public void Update(string text, string fileName, ProjectContext? context = null)
     {
-        _tree = SyntaxTree.Parse(Cocoa.CodeAnalysis.Text.SourceText.From(text, fileName));
+        _tree = SyntaxTree.Parse(Cocoa.Text.SourceText.From(text, fileName));
 
         var trees = new List<SyntaxTree> { _tree };
         var references = new List<string>();
@@ -58,7 +58,7 @@ public sealed class SemanticModelHost
         {
             var patchedText = _tree.Text.ToString().Insert(offset, insert);
             var patchedTree = SyntaxTree.Parse(
-                Cocoa.CodeAnalysis.Text.SourceText.From(patchedText, _tree.Text.FileName));
+                Cocoa.Text.SourceText.From(patchedText, _tree.Text.FileName));
 
             var all = new List<SyntaxTree> { patchedTree };
             all.AddRange(_otherTrees);

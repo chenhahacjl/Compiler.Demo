@@ -79,7 +79,7 @@ function Main(): i32
 
             if (backend == "il")
             {
-                var (exitCode, stdout) = Emit.IL.IlEndToEndTests.EmitAndRun(IndependentCounterProgram, "ClosureContract");
+                var (exitCode, stdout) = Emit.Il.IlEndToEndTests.EmitAndRun(IndependentCounterProgram, "ClosureContract");
                 Assert.Equal(0, exitCode);
                 Assert.Equal(Expected, stdout.Replace("\r\n", "\n"));
                 return;

@@ -7,11 +7,11 @@ namespace Cocoa.CodeAnalysis.Syntax.Green
     /// <summary>
     /// Cocoa 缁库啋绫诲瀷鍖栫孩鑺傜偣宸ュ巶锛圫-5 P2-4 闅忚縼璇█搴擄級锛氭寜 <see cref="GreenNode.RawKind"/> 娲惧彂鍒拌瑷€鑺傜偣绫汇€?
     /// </summary>
-    internal sealed class CocoaGreenNodeFactory
+    internal sealed class GreenNodeFactory
     {
         private readonly GreenNode _green;
 
-        public CocoaGreenNodeFactory(GreenNode green)
+        public GreenNodeFactory(GreenNode green)
         {
             _green = green;
         }
@@ -109,7 +109,7 @@ namespace Cocoa.CodeAnalysis.Syntax.Green
         }
 
         // ------------------------------------------------------------------
-        // Expression 节点构建（原 CocoaGreenNodeFactory.Expressions.cs）
+        // Expression 节点构建（原 GreenNodeFactory.Expressions.cs）
         // ------------------------------------------------------------------
 
         private SyntaxNode BuildNameExpression(SyntaxTree syntaxTree, int position)
@@ -517,8 +517,8 @@ namespace Cocoa.CodeAnalysis.Syntax.Green
         }
 
         // ------------------------------------------------------------------
-        // Member / Statement 节点构建（原 CocoaGreenNodeFactory.Members.cs /
-        // CocoaGreenNodeFactory.Statements.cs）
+        // Member / Statement 节点构建（原 GreenNodeFactory.Members.cs /
+        // GreenNodeFactory.Statements.cs）
         // ------------------------------------------------------------------
 
         private SyntaxNode BuildFunctionDeclaration(SyntaxTree syntaxTree, int position)

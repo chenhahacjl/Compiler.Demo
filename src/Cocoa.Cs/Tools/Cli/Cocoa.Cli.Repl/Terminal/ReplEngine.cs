@@ -9,8 +9,9 @@ using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Syntax.Nodes;
 using Cocoa.CodeAnalysis.Syntax.Green;
 using Cocoa.Text;
+using Cocoa.Cli.Repl.Services;
 
-namespace Cocoa.Cli.Repl;
+namespace Cocoa.Cli.Repl.Terminal;
 
 public sealed class ReplEngine : IDisposable
 {

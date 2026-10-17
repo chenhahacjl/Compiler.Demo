@@ -13,22 +13,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// <br/>
     /// 字符 => Token
     /// </summary>
-    /// <summary>
-    /// 词法分析器 (Lexical Analyzer)
-    /// <br/>
-    /// 字符 => Token
-    /// </summary>
-    /// <summary>
-    /// 词法分析器 (Lexical Analyzer)
-    /// <br/>
-    /// 字符 => Token
-    /// </summary>
-    /// <summary>
-    /// 词法分析器 (Lexical Analyzer)
-    /// <br/>
-    /// 字符 => Token
-    /// </summary>
-    public sealed class CocoaLexer
+    public sealed class Lexer
     {
         private readonly DiagnosticBag _diagnostics = new DiagnosticBag();
         private readonly SyntaxTree _syntaxTree;
@@ -41,14 +26,14 @@ namespace Cocoa.CodeAnalysis.Syntax
         private object? _value;
         private ImmutableArray<SyntaxTrivia>.Builder _triviaBuilder = ImmutableArray.CreateBuilder<SyntaxTrivia>();
 
-        public CocoaLexer(SyntaxTree syntaxTree)
+        public Lexer(SyntaxTree syntaxTree)
         {
             _syntaxTree = syntaxTree;
             _text = syntaxTree.Text;
         }
 
         /// <summary>从指定位置开始词法（用于插值洞的子解析，位置必须指向洞首字符）。</summary>
-        public CocoaLexer(SyntaxTree syntaxTree, int start)
+        public Lexer(SyntaxTree syntaxTree, int start)
             : this(syntaxTree)
         {
             _position = start;

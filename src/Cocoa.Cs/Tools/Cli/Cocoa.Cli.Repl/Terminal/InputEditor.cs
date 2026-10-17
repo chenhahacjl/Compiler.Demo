@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Cocoa.Cli.Repl;
+namespace Cocoa.Cli.Repl.Terminal;
 
 internal sealed class InputEditor
 {

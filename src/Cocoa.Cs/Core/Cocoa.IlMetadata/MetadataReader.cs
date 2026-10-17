@@ -26,7 +26,7 @@ using Cocoa.IlMetadata; using System; using System.Collections.Generic; using Sy
         }
 
         /// <summary>按 FullName（命名空间.名称）查找类型，返回其 TypeRef 描述。</summary>
-        public IlTypeRef? FindType(string fullName, IIlRefIssuer builder)
+        public IlTypeRef? FindType(string fullName, IlRefIssuer builder)
         {
             foreach (var assembly in _assemblies)
             {
@@ -74,7 +74,7 @@ using Cocoa.IlMetadata; using System; using System.Collections.Generic; using Sy
         }
 
         /// <summary>按「类型 FullName + 方法名 + 参数类型 FullName 列表」查找方法；<paramref name="returnTypeName"/> 非空时按返回类型消歧。</summary>
-        public ResolvedMethodInfo? FindMethod(string typeFullName, string methodName, string[] parameterTypeNames, IIlRefIssuer builder, string? returnTypeName = null)
+        public ResolvedMethodInfo? FindMethod(string typeFullName, string methodName, string[] parameterTypeNames, IlRefIssuer builder, string? returnTypeName = null)
         {
             foreach (var assembly in _assemblies)
             {
@@ -113,7 +113,7 @@ using Cocoa.IlMetadata; using System; using System.Collections.Generic; using Sy
         }
 
         /// <summary>按「类型 FullName + 字段名」查找 public 字段（facade 值类型字段重定向：Vector3.X 等）。</summary>
-        public ResolvedFieldInfo? FindField(string typeFullName, string fieldName, IIlRefIssuer builder)
+        public ResolvedFieldInfo? FindField(string typeFullName, string fieldName, IlRefIssuer builder)
         {
             foreach (var assembly in _assemblies)
             {

@@ -5,10 +5,10 @@ namespace Cocoa.CodeAnalysis.Symbols
 {
     /// <summary>
     /// 内置函数（功能层）：规格表生成符号，三后端按 <see cref="BuiltinKind"/> 映射实现。
-        /// 规范名为 C# 风格 PascalCase（Print/Input/Random/Sleep/Now/Exit，6e-M17）—
+    /// 规范名为 C# 风格 PascalCase（Print/Input/Random/Sleep/Now/Exit，6e-M17）—
     /// syscall 声明 `syscall function Print(...)` 精确命中；旧小写调用 `print(...)` 由
     /// <see cref="GetByName"/> 大小写不敏感回退兼容（Step 3 迁移后移除）。
-        /// 新增功能层原语 = 1 行规格 + 三后端各 1 个 kind case + 1 个 IL 方法引用。
+    /// 新增功能层原语 = 1 行规格 + 三后端各 1 个 kind case + 1 个 IL 方法引用。
     /// </summary>
     public static class BuiltinFunctions
     {

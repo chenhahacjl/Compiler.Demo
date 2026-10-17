@@ -48,11 +48,11 @@ namespace Cocoa.CodeAnalysis.Syntax.Green
         }
 
 
-        /// <summary>绿→类型化红节点：按 <see cref="Kind"/> 经 <see cref="CocoaGreenNodeFactory"/> 派发到具体类型；
+        /// <summary>绿→类型化红节点：按 <see cref="Kind"/> 经 <see cref="GreenNodeFactory"/> 派发到具体类型；
         /// 未覆盖的 Kind 回落通用 <see cref="RedNode"/>。</summary>
         public SyntaxNode CreateTypedRed(SyntaxTree syntaxTree, int position = 0)
         {
-            return new CocoaGreenNodeFactory(this).CreateTypedRed(syntaxTree, position);
+            return new GreenNodeFactory(this).CreateTypedRed(syntaxTree, position);
         }
     }
 }

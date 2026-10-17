@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace Cocoa.Cli.Repl;
+namespace Cocoa.Cli.Repl.Terminal;
 
 internal sealed class AnsiBackend
 {

@@ -86,7 +86,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private static void Parse(SyntaxTree syntaxTree, out SyntaxNode root, out ImmutableArray<Diagnostic> diagnostics)
         {
-            var parser = new CocoaParser(syntaxTree);
+            var parser = new Parser(syntaxTree);
             root = parser.ParseCompilationUnit();
             diagnostics = parser.Diagnostics.ToImmutableArray();
         }
@@ -132,7 +132,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             void ParseTokens(SyntaxTree syntaxTree, out SyntaxNode root, out ImmutableArray<Diagnostic> d)
             {
-                var lexer = new CocoaLexer(syntaxTree);
+                var lexer = new Lexer(syntaxTree);
 
                 while (true)
                 {
@@ -148,7 +148,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                         // P2-7：共享节点类已删，根构建经语言工厂（空成员 + EOF token 的绿节点）。
                         var greenRoot = new GreenNodeWithChildren(SyntaxKind.CompilationUnit,
                             ImmutableArray.Create<GreenNode?>((GreenNode)token.ToGreen()));
-                        root = new CocoaGreenNodeFactory(greenRoot).CreateTypedRed(syntaxTree, 0);
+                        root = new GreenNodeFactory(greenRoot).CreateTypedRed(syntaxTree, 0);
 
                         break;
                     }

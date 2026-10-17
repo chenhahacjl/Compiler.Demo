@@ -7,4 +7,4 @@ slndir="$(dirname "${BASH_SOURCE[0]}")"
 dotnet build "$slndir/Cocoa.slnx" --nologo || exit
 
 # Test
-dotnet test "$slndir/Cocoa.Tests" --nologo --no-build
+dotnet test "$slndir/Cocoa.slnx" --nologo --no-build

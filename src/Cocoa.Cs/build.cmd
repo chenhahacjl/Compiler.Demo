@@ -7,4 +7,4 @@ REM Restore + Build
 dotnet build "%SLNDIR%Cocoa.slnx" --nologo || exit /b
 
 REM Test
-dotnet test "%SLNDIR%Cocoa.Tests" --nologo --no-build
+dotnet test "%SLNDIR%Cocoa.slnx" --nologo --no-build

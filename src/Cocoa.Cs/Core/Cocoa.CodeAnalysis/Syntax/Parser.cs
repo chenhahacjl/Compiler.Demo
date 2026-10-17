@@ -11,7 +11,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// 所有 virtual/abstract 方法替换为具体实现；无继承、无 virtual 方法。
     /// S-5 P2-1：产出 Cocoa 语言节点（<c>Cocoa.CodeAnalysis.Syntax</c>），token 判断保留共享 <see cref="SyntaxKind"/>。
     /// </summary>
-    internal sealed partial class CocoaParser
+    internal sealed partial class Parser
     {
         private readonly DiagnosticBag _diagnostics = new DiagnosticBag();
         private readonly SyntaxTree _syntaxTree;
@@ -22,12 +22,12 @@ namespace Cocoa.CodeAnalysis.Syntax
         /// <summary>`>>` 拆分出的合成 token 队列（嵌套泛型 `List<List<int>>`；仅在泛型实参表解析窗口内非空）。</summary>
         private readonly Queue<SyntaxToken> _syntheticTokens = new Queue<SyntaxToken>();
 
-        public CocoaParser(SyntaxTree syntaxTree)
+        public Parser(SyntaxTree syntaxTree)
         {
             var tokens = new List<SyntaxToken>();
             var badTokens = new List<SyntaxToken>();
 
-            var lexer = new CocoaLexer(syntaxTree);
+            var lexer = new Lexer(syntaxTree);
             SyntaxToken token;
 
             do
@@ -79,16 +79,16 @@ namespace Cocoa.CodeAnalysis.Syntax
         }
 
         /// <summary>用预词法 token 构造 Parser（插值洞的子解析；token 属同一 SyntaxTree，Span 绝对定位）。</summary>
-        public CocoaParser(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> tokens)
+        public Parser(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> tokens)
         {
             _syntaxTree = syntaxTree;
             _text = syntaxTree.Text;
             _tokens = tokens;
         }
 
-        private CocoaParser CreateSubParser(ImmutableArray<SyntaxToken> tokens)
+        private Parser CreateSubParser(ImmutableArray<SyntaxToken> tokens)
         {
-            return new CocoaParser(_syntaxTree, tokens);
+            return new Parser(_syntaxTree, tokens);
         }
 
         public DiagnosticBag Diagnostics => _diagnostics;
@@ -822,7 +822,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private InterpolationSyntax ParseHoleExpression(int start, int end)
         {
-            var lexer = new CocoaLexer(_syntaxTree, start);
+            var lexer = new Lexer(_syntaxTree, start);
             var tokens = new List<SyntaxToken>();
             SyntaxToken token;
             do
@@ -883,7 +883,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new LiteralExpressionSyntax(_syntaxTree, numberToken, value);
         }
 
-        private SyntaxToken ParseFormatSpecifier(CocoaParser holeParser, int end)
+        private SyntaxToken ParseFormatSpecifier(Parser holeParser, int end)
         {
             var formatStart = holeParser.Current.Position;
             var length = end - formatStart;

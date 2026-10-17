@@ -1,6 +1,6 @@
 using System;
 
-namespace Cocoa.Cli.Repl;
+namespace Cocoa.Cli.Repl.Terminal;
 
 internal readonly struct Cell : IEquatable<Cell>
 {

@@ -1,4 +1,4 @@
-namespace Cocoa.Cli.Repl;
+namespace Cocoa.Cli.Repl.Terminal;
 
 internal readonly struct Rect
 {
