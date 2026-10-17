@@ -9,5 +9,5 @@ dotnet build "%ROOT%\src\Cocoa.Cs\Cocoa.slnx" --nologo || exit /b 1
 
 dotnet test "%TESTS%\Cocoa.Tests.CodeAnalysis" --no-restore --no-build --nologo || exit /b 1
 dotnet test "%TESTS%\Cocoa.Tests.CodeGen" --no-restore --no-build --nologo || exit /b 1
-dotnet test "%TESTS%\Cocoa.Tests.Compiler" --no-restore --no-build --nologo || exit /b 1
+dotnet test "%TESTS%\Cocoa.Tests.Integration" --no-restore --no-build --nologo || exit /b 1
 endlocal
