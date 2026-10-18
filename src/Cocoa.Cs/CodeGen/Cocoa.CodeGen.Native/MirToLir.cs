@@ -36,6 +36,9 @@ namespace Cocoa.CodeGen.Native
 
         private readonly Dictionary<FunctionSymbol, LirFunction> _functionMap = new();
 
+        /// <summary>S3（native-s1）：库形态按函数容错跳过的函数集（native 不支持的函数体，如 decimal 打印）。</summary>
+        private readonly HashSet<FunctionSymbol> _skippedNativeFunctions = new();
+
         /// <summary>4.2 试点：方法体构建状态协作对象（当前函数/变量槽/标签/this/闭包寄存器）。</summary>
         private readonly LirFunctionBuilder _builder = new();
 
@@ -113,7 +116,10 @@ namespace Cocoa.CodeGen.Native
             generator.ComputeTopLevelOverloads();
             generator.EmitLibraryProgram();
             generator.EmitVTableData();
-            return new NativeEmitResult(generator._irProgram, generator.CaptureSnapshot());
+            return new NativeEmitResult(
+                generator._irProgram,
+                generator.CaptureSnapshot(),
+                generator._skippedNativeFunctions.ToImmutableArray());
         }
 
         /// <summary>M2：从内部发射状态捕获只读符号快照（存活类 + 实际发射函数），纯暴露不加逻辑。</summary>
@@ -349,7 +355,21 @@ namespace Cocoa.CodeGen.Native
 
             foreach (var (function, body) in functionsToEmit)
             {
-                EmitFunction(_functionMap[function], function, body);
+                // S3（native-s1）：库形态按函数容错——native 后端不支持个别函数体（如 decimal 打印）时
+                // 该函数不发射且不导出（库形态可跳过；exe 形态保持既有抛错诊断）。跳过函数须无内部调用者。
+                var irFunction = _functionMap[function];
+                try
+                {
+                    EmitFunction(irFunction, function, body);
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException)
+                {
+                    if (_functionMap.Remove(function))
+                    {
+                        _irProgram.Functions.Remove(irFunction);
+                        _skippedNativeFunctions.Add(function);
+                    }
+                }
             }
         }
 

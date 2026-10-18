@@ -27,7 +27,8 @@ namespace Cocoa.CodeGen.Native
     /// </summary>
     public static class EmitNativeLibrary
     {
-        public static void Emit(CoaProgram coa, string dllPath, TargetPlatform platform, bool embedRuntime = true)
+        /// <summary>发射 `.coa` 共享库 DLL；返回被跳过（native 不支持的函数体，如 decimal 打印）的函数集。</summary>
+        public static ImmutableArray<FunctionSymbol> Emit(CoaProgram coa, string dllPath, TargetPlatform platform, bool embedRuntime = true)
         {
             if (platform.OS == TargetOS.Linux)
             {
@@ -77,6 +78,8 @@ namespace Cocoa.CodeGen.Native
                 exports,
                 resources: null,
                 isDll: true);
+
+            return emit.SkippedFunctions;
         }
 
         /// <summary>

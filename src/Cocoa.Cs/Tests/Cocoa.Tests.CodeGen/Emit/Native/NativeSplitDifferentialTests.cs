@@ -115,5 +115,59 @@ namespace Lib {
             Assert.Equal(inlineExit, splitExit);
             Assert.Equal(inlineOut, splitOut);
         }
+
+        // ------------------------------------------------------------------
+        // S3：真实 System.Core.coa → System.Core.Native.dll 全部分拆（系统函数 + 运行时原语均导入），
+        // 与内联差分行为等价（GuessNumber 冒烟：Console/Math/字符串往返）。
+        // ------------------------------------------------------------------
+
+        private const string RealAppSource = @"using System
+
+function Main(): i32
+{
+    var x = Math.Abs(-5.5)
+    Console.WriteLine(x)
+    var s = ""a"" + ""b"" + ""c""
+    Console.WriteLine(s)
+    Console.WriteLine(42)
+    if !(s is string) return 1
+    var guess = 7
+    var target = 42
+    while guess < target
+    {
+        guess = guess * 2
+    }
+    Console.WriteLine(guess)
+    return 0
+}
+";
+
+        [Fact]
+        public void RealSystemCore_FullySplit_BehavesIdentically_ToInlinedSystemCore()
+        {
+            var dir = Path.Combine(Path.GetTempPath(), "cocoa-native-s3-realsplit-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+
+            // owner = 真实 System.Core.Native.dll（含运行时 + System.Core 库体）
+            var core = SystemLibrary.Load().Single(l => l.Name.StartsWith("System.Core", StringComparison.Ordinal));
+            EmitNativeLibrary.Emit(core, Path.Combine(dir, "System.Core.Native.dll"), Platform);
+
+            // 内联形态（默认）
+            var inlineExe = Path.Combine(dir, "app-inline.exe");
+            var inlineDiags = Compilation.Create(SyntaxTree.Parse(RealAppSource)).EmitNative("app-inline", inlineExe, Platform);
+            Assert.True(!inlineDiags.HasErrors(), "inline: " + string.Join(" | ", inlineDiags.Select(d => d.Message)));
+            var inline = Run(inlineExe);
+
+            // 全部分拆形态：linkCoaDynamically（System.Core 外链）+ splitRuntime（原语外链）
+            var splitExe = Path.Combine(dir, "app-split.exe");
+            var splitDiags = Compilation.Create(new string[0], linkCoaDynamically: true, SyntaxTree.Parse(RealAppSource))
+                .EmitNative("app-split", splitExe, Platform, splitRuntime: true);
+            Assert.True(!splitDiags.HasErrors(), "split: " + string.Join(" | ", splitDiags.Select(d => d.Message)));
+            var split = Run(splitExe);
+
+            Assert.Equal(inline.ExitCode, split.ExitCode);
+            Assert.Equal(inline.Stdout, split.Stdout);
+            Assert.True(new FileInfo(splitExe).Length > 0);
+        }
     }
 }
