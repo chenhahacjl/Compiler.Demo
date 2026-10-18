@@ -55,7 +55,8 @@ namespace Cocoa.Build
             DocumentationFile = documentationFile;
             TreatWarningsAsErrors = treatWarningsAsErrors ?? false;
             Optimize = optimize ?? false;
-            SharedSystemLibrary = sharedSystemLibrary ?? false;
+            // S3c（D7）：native 共享系统库默认开启；<SharedSystemLibrary>false</SharedSystemLibrary> 显式 opt-out（内联）
+            SharedSystemLibrary = sharedSystemLibrary ?? true;
             Metadata = metadata;
             SourcePatterns = sourcePatterns;
             References = references;

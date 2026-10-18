@@ -115,11 +115,12 @@ namespace Cocoa.Tests.Integration.Compiler
             var coreDll = Path.Combine(outputDir, "System.Core.Native.dll");
             Assert.True(File.Exists(coreDll), "System.Core.Native.dll missing beside exe");
 
-            // exe 不含内联运行时/System.Core → 比同源内联构建显著小
+            // exe 不含内联运行时/System.Core → 比同源内联构建显著小（内联基线显式 opt-out）
             var inlinePath = CreateProject(
                 "native-shared-inline",
                 "Inline",
-                "function Main()\n{\n    var x = Math.Abs(-5.5)\n    Console.WriteLine(x)\n    Console.WriteLine(\"a\" + \"b\")\n}\n");
+                "function Main()\n{\n    var x = Math.Abs(-5.5)\n    Console.WriteLine(x)\n    Console.WriteLine(\"a\" + \"b\")\n}\n",
+                "  <PropertyGroup Label=\"Common\">\n    <SharedSystemLibrary>false</SharedSystemLibrary>\n  </PropertyGroup>\n");
             var (iexit, stdout2, _) = Run($"build \"{inlinePath}\" -b native");
             Assert.True(iexit == 0, $"inline build failed");
             var inlineExe = stdout2.Trim();
