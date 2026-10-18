@@ -351,8 +351,9 @@ namespace Cocoa.Build
                 CopyReferencesToOutput(references, outputDirectory);
 
                 // 动态链接（阶段 A）：被消费的 `.coa` 库按需生成托管 dll 并部署——
-                // 含系统库（SystemLibrary 自动发现）。缺失或 stamp（coa sha256）过期 → 现场再生，自愈误删
-                if (linkCoaDynamically)
+                // 含系统库（SystemLibrary 自动发现）。缺失或 stamp（coa sha256）过期 → 现场再生，自愈误删。
+                // 仅托管后端：native 共享（SharedSystemLibrary）走 EnsureNativeDlls，不得向产物目录生成 Managed.dll。
+                if (linkCoaDynamically && backend.IsManaged())
                 {
                     if (!EnsureManagedDlls(compilation.CoaLibraries, outputDirectory, IlTarget.Parse(dotnetRuntime!) ?? IlTarget.Default, messageWriter))
                     {
