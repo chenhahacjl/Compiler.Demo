@@ -1,6 +1,6 @@
 # Native 共享框架 S0+S1 实施计划（合并运行时 · 每 coa 一 DLL）
 
-> 状态: 实施中 · 2026-10-18 · **S0–S6 + S3c 已完成（native 共享默认开启 D7，opt-out 内联；managed 共享探路；回归：CodeGen 1060 · CodeAnalysis 2007 · Integration 286 · Engine 32 全绿）** · 后置：S4 Linux .so 导出侧
+> 状态: 实施中 · 2026-10-18 · **S0–S6 全部落地（native 共享默认开启 D7 + managed 探路 + Linux .so 导出侧；回归：CodeGen 1063 · CodeAnalysis 2007 · Integration 286 · Engine 32 全绿）** · 后置：S5 收口（文档/perf 体积门禁）
 > 前置设计: [Native共享框架设计.md](Native共享框架设计.md)
 > 与主设计的关键差异（本节后续决策覆盖主文档 §1/§3/§4/§7/§9 的既定项）：
 > - **D1’=A**：运行时**并入** `System.Core.Native.dll`（不再独立 `cocoa runtime.<arch>.dll`）。
@@ -26,6 +26,7 @@
 | `&lt;SharedSystemLibrary&gt;` 项目开关 + `EnsureNativeDlls` 部署（System.Core.Native.dll 落 exe 旁，时间戳自愈）+ CLI 项目 e2e（exe 变小、跨模块运行正确） | ✅ S3b 已完成 |
 | managed 共享：netcore runtimeconfig `additionalProbingPaths`（SDK 系统库目录探路）+ 探路验证（删 copy-local 经 SDK 预编译解析） | ✅ S6 已完成 |
 | native 共享默认开启（D7：`<SharedSystemLibrary>` 缺省 true，`false` 显式 opt-out 内联），Integration 零波及 | ✅ S3c 已完成 |
+| Linux `.so` 导出侧：`ElfObjectWriter.WriteSharedLibrary`（ET_DYN、entry=0、无 PT_INTERP、`.dynsym` STB_GLOBAL 导出 + SHT_DYNSYM/HASH + GLOB_DAT 导入）+ `EmitNativeLibrary` Linux 分支 + 字节级验收 | ✅ S4 已完成 |
 | 陷阱错误径 ABI 对齐（分除/栈溢出） | ⏳ 加固 |
 
 后置（本轮未做）：S2 用户库 provenance 定向导出 · S3 默认拆分 + `EnsureNativeDlls` · S4 Linux `.so` · S6 managed 共享。

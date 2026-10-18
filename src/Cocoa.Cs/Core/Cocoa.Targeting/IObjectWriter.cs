@@ -15,6 +15,12 @@ namespace Cocoa.Targeting
     public readonly record struct DynamicImport(string Library, string Symbol, int SlotDataOffset);
 
     /// <summary>
+    /// 导出描述（S4 ELF 共享库）：符号名 + 代码/数据内 RVA。ELF .dynsym 定义为 STB_GLOBAL，
+    /// st_value = 镜像内偏移（ET_DYN 相对加载基址）；PE 侧对应 .edata 导出（RVA）。
+    /// </summary>
+    public readonly record struct ObjectExport(string Name, uint Rva);
+
+    /// <summary>
     /// 对象写出目标配置（格式中立）：机器/基址/子系统/入口 + 节 + 数据目录 + 动态导入。
     /// PE（PeImageBuilder）与 ELF（ElfObjectWriter）经此描述镜像骨架。
     /// </summary>
@@ -50,6 +56,9 @@ namespace Cocoa.Targeting
 
         /// <summary>动态导入（N3 glibc 动态链接；null/空 = 零导入静态交付）。</summary>
         public List<DynamicImport>? Imports { get; set; }
+
+        /// <summary>S4 ELF 共享库导出（STB_GLOBAL 定义；PE 侧由 PeFileWriter 自建 .edata，无需此项）。</summary>
+        public List<ObjectExport> Exports { get; } = new();
 
         /// <summary>PE 特有附加特性（Machine/FileCharacteristics 等由实现按 Cpu/Os 推导）。</summary>
         public ushort AdditionalFileCharacteristics { get; set; }

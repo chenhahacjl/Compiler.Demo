@@ -39,6 +39,8 @@ namespace Cocoa.CodeGen.ObjectFormat.Elf
         // sh_type
         public const uint ShtProgbits = 1;
         public const uint ShtStrTab = 3;
+        public const uint ShtHash = 5;
+        public const uint ShtDynSym = 11;
 
         // sh_flags
         public const ulong ShfWrite = 0x1;
@@ -70,6 +72,12 @@ namespace Cocoa.CodeGen.ObjectFormat.Elf
             if (options.Arch != Architecture.X64)
             {
                 throw new InvalidOperationException("ElfObjectWriter: linux ELF64 目标仅支持 x64。");
+            }
+
+            // S4：共享库（.so）——ET_DYN、entry=0、导出 STB_GLOBAL 定义（.dynsym）+ 导入 GLOB_DAT
+            if (options.Exports.Count > 0 && options.AddressOfEntryPoint == 0)
+            {
+                return WriteSharedLibrary(options);
             }
 
             // N3：动态导入 → 动态链接路径（与零导入静态交付字节无关）
@@ -401,6 +409,260 @@ namespace Cocoa.CodeGen.ObjectFormat.Elf
                 13, ElfConstants.ShtStrTab, 0, 0, shstrOffset, (uint)shstrBytes.Length, 1);
 
             return image;
+        }
+
+        /// <summary>
+        /// S4：Linux 共享库（.so）——ET_DYN、entry=0、无 PT_INTERP（库自身不需解释器）。
+        /// .dynsym = [0]null + 导入(SHN_UNDEF) + 导出(STB_GLOBAL 定义，st_shndx=.text，st_value=镜像内偏移)；
+        /// .rela.dyn GLOB_DAT 填导入槽；.hash 覆盖全部 dynsym。
+        /// </summary>
+        private byte[] WriteSharedLibrary(ObjectWriteOptions options)
+        {
+            var imageBase = options.ImageBase;
+            var imports = options.Imports ?? new List<DynamicImport>();
+            var exports = options.Exports;
+            var text = options.Sections.First(s => s.Name == ".text");
+            var rwSections = options.Sections.Where(s => s.Name != ".text").ToList();
+            var rwFirst = rwSections[0];
+
+            // ---- .dynstr：空名 + 库名 + 导入名 + 导出名 ----
+            var dynstr = new List<byte> { 0 };
+            var libOffsets = new Dictionary<string, uint>();
+            var libs = new List<string>();
+            foreach (var import in imports)
+            {
+                if (!libs.Contains(import.Library))
+                {
+                    libs.Add(import.Library);
+                    libOffsets[import.Library] = (uint)dynstr.Count;
+                    dynstr.AddRange(Encoding.ASCII.GetBytes(import.Library));
+                    dynstr.Add(0);
+                }
+            }
+
+            var importSymOffsets = new uint[imports.Count];
+            for (var i = 0; i < imports.Count; i++)
+            {
+                importSymOffsets[i] = (uint)dynstr.Count;
+                dynstr.AddRange(Encoding.ASCII.GetBytes(imports[i].Symbol));
+                dynstr.Add(0);
+            }
+
+            var exportSymOffsets = new uint[exports.Count];
+            for (var i = 0; i < exports.Count; i++)
+            {
+                exportSymOffsets[i] = (uint)dynstr.Count;
+                dynstr.AddRange(Encoding.ASCII.GetBytes(exports[i].Name));
+                dynstr.Add(0);
+            }
+
+            var importCount = imports.Count;
+            var exportCount = exports.Count;
+            var symCount = 1 + importCount + exportCount;
+            var dynstrBytes = dynstr.ToArray();
+
+            // ---- SysV .hash（覆盖全部符号）----
+            var hashTable = new uint[2 + 1 + symCount];
+            hashTable[0] = 1; // nbucket
+            hashTable[1] = (uint)symCount; // nchain
+            var bucket = new uint[1];
+            for (var i = 0; i < importCount; i++)
+            {
+                var idx = (uint)(i + 1);
+                hashTable[2] = idx;
+                hashTable[2 + 1 + idx] = bucket[0];
+                bucket[0] = idx;
+            }
+
+            for (var i = 0; i < exportCount; i++)
+            {
+                var idx = (uint)(1 + importCount + i);
+                hashTable[2] = idx;
+                hashTable[2 + 1 + idx] = bucket[0];
+                bucket[0] = idx;
+            }
+
+            // ---- 布局（无 PT_INTERP：PT_LOAD×2 + PT_DYNAMIC + PT_GNU_STACK）----
+            const int phCount = 4;
+            var textOffset = Align((uint)(ElfConstants.HeaderSize + phCount * ElfConstants.ProgramHeaderSize), (int)ElfConstants.PageSize);
+            var textSize = (uint)text.RawData.Length;
+            var rwOffset = Align(textOffset + textSize, (int)ElfConstants.PageSize);
+            var rwVaddr = imageBase + rwFirst.VirtualAddress;
+
+            var rwLayout = new List<(string Name, ulong Vaddr, uint FileOffset, uint Size, uint Align, ulong ShFlags, uint ShType)>();
+            var rwPos = rwOffset;
+            foreach (var section in rwSections)
+            {
+                rwPos = Align(rwPos, 8);
+                rwLayout.Add((section.Name, rwVaddr + (rwPos - rwOffset), rwPos, (uint)section.RawData.Length, 8,
+                    ElfConstants.ShfAlloc | ElfConstants.ShfWrite, ElfConstants.ShtProgbits));
+                rwPos += (uint)section.RawData.Length;
+            }
+
+            var dynStrSeg = Align(rwPos, 8);
+            var dynSymSeg = Align(dynStrSeg + (uint)dynstrBytes.Length, 8);
+            var dynSymSize = (uint)(symCount * 24);
+            var hashSeg = Align(dynSymSeg + dynSymSize, 4);
+            var hashSize = (uint)(hashTable.Length * 4);
+            var dynamicSize = (uint)((libs.Count + 5 + (imports.Count > 0 ? 3 : 0) + 1) * 16);
+            var dynamicSeg = Align(hashSeg + hashSize, 8);
+            var relaSeg = Align(dynamicSeg + dynamicSize, 8);
+            var relaEntries = new (ulong Vaddr, ulong SymIndex)[importCount];
+            for (var i = 0; i < importCount; i++)
+            {
+                relaEntries[i] = (rwVaddr + (ulong)imports[i].SlotDataOffset, (ulong)(i + 1));
+            }
+
+            var relaSize = (uint)(relaEntries.Length * 24);
+            var rwEnd = relaSeg + relaSize;
+            var rwSize = rwEnd - rwOffset;
+            var shstrOffset = Align(rwEnd, 8);
+
+            // ---- 节表 ----
+            var allSections = new List<(string Name, ulong Vaddr, uint FileOffset, uint Size, uint Align, ulong ShFlags, uint ShType)>();
+            allSections.Add((".text", (ulong)text.VirtualAddress, textOffset, textSize, 16,
+                ElfConstants.ShfAlloc | ElfConstants.ShfExecInstr, ElfConstants.ShtProgbits));
+            allSections.AddRange(rwLayout);
+            allSections.Add((".dynstr", rwVaddr + (dynStrSeg - rwOffset), dynStrSeg, (uint)dynstrBytes.Length, 1,
+                ElfConstants.ShfAlloc, ElfConstants.ShtStrTab));
+            allSections.Add((".dynsym", rwVaddr + (dynSymSeg - rwOffset), dynSymSeg, dynSymSize, 8,
+                ElfConstants.ShfAlloc, ElfConstants.ShtDynSym));
+            allSections.Add((".hash", rwVaddr + (hashSeg - rwOffset), hashSeg, hashSize, 4,
+                ElfConstants.ShfAlloc, ElfConstants.ShtHash));
+            allSections.Add((".dynamic", rwVaddr + (dynamicSeg - rwOffset), dynamicSeg, dynamicSize, 8,
+                ElfConstants.ShfAlloc | ElfConstants.ShfWrite, ElfConstants.ShtProgbits));
+            if (relaEntries.Length > 0)
+            {
+                allSections.Add((".rela.dyn", rwVaddr + (relaSeg - rwOffset), relaSeg, relaSize, 8,
+                    ElfConstants.ShfAlloc, ElfConstants.ShtProgbits));
+            }
+
+            var dynamicBytes = BuildDynamic(libs, libOffsets,
+                dynstrBytes.Length,
+                rwVaddr + (dynStrSeg - rwOffset), rwVaddr + (dynSymSeg - rwOffset), rwVaddr + (hashSeg - rwOffset),
+                rwVaddr + (relaSeg - rwOffset), relaSize, relaEntries.Length);
+
+            // ---- shstrtab ----
+            var shstr = new List<byte>();
+            shstr.AddRange(ElfConstants.ShStrTabPrefix);
+            var nameOffsets = new Dictionary<string, uint>(StringComparer.Ordinal);
+            foreach (var name in rwLayout.Select(s => s.Name)
+                         .Concat(new[] { ".dynstr", ".dynsym", ".hash", ".dynamic", ".rela.dyn" }))
+            {
+                if (name == ".data" || name == ".text" || name == ".shstrtab" || nameOffsets.ContainsKey(name))
+                {
+                    continue;
+                }
+
+                nameOffsets[name] = (uint)shstr.Count;
+                shstr.AddRange(Encoding.ASCII.GetBytes(name));
+                shstr.Add(0);
+            }
+
+            var shstrBytes = shstr.ToArray();
+            var sectionTableOffset = Align(shstrOffset + (uint)shstrBytes.Length, 8);
+            var shnum = allSections.Count + 2;
+            var totalSize = sectionTableOffset + (uint)shnum * ElfConstants.SectionHeaderSize;
+            var image = new byte[totalSize];
+
+            // ---- 程序头（PT_LOAD#0 覆盖 ELF 头+phdr 页；PT_DYNAMIC；PT_GNU_STACK）----
+            WriteProgramHeader(image, 0x40, ElfConstants.PtLoad, ElfConstants.PfR | ElfConstants.PfX, 0, imageBase, textOffset + textSize, ElfConstants.PageSize);
+            WriteProgramHeader(image, 0x40 + 56, ElfConstants.PtLoad, ElfConstants.PfR | ElfConstants.PfW, rwOffset, rwVaddr, rwSize, ElfConstants.PageSize);
+            WriteProgramHeader(image, 0x40 + 112, ElfConstants.PtDynamic, ElfConstants.PfR | ElfConstants.PfW, dynamicSeg, rwVaddr + (dynamicSeg - rwOffset), (uint)dynamicBytes.Length, 8);
+            WriteProgramHeader(image, 0x40 + 168, ElfConstants.PtGnuStack, ElfConstants.PfR | ElfConstants.PfW, 0, 0, 0, 16);
+
+            // ---- ELF 头（ET_DYN，entry=0）----
+            var header = image.AsSpan(0, ElfConstants.HeaderSize);
+            header[0x00] = 0x7F; header[0x01] = (byte)'E'; header[0x02] = (byte)'L'; header[0x03] = (byte)'F';
+            header[0x04] = ElfConstants.Elf64Class;
+            header[0x05] = ElfConstants.LittleEndian;
+            header[0x06] = 1;
+            header[0x07] = ElfConstants.SysVAbi;
+            BinaryPrimitives.WriteUInt16LittleEndian(header.Slice(0x10), 3); // ET_DYN
+            BinaryPrimitives.WriteUInt16LittleEndian(header.Slice(0x12), ElfConstants.EmX86_64);
+            BinaryPrimitives.WriteUInt32LittleEndian(header.Slice(0x14), 1);
+            BinaryPrimitives.WriteUInt64LittleEndian(header.Slice(0x18), 0); // e_entry = 0
+            BinaryPrimitives.WriteUInt64LittleEndian(header.Slice(0x20), 0x40);
+            BinaryPrimitives.WriteUInt64LittleEndian(header.Slice(0x28), sectionTableOffset);
+            BinaryPrimitives.WriteUInt32LittleEndian(header.Slice(0x30), 0);
+            BinaryPrimitives.WriteUInt16LittleEndian(header.Slice(0x34), ElfConstants.HeaderSize);
+            BinaryPrimitives.WriteUInt16LittleEndian(header.Slice(0x36), ElfConstants.ProgramHeaderSize);
+            BinaryPrimitives.WriteUInt16LittleEndian(header.Slice(0x38), phCount);
+            BinaryPrimitives.WriteUInt16LittleEndian(header.Slice(0x3A), ElfConstants.SectionHeaderSize);
+            BinaryPrimitives.WriteUInt16LittleEndian(header.Slice(0x3C), (ushort)shnum);
+            BinaryPrimitives.WriteUInt16LittleEndian(header.Slice(0x3E), (ushort)(shnum - 1));
+
+            // ---- 节数据 ----
+            text.RawData.CopyTo(image, (int)textOffset);
+            foreach (var section in rwLayout)
+            {
+                options.Sections.First(s => s.Name == section.Name).RawData.CopyTo(image, (int)section.FileOffset);
+            }
+
+            dynstrBytes.CopyTo(image, (int)dynStrSeg);
+            WriteDynSymFull(image, (int)dynSymSeg, imports, importSymOffsets, exports, exportSymOffsets);
+            WriteHash(image, (int)hashSeg, hashTable);
+            dynamicBytes.CopyTo(image, (int)dynamicSeg);
+            if (relaEntries.Length > 0)
+            {
+                WriteRela(image, (int)relaSeg, relaEntries);
+            }
+
+            shstrBytes.CopyTo(image, (int)shstrOffset);
+
+            // ---- 节表 ----
+            WriteSectionHeader(image, (int)sectionTableOffset, 0, 0, 0, 0, 0, 0, 0);
+            var index = 1;
+            foreach (var section in allSections)
+            {
+                var siName = section.Name == ".text" ? 1u : section.Name == ".data" ? 7u : nameOffsets[section.Name];
+                WriteSectionHeader(image, (int)(sectionTableOffset + (ulong)index * ElfConstants.SectionHeaderSize),
+                    siName, section.ShType, section.ShFlags, section.Vaddr, section.FileOffset, section.Size, section.Align);
+                index++;
+            }
+
+            WriteSectionHeader(image, (int)(sectionTableOffset + (ulong)index * ElfConstants.SectionHeaderSize),
+                13, ElfConstants.ShtStrTab, 0, 0, shstrOffset, (uint)shstrBytes.Length, 1);
+
+            return image;
+        }
+
+        /// <summary>完整 .dynsym：符号 0 全零；导入 SHN_UNDEF；导出 STB_GLOBAL 定义（st_shndx=.text=1，st_value=镜像内偏移 = 导出 RVA）。</summary>
+        private static void WriteDynSymFull(
+            byte[] image,
+            int offset,
+            IReadOnlyList<DynamicImport> imports,
+            uint[] importSymOffsets,
+            IReadOnlyList<ObjectExport> exports,
+            uint[] exportSymOffsets)
+        {
+            for (var i = 0; i < 24; i++)
+            {
+                image[offset + i] = 0;
+            }
+
+            var idx = 1;
+            for (var i = 0; i < imports.Count; i++, idx++)
+            {
+                var o = offset + idx * 24;
+                BinaryPrimitives.WriteUInt32LittleEndian(image.AsSpan(o + 0x00), importSymOffsets[i]);
+                image[o + 0x04] = 0x12; // STB_GLOBAL | STT_FUNC
+                image[o + 0x05] = 0;
+                BinaryPrimitives.WriteUInt16LittleEndian(image.AsSpan(o + 0x06), 0); // SHN_UNDEF
+                BinaryPrimitives.WriteUInt64LittleEndian(image.AsSpan(o + 0x08), 0);
+                BinaryPrimitives.WriteUInt64LittleEndian(image.AsSpan(o + 0x10), 0);
+            }
+
+            for (var i = 0; i < exports.Count; i++, idx++)
+            {
+                var o = offset + idx * 24;
+                BinaryPrimitives.WriteUInt32LittleEndian(image.AsSpan(o + 0x00), exportSymOffsets[i]);
+                image[o + 0x04] = 0x12; // STB_GLOBAL | STT_FUNC
+                image[o + 0x05] = 0;
+                BinaryPrimitives.WriteUInt16LittleEndian(image.AsSpan(o + 0x06), 1); // .text
+                BinaryPrimitives.WriteUInt64LittleEndian(image.AsSpan(o + 0x08), exports[i].Rva);
+                BinaryPrimitives.WriteUInt64LittleEndian(image.AsSpan(o + 0x10), 0);
+            }
         }
 
         private static uint Aligninterp(uint value, uint alignment)
