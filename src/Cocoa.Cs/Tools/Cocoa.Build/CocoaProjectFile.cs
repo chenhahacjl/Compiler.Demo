@@ -27,6 +27,7 @@ namespace Cocoa.Build
             string? documentationFile,
             bool? treatWarningsAsErrors,
             bool? optimize,
+            bool? sharedSystemLibrary,
             CocoaProjectMetadata metadata,
             ImmutableArray<string> sourcePatterns,
             ImmutableArray<string> references,
@@ -54,6 +55,7 @@ namespace Cocoa.Build
             DocumentationFile = documentationFile;
             TreatWarningsAsErrors = treatWarningsAsErrors ?? false;
             Optimize = optimize ?? false;
+            SharedSystemLibrary = sharedSystemLibrary ?? false;
             Metadata = metadata;
             SourcePatterns = sourcePatterns;
             References = references;
@@ -85,6 +87,10 @@ namespace Cocoa.Build
         public string? DocumentationFile { get; }
         public bool TreatWarningsAsErrors { get; }
         public bool Optimize { get; }
+
+        /// <summary>S3（native-s1）：共享系统库（<c>&lt;SharedSystemLibrary&gt;true&lt;/SharedSystemLibrary&gt;</c>）——
+        /// exe 对运行时原语与 System.Core 函数改 IAT 导入 <c>System.Core.Native.dll</c>（默认 false：内联，历史字节不变）。</summary>
+        public bool SharedSystemLibrary { get; }
         public CocoaProjectMetadata Metadata { get; }
         public ImmutableArray<string> SourcePatterns { get; }
         public ImmutableArray<string> References { get; }

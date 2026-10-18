@@ -172,7 +172,10 @@ namespace Cocoa.Build
 
             // 动态链接（阶段 A2）：dotnet 后端消费 `.coa` 时以外部 dll 依赖接入（产物不内联库体）；
             // native 后端保持编译期合并（PE 静态链接）；cocoa 库产物自身不涉及
-            var linkCoaDynamically = backend.IsManaged() && format != ProjectOutputFormat.Cocoa;
+            // S3（native-s1）：<SharedSystemLibrary>true</SharedSystemLibrary> → native 也动态——System.Core 函数
+            // 与运行时原语改 IAT 导入 System.Core.Native.dll（默认 false 保持内联，历史字节不变）
+            var sharedSystemLibrary = backend == CodeBackend.Native && format != ProjectOutputFormat.Cocoa && project.SharedSystemLibrary;
+            var linkCoaDynamically = (backend.IsManaged() && format != ProjectOutputFormat.Cocoa) || sharedSystemLibrary;
 
             // 增量判定（.NET Inputs/Outputs 时间戳模型，无 .cache/.stamp）：输出比所有输入新 → up-to-date。
             // 输入 = 源文件 ∪ 引用文件 ∪ .coproj[.user]（改配置/代码即刷新输入 mtime）。
@@ -193,8 +196,8 @@ namespace Cocoa.Build
 
             if (useIncremental && IncrementalCheck.IsUpToDate(outputFile, incrementalInputs))
             {
-                // 动态链接自愈：增量命中也检查被消费库的托管 dll 是否缺失/过期——被误删时现场再生
-                if (linkCoaDynamically)
+                // 动态链接自愈：增量命中也检查被消费库的托管 dll 是否缺失/过期——被误删时现场再生（仅托管后端）
+                if (linkCoaDynamically && backend.IsManaged())
                 {
                     EnsureManagedDlls(CollectReferencedCoaLibraries(references), outputDirectory, IlTarget.Parse(dotnetRuntime!) ?? IlTarget.Default, messageWriter);
                 }
@@ -259,7 +262,11 @@ namespace Cocoa.Build
                             ? (ushort)2 /* PeSubsystem.WindowsGui */
                             : (ushort)3 /* PeSubsystem.WindowsCui */;
 
-                        diagnostics = compilation.EmitNative(project.Name, outputFile, platform, subsystem, resourceOptions, objDirectory);
+                        diagnostics = compilation.EmitNative(project.Name, outputFile, platform, subsystem, resourceOptions, objDirectory, splitRuntime: sharedSystemLibrary);
+                        if (sharedSystemLibrary && !diagnostics.HasErrors())
+                        {
+                            EnsureNativeDlls(references, platform, outputDirectory, messageWriter);
+                        }
                 }
                 else
                 {
@@ -709,6 +716,51 @@ namespace Cocoa.Build
             foreach (var library in SystemLibrary.Load())
             {
                 yield return (library.Name, library.SourcePath);
+            }
+        }
+
+        /// <summary>
+        /// S3（native-s1）：共享系统库部署（.NET 风格时间戳，无 .stamp）——消费 <c>&lt;SharedSystemLibrary&gt;true&lt;/&gt;</c>
+        /// 时，把被导入的 `.coa` 库发射为 <c>X.Native.dll</c> 落产物目录（与 exe 同目录，加载器按 app 目录解析）：
+        /// System.Core 为 owner（内嵌运行时+类型表），用户库共享 owner 运行时。
+        /// </summary>
+        private static void EnsureNativeDlls(
+            IReadOnlyList<string> references,
+            TargetPlatform platform,
+            string outputDirectory,
+            TextWriter messageWriter)
+        {
+            Directory.CreateDirectory(outputDirectory);
+
+            foreach (var (name, sourcePath) in CollectReferencedCoaLibraries(references))
+            {
+                if (string.IsNullOrEmpty(sourcePath) || !File.Exists(sourcePath) || string.IsNullOrEmpty(name))
+                {
+                    continue;
+                }
+
+                var coaBase = name.EndsWith(CoaAssemblyNaming.ManagedSuffix, StringComparison.Ordinal)
+                    ? name.Substring(0, name.Length - CoaAssemblyNaming.ManagedSuffix.Length)
+                    : name;
+                var nativeDll = Path.Combine(outputDirectory, CoaAssemblyNaming.NativeAssemblyName(coaBase) + ".dll");
+
+                // 时间戳自愈（无 .stamp）：dll 缺失或比 coa 源旧 → 再生
+                if (File.Exists(nativeDll) && File.GetLastWriteTimeUtc(nativeDll) >= File.GetLastWriteTimeUtc(sourcePath))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    var external = SystemLibrary.Load();
+                    var coa = Cocoa.CodeAnalysis.Serialization.CoaSerializer.Load(sourcePath, external);
+                    var embedRuntime = string.Equals(coaBase, "System.Core", StringComparison.Ordinal);
+                    Compilation.EmitNativeLibraryDllStatic(coa, nativeDll, platform, embedRuntime);
+                }
+                catch (Exception ex)
+                {
+                    messageWriter.WriteLine($"warning: 共享库 '{coaBase}.Native.dll' 生成失败：{ex.Message}");
+                }
             }
         }
 

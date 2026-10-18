@@ -96,6 +96,42 @@ namespace Cocoa.Tests.Integration.Compiler
         }
 
         [Fact]
+        public void Build_Project_Native_SharedSystemLibrary_EmitsSharedCoreDll()
+        {
+            var projectPath = CreateProject(
+                "native-shared",
+                "App",
+                "function Main()\n{\n    var x = Math.Abs(-5.5)\n    Console.WriteLine(x)\n    Console.WriteLine(\"a\" + \"b\")\n}\n",
+                "  <PropertyGroup Label=\"Common\">\n    <SharedSystemLibrary>true</SharedSystemLibrary>\n  </PropertyGroup>\n");
+
+            var (exitCode, stdout, stderr) = Run($"build \"{projectPath}\" -b native");
+            Assert.True(exitCode == 0, $"build failed: {stderr}");
+
+            var outputFile = stdout.Trim();
+            Assert.Contains("App.exe", outputFile);
+
+            // 共享系统库部署：exe 旁应有 System.Core.Native.dll（owner：运行时 + System.Core 库体）
+            var outputDir = Path.GetDirectoryName(outputFile)!;
+            var coreDll = Path.Combine(outputDir, "System.Core.Native.dll");
+            Assert.True(File.Exists(coreDll), "System.Core.Native.dll missing beside exe");
+
+            // exe 不含内联运行时/System.Core → 比同源内联构建显著小
+            var inlinePath = CreateProject(
+                "native-shared-inline",
+                "Inline",
+                "function Main()\n{\n    var x = Math.Abs(-5.5)\n    Console.WriteLine(x)\n    Console.WriteLine(\"a\" + \"b\")\n}\n");
+            var (iexit, stdout2, _) = Run($"build \"{inlinePath}\" -b native");
+            Assert.True(iexit == 0, $"inline build failed");
+            var inlineExe = stdout2.Trim();
+            Assert.True(new FileInfo(outputFile).Length < new FileInfo(inlineExe).Length,
+                $"shared exe ({new FileInfo(outputFile).Length}) should be smaller than inline ({new FileInfo(inlineExe).Length})");
+
+            var runOut = NativeEmitTests.Run(outputFile).Replace("\r\n", "\n");
+            Assert.Contains("5.5\n", runOut);
+            Assert.Contains("ab\n", runOut);
+        }
+
+        [Fact]
         public void Build_Project_SecondRun_IsUpToDate()
         {
             var projectPath = CreateProject("incremental", "App", "function Main() { Console.WriteLine(1) }");

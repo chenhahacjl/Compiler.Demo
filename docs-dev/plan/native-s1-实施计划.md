@@ -1,6 +1,6 @@
 # Native 共享框架 S0+S1 实施计划（合并运行时 · 每 coa 一 DLL）
 
-> 状态: 实施中 · 2026-10-18 · **S0/S1/S2/S3a 已完成（真实 System.Core 全量库发射 + 全部分拆差分；回归：CodeGen 1060 · CodeAnalysis 2007 · Engine 32 · Integration 284 全绿）** · 后置：S3 默认开启 + EnsureNativeDlls + golden 重固化 / S4 Linux / S6 managed
+> 状态: 实施中 · 2026-10-18 · **S0–S3b 已完成（真实 System.Core 全量库发射 + 全部分拆差分 + &lt;SharedSystemLibrary&gt; 开关与 EnsureNativeDlls 部署；回归：CodeGen 1060 · CodeAnalysis 2007 · Integration 285 · Engine 32 全绿）** · 后置：S3c 默认开启 + golden 重固化 / S4 Linux / S6 managed
 > 前置设计: [Native共享框架设计.md](Native共享框架设计.md)
 > 与主设计的关键差异（本节后续决策覆盖主文档 §1/§3/§4/§7/§9 的既定项）：
 > - **D1’=A**：运行时**并入** `System.Core.Native.dll`（不再独立 `cocoa runtime.<arch>.dll`）。
@@ -23,6 +23,7 @@
 | 用户 `.coa` 库跨模块调用（`ExternalNativeLibraries`：不合并体 + `MirToLir` 导入回落 + `EmitCall` Import） | ✅ S2 已完成 |
 | 用户库共享运行时/类型表（`EmitNativeLibrary(embedRuntime:false)` + `MirToLir` type_get 路由 + 库内 `is`/字符串身份一致） | ✅ S2 已完成 |
 | 真实 System.Core 全量库发射（逐函数容错跳过分除 native 不支持叶函数如 decimal 打印）+ 全部分拆 App（linkCoaDynamically+splitRuntime）差分一致 | ✅ S3a 已完成 |
+| `&lt;SharedSystemLibrary&gt;` 项目开关 + `EnsureNativeDlls` 部署（System.Core.Native.dll 落 exe 旁，时间戳自愈）+ CLI 项目 e2e（exe 变小、跨模块运行正确） | ✅ S3b 已完成 |
 | 陷阱错误径 ABI 对齐（分除/栈溢出） | ⏳ 加固 |
 
 后置（本轮未做）：S2 用户库 provenance 定向导出 · S3 默认拆分 + `EnsureNativeDlls` · S4 Linux `.so` · S6 managed 共享。

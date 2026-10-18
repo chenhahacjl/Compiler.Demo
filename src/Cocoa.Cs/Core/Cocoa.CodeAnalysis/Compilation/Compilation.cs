@@ -62,6 +62,41 @@ namespace Cocoa.CodeAnalysis
             Interlocked.CompareExchange(ref _nativeEmitter, emitter, null);
         }
 
+        /// <summary>S3（native-s1）：native 共享库发射委托（<c>cocoa runtime 库体 → X.Native.dll</c>），
+        /// 由 <c>Cocoa.CodeGen.Native</c>（EmitNativeLibrary）经此处注册；Core 自身不引用后端。</summary>
+        private static volatile Func<Cocoa.CodeAnalysis.Serialization.CoaProgram, string, TargetPlatform, bool, System.Collections.Immutable.ImmutableArray<Symbols.FunctionSymbol>>? _nativeLibraryEmitter;
+
+        /// <summary>注册 native 共享库发射实现（后端/宿主启动时调用）。幂等。</summary>
+        public static void RegisterNativeLibraryEmitter(Func<Cocoa.CodeAnalysis.Serialization.CoaProgram, string, TargetPlatform, bool, System.Collections.Immutable.ImmutableArray<Symbols.FunctionSymbol>> emitter)
+        {
+            Interlocked.CompareExchange(ref _nativeLibraryEmitter, emitter, null);
+        }
+
+        /// <summary>发射 native 共享库 DLL（每 `.coa` 一 DLL；embedRuntime=true 为 owner，内嵌运行时原语+类型表）。</summary>
+        public System.Collections.Immutable.ImmutableArray<Symbols.FunctionSymbol> EmitNativeLibraryDll(
+            Cocoa.CodeAnalysis.Serialization.CoaProgram coa,
+            string dllPath,
+            TargetPlatform platform,
+            bool embedRuntime)
+        {
+            return EmitNativeLibraryDllStatic(coa, dllPath, platform, embedRuntime);
+        }
+
+        /// <summary>发射 native 共享库 DLL（不依赖 Compilation 实例；供构建部署层调用）。</summary>
+        public static System.Collections.Immutable.ImmutableArray<Symbols.FunctionSymbol> EmitNativeLibraryDllStatic(
+            Cocoa.CodeAnalysis.Serialization.CoaProgram coa,
+            string dllPath,
+            TargetPlatform platform,
+            bool embedRuntime)
+        {
+            if (_nativeLibraryEmitter == null)
+            {
+                throw new InvalidOperationException("native 共享库发射器未注册（Cocoa.CodeGen.Native 未初始化）");
+            }
+
+            return _nativeLibraryEmitter(coa, dllPath, platform, embedRuntime);
+        }
+
         /// <summary>
         /// 解释器求值委托（4.1）：由 <c>Cocoa.CodeGen.Interpreter</c> 经 <see cref="RegisterInterpreterEvaluator"/> 注册；
         /// Core 自身不引用后端。args 为 null 表示无参 REPL 求值，否则为 Main(string[]) 形态。幂等。

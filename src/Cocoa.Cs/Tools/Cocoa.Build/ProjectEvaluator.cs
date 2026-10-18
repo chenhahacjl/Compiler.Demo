@@ -176,6 +176,7 @@ namespace Cocoa.Build
                 state.Get("DocumentationFile"),
                 ParseBool(state.Get("TreatWarningsAsErrors")),
                 ParseBool(state.Get("Optimize")),
+                ParseBool(state.Get("SharedSystemLibrary") ?? "false"),
                 BuildMetadata(state),
                 state.Sources,
                 state.References,

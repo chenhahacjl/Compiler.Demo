@@ -21,6 +21,7 @@ namespace Cocoa.CodeGen.Native
         public static void Register()
         {
             Compilation.RegisterNativeEmitter(EmitNative);
+            Compilation.RegisterNativeLibraryEmitter(EmitNativeLibrary.Emit);
         }
 
         /// <summary>
