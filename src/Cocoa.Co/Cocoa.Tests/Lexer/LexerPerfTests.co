@@ -1,4 +1,7 @@
-?// 自举测试：Lexer 计数 + 1MB 性能（阶。7 增量。M5-b0）——移。Cocoa.Cs/LexerPerformanceTests。// Run()：默认套件内适中语料。000 。。10000 token），Evaluator/native 都快。// RunPerf()→00k 行（。MB）→ 500k token，仅 native 计时门禁（Main 。--perf 门控。// Evaluator 字节码解释器。1MB 太慢）；。System.Text.StringBuilder（SDK，O(n)）构建，避免 O(n²)→
+// 自举测试：Lexer 计数 + 1MB 性能（阶段 7 增量五 M5-b0）——移植自 Cocoa.Cs/LexerPerformanceTests。
+// Run()：默认套件内适中语料（~1000 token），Evaluator/native 都快。
+// RunPerf()→100k 行（1MB）→500k token，仅 native 计时门禁（Main --perf 门控）。
+// Evaluator 字节码解释器跑 1MB 太慢；用 System.Text.StringBuilder（SDK，O(n)）构建，避免 O(n²)
 using Cocoa.CodeAnalysis.Syntax
 using System.Text
 

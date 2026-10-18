@@ -1,4 +1,5 @@
-?// Cocoa 自举 CodeGen · Interpreter 后端入口（阶。7 增量。M5-a1）—。// 自举 Binder 。Interpreter 装配（对。C# InterpreterBackend.Register 模式的自举侧形态）。
+// Cocoa 自举 CodeGen · Interpreter 后端入口（阶段 7 增量五 M5-a1）——
+// 自举 Binder → Interpreter 装配（对齐 C# InterpreterBackend.Register 模式的自举侧形态）。
 using Cocoa.CodeAnalysis.Binding
 
 namespace Cocoa.CodeGen

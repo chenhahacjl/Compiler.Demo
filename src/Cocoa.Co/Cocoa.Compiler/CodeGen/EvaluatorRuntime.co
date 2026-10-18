@@ -1,5 +1,6 @@
-?// Cocoa 自举 CodeGen · 求值运行时（阶。7 增量。M5-a1）——数。字符串解析与格式化辅助。// 注意 Cocoa 语言约束：无 object 装箱多态（object 特性另行立项），故值用 Tagged Value 类承载；
-// 解析。i32(char) ASCII 判定（char 比较运算符受限）。
+// Cocoa 自举 CodeGen · 求值运行时（阶段 7 增量五 M5-a1）——数值与字符串解析与格式化辅助。
+// 注意 Cocoa 语言约束：无 object 装箱多态（object 特性另行立项），故值用 Tagged Value 类承载；
+// 解析用 i32(char) ASCII 判定（char 比较运算符受限）。
 namespace Cocoa.CodeGen
 {
     class EvaluatorRuntime

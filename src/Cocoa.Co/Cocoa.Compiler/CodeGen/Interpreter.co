@@ -1,4 +1,9 @@
-?// Cocoa 自举 CodeGen · 树遍历求值器（阶。7 增量。M5-a1）—。// 消费自举 Binder 的降级后绑定树（。Label/Goto/ConditionalGoto），对齐 C# Evaluator 语义。// 值模型：Tagged Value（kind 分派，无 object 多态）。// 支持语句：Block/Return/ExpressionStatement/VariableDeclaration/Label/Goto/ConditionalGoto。// 表达式：Literal/Variable/Assignment/Unary/Binary/Call（用户函数递归 + 少量内置）。// Console.* 内置捕获。_output（差分比对用，不直出控制台）。
+// Cocoa 自举 CodeGen · 树遍历求值器（阶段 7 增量五 M5-a1）——
+// 消费自举 Binder 的降级后绑定树（含 Label/Goto/ConditionalGoto），对齐 C# Evaluator 语义。
+// 值模型：Tagged Value（kind 分派，无 object 多态）。
+// 支持语句：Block/Return/ExpressionStatement/VariableDeclaration/Label/Goto/ConditionalGoto。
+// 表达式：Literal/Variable/Assignment/Unary/Binary/Call（用户函数递归 + 少量内置）。
+// Console.* 内置捕获到 _output（差分比对用，不直出控制台）。
 using Cocoa.CodeAnalysis.Syntax
 
 namespace Cocoa.CodeGen

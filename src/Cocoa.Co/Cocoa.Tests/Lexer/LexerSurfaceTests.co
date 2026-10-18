@@ -1,4 +1,5 @@
-?// Cocoa 自举测试：词法表面（移植 Cocoa.Cs/MiniLexerTests，M5-b0）—。// 两个内嵌语料 + 黄金 token 流（Describe 格式 `KIND text line:col`）逐行比对。
+// Cocoa 自举测试：词法表面（移植 Cocoa.Cs/MiniLexerTests，M5-b0）——
+// 两个内嵌语料 + 黄金 token 流（Describe 格式 `KIND text line:col`）逐行比对。
 using Cocoa.CodeAnalysis.Syntax
 
 namespace Cocoa.CodeAnalysis.Tests

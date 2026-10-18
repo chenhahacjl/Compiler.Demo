@@ -1,5 +1,6 @@
-?// Cocoa 自举 CodeGen · Tagged Value（阶。7 增量。M5-a1）—。// 值模型：kind（int/double/string/bool/null/return。 规范文本。无 object 多态，
-// 。kind 分派对齐 C# Evaluator 的装箱值语义（int 整除 vs double 除法、类型推断自字面量文本）。
+// Cocoa 自举 CodeGen · Tagged Value（阶段 7 增量五 M5-a1）——
+// 值模型：kind（int/double/string/bool/null/return）规范文本。无 object 多态，
+// 用 kind 分派对齐 C# Evaluator 的装箱值语义（int 整除 vs double 除法、类型推断自字面量文本）。
 namespace Cocoa.CodeGen
 {
     class Value
