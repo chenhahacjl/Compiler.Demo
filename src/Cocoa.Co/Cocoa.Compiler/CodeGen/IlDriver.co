@@ -202,7 +202,7 @@ namespace Cocoa.CodeGen
                 cpChars[0] = "i32"
                 EnsureBcl(bclKeys, bclTokens, bclParents, bclSigs, bclNames, bclCount,
                     "String.get_Chars", stringTypeRow, "get_Chars",
-                    MetadataEncode.EncodeMethodSignatureHex("char", cpChars, 1, true))
+                    MetadataEncode.EncodeMethodSignatureHex("char", cpChars, 1, false))
             }
 
             var convertTypeRow = typeRefCount

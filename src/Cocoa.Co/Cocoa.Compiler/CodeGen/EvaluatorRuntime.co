@@ -56,17 +56,55 @@ namespace Cocoa.CodeGen
                 }
             }
 
+            // 0x/0X 十六进制前缀（语料内 hex 字面量 0xff/0x40... 若按十进制尾部扫描得 0）。
+            var isHex = 0
+            if i + 1 < s.Length
+            {
+                if i32(s[i]) == 48
+                {
+                    if i32(s[i + 1]) == 120 || i32(s[i + 1]) == 88
+                    {
+                        isHex = 1
+                        i = i + 2
+                    }
+                }
+            }
+
             while i < s.Length
             {
                 let v = i32(s[i])
-                if v == 46
+                if isHex == 0
                 {
-                    break
-                }
+                    if v == 46
+                    {
+                        break
+                    }
 
-                if v >= 48 && v <= 57
+                    if v >= 48 && v <= 57
+                    {
+                        result = result * 10 + (v - 48)
+                    }
+                }
+                else
                 {
-                    result = result * 10 + (v - 48)
+                    var d = -1
+                    if v >= 48 && v <= 57
+                    {
+                        d = v - 48
+                    }
+                    else if v >= 97 && v <= 102
+                    {
+                        d = v - 97 + 10
+                    }
+                    else if v >= 65 && v <= 70
+                    {
+                        d = v - 65 + 10
+                    }
+
+                    if d >= 0
+                    {
+                        result = result * 16 + d
+                    }
                 }
 
                 i = i + 1
