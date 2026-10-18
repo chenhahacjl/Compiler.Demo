@@ -13,12 +13,12 @@
     <OutputType>Executable</OutputType>
   </PropertyGroup>
   <PropertyGroup Label="Build">
-    <OutputPath>out</OutputPath>
+
     <!-- 双轨运行：native exe 作为真自举门禁；-b 可覆盖（镜像 Cli） -->
     <Backend>native</Backend>
   </PropertyGroup>
   <ItemGroup>
     <Source Include="**/*.co" />
-    <Reference Include="../Cocoa.Compiler/out/Cocoa.Compiler.coa" />
+    <Reference Include="../Cocoa.Compiler/Cocoa.Compiler.coproj" />
   </ItemGroup>
 </Project>

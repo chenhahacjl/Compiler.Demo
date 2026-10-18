@@ -1,4 +1,4 @@
-?// Cocoa 系统标准。· System.Core 逻辑层（namespace System。// class Convert —。编码原语。e-G7 ⑤a 自包含：。Cocoa 实现，三后端天然可用，不依赖 BCL crypto）。// hex：字。。十六进制字符串（大写）；base64：字。。Base64 字符串（RFC 4648，标准字母表 + '=' 填充）。// 注：三后。`&&`/`||` 非短路求值，故循环用单条。+ break 规避越界。
+// Cocoa System.Core standard library
 
 namespace System
 {

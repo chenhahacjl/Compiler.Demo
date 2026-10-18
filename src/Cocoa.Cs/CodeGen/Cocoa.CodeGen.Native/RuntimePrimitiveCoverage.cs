@@ -119,6 +119,7 @@ namespace Cocoa.CodeGen.Native
             new("StringFromChars", "IO", RuntimePrimitivePlatform.All, "-"),
             new("FileExists", "IO", RuntimePrimitivePlatform.All, "kernel32"),
             new("DirectoryExists", "IO", RuntimePrimitivePlatform.All, "kernel32"),
+            new("DeleteDirectory", "IO", RuntimePrimitivePlatform.All, "kernel32"),
             new("CreateDirectory", "IO", RuntimePrimitivePlatform.All, "kernel32"),
             new("FileDelete", "IO", RuntimePrimitivePlatform.All, "kernel32"),
             new("FileCopy", "IO", RuntimePrimitivePlatform.All, "kernel32"),

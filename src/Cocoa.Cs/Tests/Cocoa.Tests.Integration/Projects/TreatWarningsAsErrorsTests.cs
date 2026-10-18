@@ -54,7 +54,7 @@ namespace Cocoa.Tests.Integration.Projects
             _out.GetStringBuilder().Length = 0;
             return ProjectBuilder.Build(
                 project,
-                new ProjectBuildOptions { CacheRoot = _directory, NoIncremental = true },
+                new ProjectBuildOptions { NoIncremental = true },
                 _out);
         }
 

@@ -179,8 +179,8 @@ function Main(): i32
   </PropertyGroup>
   <ItemGroup>
     <Source Include=""*.co"" />
-    <Reference Include=""../LibOne/LibOne.coa"" />
-    <Reference Include=""../LibTwo/LibTwo.coa"" />
+    <Reference Include=""../LibOne/LibOne.coproj"" />
+    <Reference Include=""../LibTwo/LibTwo.coproj"" />
   </ItemGroup>
 </Project>
 ");
@@ -198,9 +198,9 @@ function Main(): i32
   </PropertyGroup>
   <ItemGroup>
     <Source Include=""*.co"" />
-    <Reference Include=""../LibOne/LibOne.coa"" />
-    <Reference Include=""../LibTwo/LibTwo.coa"" />
-    <Reference Include=""../LibMid/LibMid.coa"" />
+    <Reference Include=""../LibOne/LibOne.coproj"" />
+    <Reference Include=""../LibTwo/LibTwo.coproj"" />
+    <Reference Include=""../LibMid/LibMid.coproj"" />
   </ItemGroup>
 </Project>
 ");
@@ -209,12 +209,13 @@ function Main(): i32
             Assert.True(CliTestRunner.Run($"build \"{Path.Combine(libTwo, "LibTwo.coproj")}\"", root).ExitCode == 0, "LibTwo build failed");
             Assert.True(CliTestRunner.Run($"build \"{Path.Combine(mid, "LibMid.coproj")}\"", root).ExitCode == 0, "LibMid build failed");
 
+            var appOutputDir = Path.Combine(appDir, "bin", "Debug", "managed", "net9.0");
             var appProject = Path.Combine(appDir, "App.coproj");
             var appBuild = CliTestRunner.Run($"build \"{appProject}\" -b managed-net --dotnet-runtime net9.0", root);
             Assert.True(appBuild.ExitCode == 0, $"app build failed: {appBuild.Stdout}{appBuild.Stderr}");
-            Assert.True(File.Exists(Path.Combine(appDir, "App.exe")));
+            Assert.True(File.Exists(Path.Combine(appOutputDir, "App.exe")));
 
-            var exePath = Path.Combine(appDir, "App.exe");
+            var exePath = Path.Combine(appOutputDir, "App.exe");
             var psi = new ProcessStartInfo(exePath)
             {
                 RedirectStandardOutput = true,

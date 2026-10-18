@@ -71,6 +71,14 @@ namespace Cocoa.CodeGen.Native
             EndFunction(_currentFunction!, 0);
         }
 
+        // DeleteDirectory(path:8) →void：Win32 RemoveDirectoryW（仅删空目录——BCL Directory.Delete 非递归）
+        private void EmitDeleteDirectory()
+        {
+            var p = WidePtrZ(_args[0]);
+            SysCallDll(null, PlatformDllResolver.Kernel32, "RemoveDirectoryW", 1, false, p);
+            EndFunction(_currentFunction!, 0);
+        }
+
         // FileDelete(path:8) →一void
         private void EmitFileDelete()
         {

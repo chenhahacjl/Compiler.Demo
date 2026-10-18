@@ -114,9 +114,11 @@ HIR（绑定后未降级树：for/while/if 等保留）【语言合并点 + .coa
 ### 4.2 MIR（规范中层 IR）
 
 - 形态：树形；Lowerer（`Hir→Mir`）输出的规范 Bound 树（goto / 条件goto / ret / 赋值 / 局部声明 / 序列点…）。
-- 生命周期：`BoundProgram.Functions` 的存储形态（跨后端共享契约）；**不落盘**（仅内存流转，debug 期可环境变量 dump）。
+- 生命周期：`BoundProgram.Functions` 的存储形态（跨后端共享契约）；**落地 `obj/<name>.mir`**（2026-10-18
+  与 HIR/LIR 一并落盘构建中间目录；`BoundNodePrinter` 文本，单函数不可打印则落占位行不阻断构建）。
 - 消费：IL 后端 / Evaluator / native（经 `MirToLir`）统一遍历。
 - 规范契约：`CanonicalIr.Verify`（`Lowering/CanonicalIr.cs`）以 DEBUG 契约确保"高节点不清零不跨消费边界"。
+- 配套：HIR → `obj/<name>.hir`（`program.RawFunctions`）；LIR → `obj/<name>.lir`（native，`LirPrinter`）。
 
 ### 4.3 LIR（低层 3-地址码 IR）
 

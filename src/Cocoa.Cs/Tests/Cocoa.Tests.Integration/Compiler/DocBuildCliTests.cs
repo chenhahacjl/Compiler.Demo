@@ -50,7 +50,7 @@ function Main()
             var (exitCode, stdout, stderr) = CliTestRunner.Run($"build \"{projectPath}\" -b native --doc", dir);
             Assert.True(exitCode == 0, $"build failed: {stderr}");
 
-            var docPath = Path.Combine(dir, "App.exe.xml");
+            var docPath = Path.Combine(dir, "bin", "Debug", "native", "x64", "App.exe.xml");
             Assert.True(File.Exists(docPath), $"expected XML at {docPath}; stdout={stdout}");
             var xml = File.ReadAllText(docPath);
             Assert.Contains("M:Add(System.Int32,System.Int32)", xml);
@@ -66,7 +66,7 @@ function Main()
             var (exitCode, stdout, stderr) = CliTestRunner.Run($"build \"{projectPath}\" -b native", dir);
             Assert.True(exitCode == 0, $"build failed: {stderr}");
 
-            Assert.False(File.Exists(Path.Combine(dir, "App.exe.xml")));
+            Assert.False(File.Exists(Path.Combine(dir, "bin", "Debug", "native", "x64", "App.exe.xml")));
         }
     }
 }

@@ -56,7 +56,7 @@ namespace Cocoa.Tests.Integration.Projects
             var project = WriteProject();
             var result = ProjectBuilder.Build(
                 project,
-                new ProjectBuildOptions { CacheRoot = _directory, NoIncremental = true },
+                new ProjectBuildOptions { NoIncremental = true },
                 _out);
 
             Assert.True(result.Success, _out.ToString());
@@ -78,7 +78,7 @@ namespace Cocoa.Tests.Integration.Projects
                 project,
                 new ProjectBuildOptions
                 {
-                    CacheRoot = _directory,
+
                     NoIncremental = true,
                     TargetOsOverride = Cocoa.Targeting.TargetOS.Linux,
                 },
@@ -210,7 +210,7 @@ namespace Cocoa.Tests.Integration.Projects
                 project,
                 new ProjectBuildOptions
                 {
-                    CacheRoot = _directory,
+
                     NoIncremental = true,
                     TargetOsOverride = os,
                 },

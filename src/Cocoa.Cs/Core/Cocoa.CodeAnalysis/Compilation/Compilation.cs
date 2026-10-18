@@ -47,7 +47,7 @@ namespace Cocoa.CodeAnalysis
         private static volatile Func<BoundProgram, string, string[], string, IlTarget, bool, ImmutableDictionary<object, string>?, bool, PeVersionInfo?, PeResourceOptions?, ImmutableArray<Diagnostic>>? _managedEmitter;
 
         /// <summary>native 后端发射委托（由 <c>Cocoa.CodeGen.Native</c> 经 <see cref="RegisterNativeEmitter"/> 注入，含后端专属校验）。幂等同上。</summary>
-        private static volatile Func<Compilation, string, string, TargetPlatform, ushort, PeResourceOptions?, ImmutableArray<Diagnostic>>? _nativeEmitter;
+        private static volatile Func<Compilation, string, string, TargetPlatform, ushort, PeResourceOptions?, string?, ImmutableArray<Diagnostic>>? _nativeEmitter;
 
         /// <summary>注册 managed（dotnet/IL）后端发射实现（后端/宿主启动时调用；Core 自身不引用后端）。幂等。</summary>
         public static void RegisterManagedEmitter(Func<BoundProgram, string, string[], string, IlTarget, bool, ImmutableDictionary<object, string>?, bool, PeVersionInfo?, PeResourceOptions?, ImmutableArray<Diagnostic>> emitter)
@@ -56,7 +56,7 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>注册 native 后端发射实现（后端/宿主启动时调用；Core 自身不引用后端）。幂等。</summary>
-        public static void RegisterNativeEmitter(Func<Compilation, string, string, TargetPlatform, ushort, PeResourceOptions?, ImmutableArray<Diagnostic>> emitter)
+        public static void RegisterNativeEmitter(Func<Compilation, string, string, TargetPlatform, ushort, PeResourceOptions?, string?, ImmutableArray<Diagnostic>> emitter)
         {
             Interlocked.CompareExchange(ref _nativeEmitter, emitter, null);
         }
@@ -433,7 +433,7 @@ namespace Cocoa.CodeAnalysis
         public ImmutableArray<Diagnostic> Emit(string moduleName, IReadOnlyList<AssemblySymbol> references, string outputPath, IlTarget target, bool emitLibrary)
             => Emit(moduleName, references.Select(r => r.Display ?? r.Name).ToArray(), outputPath, target, emitLibrary);
 
-        public ImmutableArray<Diagnostic> Emit(string moduleName, string[] references, string outputPath, IlTarget target, bool emitLibrary, PeVersionInfo? versionInfo = null, PeResourceOptions? resourceOptions = null)
+        public ImmutableArray<Diagnostic> Emit(string moduleName, string[] references, string outputPath, IlTarget target, bool emitLibrary, PeVersionInfo? versionInfo = null, PeResourceOptions? resourceOptions = null, string? irOutputDirectory = null)
         {
             var parseDiagnostics = SyntaxTrees.SelectMany(st => st.Diagnostics);
 
@@ -470,6 +470,12 @@ namespace Cocoa.CodeAnalysis
                 ? ImmutableArray.Create(Diagnostic.Error(ZeroLocation, "managed 后端未注册（Cocoa.CodeGen.Managed 未初始化）"))
                 : _managedEmitter(program, moduleName, ilReferences, outputPath, target, emitLibrary, program.CoaAssemblies, false, versionInfo, resourceOptions);
 
+            // 中间件：HIR/MIR 落盘 obj/（成功路径才写，失败诊断在前）
+            if (!backendDiagnostics.HasErrors())
+            {
+                IrDumper.WriteProgram(program, irOutputDirectory, Path.GetFileName(moduleName));
+            }
+
             // 成功路径也带上 GlobalScope 警告（using 未解析等），供 CLI 打印
             return diagnostics.Concat(backendDiagnostics).ToImmutableArray();
         }
@@ -480,7 +486,7 @@ namespace Cocoa.CodeAnalysis
         /// <paramref name="resourceOptions"/> 非空时在产物内嵌 .rsrc 资源（版本信息 VS_VERSIONINFO / 图标 RT_ICON /
         /// 通用 RT_RCDATA）——规避杀软误报 + explorer 显示应用图标。
         /// </summary>
-        public ImmutableArray<Diagnostic> EmitNative(string moduleName, string outputPath, TargetPlatform platform = default, ushort subsystem = 3 /* PeSubsystem.WindowsCui */, PeResourceOptions? resourceOptions = null)
+        public ImmutableArray<Diagnostic> EmitNative(string moduleName, string outputPath, TargetPlatform platform = default, ushort subsystem = 3 /* PeSubsystem.WindowsCui */, PeResourceOptions? resourceOptions = null, string? irOutputDirectory = null)
         {
             if (platform == default)
             {
@@ -505,7 +511,10 @@ namespace Cocoa.CodeAnalysis
                 return yieldDiagnostics;
             }
 
-            return _nativeEmitter(this, moduleName, outputPath, platform, subsystem, resourceOptions);
+            // 中间件：HIR/MIR 落盘 obj/（native 的 <name>.lir 由 NativeCodeEmitter 经 irOutputDirectory 写出）
+            IrDumper.WriteProgram(program, irOutputDirectory, Path.GetFileName(moduleName));
+
+            return _nativeEmitter(this, moduleName, outputPath, platform, subsystem, resourceOptions, irOutputDirectory);
         }
 
         /// <summary>C-2：含 `yield return`/`yield break` 的函数仅在解释器后端可执行（迭代器状态机未实现）。
@@ -561,7 +570,7 @@ namespace Cocoa.CodeAnalysis
         /// <summary>
         /// 把库编译为 `.coa` 语义层程序集（编译到 BoundProgram 即停，不走 IR/机器码/IL）。
         /// </summary>
-        public ImmutableArray<Diagnostic> EmitCoa(string moduleName, string outputPath, string? docPath = null)
+        public ImmutableArray<Diagnostic> EmitCoa(string moduleName, string outputPath, string? docPath = null, string? irOutputDirectory = null)
         {
             var parseDiagnostics = SyntaxTrees.SelectMany(st => st.Diagnostics);
 
@@ -700,6 +709,9 @@ var globals = GlobalScope.Variables.OfType<GlobalVariableSymbol>().ToImmutableAr
             {
                 CoaSerializer.Write(writer, coaProgram);
             }
+
+            // 中间件：HIR/MIR 落盘 obj/
+            IrDumper.WriteProgram(program, irOutputDirectory, moduleName);
 
             // 6e-M24：XML documentation 文件生成
             if (docPath != null)

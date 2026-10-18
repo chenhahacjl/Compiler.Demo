@@ -80,21 +80,22 @@ function Main(): i32
   </PropertyGroup>
   <ItemGroup>
     <Source Include=""*.co"" />
-    <Reference Include=""../GreeterLib/GreeterLib.coa"" />
+    <Reference Include=""../GreeterLib/GreeterLib.coproj"" />
   </ItemGroup>
 </Project>
 ");
 
+            var appOutputDir = Path.Combine(appDir, "bin", "Debug", "managed", "net9.0");
             var libProject = Path.Combine(libDir, "GreeterLib.coproj");
             var libBuild = CliTestRunner.Run($"build \"{libProject}\"", root);
             Assert.True(libBuild.ExitCode == 0, $"lib build failed: {libBuild.Stdout}{libBuild.Stderr}");
-            Assert.True(File.Exists(Path.Combine(libDir, "GreeterLib.coa")));
+            Assert.True(File.Exists(Path.Combine(libDir, "bin", "Debug", "GreeterLib.coa")));
 
             var appProject = Path.Combine(appDir, "App.coproj");
             var appBuild = CliTestRunner.Run($"build \"{appProject}\" -b managed-net --dotnet-runtime net9.0", root);
             Assert.True(appBuild.ExitCode == 0, $"app build failed: {appBuild.Stdout}{appBuild.Stderr}");
-            Assert.True(File.Exists(Path.Combine(appDir, "App.exe")));
-            Assert.True(File.Exists(Path.Combine(appDir, "GreeterLib.Managed.dll")), "库托管 dll 应按需生成（事件类实例化）");
+            Assert.True(File.Exists(Path.Combine(appOutputDir, "App.exe")));
+            Assert.True(File.Exists(Path.Combine(appOutputDir, "GreeterLib.Managed.dll")), "库托管 dll 应按需生成（事件类实例化）");
 
             // 6e-Step D-b 边界：.coa 携带 evt 符号 + fld 后备字段 + 实例方法/ctor，消费方编译与托管 dll 物化通过；
             // 运行期事件往返（newobj MemberRef 挂接库内实例方法的符号同一性）待 Step F 完善后在此追加 run 断言。
@@ -102,16 +103,16 @@ function Main(): i32
             // 方法体，A1 库编译仅得到空壳；放开后读侧要求 System.Core!System.Console.WriteLine[@string] 在消费
             // 方注册表中可解析（当前 candidates=0/owner.Methods=0）→ 未闭环，暂回退写侧门。
             _ = AppDomain.CurrentDomain.BaseDirectory;
-            Assert.True(File.Exists(Path.Combine(appDir, "App.dll")), "托管主程序集 App.dll 应在构建期产出");
+            Assert.True(File.Exists(Path.Combine(appOutputDir, "App.dll")), "托管主程序集 App.dll 应在构建期产出");
 
             // Step F 6f-2 闭环：运行期事件往返（newobj MemberRef 挂接库内实例方法 + System 动态链接）
-            var appDll = Path.Combine(appDir, "App.dll");
+            var appDll = Path.Combine(appOutputDir, "App.dll");
             var runPsi = new System.Diagnostics.ProcessStartInfo("dotnet", $"\"{appDll}\"")
             {
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
-                WorkingDirectory = appDir,
+                WorkingDirectory = appOutputDir,
             };
             using (var runProcess = System.Diagnostics.Process.Start(runPsi)!)
             {

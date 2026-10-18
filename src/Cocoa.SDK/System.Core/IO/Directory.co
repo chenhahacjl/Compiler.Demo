@@ -21,5 +21,10 @@ namespace System.IO
         {
             return EnvironmentSyscall.GetCurrentDirectory()
         }
+
+        public static function Delete(path: string): void
+        {
+            IOSyscall.DeleteDirectory(path)
+        }
     }
 }

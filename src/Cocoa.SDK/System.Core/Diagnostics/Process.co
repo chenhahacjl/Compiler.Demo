@@ -1,0 +1,75 @@
+// Cocoa 系统标准库 · Core（namespace System.Diagnostics）——BCL 存在类型即 facade
+// Process / ProcessStartInfo —— facade：IL 直连 System.Diagnostics.Process / ProcessStartInfo；
+// native/Evaluator 走本体（System.Syscall.ProcessSyscall.LaunchProcess 同步等待）。
+// 语义对齐 BCL：Start 不阻塞（仅记录启动信息）；WaitForExit 阻塞并取退出码；ExitCode 读退出码。
+// 已知边界：native/Evaluator 侧 ExitCode 在 WaitForExit 前为 0（BCL 未启动时读 ExitCode 抛异常）。
+
+using System
+
+using System.Syscall
+
+namespace System.Diagnostics
+{
+    [Facade("System.Diagnostics.ProcessStartInfo")]
+    public class ProcessStartInfo
+    {
+        private field _fileName: string
+        private field _arguments: string
+        private field _workingDirectory: string
+
+        public constructor()
+        {
+            _arguments = ""
+            _workingDirectory = ""
+        }
+
+        public constructor(fileName: string)
+        {
+            _fileName = fileName
+            _arguments = ""
+            _workingDirectory = ""
+        }
+
+        public property FileName: string
+        {
+            get { return _fileName }
+            set { _fileName = value }
+        }
+
+        public property Arguments: string
+        {
+            get { return _arguments }
+            set { _arguments = value }
+        }
+
+        public property WorkingDirectory: string
+        {
+            get { return _workingDirectory }
+            set { _workingDirectory = value }
+        }
+    }
+
+    [Facade("System.Diagnostics.Process")]
+    public class Process
+    {
+        private field _startInfo: ProcessStartInfo
+        private field _exitCode: i32
+
+        public static function Start(info: ProcessStartInfo): Process
+        {
+            var p = new Process()
+            p._startInfo = info
+            return p
+        }
+
+        public function WaitForExit(): void
+        {
+            _exitCode = ProcessSyscall.LaunchProcess(_startInfo.FileName, _startInfo.Arguments, _startInfo.WorkingDirectory)
+        }
+
+        public property ExitCode: i32
+        {
+            get { return _exitCode }
+        }
+    }
+}

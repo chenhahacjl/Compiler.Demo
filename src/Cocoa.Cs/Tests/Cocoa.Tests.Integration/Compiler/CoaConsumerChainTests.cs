@@ -38,7 +38,7 @@ namespace Cocoa.Tests.Integration.Compiler
                 "  <PropertyGroup Label=\"Language\">\n    <Language>Cocoa</Language>\n  </PropertyGroup>\n" +
                 "  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>LibA</AssemblyName>\n  </PropertyGroup>\n" +
                 "  <PropertyGroup Label=\"Output\">\n    <OutputType>Cocoa</OutputType>\n  </PropertyGroup>\n" +
-                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n    <Reference Include=\"../LibB/LibB.coa\" />\n  </ItemGroup>\n" +
+                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n    <Reference Include=\"../LibB/LibB.coproj\" />\n  </ItemGroup>\n" +
                 "</Project>\n");
 
             File.WriteAllText(Path.Combine(appDir, "main.co"), "using A\nfunction Main(): void\n{\n    Console.WriteLine(A.Double())\n}\n");
@@ -47,25 +47,26 @@ namespace Cocoa.Tests.Integration.Compiler
                 "  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>App</AssemblyName>\n  </PropertyGroup>\n" +
                 "  <PropertyGroup Label=\"Target\">\n    <Platform>x64</Platform>\n  </PropertyGroup>\n" +
                 "  <PropertyGroup Label=\"Output\">\n    <OutputType>Executable</OutputType>\n  </PropertyGroup>\n" +
-                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n    <Reference Include=\"../LibB/LibB.coa\" />\n    <Reference Include=\"../LibA/LibA.coa\" />\n  </ItemGroup>\n" +
+                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n    <Reference Include=\"../LibB/LibB.coproj\" />\n    <Reference Include=\"../LibA/LibA.coproj\" />\n  </ItemGroup>\n" +
                 "</Project>\n");
 
+            var appOutputDir = Path.Combine(appDir, "bin", "Debug", "managed", "net9.0");
             var libBBuild = CliTestRunner.Run($"build \"{Path.Combine(libB, "LibB.coproj")}\"", root);
             Assert.True(libBBuild.ExitCode == 0, $"LibB build failed: {libBBuild.Stdout}{libBBuild.Stderr}");
-            Assert.True(File.Exists(Path.Combine(libB, "LibB.coa")));
+            Assert.True(File.Exists(Path.Combine(libB, "bin", "Debug", "LibB.coa")));
 
             var libABuild = CliTestRunner.Run($"build \"{Path.Combine(libA, "LibA.coproj")}\"", root);
             Assert.True(libABuild.ExitCode == 0, $"LibA build failed: {libABuild.Stdout}{libABuild.Stderr}");
-            Assert.True(File.Exists(Path.Combine(libA, "LibA.coa")));
+            Assert.True(File.Exists(Path.Combine(libA, "bin", "Debug", "LibA.coa")));
 
             var appProject = Path.Combine(appDir, "App.coproj");
             var appBuild = CliTestRunner.Run($"build \"{appProject}\" -b managed-net --dotnet-runtime net9.0", root);
             Assert.True(appBuild.ExitCode == 0, $"app build failed: {appBuild.Stdout}{appBuild.Stderr}");
-            Assert.True(File.Exists(Path.Combine(appDir, "App.exe")));
-            Assert.True(File.Exists(Path.Combine(appDir, "LibA.Managed.dll")), "LibA 托管 dll 应按需生成");
-            Assert.True(File.Exists(Path.Combine(appDir, "LibB.Managed.dll")), "LibB 托管 dll 应为 LibA 依赖一并部署");
+            Assert.True(File.Exists(Path.Combine(appOutputDir, "App.exe")));
+            Assert.True(File.Exists(Path.Combine(appOutputDir, "LibA.Managed.dll")), "LibA 托管 dll 应按需生成");
+            Assert.True(File.Exists(Path.Combine(appOutputDir, "LibB.Managed.dll")), "LibB 托管 dll 应为 LibA 依赖一并部署");
 
-            var exePath = Path.Combine(appDir, "App.exe");
+            var exePath = Path.Combine(appOutputDir, "App.exe");
             var run = Start(exePath);
             Assert.True(run.ExitCode == 0, $"app run failed exit={run.ExitCode}: {run.Stdout}{run.Stderr}");
             Assert.Contains("42", run.Stdout);

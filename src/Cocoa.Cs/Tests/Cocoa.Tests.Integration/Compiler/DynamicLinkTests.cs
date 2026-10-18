@@ -49,39 +49,41 @@ namespace MyLib
                 "  <PropertyGroup Label=\"Language\">\n    <Language>Cocoa</Language>\n  </PropertyGroup>\n" +
                 "  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>App</AssemblyName>\n  </PropertyGroup>\n" +
                 "  <PropertyGroup Label=\"Output\">\n    <OutputType>Executable</OutputType>\n  </PropertyGroup>\n" +
-                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n    <Reference Include=\"../Lib/Lib.coa\" />\n  </ItemGroup>\n" +
+                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n    <Reference Include=\"../Lib/Lib.coproj\" />\n  </ItemGroup>\n" +
                 "</Project>\n");
 
-            // 1. 库构建：只产出 coa，不预生成任何 dll（lazy）
+            var appOutputDir = Path.Combine(appDir, "bin", "Debug", "managed", "net9.0");
+            var libCoaPath = Path.Combine(libDir, "bin", "Debug", "Lib.coa");
+
+            // 1. 库构建：只产出 coa（bin/Debug/），不预生成任何 dll（lazy）
             var libBuild = CliTestRunner.Run($"build \"{Path.Combine(libDir, "Lib.coproj")}\"", root);
             Assert.Equal(0, libBuild.ExitCode);
-            Assert.True(File.Exists(Path.Combine(libDir, "Lib.coa")));
+            Assert.True(File.Exists(libCoaPath), $"lib coa missing; stdout=[{libBuild.Stdout}]");
             Assert.Empty(Directory.EnumerateFiles(libDir, "*.dll"));
 
             // 2. 消费方构建：按需生成并部署 Lib.Managed.dll + System.Core.Managed.dll
             var appProject = Path.Combine(appDir, "App.coproj");
             var appBuild = CliTestRunner.Run($"build \"{appProject}\" -b managed-net --dotnet-runtime net9.0", root);
             Assert.True(appBuild.ExitCode == 0, $"app build failed: {appBuild.Stdout}{appBuild.Stderr}");
-            Assert.True(File.Exists(Path.Combine(appDir, "App.exe")));
-            Assert.True(File.Exists(Path.Combine(appDir, "Lib.Managed.dll")), "用户库托管 dll 应按需生成");
-            Assert.True(File.Exists(Path.Combine(appDir, "System.Core.Managed.dll")), "系统库托管 dll 应按需生成");
+            Assert.True(File.Exists(Path.Combine(appOutputDir, "App.exe")));
+            Assert.True(File.Exists(Path.Combine(appOutputDir, "Lib.Managed.dll")), "用户库托管 dll 应按需生成");
+            Assert.True(File.Exists(Path.Combine(appOutputDir, "System.Core.Managed.dll")), "系统库托管 dll 应按需生成");
 
-            var exePath = Path.Combine(appDir, "App.exe");
+            var exePath = Path.Combine(appOutputDir, "App.exe");
             var run1 = RunExe(exePath);
             Assert.Equal(0, run1.exitCode);
             Assert.Contains("9", run1.output);
 
-            // 3. 自愈：部署的库 dll + stamp 全删 → 增量重建（up-to-date 分支）现场再生 → 运行恢复
-            foreach (var dll in Directory.EnumerateFiles(appDir, "*.Managed.dll"))
+            // 3. 自愈：部署的库 dll 全删 → 增量重建（up-to-date 分支）现场再生 → 运行恢复
+            foreach (var dll in Directory.EnumerateFiles(appOutputDir, "*.Managed.dll"))
             {
                 File.Delete(dll);
-                File.Delete(dll + ".stamp");
             }
 
             var rebuild = CliTestRunner.Run($"build \"{appProject}\" -b managed-net --dotnet-runtime net9.0", root);
             Assert.Equal(0, rebuild.ExitCode);
-            Assert.True(File.Exists(Path.Combine(appDir, "Lib.Managed.dll")), "误删后应自动再生");
-            Assert.True(File.Exists(Path.Combine(appDir, "System.Core.Managed.dll")), "系统库 dll 误删后应自动再生");
+            Assert.True(File.Exists(Path.Combine(appOutputDir, "Lib.Managed.dll")), "误删后应自动再生");
+            Assert.True(File.Exists(Path.Combine(appOutputDir, "System.Core.Managed.dll")), "系统库 dll 误删后应自动再生");
 
             var run2 = RunExe(exePath);
             Assert.Equal(0, run2.exitCode);
@@ -124,7 +126,6 @@ function Main(): i32
             Assert.True(build.ExitCode == 0, $"bare cli build failed: {build.Stdout}{build.Stderr}");
 
             Assert.True(File.Exists(Path.Combine(dir, "System.Core.Managed.dll")), "系统库托管 dll 应按需生成（统一动态链接）");
-            Assert.True(File.Exists(Path.Combine(dir, "System.Core.Managed.dll.stamp")), "stamp 应随托管 dll 生成");
             Assert.True(File.Exists(Path.Combine(dir, "app.exe")), "apphost 应存在");
 
             var run = RunExe(Path.Combine(dir, "app.exe"));

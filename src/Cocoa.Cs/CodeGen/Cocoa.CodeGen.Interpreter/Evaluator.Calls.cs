@@ -486,6 +486,9 @@ namespace Cocoa.CodeGen.Interpreter
                     return null;
                 case BuiltinKind.DirectoryExists:
                     return Directory.Exists((string)EvaluateExpression(arguments[0])!);
+                case BuiltinKind.DeleteDirectory:
+                    Directory.Delete((string)EvaluateExpression(arguments[0])!);
+                    return null;
                 case BuiltinKind.CreateDirectory:
                     Directory.CreateDirectory((string)EvaluateExpression(arguments[0])!);
                     return null;

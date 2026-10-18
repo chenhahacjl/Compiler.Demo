@@ -13,5 +13,6 @@ namespace System.Syscall
         syscall function FileClose(h: i64): void
         syscall function DirectoryExists(path: string): bool
         syscall function CreateDirectory(path: string): void
+        syscall function DeleteDirectory(path: string): void
     }
 }

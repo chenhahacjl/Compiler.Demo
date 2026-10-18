@@ -206,6 +206,9 @@ var solution = $@"<Solution Version=""1"">
             File.WriteAllText(sourcePath, source);
             Console.WriteLine(sourcePath);
 
+            // 默认应用图标：复制 EXE.ico 到项目目录（构建时 ProjectBuilder 自动拾取）；找不到则跳过
+            Cocoa.Build.AppIconLocator.CopyInto(targetDirectory, Directory.GetCurrentDirectory());
+
             return 0;
         }
 

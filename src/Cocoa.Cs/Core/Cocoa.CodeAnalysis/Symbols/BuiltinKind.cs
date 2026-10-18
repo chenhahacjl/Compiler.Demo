@@ -42,6 +42,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         FileDelete,
         FileCopy,
         DirectoryExists,
+        DeleteDirectory,
         GetEnvironmentVariable,
         GetCurrentDirectory,
         SetCurrentDirectory,

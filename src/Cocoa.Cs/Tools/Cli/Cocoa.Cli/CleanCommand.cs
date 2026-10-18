@@ -105,29 +105,29 @@ namespace Cocoa.Cli
 
                 CleanProject(fullPath);
             }
-
-            CleanCacheRoot(BuildCache.GetDefaultCacheRoot(solution.Directory));
         }
 
         private static void CleanProject(string projectPath)
         {
             var project = CocoaProjectFile.Load(projectPath);
 
-            CleanCacheRoot(BuildCache.GetDefaultCacheRoot(project.Directory));
+            // obj/ 中间目录（HIR/MIR/LIR 等）
+            DeleteDirectoryIfExists(BuildOutputLayout.ObjDirectory(project.Directory), "obj");
 
             var outputDirectory = Path.GetFullPath(project.GetOutputDirectory());
             var projectDirectory = Path.GetFullPath(project.Directory);
             if (string.Equals(outputDirectory, projectDirectory, StringComparison.OrdinalIgnoreCase))
             {
-                return;
+                // 显式 OutputPath=. ：不删项目目录本身；
+            }
+            else
+            {
+                // 显式输出目录（非布局根）直接删
+                DeleteDirectoryIfExists(outputDirectory, "output");
             }
 
-            DeleteDirectoryIfExists(outputDirectory, "output");
-        }
-
-        private static void CleanCacheRoot(string cacheRoot)
-        {
-            DeleteDirectoryIfExists(cacheRoot, "cache");
+            // 布局根 bin/（默认输出及其子配置/后端/架构目录的公共根）
+            DeleteDirectoryIfExists(Path.Combine(projectDirectory, BuildOutputLayout.BinDirectoryName), "bin");
         }
 
         private static void DeleteDirectoryIfExists(string directory, string label)

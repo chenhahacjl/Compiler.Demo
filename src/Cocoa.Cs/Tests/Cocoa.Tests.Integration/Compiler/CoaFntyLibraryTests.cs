@@ -76,23 +76,24 @@ function Main(): i32
   </PropertyGroup>
   <ItemGroup>
     <Source Include=""*.co"" />
-    <Reference Include=""../MathLib/MathLib.coa"" />
+    <Reference Include=""../MathLib/MathLib.coproj"" />
   </ItemGroup>
 </Project>
 ");
 
+            var appOutputDir = Path.Combine(appDir, "bin", "Debug", "managed", "net9.0");
             var libProject = Path.Combine(libDir, "MathLib.coproj");
             var libBuild = CliTestRunner.Run($"build \"{libProject}\"", root);
             Assert.True(libBuild.ExitCode == 0, $"lib build failed: {libBuild.Stdout}{libBuild.Stderr}");
-            Assert.True(File.Exists(Path.Combine(libDir, "MathLib.coa")));
+            Assert.True(File.Exists(Path.Combine(libDir, "bin", "Debug", "MathLib.coa")));
 
             var appProject = Path.Combine(appDir, "App.coproj");
             var appBuild = CliTestRunner.Run($"build \"{appProject}\" -b managed-net --dotnet-runtime net9.0", root);
             Assert.True(appBuild.ExitCode == 0, $"app build failed: {appBuild.Stdout}{appBuild.Stderr}");
-            Assert.True(File.Exists(Path.Combine(appDir, "App.exe")));
-            Assert.True(File.Exists(Path.Combine(appDir, "MathLib.Managed.dll")), "库托管 dll 应按需生成（fnval 消费）");
+            Assert.True(File.Exists(Path.Combine(appOutputDir, "App.exe")));
+            Assert.True(File.Exists(Path.Combine(appOutputDir, "MathLib.Managed.dll")), "库托管 dll 应按需生成（fnval 消费）");
 
-            var run = RunExe(Path.Combine(appDir, "App.exe"));
+            var run = RunExe(Path.Combine(appOutputDir, "App.exe"));
             Assert.True(run.exitCode == 0, $"app run failed: {run.output}");
             Assert.Contains("42", run.output);
             Assert.Contains("5", run.output);

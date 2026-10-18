@@ -25,6 +25,8 @@ namespace Cocoa.CodeGen.Native
             "SetCurrentDirectoryW", "GetEnvironmentVariableW", "GetModuleFileNameW",
             // M2：ucrtbase → Win32（对标 .NET FileStream）
             "CreateFileW", "GetFileSizeEx", "SetFilePointerEx", "SetFilePointer", "CloseHandle", "CreateDirectoryW",
+            // DeleteDirectory：RemoveDirectoryW（BCL Directory.Delete 非递归，仅删空目录）
+            "RemoveDirectoryW",
             // M5：LaunchProcess 迁 CreateProcessW（同步等待 + 取退出码）
             "CreateProcessW", "WaitForSingleObject", "GetExitCodeProcess", "GetLastError",
         };
@@ -258,6 +260,8 @@ namespace Cocoa.CodeGen.Native
                 EmitFileExists();
                 _ = BeginFunctionTyped("DirectoryExists", new[] { 8 }, LirType.Addr);
                 EmitDirectoryExists();
+                _ = BeginFunctionTyped("DeleteDirectory", new[] { 8 }, LirType.Addr);
+                EmitDeleteDirectory();
                 _ = BeginFunctionTyped("CreateDirectory", new[] { 8 }, LirType.Addr);
                 EmitCreateDirectory();
                 _ = BeginFunctionTyped("FileDelete", new[] { 8 }, LirType.Addr);

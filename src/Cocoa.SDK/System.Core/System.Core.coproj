@@ -8,13 +8,11 @@
   <PropertyGroup Label="Output">
     <OutputType>Cocoa</OutputType>
   </PropertyGroup>
-  <PropertyGroup Label="Build">
-    <OutputPath>..\out</OutputPath>
-  </PropertyGroup>
   <ItemGroup>
     <Source Include="*.co" />
     <Source Include="Handle/*.co" />
     <Source Include="IO/*.co" />
+    <Source Include="Diagnostics/*.co" />
     <Source Include="Collections/*.co" />
     <Source Include="Syscall/*.co" />
     <Source Include="Text/*.co" />

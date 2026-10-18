@@ -22,7 +22,7 @@ namespace Cocoa.CodeGen.Native
     /// </summary>
     internal sealed class NativeCodeEmitter
     {
-        public static void Emit(BoundProgram program, string moduleName, string outputPath, TargetPlatform platform, ushort subsystem, Cocoa.CodeAnalysis.PeResourceOptions? resourceOptions = null)
+        public static void Emit(BoundProgram program, string moduleName, string outputPath, TargetPlatform platform, ushort subsystem, Cocoa.CodeAnalysis.PeResourceOptions? resourceOptions = null, string? irOutputDirectory = null)
         {
             IAssembler a = platform.Arch == Architecture.X64
                 ? new X64Assembler()
@@ -34,8 +34,22 @@ namespace Cocoa.CodeGen.Native
             var ir = emit.Program;
             RuntimeEmitterLir.Append(ir, platform);
 
-            // 与 LirToAssembler 的 IR dump 同一开关（重构阶段 1a/A6：不再无条件落盘）
-            if (Environment.GetEnvironmentVariable("COCOA_DUMP_IR") != null)
+            // LIR 落盘 obj/（构建中间件）；旧有 COCOA_DUMP_IR 兼容：落到产物旁 .ir.txt
+            if (!string.IsNullOrEmpty(irOutputDirectory) && !string.IsNullOrEmpty(moduleName))
+            {
+                try
+                {
+                    System.IO.Directory.CreateDirectory(irOutputDirectory);
+                    System.IO.File.WriteAllText(
+                        System.IO.Path.Combine(irOutputDirectory, System.IO.Path.GetFileName(moduleName) + ".lir"),
+                        LirPrinter.Format(ir));
+                }
+                catch (System.IO.IOException)
+                {
+                    // 中间件写失败不阻断构建
+                }
+            }
+            else if (Environment.GetEnvironmentVariable("COCOA_DUMP_IR") != null)
             {
                 System.IO.File.WriteAllText(System.IO.Path.ChangeExtension(outputPath, ".ir.txt"), LirPrinter.Format(ir));
             }

@@ -119,8 +119,8 @@ namespace Cocoa.Tests.Integration.Compiler
             var build = Run($"build \"{projectPath}\" -b managed-net --dotnet-runtime net9.0");
             Assert.Equal(0, build.ExitCode);
 
-            // netcore 可执行产出 `<name>.dll`（项目目录，无 OutputPath 时默认）
-            var managedDll = Path.Combine(Path.GetDirectoryName(projectPath)!, "App.dll");
+            // netcore 可执行产出 `<name>.dll`（bin/Debug/managed/net9.0）
+            var managedDll = Path.Combine(Path.GetDirectoryName(projectPath)!, "bin", "Debug", "managed", "net9.0", "App.dll");
             Assert.True(File.Exists(managedDll), $"managed dll not found at '{managedDll}'. stdout=[{build.Stdout}]");
 
             var asm = System.Reflection.Assembly.LoadFile(managedDll);
@@ -145,14 +145,16 @@ namespace Cocoa.Tests.Integration.Compiler
             Assert.Equal(0, dotnetBuild.ExitCode);
             Assert.DoesNotContain("up to date", dotnetBuild.Stdout);
 
+            // 换后端 → 产物落到另一 bin 子目录（managed/net9.0 vs native/x64）→ 必然重编
             var nativeBuild = Run($"build \"{projectPath}\" -b native");
             Assert.Equal(0, nativeBuild.ExitCode);
             Assert.DoesNotContain("up to date", nativeBuild.Stdout);
             Assert.Contains("'App' is up to date (native)", Run($"build \"{projectPath}\" -b native").Stdout);
 
+            // 切回 managed-net：第 1 步产物仍在（按 config 分路径缓存），直接复用 → up to date
             var dotnetAgain = Run($"build \"{projectPath}\" -b managed-net --dotnet-runtime net9.0");
             Assert.Equal(0, dotnetAgain.ExitCode);
-            Assert.DoesNotContain("up to date", dotnetAgain.Stdout);
+            Assert.Contains("up to date", dotnetAgain.Stdout);
         }
 
         [Fact]
@@ -317,8 +319,8 @@ namespace Cocoa.Tests.Integration.Compiler
 
             var (exitCode, stdout, stderr) = Run($"build \"{solutionPath}\"");
             Assert.True(exitCode == 0, $"solution build failed: {stderr}");
-            Assert.True(File.Exists(Path.Combine(dir, "Core", "Core.exe")));
-            Assert.True(File.Exists(Path.Combine(dir, "App", "App.exe")));
+            Assert.True(File.Exists(Path.Combine(dir, "Core", "bin", "Debug", "native", "x64", "Core.exe")));
+            Assert.True(File.Exists(Path.Combine(dir, "App", "bin", "Debug", "native", "x64", "App.exe")));
         }
 
         [Fact]
@@ -335,7 +337,7 @@ namespace Cocoa.Tests.Integration.Compiler
                 File.WriteAllText(Path.Combine(projectDir, name + ".co"), "function Main() { }");
             }
 
-            Func<string, string> other = name => name == "A" ? "../B/B.coa" : "../A/A.coa";
+            Func<string, string> other = name => name == "A" ? "../B/B.coproj" : "../A/A.coproj";
             foreach (var name in new[] { "A", "B" })
             {
                 var projectDir = Path.Combine(dir, name);
@@ -383,8 +385,9 @@ namespace Cocoa.Tests.Integration.Compiler
 
             var (exitCode, stdout, stderr) = Run($"build \"{projectPath}\"");
             Assert.Equal(0, exitCode);
-            Assert.True(File.Exists(Path.Combine(dir, "Lib.coa")), $"expected Lib.coa; stdout=[{stdout}] stderr=[{stderr}]");
-            Assert.Contains("COCOA", File.ReadAllText(Path.Combine(dir, "Lib.coa")));
+            var coaOut = Path.Combine(dir, "bin", "Debug", "Lib.coa");
+            Assert.True(File.Exists(coaOut), $"expected Lib.coa; stdout=[{stdout}] stderr=[{stderr}]");
+            Assert.Contains("COCOA", File.ReadAllText(coaOut));
         }
 
         [Fact]
@@ -445,7 +448,7 @@ namespace MyLib
                 "  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>App</AssemblyName>\n  </PropertyGroup>\n" +
                 "  <PropertyGroup Label=\"Target\">\n    <Platform>x64</Platform>\n  </PropertyGroup>\n" +
                 "  <PropertyGroup Label=\"Output\">\n    <OutputType>Executable</OutputType>\n  </PropertyGroup>\n" +
-                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n    <Reference Include=\"../Lib/Lib.coa\" />\n  </ItemGroup>\n" +
+                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n    <Reference Include=\"../Lib/Lib.coproj\" />\n  </ItemGroup>\n" +
                 "</Project>\n");
             return (libDir, appDir);
         }
@@ -481,14 +484,17 @@ namespace MyLib
 
             var libResult = Run($"build \"{libProject}\"");
             Assert.Equal(0, libResult.ExitCode);
-            Assert.True(File.Exists(Path.Combine(libDir, "Lib.coa")));
+            Assert.True(File.Exists(Path.Combine(libDir, "bin", "Debug", "Lib.coa")));
 
             var appArgs = backend == "native" ? $"build \"{appProject}\" -b native" : $"build \"{appProject}\" -b managed-net --dotnet-runtime net9.0";
             var appResult = Run(appArgs);
             Assert.Equal(0, appResult.ExitCode);
 
-            var exePath = Path.Combine(appDir, "App.exe");
-            Assert.True(File.Exists(exePath));
+            var appOutputDir = backend == "native"
+                ? Path.Combine(appDir, "bin", "Debug", "native", "x64")
+                : Path.Combine(appDir, "bin", "Debug", "managed", "net9.0");
+            var exePath = Path.Combine(appOutputDir, "App.exe");
+            Assert.True(File.Exists(exePath), $"exe missing; stdout=[{appResult.Stdout}]");
 
             // netcore 产物含原生 apphost：直接运行（不经 dotnet 前缀）
             var exitCode = RunProcess(exePath, "", out var output);
@@ -506,7 +512,7 @@ namespace MyLib
 
             var appResult = Run($"build \"{Path.Combine(appDir, "App.coproj")}\" -b managed-net --dotnet-runtime net9.0");
             Assert.Equal(0, appResult.ExitCode);
-            Assert.True(File.Exists(Path.Combine(appDir, "Lib.coa")), "Lib.coa 应复制到 app 输出目录");
+            Assert.True(File.Exists(Path.Combine(appDir, "bin", "Debug", "managed", "net9.0", "Lib.coa")), "Lib.coa 应复制到 app 输出目录");
         }
 
         [Fact]
@@ -533,16 +539,16 @@ namespace MyLib
                 "  <PropertyGroup Label=\"Language\">\n    <Language>Cocoa</Language>\n  </PropertyGroup>\n" +
                 "  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>App</AssemblyName>\n  </PropertyGroup>\n" +
                 "  <PropertyGroup Label=\"Output\">\n    <OutputType>Executable</OutputType>\n  </PropertyGroup>\n" +
-                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n    <Reference Include=\"../Lib/Lib.dll\" />\n  </ItemGroup>\n" +
+                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n    <Reference Include=\"../Lib/Lib.coproj\" />\n  </ItemGroup>\n" +
                 "</Project>\n");
 
             var libResult = Run($"build \"{Path.Combine(libDir, "Lib.coproj")}\" -b managed-net --dotnet-runtime net9.0");
             Assert.Equal(0, libResult.ExitCode);
-            Assert.True(File.Exists(Path.Combine(libDir, "Lib.dll")));
+            Assert.True(File.Exists(Path.Combine(libDir, "bin", "Debug", "managed", "net9.0", "Lib.dll")));
 
             var appResult = Run($"build \"{Path.Combine(appDir, "App.coproj")}\" -b managed-net --dotnet-runtime net9.0");
             Assert.Equal(0, appResult.ExitCode);
-            Assert.True(File.Exists(Path.Combine(appDir, "Lib.dll")), "Lib.dll 应复制到 app 输出目录");
+            Assert.True(File.Exists(Path.Combine(appDir, "bin", "Debug", "managed", "net9.0", "Lib.dll")), "Lib.dll 应复制到 app 输出目录");
         }
 
         [Fact]

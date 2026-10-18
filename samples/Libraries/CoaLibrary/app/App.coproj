@@ -13,10 +13,10 @@
     <OutputType>Executable</OutputType>
   </PropertyGroup>
   <PropertyGroup Label="Build">
-    <OutputPath>out</OutputPath>
+
   </PropertyGroup>
   <ItemGroup>
     <Source Include="*.co" />
-    <Reference Include="../mylib/out/MyLib.coa" />
+    <Reference Include="../mylib/MyLib.coproj" />
   </ItemGroup>
 </Project>

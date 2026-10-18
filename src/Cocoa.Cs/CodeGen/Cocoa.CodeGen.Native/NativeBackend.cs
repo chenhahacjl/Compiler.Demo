@@ -37,7 +37,7 @@ namespace Cocoa.CodeGen.Native
             return MirToLir.GenerateWithSnapshot(program, platform);
         }
 
-        private static ImmutableArray<Diagnostic> EmitNative(Compilation compilation, string moduleName, string outputPath, TargetPlatform platform, ushort subsystem, PeResourceOptions? resourceOptions)
+        private static ImmutableArray<Diagnostic> EmitNative(Compilation compilation, string moduleName, string outputPath, TargetPlatform platform, ushort subsystem, PeResourceOptions? resourceOptions, string? irOutputDirectory)
         {
             if (TryValidate(compilation, platform, out var program, out var diagnostics) != 0)
             {
@@ -46,7 +46,7 @@ namespace Cocoa.CodeGen.Native
 
             var importWarnings = NativeImportValidator.Validate(program, platform.Arch);
 
-            NativeCodeEmitter.Emit(program, moduleName, outputPath, platform, subsystem, resourceOptions);
+            NativeCodeEmitter.Emit(program, moduleName, outputPath, platform, subsystem, resourceOptions, irOutputDirectory);
 
             return diagnostics.Concat(importWarnings).ToImmutableArray();
         }

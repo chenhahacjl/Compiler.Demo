@@ -355,9 +355,6 @@ namespace {name}
   <PropertyGroup Label=""Output"">
     <OutputType>{outputType}</OutputType>
   </PropertyGroup>
-  <PropertyGroup Label=""Build"">
-    <OutputPath>out</OutputPath>
-  </PropertyGroup>
   <ItemGroup>
     <Source Include=""*.co"" />
   </ItemGroup>

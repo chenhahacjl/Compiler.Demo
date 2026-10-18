@@ -142,8 +142,22 @@
     )
     (cls System.Kernel32 public iface:false ifaces:0 struct:false bclTarget:- base:- methods:1 CloseHandle[-@nint] fields:0 events:0 props:0)
     (cls System.ProcessHandle public iface:false ifaces:0 struct:false bclTarget:- base:System.Handle methods:0 fields:0 events:0 props:0)
-    (cls System.IO.Directory public iface:false ifaces:0 struct:false bclTarget:System.IO.Directory base:- methods:3 Exists[-@string] CreateDirectory[-@string] GetCurrentDirectory fields:0 events:0 props:0)
+    (cls System.IO.Directory public iface:false ifaces:0 struct:false bclTarget:System.IO.Directory base:- methods:4 Exists[-@string] CreateDirectory[-@string] GetCurrentDirectory Delete[-@string] fields:0 events:0 props:0)
+    (cls System.IO.DirectoryInfo public iface:false ifaces:0 struct:false bclTarget:System.IO.DirectoryInfo base:- methods:0 fields:1
+      (fld _path @string private false false) events:0 props:3
+      (prop Name @string true false public false)
+      (prop Parent System.IO.DirectoryInfo true false public false)
+      (prop Exists @bool true false public false)
+    )
     (cls System.IO.File public iface:false ifaces:0 struct:false bclTarget:System.IO.File base:- methods:7 ReadAllText[-@string] WriteAllText[-@string,-@string] Exists[-@string] Copy[-@string,-@string] Delete[-@string] ReadAllBytes[-@string] WriteAllBytes[-@string,-@u8[]] fields:0 events:0 props:0)
+    (cls System.IO.FileInfo public iface:false ifaces:0 struct:false bclTarget:System.IO.FileInfo base:- methods:0 fields:1
+      (fld _path @string private false false) events:0 props:5
+      (prop Name @string true false public false)
+      (prop Extension @string true false public false)
+      (prop DirectoryName @string true false public false)
+      (prop Exists @bool true false public false)
+      (prop Length @i64 true false public false)
+    )
     (cls System.IO.FileStream public iface:false ifaces:0 struct:false bclTarget:System.IO.FileStream base:- methods:0 fields:1
       (fld _h @i64 private false false) events:0 props:5
       (prop CanRead @bool true false public false)
@@ -183,6 +197,19 @@
     )
     (cls System.IO.StringWriter public iface:false ifaces:0 struct:false bclTarget:- base:- methods:1 NewLine fields:1
       (fld _value @string private false false) events:0 props:0
+    )
+    (cls System.Diagnostics.ProcessStartInfo public iface:false ifaces:0 struct:false bclTarget:System.Diagnostics.ProcessStartInfo base:- methods:0 fields:3
+      (fld _fileName @string private false false)
+      (fld _arguments @string private false false)
+      (fld _workingDirectory @string private false false) events:0 props:3
+      (prop FileName @string true true public false)
+      (prop Arguments @string true true public false)
+      (prop WorkingDirectory @string true true public false)
+    )
+    (cls System.Diagnostics.Process public iface:false ifaces:0 struct:false bclTarget:System.Diagnostics.Process base:- methods:1 Start[-System.Diagnostics.ProcessStartInfo] fields:2
+      (fld _startInfo System.Diagnostics.ProcessStartInfo private false false)
+      (fld _exitCode @i32 private false false) events:0 props:1
+      (prop ExitCode @i32 true false public false)
     )
     (gcls System.Collections.Generic.IEnumerable public iface:true ifaces:0 struct:false tparams:1
       (tpar T 0 - v:- c:0) fields:0 methods:0 events:0 props:0
@@ -301,7 +328,7 @@
     (cls System.Syscall.ConsoleSyscall internal iface:false ifaces:0 struct:false bclTarget:- base:- methods:8 WriteLine[-@object] Write[-@object] ReadLine ReadKey[-@bool] Sleep[-@i32] TickCount Exit[-@i32] Beep[-@i32,-@i32] fields:0 events:0 props:0)
     (cls System.Syscall.EnvironmentSyscall internal iface:false ifaces:0 struct:false bclTarget:- base:- methods:4 GetEnvironmentVariable[-@string] GetCurrentDirectory SetCurrentDirectory[-@string] GetExecutablePath fields:0 events:0 props:0)
     (cls System.Syscall.FileSyscall internal iface:false ifaces:0 struct:false bclTarget:- base:- methods:5 Exists[-@string] Copy[-@string,-@string] Delete[-@string] ReadAllBytes[-@string] WriteAllBytes[-@string,-@u8[]] fields:0 events:0 props:0)
-    (cls System.Syscall.IOSyscall internal iface:false ifaces:0 struct:false bclTarget:- base:- methods:9 FileOpen[-@string,-System.IO.FileMode,-System.IO.FileAccess,-System.IO.FileShare] FileSize[-@i64] FileSeek[-@i64,-@i64,-@i32] FileTell[-@i64] FileRead[-@i64,-@u8[],-@i32,-@i32] FileWrite[-@i64,-@u8[],-@i32,-@i32] FileClose[-@i64] DirectoryExists[-@string] CreateDirectory[-@string] fields:0 events:0 props:0)
+    (cls System.Syscall.IOSyscall internal iface:false ifaces:0 struct:false bclTarget:- base:- methods:10 FileOpen[-@string,-System.IO.FileMode,-System.IO.FileAccess,-System.IO.FileShare] FileSize[-@i64] FileSeek[-@i64,-@i64,-@i32] FileTell[-@i64] FileRead[-@i64,-@u8[],-@i32,-@i32] FileWrite[-@i64,-@u8[],-@i32,-@i32] FileClose[-@i64] DirectoryExists[-@string] CreateDirectory[-@string] DeleteDirectory[-@string] fields:0 events:0 props:0)
     (cls System.Syscall.MathSyscall internal iface:false ifaces:0 struct:false bclTarget:- base:- methods:4 Random[-@i32] Sqrt[-@f64] DoubleToString[-@f64] Sha256Hash[-@u8[]] fields:0 events:0 props:0)
     (cls System.Syscall.ProcessSyscall internal iface:false ifaces:0 struct:false bclTarget:- base:- methods:1 LaunchProcess[-@string,-@string,-@string] fields:0 events:0 props:0)
     (cls System.Syscall.StringSyscall public iface:false ifaces:0 struct:false bclTarget:- base:- methods:3 StringFromBytes[-@u8[]] StringToBytes[-@string] StringFromChars[-@char[]] fields:0 events:0 props:0)
@@ -1259,6 +1286,17 @@
       (par System.Core!System.IO.Directory.CreateDirectory[-@string]/path path @string 0 - -)
     )
     (fn System.Core!System.IO.Directory.GetCurrentDirectory[] name:GetCurrentDirectory tps:0 ret:@string ns:- owner:System.IO.Directory extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:0)
+    (fn System.Core!System.IO.Directory.Delete[-@string] name:Delete tps:0 ret:@void ns:- owner:System.IO.Directory extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
+      (par System.Core!System.IO.Directory.Delete[-@string]/path path @string 0 - -)
+    )
+    (fn System.Core!System.IO.DirectoryInfo.DirectoryInfo[-@string] name:DirectoryInfo tps:0 ret:@void ns:- owner:System.IO.DirectoryInfo extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:true acc:false virt:false abs:false ovr:false seal:false params:1
+      (par System.Core!System.IO.DirectoryInfo.DirectoryInfo[-@string]/path path @string 0 - -)
+    )
+    (fn System.Core!System.IO.DirectoryInfo.get_Name[] name:get_Name tps:0 ret:@string ns:- owner:System.IO.DirectoryInfo extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:true virt:false abs:false ovr:false seal:false params:0)
+    (fn System.Core!System.IO.DirectoryInfo.get_Parent[] name:get_Parent tps:0 ret:System.IO.DirectoryInfo ns:- owner:System.IO.DirectoryInfo extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:true virt:false abs:false ovr:false seal:false params:0)
+    (fn System.Core!System.IO.DirectoryInfo.get_Exists[] name:get_Exists tps:0 ret:@bool ns:- owner:System.IO.DirectoryInfo extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:true virt:false abs:false ovr:false seal:false params:0)
+    (fn System.Core!System.IO.DirectoryInfo.Create[] name:Create tps:0 ret:@void ns:- owner:System.IO.DirectoryInfo extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:false virt:false abs:false ovr:false seal:false params:0)
+    (fn System.Core!System.IO.DirectoryInfo.Delete[] name:Delete tps:0 ret:@void ns:- owner:System.IO.DirectoryInfo extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:false virt:false abs:false ovr:false seal:false params:0)
     (fn System.Core!System.IO.File.ReadAllText[-@string] name:ReadAllText tps:0 ret:@string ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
       (par System.Core!System.IO.File.ReadAllText[-@string]/path path @string 0 - -)
     )
@@ -1282,6 +1320,18 @@
     (fn System.Core!System.IO.File.WriteAllBytes[-@string,-@u8[]] name:WriteAllBytes tps:0 ret:@void ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:2
       (par System.Core!System.IO.File.WriteAllBytes[-@string,-@u8[]]/path path @string 0 - -)
       (par System.Core!System.IO.File.WriteAllBytes[-@string,-@u8[]]/data data @u8[] 1 - -)
+    )
+    (fn System.Core!System.IO.FileInfo.FileInfo[-@string] name:FileInfo tps:0 ret:@void ns:- owner:System.IO.FileInfo extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:true acc:false virt:false abs:false ovr:false seal:false params:1
+      (par System.Core!System.IO.FileInfo.FileInfo[-@string]/path path @string 0 - -)
+    )
+    (fn System.Core!System.IO.FileInfo.get_Name[] name:get_Name tps:0 ret:@string ns:- owner:System.IO.FileInfo extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:true virt:false abs:false ovr:false seal:false params:0)
+    (fn System.Core!System.IO.FileInfo.get_Extension[] name:get_Extension tps:0 ret:@string ns:- owner:System.IO.FileInfo extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:true virt:false abs:false ovr:false seal:false params:0)
+    (fn System.Core!System.IO.FileInfo.get_DirectoryName[] name:get_DirectoryName tps:0 ret:@string ns:- owner:System.IO.FileInfo extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:true virt:false abs:false ovr:false seal:false params:0)
+    (fn System.Core!System.IO.FileInfo.get_Exists[] name:get_Exists tps:0 ret:@bool ns:- owner:System.IO.FileInfo extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:true virt:false abs:false ovr:false seal:false params:0)
+    (fn System.Core!System.IO.FileInfo.get_Length[] name:get_Length tps:0 ret:@i64 ns:- owner:System.IO.FileInfo extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:true virt:false abs:false ovr:false seal:false params:0)
+    (fn System.Core!System.IO.FileInfo.Delete[] name:Delete tps:0 ret:@void ns:- owner:System.IO.FileInfo extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:false virt:false abs:false ovr:false seal:false params:0)
+    (fn System.Core!System.IO.FileInfo.CopyTo[-@string] name:CopyTo tps:0 ret:System.IO.FileInfo ns:- owner:System.IO.FileInfo extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
+      (par System.Core!System.IO.FileInfo.CopyTo[-@string]/dest dest @string 0 - -)
     )
     (fn System.Core!System.IO.FileStream.FileStream[-@string] name:FileStream tps:0 ret:@void ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:true acc:false virt:false abs:false ovr:false seal:false params:1
       (par System.Core!System.IO.FileStream.FileStream[-@string]/path path @string 0 - -)
@@ -1426,6 +1476,28 @@
     )
     (fn System.Core!System.IO.StringWriter.WriteLineEmpty[] name:WriteLineEmpty tps:0 ret:@void ns:- owner:System.IO.StringWriter extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:false virt:false abs:false ovr:false seal:false params:0)
     (fn System.Core!System.IO.StringWriter.GetValue[] name:GetValue tps:0 ret:@string ns:- owner:System.IO.StringWriter extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:false virt:false abs:false ovr:false seal:false params:0)
+    (fn System.Core!System.Diagnostics.ProcessStartInfo.ProcessStartInfo[] name:ProcessStartInfo tps:0 ret:@void ns:- owner:System.Diagnostics.ProcessStartInfo extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:true acc:false virt:false abs:false ovr:false seal:false params:0)
+    (fn System.Core!System.Diagnostics.ProcessStartInfo.ProcessStartInfo[-@string] name:ProcessStartInfo tps:0 ret:@void ns:- owner:System.Diagnostics.ProcessStartInfo extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:true acc:false virt:false abs:false ovr:false seal:false params:1
+      (par System.Core!System.Diagnostics.ProcessStartInfo.ProcessStartInfo[-@string]/fileName fileName @string 0 - -)
+    )
+    (fn System.Core!System.Diagnostics.ProcessStartInfo.get_FileName[] name:get_FileName tps:0 ret:@string ns:- owner:System.Diagnostics.ProcessStartInfo extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:true virt:false abs:false ovr:false seal:false params:0)
+    (fn System.Core!System.Diagnostics.ProcessStartInfo.set_FileName[-@string] name:set_FileName tps:0 ret:@void ns:- owner:System.Diagnostics.ProcessStartInfo extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:true virt:false abs:false ovr:false seal:false params:1
+      (par System.Core!System.Diagnostics.ProcessStartInfo.set_FileName[-@string]/value value @string 0 - -)
+    )
+    (fn System.Core!System.Diagnostics.ProcessStartInfo.get_Arguments[] name:get_Arguments tps:0 ret:@string ns:- owner:System.Diagnostics.ProcessStartInfo extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:true virt:false abs:false ovr:false seal:false params:0)
+    (fn System.Core!System.Diagnostics.ProcessStartInfo.set_Arguments[-@string] name:set_Arguments tps:0 ret:@void ns:- owner:System.Diagnostics.ProcessStartInfo extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:true virt:false abs:false ovr:false seal:false params:1
+      (par System.Core!System.Diagnostics.ProcessStartInfo.set_Arguments[-@string]/value value @string 0 - -)
+    )
+    (fn System.Core!System.Diagnostics.ProcessStartInfo.get_WorkingDirectory[] name:get_WorkingDirectory tps:0 ret:@string ns:- owner:System.Diagnostics.ProcessStartInfo extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:true virt:false abs:false ovr:false seal:false params:0)
+    (fn System.Core!System.Diagnostics.ProcessStartInfo.set_WorkingDirectory[-@string] name:set_WorkingDirectory tps:0 ret:@void ns:- owner:System.Diagnostics.ProcessStartInfo extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:true virt:false abs:false ovr:false seal:false params:1
+      (par System.Core!System.Diagnostics.ProcessStartInfo.set_WorkingDirectory[-@string]/value value @string 0 - -)
+    )
+    (fn System.Core!System.Diagnostics.Process.Start[-System.Diagnostics.ProcessStartInfo] name:Start tps:0 ret:System.Diagnostics.Process ns:- owner:System.Diagnostics.Process extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
+      (par System.Core!System.Diagnostics.Process.Start[-System.Diagnostics.ProcessStartInfo]/info info System.Diagnostics.ProcessStartInfo 0 - -)
+    )
+    (fn System.Core!System.Diagnostics.Process.WaitForExit[] name:WaitForExit tps:0 ret:@void ns:- owner:System.Diagnostics.Process extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:false virt:false abs:false ovr:false seal:false params:0)
+    (fn System.Core!System.Diagnostics.Process.get_ExitCode[] name:get_ExitCode tps:0 ret:@i32 ns:- owner:System.Diagnostics.Process extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:true virt:false abs:false ovr:false seal:false params:0)
+    (fn System.Core!System.Diagnostics.Process.Process[] name:Process tps:0 ret:@void ns:- owner:System.Diagnostics.Process extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:true acc:false virt:false abs:false ovr:false seal:false params:0)
     (fn System.Core!System.Collections.Generic.Dictionary.Dictionary[] name:Dictionary tps:0 ret:@void ns:- owner:System.Collections.Generic.Dictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:true acc:false virt:false abs:false ovr:false seal:false params:0)
     (fn System.Core!System.Collections.Generic.Dictionary.get_Count[] name:get_Count tps:0 ret:@i32 ns:- owner:System.Collections.Generic.Dictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:true virt:false abs:false ovr:false seal:false params:0)
     (fn System.Core!System.Collections.Generic.Dictionary.get_Keys[] name:get_Keys tps:0 ret:!System.Collections.Generic.Dictionary.K[] ns:- owner:System.Collections.Generic.Dictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- attrs:- static:false ctor:false acc:true virt:false abs:false ovr:false seal:false params:0)
@@ -1681,6 +1753,9 @@
     )
     (fn System.Core!System.Syscall.IOSyscall.CreateDirectory[-@string] name:CreateDirectory tps:0 ret:@void ns:- owner:System.Syscall.IOSyscall extern:false dll:- cc:winapi builtin:CreateDirectory entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
       (par System.Core!System.Syscall.IOSyscall.CreateDirectory[-@string]/path path @string 0 - -)
+    )
+    (fn System.Core!System.Syscall.IOSyscall.DeleteDirectory[-@string] name:DeleteDirectory tps:0 ret:@void ns:- owner:System.Syscall.IOSyscall extern:false dll:- cc:winapi builtin:DeleteDirectory entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
+      (par System.Core!System.Syscall.IOSyscall.DeleteDirectory[-@string]/path path @string 0 - -)
     )
     (fn System.Core!System.Syscall.MathSyscall.Random[-@i32] name:Random tps:0 ret:@i32 ns:- owner:System.Syscall.MathSyscall extern:false dll:- cc:winapi builtin:Random entry:- charset:- attrs:- static:true ctor:false acc:false virt:false abs:false ovr:false seal:false params:1
       (par System.Core!System.Syscall.MathSyscall.Random[-@i32]/max max @i32 0 - -)
@@ -1977,6 +2052,9 @@
     (loc System.Core!System.UInt64.TryParse[-@string,out:@u64]/acc false @u64)
     (loc System.Core!System.UInt64.TryParse[-@string,out:@u64]/c true @char)
     (loc System.Core!System.UInt64.TryParse[-@string,out:@u64]/d true @u64)
+    (loc System.Core!System.IO.DirectoryInfo.get_Parent[]/p true @string)
+    (loc System.Core!System.IO.FileInfo.get_Length[]/h true @i64)
+    (loc System.Core!System.IO.FileInfo.get_Length[]/len true @i64)
     (loc System.Core!System.IO.MemoryStream.EnsureCapacity[-@i32]/capacity false @i32)
     (loc System.Core!System.IO.MemoryStream.EnsureCapacity[-@i32]/grown false @u8[])
     (loc System.Core!System.IO.MemoryStream.EnsureCapacity[-@i32]/i false @i32)
@@ -2030,6 +2108,7 @@
     (loc System.Core!System.IO.StringReader.ReadToEnd[]/rest false @string)
     (loc System.Core!System.IO.StringWriter.NewLine[]/b false @u8[])
     (loc System.Core!System.IO.StringWriter.WriteChar[-@char]/chars false @char[])
+    (loc System.Core!System.Diagnostics.Process.Start[-System.Diagnostics.ProcessStartInfo]/p false System.Diagnostics.Process)
     (loc System.Core!System.Syscall.StringSyscall.StringFromBytes[-@u8[]]/chars false @char[])
     (loc System.Core!System.Syscall.StringSyscall.StringFromBytes[-@u8[]]/o false @i32)
     (loc System.Core!System.Syscall.StringSyscall.StringFromBytes[-@u8[]]/i false @i32)
@@ -11163,6 +11242,104 @@
         )
       )
     )
+    (body System.Core!System.IO.Directory.Delete[-@string]
+      (block 1
+        (exprstmt
+          (membercall @void DeleteDirectory System.Core!System.Syscall.IOSyscall.DeleteDirectory[-@string] 1
+            (statictype System.Syscall.IOSyscall)
+            (var System.Core!System.IO.Directory.Delete[-@string]/path)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.DirectoryInfo.DirectoryInfo[-@string]
+      (block 1
+        (exprstmt
+          (memberassign
+            (this System.IO.DirectoryInfo) name:_path @string false
+            (var System.Core!System.IO.DirectoryInfo.DirectoryInfo[-@string]/path)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.DirectoryInfo.get_Name[]
+      (block 1
+        (return
+          (membercall @string GetFileName System.Core!System.IO.Path.GetFileName[-@string] 1
+            (statictype System.IO.Path)
+            (memberacc @string _path owner:System.IO.DirectoryInfo
+              (this System.IO.DirectoryInfo)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.DirectoryInfo.get_Parent[]
+      (block 3
+        (vardecl System.Core!System.IO.DirectoryInfo.get_Parent[]/p
+          (membercall @string GetDirectoryName System.Core!System.IO.Path.GetDirectoryName[-@string] 1
+            (statictype System.IO.Path)
+            (memberacc @string _path owner:System.IO.DirectoryInfo
+              (this System.IO.DirectoryInfo)
+            )
+          )
+        )
+        (if
+          (membercall @bool IsNullOrEmpty System.Core!System.String.IsNullOrEmpty[-@string] 1
+            (statictype System.String)
+            (var System.Core!System.IO.DirectoryInfo.get_Parent[]/p)
+          )
+          (block 1
+            (return
+              (conv System.IO.DirectoryInfo
+                (lit @null n:)
+              )
+            )
+          ) -
+        )
+        (return
+          (objnew System.IO.DirectoryInfo 1
+            (var System.Core!System.IO.DirectoryInfo.get_Parent[]/p)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.DirectoryInfo.get_Exists[]
+      (block 1
+        (return
+          (membercall @bool DirectoryExists System.Core!System.Syscall.IOSyscall.DirectoryExists[-@string] 1
+            (statictype System.Syscall.IOSyscall)
+            (memberacc @string _path owner:System.IO.DirectoryInfo
+              (this System.IO.DirectoryInfo)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.DirectoryInfo.Create[]
+      (block 1
+        (exprstmt
+          (membercall @void CreateDirectory System.Core!System.Syscall.IOSyscall.CreateDirectory[-@string] 1
+            (statictype System.Syscall.IOSyscall)
+            (memberacc @string _path owner:System.IO.DirectoryInfo
+              (this System.IO.DirectoryInfo)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.DirectoryInfo.Delete[]
+      (block 1
+        (exprstmt
+          (membercall @void DeleteDirectory System.Core!System.Syscall.IOSyscall.DeleteDirectory[-@string] 1
+            (statictype System.Syscall.IOSyscall)
+            (memberacc @string _path owner:System.IO.DirectoryInfo
+              (this System.IO.DirectoryInfo)
+            )
+          )
+        )
+      )
+    )
     (body System.Core!System.IO.File.ReadAllText[-@string]
       (block 1
         (return
@@ -11238,6 +11415,140 @@
             (statictype System.Syscall.FileSyscall)
             (var System.Core!System.IO.File.WriteAllBytes[-@string,-@u8[]]/path)
             (var System.Core!System.IO.File.WriteAllBytes[-@string,-@u8[]]/data)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.FileInfo.FileInfo[-@string]
+      (block 1
+        (exprstmt
+          (memberassign
+            (this System.IO.FileInfo) name:_path @string false
+            (var System.Core!System.IO.FileInfo.FileInfo[-@string]/path)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.FileInfo.get_Name[]
+      (block 1
+        (return
+          (membercall @string GetFileName System.Core!System.IO.Path.GetFileName[-@string] 1
+            (statictype System.IO.Path)
+            (memberacc @string _path owner:System.IO.FileInfo
+              (this System.IO.FileInfo)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.FileInfo.get_Extension[]
+      (block 1
+        (return
+          (membercall @string GetExtension System.Core!System.IO.Path.GetExtension[-@string] 1
+            (statictype System.IO.Path)
+            (memberacc @string _path owner:System.IO.FileInfo
+              (this System.IO.FileInfo)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.FileInfo.get_DirectoryName[]
+      (block 1
+        (return
+          (membercall @string GetDirectoryName System.Core!System.IO.Path.GetDirectoryName[-@string] 1
+            (statictype System.IO.Path)
+            (memberacc @string _path owner:System.IO.FileInfo
+              (this System.IO.FileInfo)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.FileInfo.get_Exists[]
+      (block 1
+        (return
+          (membercall @bool Exists System.Core!System.Syscall.FileSyscall.Exists[-@string] 1
+            (statictype System.Syscall.FileSyscall)
+            (memberacc @string _path owner:System.IO.FileInfo
+              (this System.IO.FileInfo)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.FileInfo.get_Length[]
+      (block 5
+        (vardecl System.Core!System.IO.FileInfo.get_Length[]/h
+          (membercall @i64 FileOpen System.Core!System.Syscall.IOSyscall.FileOpen[-@string,-System.IO.FileMode,-System.IO.FileAccess,-System.IO.FileShare] 4
+            (statictype System.Syscall.IOSyscall)
+            (memberacc @string _path owner:System.IO.FileInfo
+              (this System.IO.FileInfo)
+            )
+            (lit System.IO.FileMode i:3)
+            (lit System.IO.FileAccess i:1)
+            (lit System.IO.FileShare i:1)
+          )
+        )
+        (if
+          (binary
+            (bop == @i64 @i64)
+            (var System.Core!System.IO.FileInfo.get_Length[]/h)
+            (conv @i64
+              (lit @i32 i:0)
+            )
+          )
+          (block 1
+            (return
+              (conv @i64
+                (lit @i32 i:0)
+              )
+            )
+          ) -
+        )
+        (vardecl System.Core!System.IO.FileInfo.get_Length[]/len
+          (membercall @i64 FileSize System.Core!System.Syscall.IOSyscall.FileSize[-@i64] 1
+            (statictype System.Syscall.IOSyscall)
+            (var System.Core!System.IO.FileInfo.get_Length[]/h)
+          )
+        )
+        (exprstmt
+          (membercall @void FileClose System.Core!System.Syscall.IOSyscall.FileClose[-@i64] 1
+            (statictype System.Syscall.IOSyscall)
+            (var System.Core!System.IO.FileInfo.get_Length[]/h)
+          )
+        )
+        (return
+          (var System.Core!System.IO.FileInfo.get_Length[]/len)
+        )
+      )
+    )
+    (body System.Core!System.IO.FileInfo.Delete[]
+      (block 1
+        (exprstmt
+          (membercall @void Delete System.Core!System.Syscall.FileSyscall.Delete[-@string] 1
+            (statictype System.Syscall.FileSyscall)
+            (memberacc @string _path owner:System.IO.FileInfo
+              (this System.IO.FileInfo)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.FileInfo.CopyTo[-@string]
+      (block 2
+        (exprstmt
+          (membercall @void Copy System.Core!System.Syscall.FileSyscall.Copy[-@string,-@string] 2
+            (statictype System.Syscall.FileSyscall)
+            (memberacc @string _path owner:System.IO.FileInfo
+              (this System.IO.FileInfo)
+            )
+            (var System.Core!System.IO.FileInfo.CopyTo[-@string]/dest)
+          )
+        )
+        (return
+          (objnew System.IO.FileInfo 1
+            (var System.Core!System.IO.FileInfo.CopyTo[-@string]/dest)
           )
         )
       )
@@ -13469,6 +13780,156 @@
           )
         )
       )
+    )
+    (body System.Core!System.Diagnostics.ProcessStartInfo.ProcessStartInfo[]
+      (block 2
+        (exprstmt
+          (memberassign
+            (this System.Diagnostics.ProcessStartInfo) name:_arguments @string false
+            (lit @string s:)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Diagnostics.ProcessStartInfo) name:_workingDirectory @string false
+            (lit @string s:)
+          )
+        )
+      )
+    )
+    (body System.Core!System.Diagnostics.ProcessStartInfo.ProcessStartInfo[-@string]
+      (block 3
+        (exprstmt
+          (memberassign
+            (this System.Diagnostics.ProcessStartInfo) name:_fileName @string false
+            (var System.Core!System.Diagnostics.ProcessStartInfo.ProcessStartInfo[-@string]/fileName)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Diagnostics.ProcessStartInfo) name:_arguments @string false
+            (lit @string s:)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Diagnostics.ProcessStartInfo) name:_workingDirectory @string false
+            (lit @string s:)
+          )
+        )
+      )
+    )
+    (body System.Core!System.Diagnostics.ProcessStartInfo.get_FileName[]
+      (block 1
+        (return
+          (memberacc @string _fileName owner:System.Diagnostics.ProcessStartInfo
+            (this System.Diagnostics.ProcessStartInfo)
+          )
+        )
+      )
+    )
+    (body System.Core!System.Diagnostics.ProcessStartInfo.set_FileName[-@string]
+      (block 1
+        (exprstmt
+          (memberassign
+            (this System.Diagnostics.ProcessStartInfo) name:_fileName @string false
+            (var System.Core!System.Diagnostics.ProcessStartInfo.set_FileName[-@string]/value)
+          )
+        )
+      )
+    )
+    (body System.Core!System.Diagnostics.ProcessStartInfo.get_Arguments[]
+      (block 1
+        (return
+          (memberacc @string _arguments owner:System.Diagnostics.ProcessStartInfo
+            (this System.Diagnostics.ProcessStartInfo)
+          )
+        )
+      )
+    )
+    (body System.Core!System.Diagnostics.ProcessStartInfo.set_Arguments[-@string]
+      (block 1
+        (exprstmt
+          (memberassign
+            (this System.Diagnostics.ProcessStartInfo) name:_arguments @string false
+            (var System.Core!System.Diagnostics.ProcessStartInfo.set_Arguments[-@string]/value)
+          )
+        )
+      )
+    )
+    (body System.Core!System.Diagnostics.ProcessStartInfo.get_WorkingDirectory[]
+      (block 1
+        (return
+          (memberacc @string _workingDirectory owner:System.Diagnostics.ProcessStartInfo
+            (this System.Diagnostics.ProcessStartInfo)
+          )
+        )
+      )
+    )
+    (body System.Core!System.Diagnostics.ProcessStartInfo.set_WorkingDirectory[-@string]
+      (block 1
+        (exprstmt
+          (memberassign
+            (this System.Diagnostics.ProcessStartInfo) name:_workingDirectory @string false
+            (var System.Core!System.Diagnostics.ProcessStartInfo.set_WorkingDirectory[-@string]/value)
+          )
+        )
+      )
+    )
+    (body System.Core!System.Diagnostics.Process.Start[-System.Diagnostics.ProcessStartInfo]
+      (block 3
+        (vardecl System.Core!System.Diagnostics.Process.Start[-System.Diagnostics.ProcessStartInfo]/p
+          (objnew System.Diagnostics.Process 0)
+        )
+        (exprstmt
+          (memberassign
+            (var System.Core!System.Diagnostics.Process.Start[-System.Diagnostics.ProcessStartInfo]/p) name:_startInfo System.Diagnostics.ProcessStartInfo false
+            (var System.Core!System.Diagnostics.Process.Start[-System.Diagnostics.ProcessStartInfo]/info)
+          )
+        )
+        (return
+          (var System.Core!System.Diagnostics.Process.Start[-System.Diagnostics.ProcessStartInfo]/p)
+        )
+      )
+    )
+    (body System.Core!System.Diagnostics.Process.WaitForExit[]
+      (block 1
+        (exprstmt
+          (memberassign
+            (this System.Diagnostics.Process) name:_exitCode @i32 false
+            (membercall @i32 LaunchProcess System.Core!System.Syscall.ProcessSyscall.LaunchProcess[-@string,-@string,-@string] 3
+              (statictype System.Syscall.ProcessSyscall)
+              (membercall @string get_FileName System.Core!System.Diagnostics.ProcessStartInfo.get_FileName[] 0
+                (memberacc System.Diagnostics.ProcessStartInfo _startInfo owner:System.Diagnostics.Process
+                  (this System.Diagnostics.Process)
+                )
+              )
+              (membercall @string get_Arguments System.Core!System.Diagnostics.ProcessStartInfo.get_Arguments[] 0
+                (memberacc System.Diagnostics.ProcessStartInfo _startInfo owner:System.Diagnostics.Process
+                  (this System.Diagnostics.Process)
+                )
+              )
+              (membercall @string get_WorkingDirectory System.Core!System.Diagnostics.ProcessStartInfo.get_WorkingDirectory[] 0
+                (memberacc System.Diagnostics.ProcessStartInfo _startInfo owner:System.Diagnostics.Process
+                  (this System.Diagnostics.Process)
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.Diagnostics.Process.get_ExitCode[]
+      (block 1
+        (return
+          (memberacc @i32 _exitCode owner:System.Diagnostics.Process
+            (this System.Diagnostics.Process)
+          )
+        )
+      )
+    )
+    (body System.Core!System.Diagnostics.Process.Process[]
+      (block 0)
     )
     (body System.Core!System.Syscall.StringSyscall.StringFromBytes[-@u8[]]
       (block 8
@@ -18131,6 +18592,7 @@
     (import kernel32.dll)
     (ns System)
     (ns System.Collections.Generic)
+    (ns System.Diagnostics)
     (ns System.IO)
     (ns System.Syscall)
     (ns System.Text)
@@ -18191,10 +18653,10 @@
     (doc M:System.Console.WriteLine\(System.UInt64\) <summary>Writes\san\sunsigned\s64-bit\sinteger\sfollowed\sby\sa\snewline\sto\sthe\sstandard\soutput.</summary>\n<param\sname="text">The\sunsigned\s64-bit\sinteger\sto\swrite.</param>)
     (doc M:System.Console.WriteLine\(decimal\) <summary>Writes\sa\s128-bit\shigh-precision\sdecimal\sfollowed\sby\sa\snewline\sto\sthe\sstandard\soutput.</summary>\n<param\sname="text">The\sdecimal\sto\swrite.</param>)
     (doc M:System.Console.WriteLine\(f16\) <summary>Writes\sa\s16-bit\shalf-precision\sfloat\sfollowed\sby\sa\snewline\sto\sthe\sstandard\soutput.</summary>\n<param\sname="text">The\sf16\sto\swrite.</param>)
-    (doc M:System.Convert.FromBase64String\(System.String\) <summary>Base64\s瀛楃涓?鈫?瀛楄妭鏁扮粍锛涢潪娉曞瓧绗?闀垮害\s鈫?绌烘暟缁勩€?/summary>)
-    (doc M:System.Convert.FromHexString\(System.String\) <summary>鍗佸叚杩涘埗瀛楃涓诧紙澶у啓/灏忓啓鍧囧彲锛夆啋\s瀛楄妭鏁扮粍锛涘鏁伴暱搴︽垨闈炴硶瀛楃\s鈫?绌烘暟缁勩€?/summary>)
-    (doc M:System.Convert.ToBase64String\(System.Byte[]\) <summary>瀛楄妭鏁扮粍\s鈫?Base64\s瀛楃涓诧紙'='\s濉厖锛夈€?/summary>)
-    (doc M:System.Convert.ToHexString\(System.Byte[]\) <summary>瀛楄妭鏁扮粍\s鈫?澶у啓鍗佸叚杩涘埗瀛楃涓诧紙"0F2A..."锛夈€?/summary>)
+    (doc M:System.Convert.FromBase64String\(System.String\) <summary>Base64\s字符。。字节数组；非法字。长度\s。空数组。/summary>)
+    (doc M:System.Convert.FromHexString\(System.String\) <summary>十六进制字符串（大写/小写均可）→\s字节数组；奇数长度或非法字符\s。空数组。/summary>)
+    (doc M:System.Convert.ToBase64String\(System.Byte[]\) <summary>字节数组\s。Base64\s字符串（'='\s填充）。/summary>)
+    (doc M:System.Convert.ToHexString\(System.Byte[]\) <summary>字节数组\s。大写十六进制字符串（"0F2A..."）。/summary>)
     (doc M:System.Int32.CompareTo\(System.Int32,System.Int32\) <summary>Compares\sthis\sinteger\sto\sanother\sinteger.</summary>\n<param\sname="value">The\sinteger\sto\scompare\sto.</param>\n<returns>A\svalue\sindicating\sthe\srelative\sorder\s\(-1,\s0,\sor\s1\).</returns>)
     (doc M:System.Int32.Equals\(System.Int32,System.Int32\) <summary>Determines\swhether\sthis\sinteger\sequals\sthe\sspecified\sinteger.</summary>\n<param\sname="value">The\sinteger\sto\scompare\sto.</param>\n<returns>true\sif\svalue\sequals\sthis\sinteger;\sotherwise,\sfalse.</returns>)
     (doc M:System.Int32.GetHashCode\(System.Int32\) <summary>Returns\sthe\shash\scode\sfor\sthis\sinteger.</summary>\n<returns>A\s32-bit\ssigned\sinteger\shash\scode.</returns>)
@@ -18261,4 +18723,4 @@
     (doc T:System.String <summary>Represents\sa\ssequence\sof\scharacters.\sProvides\sstring\smanipulation\smethods.</summary>)
   )
 )
-(checksum sha256:97f5148020d3682e71bef93307ffe05bf814dd5bcc855fa1b6684f0393822844)
+(checksum sha256:ce433bf79d01a57a6177f1dbd27c52faaf774228881b49d569b8deb112a931f0)

@@ -45,6 +45,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             new BuiltinSpec(BuiltinKind.FileDelete, "Delete", TypeSymbol.Void, new[] { ("path", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.FileCopy, "Copy", TypeSymbol.Void, new[] { ("src", TypeSymbol.String), ("dst", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.DirectoryExists, "DirectoryExists", TypeSymbol.Boolean, new[] { ("path", TypeSymbol.String) }),
+            new BuiltinSpec(BuiltinKind.DeleteDirectory, "DeleteDirectory", TypeSymbol.Void, new[] { ("path", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.CreateDirectory, "CreateDirectory", TypeSymbol.Void, new[] { ("path", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.SetCurrentDirectory, "SetCurrentDirectory", TypeSymbol.Void, new[] { ("path", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.Sha256Hash, "Sha256Hash", TypeSymbol.ArrayOf(TypeSymbol.UInt8), new[] { ("data", TypeSymbol.ArrayOf(TypeSymbol.UInt8)) }),
@@ -143,6 +144,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         public static readonly FunctionSymbol FileDelete = Create(BuiltinKind.FileDelete);
         public static readonly FunctionSymbol FileCopy = Create(BuiltinKind.FileCopy);
         public static readonly FunctionSymbol DirectoryExists = Create(BuiltinKind.DirectoryExists);
+        public static readonly FunctionSymbol DeleteDirectory = Create(BuiltinKind.DeleteDirectory);
         public static readonly FunctionSymbol CreateDirectory = Create(BuiltinKind.CreateDirectory);
         public static readonly FunctionSymbol SetCurrentDirectory = Create(BuiltinKind.SetCurrentDirectory);
         public static readonly FunctionSymbol Sha256Hash = Create(BuiltinKind.Sha256Hash);
@@ -200,6 +202,7 @@ namespace Cocoa.CodeAnalysis.Symbols
                 BuiltinKind.FileDelete => FileDelete,
                 BuiltinKind.FileCopy => FileCopy,
                 BuiltinKind.DirectoryExists => DirectoryExists,
+                BuiltinKind.DeleteDirectory => DeleteDirectory,
                 BuiltinKind.CreateDirectory => CreateDirectory,
                 BuiltinKind.SetCurrentDirectory => SetCurrentDirectory,
                 BuiltinKind.Sha256Hash => Sha256Hash,

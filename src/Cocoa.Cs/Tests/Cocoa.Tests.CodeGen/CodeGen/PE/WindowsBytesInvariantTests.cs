@@ -29,8 +29,9 @@ function Main()
 }";
 
         // bf36bb18 基线采集（2026-10-16 本机 gold 哈希；T3.3 改造前）。
-        private const string GoldenTextSha256 = "4EF618F4F15620313D6BB439A0B416EA4EA62ED8EB5DBD3CB32E06F74997B6CA";
-        private const string GoldenDataSha256 = "2A95BCFDC960DD204A4AAEB53589E1ED94BABAEFB5B7B7F6348B75C46DF2CCE9";
+        // 2026-10-18 重采集：native 运行时新增 DeleteDirectory（RemoveDirectoryW 导入）→ .text/.data 字节变更。
+        private const string GoldenTextSha256 = "808E6A4F17444B3068F8E27FCD333BDC756FB88786DDECEAF29B4B28C7D34428";
+        private const string GoldenDataSha256 = "15CF3B5CC11592D78EF6D6F9B20BB6C3BC8CBCD001BF424002C8A81DC855C86C";
 
         [Fact]
         public void WindowsX64_TextAndData_ByteInvariant()

@@ -30,13 +30,13 @@ namespace Cocoa.Tests.Integration.Compiler
 
             var build = CliTestRunner.Run($"build -p \"{project}\"", dir);
             Assert.True(build.ExitCode == 0, build.Stderr);
-            Assert.True(Directory.Exists(Path.Combine(dir, ".cocoa")), "cache dir should exist after build");
+            Assert.True(Directory.Exists(Path.Combine(dir, "obj")), "intermediate dir (obj/) should exist after build");
             Assert.True(Directory.Exists(Path.Combine(dir, "out")), "output dir should exist after build");
 
             var (exitCode, stdout, stderr) = CliTestRunner.Run($"clean -p \"{project}\"", dir);
 
             Assert.True(exitCode == 0, stderr);
-            Assert.False(Directory.Exists(Path.Combine(dir, ".cocoa")), "cache dir should be removed");
+            Assert.False(Directory.Exists(Path.Combine(dir, "obj")), "intermediate dir (obj/) should be removed");
             Assert.False(Directory.Exists(Path.Combine(dir, "out")), "output dir should be removed");
             Assert.True(File.Exists(Path.Combine(dir, "App.coproj")), "project file must be preserved");
         }
@@ -57,7 +57,7 @@ namespace Cocoa.Tests.Integration.Compiler
 
             Assert.True(exitCode == 0, stderr);
             Assert.False(Directory.Exists(Path.Combine(dir, "App", "out")));
-            Assert.False(Directory.Exists(Path.Combine(dir, "App", ".cocoa")));
+            Assert.False(Directory.Exists(Path.Combine(dir, "App", "obj")));
         }
 
         [Fact]

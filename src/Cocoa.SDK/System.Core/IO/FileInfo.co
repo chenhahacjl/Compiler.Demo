@@ -1,0 +1,67 @@
+// Cocoa 系统标准库 · Core（namespace System.IO）——BCL 存在类型即 facade
+// class FileInfo —— facade：IL 直连 System.IO.FileInfo；native/Evaluator 走本体（FileSyscall/IOSyscall 转发 + Path 纯函数）。
+// 实例字段 _path 承载目标路径；语义对齐 BCL 子集：Name/Extension/DirectoryName/Exists/Length/Delete/CopyTo。
+
+using System.IO
+
+using System.Syscall
+
+namespace System.IO
+{
+    [Facade("System.IO.FileInfo")]
+    public class FileInfo
+    {
+        private field _path: string
+
+        public constructor(path: string)
+        {
+            _path = path
+        }
+
+        public property Name: string
+        {
+            get { return Path.GetFileName(_path) }
+        }
+
+        public property Extension: string
+        {
+            get { return Path.GetExtension(_path) }
+        }
+
+        public property DirectoryName: string
+        {
+            get { return Path.GetDirectoryName(_path) }
+        }
+
+        public property Exists: bool
+        {
+            get { return FileSyscall.Exists(_path) }
+        }
+
+        public property Length: i64
+        {
+            get
+            {
+                let h = IOSyscall.FileOpen(_path, FileMode.Open, FileAccess.Read, FileShare.Read)
+                if h == 0
+                {
+                    return 0
+                }
+                let len = IOSyscall.FileSize(h)
+                IOSyscall.FileClose(h)
+                return len
+            }
+        }
+
+        public function Delete(): void
+        {
+            FileSyscall.Delete(_path)
+        }
+
+        public function CopyTo(dest: string): FileInfo
+        {
+            FileSyscall.Copy(_path, dest)
+            return new FileInfo(dest)
+        }
+    }
+}

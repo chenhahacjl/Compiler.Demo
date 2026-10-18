@@ -128,6 +128,7 @@ namespace Cocoa.CodeGen.Native
             // ---- Linux 文件/目录/环境（裸 syscall；实现见 RuntimeFunctionEmitter.LinuxFile.cs）----
             _ = BeginFunctionTyped("FileExists", new[] { 8 }, LirType.Addr); EmitFileExistsLinux();
             _ = BeginFunctionTyped("DirectoryExists", new[] { 8 }, LirType.Addr); EmitDirectoryExistsLinux();
+            _ = BeginFunctionTyped("DeleteDirectory", new[] { 8 }, LirType.Addr); EmitDeleteDirectoryLinux();
             _ = BeginFunctionTyped("CreateDirectory", new[] { 8 }, LirType.Addr); EmitCreateDirectoryLinux();
             _ = BeginFunctionTyped("FileDelete", new[] { 8 }, LirType.Addr); EmitFileDeleteLinux();
             _ = BeginFunctionTyped("FileCopy", new[] { 8, 8 }, LirType.Addr, LirType.Addr); EmitFileCopyLinux();

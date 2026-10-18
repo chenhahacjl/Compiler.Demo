@@ -80,29 +80,31 @@ function Main(): void
   </PropertyGroup>
   <ItemGroup>
     <Source Include=""*.co"" />
-    <Reference Include=""../ClosureLib/ClosureLib.coa"" />
+    <Reference Include=""../ClosureLib/ClosureLib.coproj"" />
   </ItemGroup>
 </Project>
 ");
 
+            var libCoaPath = Path.Combine(libDir, "bin", "Debug", "ClosureLib.coa");
             var libProject = Path.Combine(libDir, "ClosureLib.coproj");
             var libBuild = CliTestRunner.Run($"build \"{libProject}\"", root);
             Assert.True(libBuild.ExitCode == 0, $"lib build failed: {libBuild.Stdout}{libBuild.Stderr}");
-            Assert.True(File.Exists(Path.Combine(libDir, "ClosureLib.coa")));
+            Assert.True(File.Exists(libCoaPath));
 
             // 记录闭包元数据确已随库携带（IsLambda/EnvClass/捕获清单）
-            var libText = File.ReadAllText(Path.Combine(libDir, "ClosureLib.coa"));
+            var libText = File.ReadAllText(libCoaPath);
             Assert.Contains("envl:true", libText);
             Assert.Contains("envc:__Env_MakeAdder", libText);
             Assert.Contains("envcap:1", libText);
 
+            var appOutputDir = Path.Combine(appDir, "bin", "Debug", "managed", "net9.0");
             var appProject = Path.Combine(appDir, "App.coproj");
             var appBuild = CliTestRunner.Run($"build \"{appProject}\" -b managed-net --dotnet-runtime net9.0", root);
             Assert.True(appBuild.ExitCode == 0, $"app build failed: {appBuild.Stdout}{appBuild.Stderr}");
-            Assert.True(File.Exists(Path.Combine(appDir, "App.exe")));
-            Assert.True(File.Exists(Path.Combine(appDir, "ClosureLib.Managed.dll")), "库托管 dll 应按需生成（捕获闭包宿主）");
+            Assert.True(File.Exists(Path.Combine(appOutputDir, "App.exe")));
+            Assert.True(File.Exists(Path.Combine(appOutputDir, "ClosureLib.Managed.dll")), "库托管 dll 应按需生成（捕获闭包宿主）");
 
-            var run = RunExe(Path.Combine(appDir, "App.exe"));
+            var run = RunExe(Path.Combine(appOutputDir, "App.exe"));
             Assert.True(run.exitCode == 0, $"app run failed: {run.output}");
             Assert.Contains("42", run.output);
             Assert.Contains("10", run.output);

@@ -262,6 +262,13 @@ namespace Cocoa.CodeGen.Native
                     Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("DirectoryExists"), LirOperand.Constant(0)));
                     return result;
                 }
+                case BuiltinKind.DeleteDirectory:
+                {
+                    var path = EmitExpression(arguments[0]);
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(path)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime("DeleteDirectory"), LirOperand.Constant(0)));
+                    return VoidResult();
+                }
                 case BuiltinKind.CreateDirectory:
                 {
                     var path = EmitExpression(arguments[0]);

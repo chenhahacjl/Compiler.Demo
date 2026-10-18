@@ -1,12 +1,12 @@
 @echo off
-REM 构建 Cocoa SDK（标准库）（src\Cocoa.SDK\Cocoa.SDK.cosln）System.Core\*.co -> src\Cocoa.SDK\out\System.Core.coa
+REM 构建 Cocoa SDK（标准库）（src\Cocoa.SDK\Cocoa.SDK.cosln）System.Core\*.co -> src\Cocoa.SDK\System.Core\bin\Debug\System.Core.coa
 REM 子目录按需加载（未来增补模块：System.Net.coa/System.Json.coa）
 REM  由 Cocoa.SDK.cosln 工程约定的 .coproj 工程文件自动包含
 REM 用法：tools\build-sdk.cmd
 setlocal
 set "ROOT=%~dp0.."
 set "SDK=%ROOT%\src\Cocoa.SDK"
-set "OUT=%SDK%\out"
+set "OUT=%SDK%\System.Core\bin\Debug"
 
 if not exist "%OUT%" mkdir "%OUT%"
 

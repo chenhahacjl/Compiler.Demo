@@ -140,15 +140,22 @@ namespace Cocoa.Build
             if (cli.OutputPath != null) target.OutputPath = cli.OutputPath;
         }
 
-        /// <summary>解析输出目录（相对项目文件目录），未配置时默认项目目录。</summary>
+        /// <summary>
+        /// 解析输出目录（相对项目文件目录）。显式 <c>OutputPath</c> 优先；未配置时按
+        /// <see cref="BuildOutputLayout"/> 默认布局（bin/&lt;Config&gt;/{managed|native}…）计算。
+        /// </summary>
         public string GetOutputDirectory()
+            => GetOutputDirectory(Configuration, Backend ?? ProjectBuildOptions.DefaultBackend, Arch, DotnetRuntime);
+
+        /// <summary>带生效参数的输出目录计算（ProjectBuilder 用 CLI/.user 覆盖后的 os/backend/arch/tfm）。</summary>
+        public string GetOutputDirectory(ProjectConfiguration config, CodeBackend backend, Architecture arch, string? tfm)
         {
-            if (OutputPath is null)
+            if (OutputPath is not null)
             {
-                return Directory;
+                return Path.GetFullPath(Path.Combine(Directory, OutputPath));
             }
 
-            return Path.GetFullPath(Path.Combine(Directory, OutputPath));
+            return BuildOutputLayout.DefaultOutputDirectory(this, config, backend, arch, tfm);
         }
 
         /// <summary>默认输出文件名（T3：linux native 产物无扩展名——ELF 惯例；其余恒 .exe/.dll/.coa）。</summary>

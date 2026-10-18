@@ -40,14 +40,14 @@ namespace Cocoa.Build
             }
 
             var allOk = true;
-            var buildOptions = GetBuildOptions(options, solution.Directory);
             foreach (var index in order)
             {
                 ProjectBuildResult result;
                 try
                 {
                     // 6e-M21：聚合解决方案容错——单项目失败（如 native 后端遇 OOP/dotnet-only 示例）不中断其余构建
-                    result = ProjectBuilder.Build(projects[index], buildOptions, messageWriter);
+                    // 增量/中间件均按项目自身目录（bin/、obj/）计算，无方案级缓存根。
+                    result = ProjectBuilder.Build(projects[index], options, messageWriter);
                 }
                 catch (Exception ex)
                 {
@@ -63,28 +63,6 @@ namespace Cocoa.Build
             }
 
             return allOk;
-        }
-
-        private static ProjectBuildOptions GetBuildOptions(ProjectBuildOptions options, string anchorDirectory)
-        {
-            if (options.CacheRoot != null)
-            {
-                return options;
-            }
-
-            return new ProjectBuildOptions
-            {
-                FormatOverride = options.FormatOverride,
-                PlatformOverride = options.PlatformOverride,
-                TargetOsOverride = options.TargetOsOverride,
-                NoIncremental = options.NoIncremental,
-                ConfigurationOverride = options.ConfigurationOverride,
-                OutputFileOverride = options.OutputFileOverride,
-                ReferenceOverrides = options.ReferenceOverrides,
-                Backend = options.Backend,
-                DotnetRuntimeOverride = options.DotnetRuntimeOverride,
-                CacheRoot = BuildCache.GetDefaultCacheRoot(anchorDirectory),
-            };
         }
 
         /// <summary>Kahn 拓扑排序。存在环时返回 default，并通过 cycle 输出环路径（索引序列）。</summary>
@@ -169,7 +147,10 @@ namespace Cocoa.Build
                         ? reference
                         : Path.GetFullPath(Path.Combine(project.Directory, reference));
 
-                    if (string.Equals(path, outputPath, StringComparison.OrdinalIgnoreCase))
+                    // 依赖边：命中被引用项目的产物路径（.coa/.dll）或项目文件本身（.coproj 项目引用）
+                    var isProjectFileRef = path.EndsWith(".coproj", StringComparison.OrdinalIgnoreCase);
+                    if (string.Equals(path, outputPath, StringComparison.OrdinalIgnoreCase) ||
+                        (isProjectFileRef && string.Equals(path, projects[j].FilePath, StringComparison.OrdinalIgnoreCase)))
                     {
                         dependencies.Add(j);
                         break;

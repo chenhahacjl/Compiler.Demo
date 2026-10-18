@@ -198,6 +198,13 @@ namespace Cocoa.CodeGen.Managed
                     il.Emit(IlOpCodeTable.Get("Call"), m);
                     break;
                 }
+                case BuiltinKind.DeleteDirectory:
+                {
+                    var m = _framework.ResolveMethod("System.IO.Directory", "Delete", new[] { "System.String" });
+                    if (m == null) throw new Exception("System.IO.Directory.Delete not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
                 case BuiltinKind.CreateDirectory:
                 {
                     var m = _framework.ResolveMethod("System.IO.Directory", "CreateDirectory", new[] { "System.String" });
@@ -223,9 +230,18 @@ namespace Cocoa.CodeGen.Managed
                 }
                 case BuiltinKind.LaunchProcess:
                 {
+                    // 库发射（生成 System.Core.Managed.dll 等）默认引用不引 System.Diagnostics.Process.dll ——
+                    // 桩成 NotSupportedException（与 IOSyscall 低层句柄原语同款；消费方带引用走真实 BCL 路径）。
+                    var psiCtor = _framework.FindMethod("System.Diagnostics.ProcessStartInfo", ".ctor", new[] { "System.String" });
+                    if (psiCtor == null)
+                    {
+                        var stub = _framework.ResolveMethod("System.NotSupportedException", ".ctor", Array.Empty<string>());
+                        il.Emit(IlOpCodeTable.Get("Newobj"), stub);
+                        il.Emit(IlOpCodeTable.Get("Throw"));
+                        break;
+                    }
+
                     // ProcessStartInfo(string fileName) ctor — consumes 'path' from stack
-                    var psiCtor = _framework.ResolveMethod("System.Diagnostics.ProcessStartInfo", ".ctor", new[] { "System.String" });
-                    if (psiCtor == null) throw new Exception("ProcessStartInfo.ctor not found in framework references");
                     il.Emit(IlOpCodeTable.Get("Newobj"), psiCtor);
                     // stack: [..., psi]
 
@@ -1304,6 +1320,14 @@ namespace Cocoa.CodeGen.Managed
                         {
                             facadeMethodRef = _framework.FindMethod("System.IO.Stream", "Close", facadeParamNames);
                         }
+                    }
+
+                    // FileInfo/DirectoryInfo 的 Name/Extension/Exists/Length 等继承自 FileSystemInfo，
+                    // FindMethod 不回溯基类 → 显式落位（callvirt 运行时按虚表分派到真实实现）
+                    if (facadeMethodRef == null &&
+                        (facadeOwner.FullName == "System.IO.FileInfo" || facadeOwner.FullName == "System.IO.DirectoryInfo"))
+                    {
+                        facadeMethodRef = _framework.FindMethod("System.IO.FileSystemInfo", node.Identifier, facadeParamNames);
                     }
 
                     if (facadeMethodRef == null && facadeOwner.FullName == "System.Console")

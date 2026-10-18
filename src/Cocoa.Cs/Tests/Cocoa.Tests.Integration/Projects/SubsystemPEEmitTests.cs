@@ -64,7 +64,7 @@ namespace Cocoa.Tests.Integration.Projects
             var project = WriteProject("<Subsystem>Windows</Subsystem>");
             var result = ProjectBuilder.Build(
                 project,
-                new ProjectBuildOptions { CacheRoot = _directory, Backend = CodeBackend.Native },
+                new ProjectBuildOptions { Backend = CodeBackend.Native },
                 _out);
             Assert.True(result.Success, _out.ToString());
             Assert.Equal(2, ReadSubsystem(Path.Combine(_directory, "out", "App.exe")));
@@ -76,7 +76,7 @@ namespace Cocoa.Tests.Integration.Projects
             var project = WriteProject("");
             var result = ProjectBuilder.Build(
                 project,
-                new ProjectBuildOptions { CacheRoot = _directory, Backend = CodeBackend.Native },
+                new ProjectBuildOptions { Backend = CodeBackend.Native },
                 _out);
             Assert.True(result.Success, _out.ToString());
             Assert.Equal(3, ReadSubsystem(Path.Combine(_directory, "out", "App.exe")));

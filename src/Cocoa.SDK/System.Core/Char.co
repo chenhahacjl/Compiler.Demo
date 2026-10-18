@@ -1,4 +1,4 @@
-?// Cocoa 系统标准。· System.Core 基元 facade（namespace System。// class Char —。char 的成员面载体。e-M19 M2-b，对。C# System.Char）。// 注：char 无关系运算符，判。比较统一。i32 转换。0'=48 '9'=57 'A'=65 'Z'=90 'a'=97 'z'=122）。
+// Cocoa System.Core standard library
 namespace System
 {
     [Facade("System.Char")]

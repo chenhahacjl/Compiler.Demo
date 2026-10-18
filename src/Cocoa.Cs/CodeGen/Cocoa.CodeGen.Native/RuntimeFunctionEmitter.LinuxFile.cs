@@ -21,6 +21,7 @@ namespace Cocoa.CodeGen.Native
         private const int __NR_getcwd = 79;
         private const int __NR_chdir = 80;
         private const int __NR_mkdir = 83;
+        private const int __NR_rmdir = 84;
         private const int __NR_unlink = 87;
         private const int __NR_readlink = 89;
         private const int __NR_fork = 57;
@@ -270,6 +271,13 @@ namespace Cocoa.CodeGen.Native
         {
             var (pp, _) = EmitUtf8Z(_args[0], _fileBuffer);
             LinuxSyscall(null, __NR_mkdir, 2, pp, C(8, Mode0777));
+            EndFunction(_currentFunction!, 0);
+        }
+
+        private void EmitDeleteDirectoryLinux()
+        {
+            var (pp, _) = EmitUtf8Z(_args[0], _fileBuffer);
+            LinuxSyscall(null, __NR_rmdir, 1, pp);
             EndFunction(_currentFunction!, 0);
         }
 

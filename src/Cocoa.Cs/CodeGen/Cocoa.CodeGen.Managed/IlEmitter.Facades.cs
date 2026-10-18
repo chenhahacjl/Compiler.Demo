@@ -229,6 +229,12 @@ private bool IsFacadeRedirect(NamedTypeSymbol classType)
             foreach (var a in methodArgs) EmitExpression(il, a);
             var callOp = !isInstance || IsValueTypeSymbol(node.Arguments[0].Type) ? "Call" : "Callvirt";
             il.Emit(IlOpCodeTable.Get(callOp), methodRef);
+            // 6e：BCL 方法带回值但 Cocoa facade 声明为 void 时（Directory.CreateDirectory → DirectoryInfo），
+            // 直连后须弹栈保持平衡（Branch 1 已覆盖 MemberCall 形态；此处覆盖静态 CallExpression 形态）。
+            if (FacadeBclReturnsValueWhileVoid(cc, fn))
+            {
+                il.Emit(IlOpCodeTable.Get("Pop"));
+            }
             return true;
         }
 

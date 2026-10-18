@@ -1,0 +1,54 @@
+// Cocoa 系统标准库 · Core（namespace System.IO）——BCL 存在类型即 facade
+// class DirectoryInfo —— facade：IL 直连 System.IO.DirectoryInfo；native/Evaluator 走本体（IOSyscall 转发 + Path 纯函数）。
+// 语义对齐 BCL 子集：Name/Parent/Exists/Create/Delete；实例字段 _path 承载目标路径。
+
+using System.IO
+
+using System.Syscall
+
+namespace System.IO
+{
+    [Facade("System.IO.DirectoryInfo")]
+    public class DirectoryInfo
+    {
+        private field _path: string
+
+        public constructor(path: string)
+        {
+            _path = path
+        }
+
+        public property Name: string
+        {
+            get { return Path.GetFileName(_path) }
+        }
+
+        public property Parent: DirectoryInfo
+        {
+            get
+            {
+                let p = Path.GetDirectoryName(_path)
+                if String.IsNullOrEmpty(p)
+                {
+                    return null
+                }
+                return new DirectoryInfo(p)
+            }
+        }
+
+        public property Exists: bool
+        {
+            get { return IOSyscall.DirectoryExists(_path) }
+        }
+
+        public function Create(): void
+        {
+            IOSyscall.CreateDirectory(_path)
+        }
+
+        public function Delete(): void
+        {
+            IOSyscall.DeleteDirectory(_path)
+        }
+    }
+}

@@ -136,11 +136,12 @@ namespace Cocoa.Tests.Integration.Compiler
             Assert.True(exitCode == 0, $"build failed ({exitCode}). stdout=[{stdout}] stderr=[{stderr}]");
 
             var root = Path.GetDirectoryName(projectDir)!;
-            var exePath = Path.Combine(root, "Hello.exe");
-            var dllPath = Path.Combine(root, "Hello.dll");
+            var outDir = Path.Combine(root, "bin", "Debug", "managed", "net9.0");
+            var exePath = Path.Combine(outDir, "Hello.exe");
+            var dllPath = Path.Combine(outDir, "Hello.dll");
             Assert.True(File.Exists(exePath), "native apphost exe missing");
             Assert.True(File.Exists(dllPath), "managed dll missing");
-            Assert.True(File.Exists(Path.Combine(root, "Hello.runtimeconfig.json")), "runtimeconfig missing");
+            Assert.True(File.Exists(Path.Combine(outDir, "Hello.runtimeconfig.json")), "runtimeconfig missing");
 
             // exe 是原生 apphost（与 SDK 模板等长），不是托管程序集
             var template = AppHostPatcher.FindDefaultTemplate();
@@ -165,7 +166,7 @@ namespace Cocoa.Tests.Integration.Compiler
             var (exitCode, stdout, stderr) = RunCli($"build \"{projectDir}\" -b managed-net --dotnet-runtime net9.0");
             Assert.True(exitCode == 0, $"build failed ({exitCode}). stdout=[{stdout}] stderr=[{stderr}]");
 
-            var exePath = Path.Combine(Path.GetDirectoryName(projectDir)!, "ArgsApp.exe");
+            var exePath = Path.Combine(Path.Combine(Path.GetDirectoryName(projectDir)!, "bin", "Debug", "managed", "net9.0"), "ArgsApp.exe");
             var run = RunExe(exePath, "alpha", "beta");
             Assert.Equal(0, run.ExitCode);
             Assert.Contains("2", run.Stdout);

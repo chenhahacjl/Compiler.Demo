@@ -7,7 +7,7 @@ namespace Cocoa.CodeAnalysis.Serialization
     /// 带 <c>.Managed</c>/<c>.Native.x64</c> 的名字不在任何映射表中，任何库名都天然安全。
     ///
     /// `.coa` 文件名与目录发现约定（System*.coa 等）不受影响；消费方构建时按需生成并部署
-    /// （缺失或 stamp 过期即现场再生，见 ProjectBuilder EnsureManagedDlls）。
+    /// （缺失或比 coa 源旧即现场再生，时间戳判定无 .stamp，见 ProjectBuilder EnsureManagedDlls）。
     /// </summary>
     public static class CoaAssemblyNaming
     {

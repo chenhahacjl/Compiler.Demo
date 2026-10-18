@@ -124,11 +124,18 @@ namespace Cocoa.Build
                 }
             }
 
-            var outputDirectory = project.GetOutputDirectory();
+            var outputDirectory = project.GetOutputDirectory(
+                options.ConfigurationOverride ?? project.Configuration,
+                backend,
+                effectiveArch,
+                projectTfm);
             var outputFile = options.OutputFileOverride != null
                 ? Path.GetFullPath(options.OutputFileOverride)
                 : Path.Combine(outputDirectory, project.GetDefaultOutputFileName(effectiveTargetOs, backend));
             Directory.CreateDirectory(Path.GetDirectoryName(outputFile)!);
+
+            // 中间件目录（HIR/MIR/LIR 落盘 obj/）
+            var objDirectory = BuildOutputLayout.ObjDirectory(project.Directory);
 
             var expansion = Glob.Expand(project.SourcePatterns, project.Directory);
             foreach (var pattern in expansion.UnmatchedPatterns)
@@ -155,39 +162,36 @@ namespace Cocoa.Build
             }
 
             var useIncremental = !options.NoIncremental;
-            var cacheRoot = options.CacheRoot ?? BuildCache.GetDefaultCacheRoot(project.Directory);
-            var cachePath = BuildCache.GetCachePath(cacheRoot, project.Directory, project.Name);
 
             var dotnetRuntime = options.DotnetRuntimeOverride ?? project.DotnetRuntime ?? "net48";
-            if (dotnetRuntime != null && !IlTarget.TryParse(dotnetRuntime, out _))
+            if (!IlTarget.TryParse(dotnetRuntime, out _))
             {
                 messageWriter.WriteLine($"error: invalid dotnetRuntime '{dotnetRuntime}'. Expected e.g. net40~net48 (netfx, default net48) or net8.0/net9.0 (netcore)");
                 return ProjectBuildResult.Failed;
             }
 
-            var optionTokens = new[]
-            {
-                $"format={format}",
-                $"platform={options.PlatformOverride ?? effectiveArch.ToString()}",
-                $"os={effectiveTargetOs}",
-                $"backend={backend}",
-                $"configuration={options.ConfigurationOverride ?? project.Configuration}",
-                $"output={outputFile}",
-                $"entry={project.Entry}",
-                $"dotnetRuntime={dotnetRuntime}",
-            };
-
             // 动态链接（阶段 A2）：dotnet 后端消费 `.coa` 时以外部 dll 依赖接入（产物不内联库体）；
             // native 后端保持编译期合并（PE 静态链接）；cocoa 库产物自身不涉及
             var linkCoaDynamically = backend.IsManaged() && format != ProjectOutputFormat.Cocoa;
 
-            var fingerprint = BuildCache.ComputeFingerprint(
-                expansion.Files,
-                references.ToImmutableArray(),
-                project.Imports,
-                optionTokens.ToImmutableArray());
+            // 增量判定（.NET Inputs/Outputs 时间戳模型，无 .cache/.stamp）：输出比所有输入新 → up-to-date。
+            // 输入 = 源文件 ∪ 引用文件 ∪ .coproj[.user]（改配置/代码即刷新输入 mtime）。
+            var incrementalInputs = new List<string>(expansion.Files)
+            {
+                project.FilePath,
+            };
+            foreach (var reference in references)
+            {
+                incrementalInputs.Add(reference);
+            }
 
-            if (useIncremental && BuildCache.IsUpToDate(cachePath, fingerprint))
+            var userFile = project.FilePath + ".user";
+            if (File.Exists(userFile))
+            {
+                incrementalInputs.Add(userFile);
+            }
+
+            if (useIncremental && IncrementalCheck.IsUpToDate(outputFile, incrementalInputs))
             {
                 // 动态链接自愈：增量命中也检查被消费库的托管 dll 是否缺失/过期——被误删时现场再生
                 if (linkCoaDynamically)
@@ -227,7 +231,7 @@ namespace Cocoa.Build
                     var docPath = options.DocOutput != null
                         ? outputFile + ".xml"
                         : project.DocumentationFile;
-                    diagnostics = compilation.EmitCoa(project.Name, outputFile, docPath);
+                    diagnostics = compilation.EmitCoa(project.Name, outputFile, docPath, objDirectory);
                 }
                 else if (backend == CodeBackend.Native)
                 {
@@ -255,7 +259,7 @@ namespace Cocoa.Build
                             ? (ushort)2 /* PeSubsystem.WindowsGui */
                             : (ushort)3 /* PeSubsystem.WindowsCui */;
 
-                        diagnostics = compilation.EmitNative(project.Name, outputFile, platform, subsystem, resourceOptions);
+                        diagnostics = compilation.EmitNative(project.Name, outputFile, platform, subsystem, resourceOptions, objDirectory);
                 }
                 else
                 {
@@ -273,7 +277,7 @@ namespace Cocoa.Build
                         // netcore 可执行：托管程序集产出 `<name>.dll`，另生成原生 apphost `<name>.exe`（SDK 标准布局），
                         // 双击/直接运行即经 apphost 激活 dotnet 宿主。netfx 仍是托管 exe（mscoree 导入）直接运行。
                         var managedDllPath = Path.ChangeExtension(outputFile, ".dll");
-                        diagnostics = compilation.Emit(project.Name, referencePaths, managedDllPath, target, emitLibrary: false, versionInfo, resourceOptions);
+                        diagnostics = compilation.Emit(project.Name, referencePaths, managedDllPath, target, emitLibrary: false, versionInfo, resourceOptions, objDirectory);
                         if (!diagnostics.HasErrors())
                         {
                             var templatePath = AppHostPatcher.FindDefaultTemplate();
@@ -285,7 +289,7 @@ namespace Cocoa.Build
                     }
                     else
                     {
-                        diagnostics = compilation.Emit(project.Name, referencePaths, outputFile, target, emitLibrary, versionInfo, resourceOptions);
+                        diagnostics = compilation.Emit(project.Name, referencePaths, outputFile, target, emitLibrary, versionInfo, resourceOptions, objDirectory);
                     }
                 }
             }
@@ -347,11 +351,6 @@ namespace Cocoa.Build
                 }
             }
 
-            if (useIncremental)
-            {
-                BuildCache.Write(cachePath, fingerprint);
-            }
-
             CopyContentToOutput(project, outputDirectory, warningsAsErrors, messageWriter, ref warningsFailed);
             if (warningsFailed)
             {
@@ -393,9 +392,7 @@ namespace Cocoa.Build
         /// </summary>
         private static PeResourceOptions BuildResourceOptions(CocoaProjectFile project, PeVersionInfo versionInfo)
         {
-            var iconPath = project.ApplicationIcon != null
-                ? Path.GetFullPath(Path.Combine(project.Directory, project.ApplicationIcon))
-                : null;
+            var iconPath = ResolveIconPath(project);
 
             var extra = new List<PeResourceItem>();
             var nameId = 1u;
@@ -431,9 +428,37 @@ namespace Cocoa.Build
         }
 
         /// <summary>
-        /// 收集项目引用（project.References + 命令行 overrides）：`.coa`/`.dll` 校验存在性，
-        /// 全部合法返回引用列表；遇缺失文件返回 error 消息（调用方负责打印并判失败）。
-        /// `.coa` 语义层程序集引用由 Compilation 加载（符号注入 + BoundProgram 合并），此处仅登记路径。
+        /// 图标解析优先级：显式 <c>ApplicationIcon</c>（相对项目目录，任意输出类型均生效）→
+        /// **未指定时的默认图标**（仅可执行产物）：项目目录内 <c>EXE.ico</c>（复制即生效）→
+        /// 逐级上溯 <c>resources/EXE.ico</c>（仓库根兜底）。找不到返回 null（产物无图标）。
+        /// </summary>
+        private static string? ResolveIconPath(CocoaProjectFile project)
+        {
+            if (project.ApplicationIcon != null)
+            {
+                return Path.GetFullPath(Path.Combine(project.Directory, project.ApplicationIcon));
+            }
+
+            // 默认图标仅作用于可执行产物（exe）；库/coa 输出不带默认图标
+            if (project.Output != ProjectOutputFormat.Executable)
+            {
+                return null;
+            }
+
+            var projectLocal = Path.Combine(project.Directory, AppIconLocator.FileName);
+            if (File.Exists(projectLocal))
+            {
+                return projectLocal;
+            }
+
+            return AppIconLocator.Locate(project.Directory);
+        }
+
+        /// <summary>
+        /// 收集项目引用（project.References + 命令行 overrides）：
+        /// - `.coa` / `.dll` 直接引用（校验存在性；`.coa` 由 Compilation 语义加载，此处跳过存在性）；
+        /// - `.coproj` 项目引用 → 解析为被引用项目在**同一生效配置**下的实际输出文件（.coa/.dll/.exe），
+        ///   对齐 .NET ProjectReference（输出路径随 backend/tfm 变化的场景不再硬编码失配）。
         /// </summary>
         private static List<string> CollectReferences(
             CocoaProjectFile project,
@@ -447,6 +472,35 @@ namespace Cocoa.Build
                 var path = Path.IsPathRooted(reference)
                     ? reference
                     : Path.GetFullPath(Path.Combine(project.Directory, reference));
+
+                if (path.EndsWith(".coproj", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!File.Exists(path))
+                    {
+                        error = $"error: project reference '{path}' doesn't exist!";
+                        return references;
+                    }
+
+                    CocoaProjectFile referenced;
+                    try
+                    {
+                        referenced = CocoaProjectFile.Load(path);
+                    }
+                    catch (ProjectFileFormatException ex)
+                    {
+                        error = $"error: failed to load project reference '{path}': {ex.Message}";
+                        return references;
+                    }
+
+                    var refConfig = options.ConfigurationOverride ?? referenced.Configuration;
+                    var refBackend = options.Backend ?? referenced.Backend ?? CodeBackend.ManagedNet;
+                    var refOs = options.TargetOsOverride ?? referenced.TargetOs;
+                    var refTfm = options.DotnetRuntimeOverride ?? referenced.DotnetRuntime;
+                    var refDir = referenced.GetOutputDirectory(refConfig, refBackend, referenced.Arch, refTfm);
+                    var outputFile = Path.Combine(refDir, referenced.GetDefaultOutputFileName(refOs, refBackend));
+                    references.Add(outputFile);
+                    continue;
+                }
 
                 if (path.EndsWith(".coa", StringComparison.OrdinalIgnoreCase))
                 {
@@ -548,7 +602,7 @@ namespace Cocoa.Build
 
         /// <summary>
         /// 动态链接（阶段 A）：确保被消费 `.coa` 库的托管 dll（X.Managed.dll）在输出目录就绪——
-        /// 缺失或 stamp（coa 文件 sha256）过期 → 从 coa 现场再生。误删/清缓存后下次构建自动自愈。
+        /// 缺失或比 coa 源旧（时间戳；无 .stamp）→ 从 coa 现场再生。误删/清缓存后下次构建自动自愈。
         /// 返回 false 表示有生成错误（已写诊断，调用方判构建失败）。
         /// </summary>
         private static bool EnsureManagedDlls(IEnumerable<(string Name, string SourcePath)> libraries, string outputDirectory, IlTarget target, TextWriter messageWriter)
@@ -564,11 +618,9 @@ namespace Cocoa.Build
                 }
 
                 var managedDll = Path.Combine(outputDirectory, name + ".dll");
-                var stampPath = managedDll + ".stamp";
-                var coaHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(sourcePath))).ToLowerInvariant();
-                var stamped = File.Exists(stampPath) ? File.ReadAllText(stampPath).Trim() : "";
 
-                if (File.Exists(managedDll) && stamped == coaHash)
+                // 时间戳自愈（.NET 风格，无 .stamp）：dll 缺失或比 coa 源旧 → 再生
+                if (File.Exists(managedDll) && File.GetLastWriteTimeUtc(managedDll) >= File.GetLastWriteTimeUtc(sourcePath))
                 {
                     continue;
                 }
@@ -580,8 +632,6 @@ namespace Cocoa.Build
                     ok = false;
                     continue;
                 }
-
-                File.WriteAllText(stampPath, coaHash);
             }
 
             return ok;
@@ -603,11 +653,9 @@ namespace Cocoa.Build
                 }
 
                 var managedDll = Path.Combine(outputDirectory, library.Name + ".dll");
-                var stampPath = managedDll + ".stamp";
-                var coaHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(library.SourcePath))).ToLowerInvariant();
-                var stamped = File.Exists(stampPath) ? File.ReadAllText(stampPath).Trim() : "";
 
-                if (File.Exists(managedDll) && stamped == coaHash)
+                // 时间戳自愈（无 .stamp）：dll 缺失或比 coa 源旧 → 再生
+                if (File.Exists(managedDll) && File.GetLastWriteTimeUtc(managedDll) >= File.GetLastWriteTimeUtc(library.SourcePath))
                 {
                     continue;
                 }
@@ -619,8 +667,6 @@ namespace Cocoa.Build
                     ok = false;
                     continue;
                 }
-
-                File.WriteAllText(stampPath, coaHash);
             }
 
             return ok;

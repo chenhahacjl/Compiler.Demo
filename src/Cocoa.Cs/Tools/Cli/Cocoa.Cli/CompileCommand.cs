@@ -26,6 +26,7 @@ namespace Cocoa.Cli
             var sourcePaths = new List<string>();
             var helpRequested = false;
             var nowarnCodes = ImmutableHashSet<string>.Empty;
+            var iconText = (string?)null;
 
             for (var i = 0; i < args.Length; i++)
             {
@@ -104,6 +105,14 @@ namespace Cocoa.Cli
 
                         var codes = nowarnText.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                         nowarnCodes = nowarnCodes.Union(codes);
+                        break;
+                    case "--icon":
+                        // 应用图标（.ico → native/IL 产物 .rsrc RT_GROUP_ICON/RT_ICON）；缺省自动解析 EXE.ico
+                        if (!CliHelper.TryTakeValue(args, ref i, inlineValue, out iconText))
+                        {
+                            return 1;
+                        }
+
                         break;
                     case "-?":
                     case "-h":
@@ -259,18 +268,21 @@ namespace Cocoa.Cli
             var useDynamicLink = backend is not CodeBackend.Native;
             var compilation = Compilation.Create(referencePaths.ToArray(), useDynamicLink, syntaxTrees.ToArray());
 
+            // 应用图标：`--icon` 显式 → 缺省自动解析（目录 EXE.ico / 上溯 resources/EXE.ico）
+            var resourceOptions = BuildImportResourceOptions(iconText);
+
             ImmutableArray<Diagnostic> diagnostics;
             try
             {
                 if (backend == CodeBackend.Native)
                 {
-                    diagnostics = compilation.EmitNative(moduleName, outputPath, new TargetPlatform(targetOs, platform));
+                    diagnostics = compilation.EmitNative(moduleName, outputPath, new TargetPlatform(targetOs, platform), resourceOptions: resourceOptions);
                 }
                 else if (effectiveTarget.Runtime == IlRuntime.NetCore)
                 {
                     // netcore 可执行：托管程序集产出 `<name>.dll`，另生成原生 apphost `<name>.exe`（SDK 标准布局）
                     var managedDllPath = Path.ChangeExtension(outputPath, ".dll");
-                    diagnostics = compilation.Emit(moduleName, referencePaths.ToArray(), managedDllPath, effectiveTarget);
+                    diagnostics = compilation.Emit(moduleName, referencePaths.ToArray(), managedDllPath, effectiveTarget, emitLibrary: false, versionInfo: null, resourceOptions);
                     if (!diagnostics.HasErrors())
                     {
                         var template = AppHostPatcher.FindDefaultTemplate();
@@ -285,7 +297,7 @@ namespace Cocoa.Cli
                 }
                 else
                 {
-                    diagnostics = compilation.Emit(moduleName, referencePaths.ToArray(), outputPath, effectiveTarget);
+                    diagnostics = compilation.Emit(moduleName, referencePaths.ToArray(), outputPath, effectiveTarget, emitLibrary: false, versionInfo: null, resourceOptions);
                 }
             }
             catch (NotSupportedException ex)
@@ -329,9 +341,21 @@ namespace Cocoa.Cli
             return 0;
         }
 
+        /// <summary>组装默认产物资源选项：图标解析（显式 --icon → 缺省目录 EXE.ico / resources/EXE.ico）。</summary>
+        private static Cocoa.CodeAnalysis.PeResourceOptions? BuildImportResourceOptions(string? iconText)
+        {
+            var iconPath = iconText ?? Cocoa.Build.AppIconLocator.Locate(Directory.GetCurrentDirectory());
+            if (string.IsNullOrEmpty(iconPath))
+            {
+                return null;
+            }
+
+            return new Cocoa.CodeAnalysis.PeResourceOptions(versionInfo: null, iconPath);
+        }
+
         /// <summary>
         /// 动态链接：确保被消费 `.coa` 库的托管 dll（X.Managed.dll）在输出目录就绪——
-        /// 缺失或 stamp（coa sha256）过期 → 从 coa 现场再生（与 cocoa build 同机制）。
+        /// 缺失或比 coa 源旧（时间戳，无 .stamp）→ 从 coa 现场再生（与 cocoa build 同机制）。
         /// </summary>
         private static bool EnsureManagedDlls(ImmutableArray<Cocoa.CodeAnalysis.Serialization.CoaProgram> libraries, string outputDirectory, IlTarget target, ImmutableHashSet<string> nowarnCodes)
         {
@@ -354,12 +378,9 @@ namespace Cocoa.Cli
                 }
 
                 var managedDll = Path.Combine(outputDirectory, library.Name + ".dll");
-                var stampPath = managedDll + ".stamp";
-                var coaHash = System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(library.SourcePath));
-                var hashText = Convert.ToHexString(coaHash).ToLowerInvariant();
-                var stamped = File.Exists(stampPath) ? File.ReadAllText(stampPath).Trim() : "";
 
-                if (File.Exists(managedDll) && stamped == hashText)
+                // 时间戳自愈（无 .stamp）：dll 缺失或比 coa 源旧 → 再生
+                if (File.Exists(managedDll) && File.GetLastWriteTimeUtc(managedDll) >= File.GetLastWriteTimeUtc(library.SourcePath))
                 {
                     continue;
                 }
@@ -371,8 +392,6 @@ namespace Cocoa.Cli
                     ok = false;
                     continue;
                 }
-
-                File.WriteAllText(stampPath, hashText);
             }
 
             return ok;
