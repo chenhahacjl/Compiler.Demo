@@ -218,7 +218,7 @@ namespace Cocoa.CodeGen.Native
 
             var arr = NewPtr();
             var readBytesVt = NewPtr();
-            LeaData(readBytesVt, NativeObjectModel.PseudoVTableKey("System.Array"));
+            VtPointer(readBytesVt, "System.Array");
             CallRuntime(arr, "NewArray", total, C(4, 1), readBytesVt);
             Cmp(arr, 0);
             Jcc(LirCond.Equal, fail);
@@ -255,7 +255,7 @@ namespace Cocoa.CodeGen.Native
 
             Mark(fail);
             var emptyBytesVt = NewPtr();
-            LeaData(emptyBytesVt, NativeObjectModel.PseudoVTableKey("System.Array"));
+            VtPointer(emptyBytesVt, "System.Array");
             CallRuntime(result, "NewArray", C(4, 0), C(4, 1), emptyBytesVt);
             Jmp(done);
 

@@ -87,7 +87,7 @@ namespace Cocoa.CodeGen.Native
             Cmp(obj, 0);
             Jcc(LirCond.Equal, fail);
             var stringVt = NewPtr();
-            LeaData(stringVt, NativeObjectModel.PseudoVTableKey("System.String"));
+            VtPointer(stringVt, "System.String");
             Store(obj, 0, stringVt, _isX64 ? 8 : 4);
             Store(obj, NativeObjectModel.StringLengthOffset, chars, 4);
 
@@ -286,7 +286,7 @@ namespace Cocoa.CodeGen.Native
 
             // 方案 B：string vtable 相同 → 内容比较（对齐 C# object.Equals(string,string)）
             var stringVt = NewPtr();
-            LeaData(stringVt, NativeObjectModel.PseudoVTableKey("System.String"));
+            VtPointer(stringVt, "System.String");
             var notString = NewLabel();
             Cmp(va, stringVt);
             Jcc(LirCond.NotEqual, notString);
@@ -365,7 +365,7 @@ namespace Cocoa.CodeGen.Native
 
             // ---- string → 自身 ----
             var stringVt = NewPtr();
-            LeaData(stringVt, NativeObjectModel.PseudoVTableKey("System.String"));
+            VtPointer(stringVt, "System.String");
             var notString = NewLabel();
             Cmp(vtable, stringVt);
             Jcc(LirCond.NotEqual, notString);
@@ -563,7 +563,7 @@ namespace Cocoa.CodeGen.Native
 
             // ---- string → 内容哈希 ----
             var stringVt = NewPtr();
-            LeaData(stringVt, NativeObjectModel.PseudoVTableKey("System.String"));
+            VtPointer(stringVt, "System.String");
             var notString = NewLabel();
             Cmp(vtable, stringVt);
             Jcc(LirCond.NotEqual, notString);

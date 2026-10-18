@@ -41,10 +41,14 @@ namespace Cocoa.CodeGen.Native
             private readonly LirProgram _program;
             private readonly bool _isX64;
             private readonly TargetOS _os;
+            private readonly bool _includeTypeTable;
             private readonly string _tickCountImport;
             private readonly int _heapPtrOffset;
             private readonly int _heapEndOffset;
             private readonly LirVirtualRegisterAllocator _allocator = new();
+
+            // S1 Phase B：共享类型表数据 key（includeTypeTable 时分配）——owner 模块持唯一 vtable 身份。
+            private string _typeTable = "", _typeTableCount = "";
 
             private LirFunction? _currentFunction;
             private List<LirInstruction> _instructions = new();
@@ -60,11 +64,12 @@ namespace Cocoa.CodeGen.Native
                 _bcryptAlg = "", _bcryptHash = "",
                 _extMarshal0 = "", _extMarshal1 = "", _extMarshal2 = "", _extMarshal3 = "";
 
-            public RuntimeFunctionEmitter(LirProgram program, TargetPlatform platform)
+            public RuntimeFunctionEmitter(LirProgram program, TargetPlatform platform, bool includeTypeTable = false)
             {
                 _program = program;
                 _isX64 = platform.Arch == Architecture.X64;
                 _os = platform.OS;
+                _includeTypeTable = includeTypeTable;
                 _tickCountImport = _isX64 ? "GetTickCount64" : "GetTickCount";
                 _heapPtrOffset = _isX64 ? 8 : 4;
                 _heapEndOffset = _isX64 ? 16 : 8;
@@ -322,6 +327,154 @@ namespace Cocoa.CodeGen.Native
                 _program.SpecialFunctions.Add("DivByZero", divByZero);
                 _program.SpecialFunctions.Add("StackOverflow", stackOverflow);
                 _program.SpecialFunctions.Add("ExitProcess", exitProcess);
+
+                if (_includeTypeTable)
+                {
+                    EmitTypeTableFunctions();
+                }
+            }
+
+            // ------------------------------------------------------------------
+            // S1 Phase B：共享类型表（cocoa_rt_type_get / cocoa_rt_type_register）
+            // ------------------------------------------------------------------
+
+            private void EmitTypeTableFunctions()
+            {
+                _ = BeginFunctionTyped("TypeRegister", new[] { 8, 8 }, LirType.Addr, LirType.Addr);
+                EmitTypeRegister(_currentFunction!, 8);
+                _ = BeginFunctionTyped("TypeGet", new[] { 8 }, LirType.Addr);
+                EmitTypeGet(_currentFunction!, 8);
+            }
+
+            /// <summary>cocoa_rt_type_get(key)：线性扫查 (key,vtablePtr) 表，命中返回 vtablePtr，未命中返回 0。</summary>
+            private void EmitTypeGet(LirFunction fn, int returnSize)
+            {
+                var key = _args[0];
+                var ps = _isX64 ? 8 : 4;
+                var stride = ps * 2;
+
+                var table = NewPtr();
+                LeaData(table, _typeTable);
+                var countReg = NewReg(4);
+                var countPtr = NewPtr();
+                LeaData(countPtr, _typeTableCount);
+                Load(countReg, countPtr, 0, 4);
+                var idx = NewReg(4);
+                Const(idx, 0);
+                var strideReg = NewPtr();
+                Const(strideReg, stride);
+
+                var missing = NewLabel();
+                var found = NewLabel();
+                var loop = NewLabel();
+                var fnEnd = NewLabel();
+
+                Mark(loop);
+                Cmp(idx, countReg);
+                Jcc(LirCond.AboveOrEqual, missing);
+
+                var entryKey = NewPtr();
+                Load(entryKey, table, 0, ps);
+                SetArg(0, entryKey);
+                SetArg(1, key);
+                var isEq = NewReg(4);
+                CallRuntime(isEq, "StrEquals");
+                Cmp(isEq, 0);
+                Jcc(LirCond.NotEqual, found);
+
+                Add(table, table, strideReg);
+                Add(idx, idx, C(4, 1));
+                Jmp(loop);
+
+                Mark(found);
+                var vt = NewPtr();
+                Load(vt, table, ps, ps);
+                StoreRet(vt);
+                Jmp(fnEnd);
+
+                Mark(missing);
+                var zeroVt = NewPtr();
+                Const(zeroVt, 0);
+                StoreRet(zeroVt);
+                Jmp(fnEnd);
+
+                Mark(fnEnd);
+                EndFunction(fn, returnSize);
+            }
+
+            /// <summary>cocoa_rt_type_register(key, vtablePtr)：未命中则追加（首登记胜出，进程单例）；已存在返回既有值。</summary>
+            private void EmitTypeRegister(LirFunction fn, int returnSize)
+            {
+                var keyArg = _args[0];
+                var vtArg = _args[1];
+                var ps = _isX64 ? 8 : 4;
+                var stride = ps * 2;
+
+                var table = NewPtr();
+                LeaData(table, _typeTable);
+                var countPtr = NewPtr();
+                LeaData(countPtr, _typeTableCount);
+                var countReg = NewReg(4);
+                Load(countReg, countPtr, 0, 4);
+                var idx = NewReg(4);
+                Const(idx, 0);
+                var strideReg = NewPtr();
+                Const(strideReg, stride);
+
+                var existing = NewLabel();
+                var append = NewLabel();
+                var loop = NewLabel();
+                var fnEnd = NewLabel();
+
+                Mark(loop);
+                Cmp(idx, countReg);
+                Jcc(LirCond.AboveOrEqual, append);
+
+                var entryKey = NewPtr();
+                Load(entryKey, table, 0, ps);
+                SetArg(0, entryKey);
+                SetArg(1, keyArg);
+                var isEq = NewReg(4);
+                CallRuntime(isEq, "StrEquals");
+                Cmp(isEq, 0);
+                Jcc(LirCond.NotEqual, existing);
+
+                Add(table, table, strideReg);
+                Add(idx, idx, C(4, 1));
+                Jmp(loop);
+
+                Mark(existing);
+                StoreRet(vtArg);
+                Jmp(fnEnd);
+
+                Mark(append);
+                // 表尾（table 已推进到 count*stride）追加 (key, vtablePtr)，count++
+                Store(table, 0, keyArg, ps);
+                Store(table, ps, vtArg, ps);
+                Add(countReg, countReg, C(4, 1));
+                Store(countPtr, 0, countReg, 4);
+                StoreRet(vtArg);
+                Jmp(fnEnd);
+
+                Mark(fnEnd);
+                EndFunction(fn, returnSize);
+            }
+
+            /// <summary>S1 Phase B：取共享类型 vtable 指针。includeTypeTable（owner 库）→ cocoa_rt_type_get(key)；
+            /// 否则（内联形态）→ 本地 vtable 数据项（历史行为，字节不变）。</summary>
+            private void VtPointer(LirVirtualRegister dst, string fullName)
+            {
+                if (_includeTypeTable)
+                {
+                    var keyText = _program.InternString(fullName);
+                    var key = NewPtr();
+                    LeaData(key, keyText);
+                    CallRuntime(dst, "TypeGet", key);
+                }
+                else
+                {
+                    LeaData(dst, NativeObjectModel.PseudoVTableKey(fullName));
+                }
             }
 
             private void EmitData()
@@ -365,6 +518,16 @@ namespace Cocoa.CodeGen.Native
                 _formatHalf = _program.AddData(LirDataItem.ByteArray(Prefix + "FormatHalf", DoubleBits(0.5)));
                 _bcryptAlg = _program.AddData(LirDataItem.Pointer(Prefix + "BcryptAlg"));
                 _bcryptHash = _program.AddData(LirDataItem.Pointer(Prefix + "BcryptHash"));
+
+                // S1 Phase B：共享类型表（owner 模块持唯一 vtable 身份）——(key, vtablePtr) 对数组 + 计数。
+                // 表从空开始，进程内首登记（exe 启动 init stub → String/Array）即胜出，进程单例且确定性。
+                if (_includeTypeTable)
+                {
+                    var ps = _isX64 ? 8 : 4;
+                    const int typeTableCapacity = 512;
+                    _typeTable = _program.AddData(LirDataItem.ByteArray(Prefix + "TypeTable", new byte[typeTableCapacity * 2 * ps]));
+                    _typeTableCount = _program.AddData(LirDataItem.Int32(Prefix + "TypeTableCount", 0));
+                }
 
                 // T3：Linux 运行时零导入（裸 syscall），不挂 kernel32/bcrypt；新增 Linux 专用 scratch 数据项。
                 if (_os == TargetOS.Linux)

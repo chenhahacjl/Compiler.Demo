@@ -231,7 +231,7 @@ namespace Cocoa.CodeGen.Native
 
             // ---- 结果 = 初始 H + 压缩状态；32 字节大端 ----
             var arrayVt = NewPtr();
-            LeaData(arrayVt, NativeObjectModel.PseudoVTableKey("System.Array"));
+            VtPointer(arrayVt, "System.Array");
             CallRuntime(result, "NewArray", C(4, 32), C(4, 1), arrayVt);
             Cmp(result, 0);
             Jcc(LirCond.Equal, fail);

@@ -490,7 +490,7 @@ namespace Cocoa.CodeGen.Native
             Cmp(obj, 0);
             Jcc(LirCond.Equal, fail);
             var stringVt = NewPtr();
-            LeaData(stringVt, NativeObjectModel.PseudoVTableKey("System.String"));
+            VtPointer(stringVt, "System.String");
             Store(obj, 0, stringVt, _isX64 ? 8 : 4);
             Store(obj, NativeObjectModel.StringLengthOffset, chars, 4);
 

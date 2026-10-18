@@ -338,7 +338,7 @@ namespace Cocoa.CodeGen.Native
             var elementSizeReg = C(4, elementSize);
             var arr = NewPtr();
             var splitArrayVt = NewPtr();
-            LeaData(splitArrayVt, NativeObjectModel.PseudoVTableKey("System.Array"));
+            VtPointer(splitArrayVt, "System.Array");
             SetArg(0, count);
             SetArg(1, elementSizeReg);
             SetArg(2, splitArrayVt);
@@ -425,7 +425,7 @@ namespace Cocoa.CodeGen.Native
             Jcc(LirCond.Equal, buildStrNext);
 
             var stringVt = NewPtr();
-            LeaData(stringVt, NativeObjectModel.PseudoVTableKey("System.String"));
+            VtPointer(stringVt, "System.String");
             Store(obj, 0, stringVt, _isX64 ? 8 : 4);
             Store(obj, NativeObjectModel.StringLengthOffset, lenChars, 4);
             var dst = NewPtr();
@@ -547,7 +547,7 @@ namespace Cocoa.CodeGen.Native
             // ---- Copy hash to u8[32] array ----
             var arr = NewPtr();
             var u8ArrayVt = NewPtr();
-            LeaData(u8ArrayVt, NativeObjectModel.PseudoVTableKey("System.Array"));
+            VtPointer(u8ArrayVt, "System.Array");
             CallRuntime(arr, "NewArray", C(4, 32), C(4, 1), u8ArrayVt);
             Cmp(arr, 0);
             Jcc(LirCond.Equal, errLabel);

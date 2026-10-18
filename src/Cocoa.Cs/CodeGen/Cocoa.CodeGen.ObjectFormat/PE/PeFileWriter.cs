@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using Cocoa.Targeting;
@@ -36,7 +36,7 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
             return architecture == Architecture.X86 ? 0x400000 : 0x140000000;
         }
 
-        public static void Write(string outputPath, byte[] code, byte[] data, int entryPointRva, IReadOnlyList<PeFileImport> imports, Architecture architecture, IReadOnlyList<int>? dataAbsoluteFixups = null, ushort subsystem = PeSubsystemWindowsCui, byte[]? cocoaMetadata = null, IReadOnlyList<PeExportEntry>? exports = null, ResourceSectionResult? resources = null)
+        public static void Write(string outputPath, byte[] code, byte[] data, int entryPointRva, IReadOnlyList<PeFileImport> imports, Architecture architecture, IReadOnlyList<int>? dataAbsoluteFixups = null, ushort subsystem = PeSubsystemWindowsCui, byte[]? cocoaMetadata = null, IReadOnlyList<PeExportEntry>? exports = null, ResourceSectionResult? resources = null, bool isDll = false)
         {
             var pe32 = architecture == Architecture.X86;
 
@@ -194,13 +194,24 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
             // 有重定位节时不再声明 RelocsStripped（x86 历史行为保留：无重定位时仍声明剥离）
             var fileCharacteristics = relocBlob.Length > 0 ? (ushort)0 : (pe32 ? PeFileCharacteristics.RelocsStripped : (ushort)0);
 
+            // T4：DLL 形态（cocoa runtime / System.Core.Native 等共享库）——entry=0、FileCharacteristicsOverride
+            // 强制 CurrentImage|Dll（0x2022，PeImageBuilder 仅在 Override=0 时才回退 ExecutableImage），
+            // 使加载器按 DLL 语义映射（无入口、可被 app 导入）
+            var effectiveEntry = entryPointRva;
+            if (isDll)
+            {
+                effectiveEntry = 0;
+                // AdditionalFileCharacteristics=Dll → PeImageBuilder 回退 = CurrentImage|Dll（0x2022）
+                fileCharacteristics = PeFileCharacteristics.Dll;
+            }
+
             // T3：经 PeObjectWriter 写出——回填 TimeDateStamp + CheckSum（CheckSumMappedFile 语义）
             var objOptions = new Cocoa.Targeting.ObjectWriteOptions(
                 Cocoa.Targeting.TargetOS.Windows,
                 pe32 ? Cocoa.Targeting.Architecture.X86 : Cocoa.Targeting.Architecture.X64,
                 (ulong)ImageBaseOf(architecture),
                 (ushort)subsystem,
-                (uint)entryPointRva,
+                (uint)effectiveEntry,
                 SectionAlignment, 0x200)
             {
                 SizeOfHeaders = (uint)headersSize,
@@ -275,12 +286,14 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
 
         /// <summary>
         /// C-3：构建 .edata 导出表 blob（IMAGE_EXPORT_DIRECTORY + 名字表 + ordinal 表 + 函数地址表 + 名字字符串）。
-        /// 名字按 ord 排列以保证名字表与 ordinal 表一一对应；序号 = 每条目的索引（ordinal base 1）。
+        /// **名字表必须按名字升序**（PE/COFF 规范 + Windows 加载器 LdrpSearchExportDirectory 对名字表做二分查找，
+        /// 乱序将导致 GetProcAddress 大多数名字解析失败）——先按 Name 排序再构建，序号 = 排序后的条目索引（ordinal base 1）。
         /// forwarder 不做（本编译器无转发导出）。
         /// </summary>
         private static byte[] BuildExportTable(IReadOnlyList<PeExportEntry> exports, uint edataRva)
         {
-            var count = exports.Count;
+            var ordered = exports.OrderBy(e => e.Name, StringComparer.Ordinal).ToList();
+            var count = ordered.Count;
 
             // 布局（单位字节；blob 内相对偏移）：
             //   [0 .. 40)         IMAGE_EXPORT_DIRECTORY
@@ -304,7 +317,7 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
             var nameOffsets = new int[count];
             for (var i = 0; i < count; i++)
             {
-                var bytes = System.Text.Encoding.UTF8.GetBytes(exports[i].Name + "\0");
+                var bytes = System.Text.Encoding.UTF8.GetBytes(ordered[i].Name + "\0");
                 nameOffsets[i] = blob.Count;
                 for (var b = 0; b < bytes.Length; b++)
                 {
@@ -332,7 +345,7 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
             // 函数地址表（函数 RVA）
             for (var i = 0; i < count; i++)
             {
-                WriteUInt32Value(blob, functionsTableOffset + i * 4, exports[i].Rva);
+                WriteUInt32Value(blob, functionsTableOffset + i * 4, ordered[i].Rva);
             }
 
             // 目录头：Name 字段 = 模块名前缀串（供工具显示），Base=1
@@ -380,3 +393,4 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
 
     }
 }
+

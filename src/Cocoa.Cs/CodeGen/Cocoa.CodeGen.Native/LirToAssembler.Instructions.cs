@@ -539,7 +539,7 @@ namespace Cocoa.CodeGen.Native
             LoadSlot(X64Register.ECX, instruction.A.Register!, RegisterSize(instruction.A.Register!));
 
             _a.Cmp(X64Size.Dword, X64Register.ECX, 0);
-            _a.Jcc(X64CondCode.Equal, _nameToLabel["DivByZero"]);
+            _a.Jcc(X64CondCode.Equal, RuntimeTrapLabel("DivByZero"));
 
             _a.Mov(X64Size.Dword, X64Register.EDX, X64Register.EAX);
             _a.Sar(X64Size.Dword, X64Register.EDX, 31);
@@ -559,7 +559,7 @@ namespace Cocoa.CodeGen.Native
             LoadSlot(X64Register.ECX, instruction.A.Register!, RegisterSize(instruction.A.Register!));
 
             _a.Cmp(X64Size.Dword, X64Register.ECX, 0);
-            _a.Jcc(X64CondCode.Equal, _nameToLabel["DivByZero"]);
+            _a.Jcc(X64CondCode.Equal, RuntimeTrapLabel("DivByZero"));
 
             _a.Mov(X64Size.Dword, X64Register.EDX, X64Register.EAX);
             _a.Sar(X64Size.Dword, X64Register.EDX, 31);
@@ -579,7 +579,7 @@ namespace Cocoa.CodeGen.Native
             LoadSlot(X64Register.ECX, instruction.A.Register!, RegisterSize(instruction.A.Register!));
 
             _a.Cmp(X64Size.Dword, X64Register.ECX, 0);
-            _a.Jcc(X64CondCode.Equal, _nameToLabel["DivByZero"]);
+            _a.Jcc(X64CondCode.Equal, RuntimeTrapLabel("DivByZero"));
 
             _a.Mov(X64Size.Dword, X64Register.EDX, 0);
             _a.Div(X64Size.Dword, X64Register.ECX);
@@ -752,7 +752,7 @@ namespace Cocoa.CodeGen.Native
                 LoadSlot(X64Register.RCX, instruction.A.Register!, 8);
 
                 _a.Test(X64Size.Qword, X64Register.RCX, X64Register.RCX);
-                _a.Jcc(X64CondCode.Equal, _nameToLabel["DivByZero"]);
+                _a.Jcc(X64CondCode.Equal, RuntimeTrapLabel("DivByZero"));
 
                 _a.Cqo();
                 _a.Idiv(X64Size.Qword, X64Register.RCX);
@@ -774,7 +774,7 @@ namespace Cocoa.CodeGen.Native
                 LoadSlot(X64Register.RCX, instruction.A.Register!, 8);
 
                 _a.Test(X64Size.Qword, X64Register.RCX, X64Register.RCX);
-                _a.Jcc(X64CondCode.Equal, _nameToLabel["DivByZero"]);
+                _a.Jcc(X64CondCode.Equal, RuntimeTrapLabel("DivByZero"));
 
                 _a.Cqo();
                 _a.Idiv(X64Size.Qword, X64Register.RCX);
@@ -797,7 +797,7 @@ namespace Cocoa.CodeGen.Native
                 LoadSlot(X64Register.RCX, instruction.A.Register!, 8);
 
                 _a.Test(X64Size.Qword, X64Register.RCX, X64Register.RCX);
-                _a.Jcc(X64CondCode.Equal, _nameToLabel["DivByZero"]);
+                _a.Jcc(X64CondCode.Equal, RuntimeTrapLabel("DivByZero"));
 
                 _a.Xor(X64Size.Dword, X64Register.EDX, X64Register.EDX);
                 _a.Div(X64Size.Qword, X64Register.RCX);
@@ -818,7 +818,7 @@ namespace Cocoa.CodeGen.Native
                 LoadSlot(X64Register.RCX, instruction.A.Register!, 8);
 
                 _a.Test(X64Size.Qword, X64Register.RCX, X64Register.RCX);
-                _a.Jcc(X64CondCode.Equal, _nameToLabel["DivByZero"]);
+                _a.Jcc(X64CondCode.Equal, RuntimeTrapLabel("DivByZero"));
 
                 _a.Xor(X64Size.Dword, X64Register.EDX, X64Register.EDX);
                 _a.Div(X64Size.Qword, X64Register.RCX);
@@ -846,7 +846,7 @@ namespace Cocoa.CodeGen.Native
         private void CallRuntimeHelper(string name)
         {
             var aligned = EmitAlign(0);
-            _a.Call(_nameToLabel[name]);
+            EmitRuntimeCall(name);
             if (aligned)
             {
                 _a.Add(X64Size.Qword, X64Register.RSP, 8);
@@ -1107,7 +1107,12 @@ namespace Cocoa.CodeGen.Native
             if (instruction.A.Kind == LirOperandKind.Runtime)
             {
                 aligned = EmitAlign(0);
-                _a.Call(_nameToLabel[(string)instruction.A.Symbol!]);
+                EmitRuntimeCall((string)instruction.A.Symbol!);
+            }
+            else if (instruction.A.Kind == LirOperandKind.Import)
+            {
+                // S2（native-s1）：跨模块库调用（栈 ABI，ReserveArgs/FreeArgs 对齐由调用两侧一致处理）→ call [IAT 槽]
+                _a.CallRip(_importSlots[(LirImport)instruction.A.Symbol!]);
             }
             else
             {
@@ -1252,7 +1257,7 @@ namespace Cocoa.CodeGen.Native
                 }
 
                 var aligned = EmitAlign(0);
-                _a.Call(_nameToLabel["ExitProcess"]);
+                EmitRuntimeCall("ExitProcess");
                 if (aligned)
                 {
                     _a.Add(X64Size.Qword, X64Register.RSP, 8);
@@ -1982,7 +1987,7 @@ namespace Cocoa.CodeGen.Native
             _a.MovGs(X64Register.RCX, _stackLimitOffset);
             _a.Add(X64Size.Dword, X64Register.ECX, 0x10000);
             _a.Cmp(X64Size.Dword, X64Register.RSP, X64Register.RCX);
-            _a.Jcc(X64CondCode.Below, _nameToLabel["StackOverflow"]);
+            _a.Jcc(X64CondCode.Below, RuntimeTrapLabel("StackOverflow"));
         }
 
         private void EmitPush(LirInstruction instruction)

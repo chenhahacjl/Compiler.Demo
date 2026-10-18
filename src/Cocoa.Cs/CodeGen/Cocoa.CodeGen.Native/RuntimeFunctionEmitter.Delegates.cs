@@ -25,7 +25,7 @@ namespace Cocoa.CodeGen.Native
 
             var array = NewPtr();
             var combineVt = NewPtr();
-            LeaData(combineVt, NativeObjectModel.PseudoVTableKey("System.Array"));
+            VtPointer(combineVt, "System.Array");
             CallRuntime(array, "NewArray", total, C(4, 8), combineVt);
             EmitCopyRange(a, array, la, C(4, 0), C(4, 0));
             EmitCopyRange(b, array, lb, C(4, 0), la);
@@ -102,7 +102,7 @@ namespace Cocoa.CodeGen.Native
             var newLen = NewReg(4);
             Sub(newLen, la, lb);
             var removeVt = NewPtr();
-            LeaData(removeVt, NativeObjectModel.PseudoVTableKey("System.Array"));
+            VtPointer(removeVt, "System.Array");
             CallRuntime(result, "NewArray", newLen, C(4, 8), removeVt);
             EmitCopyRange(a, result, pos, C(4, 0), C(4, 0));
             var after = NewReg(4);

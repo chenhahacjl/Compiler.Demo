@@ -511,7 +511,16 @@ namespace Cocoa.CodeAnalysis.Binder
             };
         }
 
-        public static BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> coaLibraries = default, bool linkCoaDynamically = false, NamespaceSymbol? globalNamespace = null)
+        /// <summary>库程序集名 `X.Managed` → coa 基名 `X`（S2 外部化判定用）。</summary>
+        private static string CoaBaseName(string libraryName)
+        {
+            const string suffix = CoaAssemblyNaming.ManagedSuffix;
+            return libraryName.EndsWith(suffix, System.StringComparison.Ordinal)
+                ? libraryName.Substring(0, libraryName.Length - suffix.Length)
+                : libraryName;
+        }
+
+        public static BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> coaLibraries = default, bool linkCoaDynamically = false, NamespaceSymbol? globalNamespace = null, ImmutableHashSet<string>? externalNativeLibraries = null)
         {
             var parentScope = CreateParentScope(globalScope);
             InjectCoaSymbols(parentScope, coaLibraries);
@@ -667,6 +676,14 @@ namespace Cocoa.CodeAnalysis.Binder
                 {
                     foreach (var library in coaLibraries)
                     {
+                        // S2（native-s1）：外部化用户库——不合并函数体（符号照常注入，调用点经 native 导入 X.Native.dll）
+                        if (externalNativeLibraries != null &&
+                            !externalNativeLibraries.IsEmpty &&
+                            externalNativeLibraries.Contains(CoaBaseName(library.Name)))
+                        {
+                            continue;
+                        }
+
                         foreach (var (fn, body) in library.Bodies)
                         {
                             // 6e-G7 S6：泛型定义方法（开放体）仅供 Monomorphizer 替换展开源使用，

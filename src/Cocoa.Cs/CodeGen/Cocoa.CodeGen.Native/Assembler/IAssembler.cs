@@ -143,6 +143,7 @@ namespace Cocoa.CodeGen.Native.Assembler
 
         void MovGs(X64Register dst, int displacement);
         void CallRip(int symbol);
+        void JmpRip(int symbol);
         void Setcc(X64CondCode cond, X64Register dst);
 
         // SSE（double）

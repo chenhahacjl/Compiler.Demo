@@ -22,7 +22,7 @@ namespace Cocoa.CodeGen.Native
     /// </summary>
     internal sealed class NativeCodeEmitter
     {
-        public static void Emit(BoundProgram program, string moduleName, string outputPath, TargetPlatform platform, ushort subsystem, Cocoa.CodeAnalysis.PeResourceOptions? resourceOptions = null, string? irOutputDirectory = null)
+        public static void Emit(BoundProgram program, string moduleName, string outputPath, TargetPlatform platform, ushort subsystem, Cocoa.CodeAnalysis.PeResourceOptions? resourceOptions = null, string? irOutputDirectory = null, bool splitRuntime = false)
         {
             IAssembler a = platform.Arch == Architecture.X64
                 ? new X64Assembler()
@@ -32,7 +32,17 @@ namespace Cocoa.CodeGen.Native
 
             var emit = MirToLir.GenerateWithSnapshot(program, platform);
             var ir = emit.Program;
-            RuntimeEmitterLir.Append(ir, platform);
+
+            // S1（native-s1 opt-in）：拆分形态——运行时原语不再内联进 exe，改为导入 System.Core.Native；
+            // 默认（splitRuntime=false）行为与历史逐字节一致。
+            if (splitRuntime)
+            {
+                RuntimeSplitter.RegisterImports(ir, platform);
+            }
+            else
+            {
+                RuntimeEmitterLir.Append(ir, platform);
+            }
 
             // LIR 落盘 obj/（构建中间件）；旧有 COCOA_DUMP_IR 兼容：落到产物旁 .ir.txt
             if (!string.IsNullOrEmpty(irOutputDirectory) && !string.IsNullOrEmpty(moduleName))
@@ -55,7 +65,7 @@ namespace Cocoa.CodeGen.Native
             }
 
             // 6c-2：无自解析 stub，IAT 由 OS 加载器按导入描述符填充，入口即 main
-            var result = LirToAssembler.Emit(a, ir, entryLabel, platform, null);
+            var result = LirToAssembler.Emit(a, ir, entryLabel, platform, null, splitRuntime);
 
             // T3：linux 目标仅 x64（ELF64）；其余走 Windows PE 现状字节不变。
             var isLinux = platform.OS == TargetOS.Linux;

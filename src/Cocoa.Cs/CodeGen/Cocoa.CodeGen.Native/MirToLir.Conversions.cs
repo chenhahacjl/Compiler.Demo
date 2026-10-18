@@ -129,6 +129,27 @@ namespace Cocoa.CodeGen.Native
             return result;
         }
 
+        /// <summary>
+        /// S2（native-s1）共享类型表 vtable 装载：用户库（sharedTypeTable）取 String/Array 的唯一身份记录 →
+        /// 经 <c>cocoa_rt_type_get</c>（导入）；否则本地 vtable 数据项（exe 内联/登记策略，历史行为不变）。
+        /// </summary>
+        private void EmitSharedVt(LirVirtualRegister dst, string fullName)
+        {
+            var instructions = _builder.CurrentFunction.Instructions;
+            if (_sharedTypeTable)
+            {
+                var keyText = _irProgram.InternString(fullName);
+                var key = AllocateRegister(LirType.Addr);
+                Add(instructions, new LirInstruction(LirOpCode.LeaData, key, LirOperand.Data(keyText)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(key)));
+                Add(instructions, new LirInstruction(LirOpCode.Call, dst, LirOperand.Runtime("TypeGet"), LirOperand.Constant(0)));
+            }
+            else
+            {
+                Add(instructions, new LirInstruction(LirOpCode.LeaData, dst, LirOperand.Data(NativeObjectModel.PseudoVTableKey(fullName))));
+            }
+        }
+
         /// <summary>发射 obj（可空）对目标类的类型链比较：null 短路未命中；命中/未命中，汇合三标签交调用方回填结果。</summary>
         private void EmitTypeChainCompare(LirVirtualRegister obj, TypeSymbol targetType, out int found, out int notFound, out int done)
         {
@@ -149,7 +170,7 @@ namespace Cocoa.CodeGen.Native
             {
                 // object 多态：值类型 is/as → 比对 box 伪 vtable（唯一 key）。
                 EnsurePseudoVTable(BoxVTableName(targetType));
-                Add(instructions, new LirInstruction(LirOpCode.LeaData, candidate, LirOperand.Data(NativeObjectModel.PseudoVTableKey(BoxVTableName(targetType)))));
+                EmitSharedVt(candidate, BoxVTableName(targetType));
                 Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(curVt), LirOperand.Reg(candidate)));
                 Add(instructions, new LirInstruction(LirOpCode.Jcc, LirOperand.Constant((int)LirCond.Equal), LirOperand.Label(found)));
             }
@@ -157,7 +178,7 @@ namespace Cocoa.CodeGen.Native
             {
                 // 方案 B：string 是完整对象（vtable 头 = $vt:System.String）。
                 EnsurePseudoVTable(NativeObjectModel.SystemStringVTableName);
-                Add(instructions, new LirInstruction(LirOpCode.LeaData, candidate, LirOperand.Data(NativeObjectModel.PseudoVTableKey(NativeObjectModel.SystemStringVTableName))));
+                EmitSharedVt(candidate, NativeObjectModel.SystemStringVTableName);
                 Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(curVt), LirOperand.Reg(candidate)));
                 Add(instructions, new LirInstruction(LirOpCode.Jcc, LirOperand.Constant((int)LirCond.Equal), LirOperand.Label(found)));
             }
@@ -165,7 +186,7 @@ namespace Cocoa.CodeGen.Native
             {
                 // 方案 B：数组是完整对象（vtable 头统一 $vt:System.Array，GetType 返回 System.Array）。
                 EnsurePseudoVTable("System.Array");
-                Add(instructions, new LirInstruction(LirOpCode.LeaData, candidate, LirOperand.Data(NativeObjectModel.PseudoVTableKey("System.Array"))));
+                EmitSharedVt(candidate, "System.Array");
                 Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(curVt), LirOperand.Reg(candidate)));
                 Add(instructions, new LirInstruction(LirOpCode.Jcc, LirOperand.Constant((int)LirCond.Equal), LirOperand.Label(found)));
             }
@@ -552,9 +573,23 @@ Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0),
             {
                 Add(instructions, new LirInstruction(LirOpCode.CallReg, result, LirOperand.None, LirOperand.Reg(indirectFunction)));
             }
+            else if (!_functionMap.TryGetValue(function, out var irFunction))
+            {
+                // S2（native-s1）：外部化用户库函数——不合并体，调用点经 IAT 导入 X.Native.dll（cocoa_+mangle(FnKey)），
+                // 栈 ABI（ReserveArgs/StoreArg/FreeArgs）与本地调用一致，跨模块双向同一 LirToAssembler 编译。
+                var import = new LirImport(
+                    NativeSymbolMangling.LibraryModuleName(function.ContainingLibrary ?? System.String.Empty) + ".dll",
+                    NativeSymbolMangling.ExportName(Cocoa.CodeAnalysis.Serialization.CoaFunctionNaming.FnKey(function)),
+                    Cdecl: false);
+                if (!_irProgram.Imports.Contains(import))
+                {
+                    _irProgram.Imports.Add(import);
+                }
+
+                Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Import(import), LirOperand.Constant(0)));
+            }
             else
             {
-                var irFunction = _functionMap[function];
                 Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Func(irFunction), LirOperand.Constant(0)));
             }
 

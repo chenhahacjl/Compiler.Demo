@@ -493,6 +493,15 @@ namespace Cocoa.CodeGen.Native.Assembler.X86
             EmitInt32(0);
         }
 
+        /// <summary>S1：jmp dword ptr [abs]（尾传转发到 IAT 槽；调用约定原样保持）。</summary>
+        public void JmpRip(int symbol)
+        {
+            EmitByte(0xFF);
+            EmitByte(0x25);
+            _dataFixups.Add((Position, symbol));
+            EmitInt32(0);
+        }
+
         public void Setcc(X64CondCode cond, X64Register dst)
         {
             EmitByte(0x0F);

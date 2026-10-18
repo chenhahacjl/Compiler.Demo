@@ -2,6 +2,12 @@
 
 > 状态: 设计定稿 · 2026-10-18 · 目标阶段: 阶段 B / 6c（native 独立库）+ 共享框架（managed）
 > 关键决策: **D1=B**（独立 `cocoa runtime.dll`）· **D2=F**（FnKey 白名单化导出名）· **D6=managed 仅非 facade 真实类入共享库**· **D7=默认开启共享**
+>
+> ⚠️ 实施修订（2026-10-18，按 [native-s1-实施计划.md](native-s1-实施计划.md)）：
+> - **D1’=A**：运行时并入 `System.Core.Native.dll`（不再独立 runtime dll）；每 `.coa` 一 DLL（用户库 → `Lib.Native.dll`，与 `X.Managed.dll` 同构）。
+> - **命名**：模块契约名 `System.Core.Native.dll`（`<arch>` 移出契约，仅部署目录区分）。
+> - **D7’=S3 前默认关闭**：拆分默认 OFF，`<SharedSystemLibrary>true` 显式开启；Inline 为基线，Windows golden 于 S3 重固化。
+> - **类型表**：owner 表 + `cocoa_rt_type_get(key)` 命中/迟到登记；vtable 槽位分配改为模块无关定序。
 > 相关: [CoaAssemblyNaming](../archive/类库设计.md)、[IR分层与格式设计](IR分层与格式设计.md)、[开发计划](../开发计划.md)、[输出格式](../archive/输出格式.md)
 
 ---

@@ -46,8 +46,9 @@ namespace Cocoa.CodeAnalysis
         /// </summary>
         private static volatile Func<BoundProgram, string, string[], string, IlTarget, bool, ImmutableDictionary<object, string>?, bool, PeVersionInfo?, PeResourceOptions?, ImmutableArray<Diagnostic>>? _managedEmitter;
 
-        /// <summary>native 后端发射委托（由 <c>Cocoa.CodeGen.Native</c> 经 <see cref="RegisterNativeEmitter"/> 注入，含后端专属校验）。幂等同上。</summary>
-        private static volatile Func<Compilation, string, string, TargetPlatform, ushort, PeResourceOptions?, string?, ImmutableArray<Diagnostic>>? _nativeEmitter;
+        /// <summary>native 后端发射委托（由 <c>Cocoa.CodeGen.Native</c> 经 <see cref="RegisterNativeEmitter"/> 注入，含后端专属校验）。幂等同上。
+        /// 末参 <c>splitRuntime</c>：native-s1（共享库 opt-in）——为真时 exe 对运行时原语改走 System.Core.Native 导入，默认 false（内联，字节不变）。</summary>
+        private static volatile Func<Compilation, string, string, TargetPlatform, ushort, PeResourceOptions?, string?, bool, ImmutableArray<Diagnostic>>? _nativeEmitter;
 
         /// <summary>注册 managed（dotnet/IL）后端发射实现（后端/宿主启动时调用；Core 自身不引用后端）。幂等。</summary>
         public static void RegisterManagedEmitter(Func<BoundProgram, string, string[], string, IlTarget, bool, ImmutableDictionary<object, string>?, bool, PeVersionInfo?, PeResourceOptions?, ImmutableArray<Diagnostic>> emitter)
@@ -56,7 +57,7 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>注册 native 后端发射实现（后端/宿主启动时调用；Core 自身不引用后端）。幂等。</summary>
-        public static void RegisterNativeEmitter(Func<Compilation, string, string, TargetPlatform, ushort, PeResourceOptions?, string?, ImmutableArray<Diagnostic>> emitter)
+        public static void RegisterNativeEmitter(Func<Compilation, string, string, TargetPlatform, ushort, PeResourceOptions?, string?, bool, ImmutableArray<Diagnostic>> emitter)
         {
             Interlocked.CompareExchange(ref _nativeEmitter, emitter, null);
         }
@@ -90,8 +91,8 @@ namespace Cocoa.CodeAnalysis
             => CocoaBinder.BindGlobalScope(isScript, previous, syntaxTrees, entryPointName, references, coaLibraries);
 
         /// <summary>绑定程序（含单态化/降级；见 <see cref="BindGlobalScope"/>）。</summary>
-        public BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> coaLibraries, bool linkCoaDynamically, NamespaceSymbol? globalNamespace)
-            => CocoaBinder.BindProgram(isScript, previous, globalScope, coaLibraries, linkCoaDynamically, globalNamespace);
+        public BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> coaLibraries, bool linkCoaDynamically, NamespaceSymbol? globalNamespace, ImmutableHashSet<string>? externalNativeLibraries = null)
+            => CocoaBinder.BindProgram(isScript, previous, globalScope, coaLibraries, linkCoaDynamically, globalNamespace, externalNativeLibraries);
 
         protected Compilation(bool isScript, Compilation? previous, string entryPointName, string[]? references, bool linkCoaDynamically = false, params SyntaxTree[] syntaxTrees)
         {
@@ -236,12 +237,18 @@ namespace Cocoa.CodeAnalysis
         /// <summary>引用的元数据引用（对齐 Roslyn <c>Compilation.References</c>；含 .coa 库与程序集路径，保持传入顺序）。</summary>
         public ImmutableArray<MetadataReference> References => _metadataReferences;
 
+        /// <summary>
+        /// S2（native-s1）：本编译中「外部化」的用户 `.coa` 库基名集合——绑定不合并其函数体（符号照常注入），
+        /// native 发射把对其中函数的调用改为经 IAT 导入 <c>X.Native.dll</c>（跨模块库调用）。null = 不外部化。
+        /// </summary>
+        public System.Collections.Immutable.ImmutableHashSet<string>? ExternalNativeLibraries { get; set; }
+
 
         public BoundProgram GetProgram()
         {
             var previous = Previous == null ? null : Previous.GetProgram();
 
-            var program = BindProgram(IsScript, previous, GlobalScope, _coaLibraries, _linkCoaDynamically, GlobalNamespace);
+            var program = BindProgram(IsScript, previous, GlobalScope, _coaLibraries, _linkCoaDynamically, GlobalNamespace, ExternalNativeLibraries);
 
             // Y A2-F1：规范 IR 契约（DEBUG）——消费边界不得有高 Bound 节点泄漏
             Lowering.CanonicalIr.Verify(program);
@@ -486,7 +493,7 @@ namespace Cocoa.CodeAnalysis
         /// <paramref name="resourceOptions"/> 非空时在产物内嵌 .rsrc 资源（版本信息 VS_VERSIONINFO / 图标 RT_ICON /
         /// 通用 RT_RCDATA）——规避杀软误报 + explorer 显示应用图标。
         /// </summary>
-        public ImmutableArray<Diagnostic> EmitNative(string moduleName, string outputPath, TargetPlatform platform = default, ushort subsystem = 3 /* PeSubsystem.WindowsCui */, PeResourceOptions? resourceOptions = null, string? irOutputDirectory = null)
+        public ImmutableArray<Diagnostic> EmitNative(string moduleName, string outputPath, TargetPlatform platform = default, ushort subsystem = 3 /* PeSubsystem.WindowsCui */, PeResourceOptions? resourceOptions = null, string? irOutputDirectory = null, bool splitRuntime = false)
         {
             if (platform == default)
             {
@@ -514,7 +521,7 @@ namespace Cocoa.CodeAnalysis
             // 中间件：HIR/MIR 落盘 obj/（native 的 <name>.lir 由 NativeCodeEmitter 经 irOutputDirectory 写出）
             IrDumper.WriteProgram(program, irOutputDirectory, Path.GetFileName(moduleName));
 
-            return _nativeEmitter(this, moduleName, outputPath, platform, subsystem, resourceOptions, irOutputDirectory);
+            return _nativeEmitter(this, moduleName, outputPath, platform, subsystem, resourceOptions, irOutputDirectory, splitRuntime);
         }
 
         /// <summary>C-2：含 `yield return`/`yield break` 的函数仅在解释器后端可执行（迭代器状态机未实现）。

@@ -195,19 +195,9 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
         }
 
         /// <summary>收集完成后统一命名：函数键与变量键（全局 global:名字；局部（参数）函数键/名字；冲突加 #2/#3）。</summary>
-        /// <summary>FnKey 计算（6e-G7 抽取）：owner/ns 前缀 + 名 + [参数类型]；仅有 out/ref 的重载键不同。</summary>
-        private string ComputeFnKey(FunctionSymbol fn)
-        {
-            var paramTypes = string.Join(",", fn.Parameters.Select(p =>
-                (p.IsOut ? "out:" : p.IsRef ? "ref:" : "-") + CoaTypeCodec.TypeRef(p.Type)));
-            var head = fn.ContainingClass != null
-                ? fn.ContainingClass.FullName + "." + fn.Name
-                : fn.Namespace.Length > 0 ? fn.Namespace + "." + fn.Name : fn.Name;
-            // 6e 跨库里程碑：FnKey 带库维度前缀（`库名!head[...]`）。归属 = 符号带库名则用其库名
-            // （跨库 callee：从其库加载的符号），否则回退当前模块名（本库声明的函数/编译期单例）。
-            var library = fn.ContainingLibrary ?? _moduleName;
-            return (library.Length > 0 ? library + "!" : "") + head + "[" + paramTypes + "]";
-        }
+        /// <summary>FnKey 计算（6e-G7 抽取）：owner/ns 前缀 + 名 + [参数类型]；仅有 out/ref 的重载键不同。
+        /// 公式归口 <see cref="CoaFunctionNaming.FnKey"/>（native-s1 共享契约，逐字节一致）。</summary>
+        private string ComputeFnKey(FunctionSymbol fn) => CoaFunctionNaming.FnKey(fn, _moduleName);
 
         // 6e-Step D-b：普通实例类（base=Object 无属性）实例方法/构造随库携带——事件类触发/订阅体依赖。
         // 收紧：需真实实例语义（实例字段/非构造实例方法/事件），杜绝纯静态容器类的隐式默认构造器泄漏进库。

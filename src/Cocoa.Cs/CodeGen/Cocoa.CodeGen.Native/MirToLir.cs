@@ -67,12 +67,19 @@ namespace Cocoa.CodeGen.Native
             SystemObjectMembers.Equals,
         };
 
-        private MirToLir(BoundProgram program, TargetPlatform platform)
+        /// <summary>S1/S2（native-s1）：模块是否走共享类型表（String/Array vtable 经 cocoa_rt_type_get 取，
+        /// 跨模块身份唯一）。exe 用「首登记本模块记录」策略（保持 false）；用户库（embedRuntime=false）置 true。</summary>
+        private readonly bool _sharedTypeTable;
+
+        private MirToLir(BoundProgram program, TargetPlatform platform, bool sharedTypeTable = false)
         {
             _program = program;
             _isX64 = platform.Arch == Architecture.X64;
             _os = platform.OS;
-            _irProgram = new LirProgram(program.MainFunction!.Name);
+            _sharedTypeTable = sharedTypeTable;
+            // 库形态（native-s1：EmitNativeLibrary）无入口 → EntryFunctionName 置空，
+            // MirToLir/LirToAssembler 均以「无匹配函数名」处理（全部函数用普通 label、无 BuildArgs）。
+            _irProgram = new LirProgram(program.MainFunction?.Name ?? "");
         }
 
         public static LirProgram Generate(BoundProgram program, TargetPlatform platform)
@@ -87,6 +94,24 @@ namespace Cocoa.CodeGen.Native
             var generator = new MirToLir(program, platform);
             generator.ComputeTopLevelOverloads();
             generator.EmitProgram();
+            generator.EmitVTableData();
+            return new NativeEmitResult(generator._irProgram, generator.CaptureSnapshot());
+        }
+
+        /// <summary>
+        /// S1（native-s1）：库形态发射——无入口，根 = program.Functions 全部函数（每库一 DLL 的「全公共函数根」），
+        /// vtable 数据/存活类按全根可达性聚合。与 <see cref="GenerateWithSnapshot"/> 共享同一发射路径。
+        /// </summary>
+        public static NativeEmitResult GenerateLibrary(BoundProgram program, TargetPlatform platform, bool sharedTypeTable = false)
+        {
+            if (program.MainFunction != null)
+            {
+                throw new System.InvalidOperationException("GenerateLibrary 要求无入口（mainFunction=null）的库程序。");
+            }
+
+            var generator = new MirToLir(program, platform, sharedTypeTable);
+            generator.ComputeTopLevelOverloads();
+            generator.EmitLibraryProgram();
             generator.EmitVTableData();
             return new NativeEmitResult(generator._irProgram, generator.CaptureSnapshot());
         }
@@ -244,7 +269,7 @@ namespace Cocoa.CodeGen.Native
 
             // 可达性过滤（6e-M17）：仅发射从入口可达的函数；M4 起存活类把构造函数与
             // 虚槽实现并入可达集（vtable 分派目标无法静态枚举，须随类存活整体发射）
-            var reachable = ComputeReachableFunctions(_program.MainFunction!);
+            var reachable = ComputeReachableFunctions(new[] { _program.MainFunction! });
             // 6e-M26：program.Functions（ImmutableDictionary，引用哈希进程随机）枚举不稳定 →
             // 按确定性键排序，保证 native 产物函数顺序可复现。
             var functionsToEmit = _program.Functions
@@ -256,7 +281,9 @@ namespace Cocoa.CodeGen.Native
             {
                 // 入口函数保持裸名（LirToAssembler 以 Name==EntryFunctionName 标记入口标签；
                 // 入口可为命名空间/类静态方法，mangle 名会破坏匹配）
-                var irName = function == _program.MainFunction ? function.Name : FunctionIrName(function);
+                var irName = _program.MainFunction != null && function == _program.MainFunction
+                    ? function.Name
+                    : FunctionIrName(function);
 
                 // 6e-M22 C4-c：提升 lambda 统一 env-first 形态（前置 8 字节环境槽）——
                 // 函数值对象调用约定恒为 (env, args...)；lambda 体不读该槽
@@ -284,15 +311,57 @@ namespace Cocoa.CodeGen.Native
             }
         }
 
+        /// <summary>
+        /// S1 库形态入口（每 coa 一 DLL）：根 = program.Functions 全部函数；存活类/虚槽/vtable 数据
+        /// 按全根绑定图聚合（复用 <see cref="ComputeReachableFunctions(IEnumerable{FunctionSymbol})"/>）。
+        /// </summary>
+        private void EmitLibraryProgram()
+        {
+            EnsurePseudoVTable(NativeObjectModel.SystemStringVTableName);
+            EnsurePseudoVTable("System.Array");
+
+            var reachable = ComputeReachableFunctions(_program.Functions.Keys);
+
+            var functionsToEmit = _program.Functions
+                .Where(kv => reachable.Contains(kv.Key))
+                .OrderBy(kv => SymbolSorting.FunctionSortKey(kv.Key), StringComparer.Ordinal)
+                .ToArray();
+
+            foreach (var (function, body) in functionsToEmit)
+            {
+                var parameters = CreateParameters(function);
+                if (function.IsStatic && function.IsLambda)
+                {
+                    parameters.Insert(0, new LirParameter("__env", 0));
+                    for (var p = 0; p < parameters.Count; p++)
+                    {
+                        parameters[p] = new LirParameter(parameters[p].Name, p);
+                    }
+
+                    _environmentFirstFunctions.Add(function);
+                }
+
+                var irFunction = new LirFunction(FunctionIrName(function), parameters);
+                irFunction.ReturnSize = ReturnSize(function.ReturnType);
+                _functionMap.Add(function, irFunction);
+                _irProgram.Functions.Add(irFunction);
+            }
+
+            foreach (var (function, body) in functionsToEmit)
+            {
+                EmitFunction(_functionMap[function], function, body);
+            }
+        }
+
         // ------------------------------------------------------------------
         // 可达性与存活类（M4）
         // ------------------------------------------------------------------
 
         /// <summary>
-        /// 从入口沿绑定调用图收集可达函数；BoundObjectCreationExpression 把类标记为存活，
+        /// 从根集合沿绑定调用图收集可达函数；BoundObjectCreationExpression 把类标记为存活，
         /// 存活类连带基类链、全部实例构造与虚槽实现（新根登记时对既有存活类补扫）。
         /// </summary>
-        private HashSet<FunctionSymbol> ComputeReachableFunctions(FunctionSymbol entry)
+        private HashSet<FunctionSymbol> ComputeReachableFunctions(IEnumerable<FunctionSymbol> roots)
         {
             foreach (var root in ObjectBuiltinVirtualRoots)
             {
@@ -302,7 +371,10 @@ namespace Cocoa.CodeGen.Native
             var reachable = new HashSet<FunctionSymbol>();
             var pendingFunctions = new Stack<FunctionSymbol>();
             var pendingClasses = new Stack<NamedTypeSymbol>();
-            pendingFunctions.Push(entry);
+            foreach (var root in roots)
+            {
+                pendingFunctions.Push(root);
+            }
 
             // 6e-M22 委托真实类型化 M5：具名 delegate 类全部存活（委托对象 vtable 由 MirToLir 构造时引用）
             foreach (var classType in _program.Classes)

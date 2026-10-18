@@ -54,6 +54,14 @@ namespace Cocoa.CodeGen.Native
         private readonly List<PeFileImport> _imports = new();
         private readonly List<LirVirtualRegister> _sysArgs = new();
 
+        // S1（native-s1 Phase A）：拆分形态下运行时原语经 IAT 导入 System.Core.Native，不内联。
+        private readonly bool _splitRuntime;
+        private readonly Dictionary<string, int> _runtimeImportSlots = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> _trapThunkLabels = new(StringComparer.Ordinal);
+        private readonly List<string> _trapThunkNames = new();
+        private readonly Dictionary<string, int> _forwardThunkLabels = new(StringComparer.Ordinal);
+        private readonly List<string> _forwardThunkNames = new();
+
         // M5-a4 续作：布局无关符号化 dump——asm 标签 → 符号（函数名 / L{irLabel} / rt:运行时名）
         private readonly Dictionary<int, string> _labelSymbols = new();
 
@@ -72,7 +80,7 @@ namespace Cocoa.CodeGen.Native
         private int _stubLabel;
 
         private LirToAssembler(IAssembler a, LirProgram program, int entryLabel, TargetPlatform platform,
-            Action<IReadOnlyList<PeFileImport>, int>? emitStub)
+            Action<IReadOnlyList<PeFileImport>, int>? emitStub, bool splitRuntime)
         {
             _a = a;
             _program = program;
@@ -88,6 +96,7 @@ namespace Cocoa.CodeGen.Native
             _paramOffset = _abi.ParamOffset;
             _stackLimitOffset = _abi.StackLimitOffset;
             _emitStub = emitStub;
+            _splitRuntime = splitRuntime;
         }
 
         private X64Size SlotSize => _slotSize == 8 ? X64Size.Qword : X64Size.Dword;
@@ -125,9 +134,9 @@ namespace Cocoa.CodeGen.Native
         };
 
         public static LirEmitResult Emit(IAssembler a, LirProgram program, int entryLabel, TargetPlatform platform,
-            Action<IReadOnlyList<PeFileImport>, int>? emitStub)
+            Action<IReadOnlyList<PeFileImport>, int>? emitStub, bool splitRuntime = false)
         {
-            var emitter = new LirToAssembler(a, program, entryLabel, platform, emitStub);
+            var emitter = new LirToAssembler(a, program, entryLabel, platform, emitStub, splitRuntime);
             emitter.EmitProgram();
             return new LirEmitResult(emitter._nameToLabel, emitter._stubLabel, emitter._imports);
         }
@@ -139,9 +148,116 @@ namespace Cocoa.CodeGen.Native
             EmitData();
             EmitStub();
             EmitFunctions();
+            if (_splitRuntime && _trapThunkNames.Count > 0)
+            {
+                EmitRuntimeTrapThunks();
+            }
+
             RegisterVTableFixups();
+            if (_splitRuntime && _forwardThunkNames.Count > 0)
+            {
+                EmitRuntimeForwardThunks();
+            }
+
             if (System.Environment.GetEnvironmentVariable("COCOA_DUMP_SYM") != null)
                 DumpSymbols();
+        }
+
+        // ------------------------------------------------------------------
+        // 拆分形态（S1 Phase A）：运行时原语经 IAT 导入 System.Core.Native，陷阱点经本地 thunk 中转
+        // ------------------------------------------------------------------
+
+        /// <summary>原语名的 IAT 槽（拆分形态；内联形态下不调用）。</summary>
+        private int GetRuntimeImportSlot(string name)
+        {
+            return GetRuntimeImportSlotByExport(NativeSymbolMangling.RtExportName(name));
+        }
+
+        /// <summary>导出名（cocoa_rt_*/cocoa_rt_type_*）→ IAT 槽；缓存按导出名。</summary>
+        private int GetRuntimeImportSlotByExport(string exportName)
+        {
+            if (_runtimeImportSlots.TryGetValue(exportName, out var slot))
+            {
+                return slot;
+            }
+
+            foreach (var kvp in _importSlots)
+            {
+                if (string.Equals(kvp.Key.Name, exportName, StringComparison.Ordinal))
+                {
+                    _runtimeImportSlots[exportName] = kvp.Value;
+                    return kvp.Value;
+                }
+            }
+
+            throw new InvalidOperationException($"split runtime: import '{exportName}' 未注册（RuntimeSplitter.RegisterImports 缺失？）");
+        }
+
+        /// <summary>令陷阱 jcc 目标可解析：内联 → 原语本地 label；拆分 → 本地 thunk（call [IAT] + 自环，noreturn 防御）。</summary>
+        private int RuntimeTrapLabel(string name)
+        {
+            if (!_splitRuntime)
+            {
+                return _nameToLabel[name];
+            }
+
+            if (!_trapThunkLabels.TryGetValue(name, out var label))
+            {
+                label = _a.CreateLabel();
+                _trapThunkLabels[name] = label;
+                _trapThunkNames.Add(name);
+            }
+
+            return label;
+        }
+
+        /// <summary>直接调用运行时原语：内联 → call 本地 label；拆分 → call [IAT 槽]（参数已由 SetArg 装入 ABI 寄存器）。</summary>
+        private void EmitRuntimeCall(string name)
+        {
+            if (_splitRuntime)
+            {
+                _a.CallRip(GetRuntimeImportSlot(name));
+            }
+            else
+            {
+                _a.Call(_nameToLabel[name]);
+            }
+        }
+
+        /// <summary>拆分形态陷阱 thunk 区（EmitFunctions 之后发射；仅可被 jcc 落入，noreturn 原语尾传直达）。</summary>
+        private void EmitRuntimeTrapThunks()
+        {
+            foreach (var name in _trapThunkNames)
+            {
+                _a.MarkLabel(_trapThunkLabels[name]);
+                _a.JmpRip(GetRuntimeImportSlot(name));
+            }
+        }
+
+        /// <summary>
+        /// 拆分形态：vtable 槽引用的运行时默认函数（ObjectToString/GetHashCode/Equals/GetType）不在本地 →
+        /// 生成尾传转发 thunk（jmp [IAT]）。被调用约定保持（对象面为栈 ABI，与虚分派 CallReg 一致），
+        /// ret 直达外层调用方。
+        /// </summary>
+        private int RuntimeForwardThunk(string name)
+        {
+            if (!_forwardThunkLabels.TryGetValue(name, out var label))
+            {
+                label = _a.CreateLabel();
+                _forwardThunkLabels[name] = label;
+                _forwardThunkNames.Add(name);
+            }
+
+            return label;
+        }
+
+        private void EmitRuntimeForwardThunks()
+        {
+            foreach (var name in _forwardThunkNames)
+            {
+                _a.MarkLabel(_forwardThunkLabels[name]);
+                _a.JmpRip(GetRuntimeImportSlot(name));
+            }
         }
 
         private void DumpIr()
@@ -262,6 +378,14 @@ namespace Cocoa.CodeGen.Native
         {
             if (_emitStub == null)
             {
+                // 拆分形态且为可执行（有入口）：先登记本模块 String/Array 记录（首登记胜出）。
+                // 用户库形态（无入口）不注册——身份以 exe 首登记为准，库内 String/Array 引用经 type_get 共享。
+                if (_splitRuntime && _program.EntryFunctionName.Length > 0)
+                {
+                    EmitSplitTypeInit();
+                    return;
+                }
+
                 // 无自解析 stub（6c-2）：入口即用户入口
                 _stubLabel = _entryLabel;
                 return;
@@ -270,6 +394,35 @@ namespace Cocoa.CodeGen.Native
             _stubLabel = _a.CreateLabel();
             _a.MarkLabel(_stubLabel);
             _emitStub(_imports, _stubLabel);
+        }
+
+        // ------------------------------------------------------------------
+        // S1 Phase B：exe 拆分形态启动 init —— 先于 main 把本模块的 String/Array 本地 vtable 登记进
+        // 系统库共享类型表（首登记胜出）→ 令 DLL 原语创建的 String/Array 对象与本模块字面量共享同一 vtable，
+        // 跨模块 is/GetType 身份一致。
+        // ------------------------------------------------------------------
+
+        private void EmitSplitTypeInit()
+        {
+            _stubLabel = _a.CreateLabel();
+            _a.MarkLabel(_stubLabel);
+
+            var register = GetRuntimeImportSlotByExport(NativeSymbolMangling.RtTypeRegister);
+            foreach (var fullName in new[] { NativeObjectModel.SystemStringVTableName, "System.Array" })
+            {
+                if (!_dataSymbols.TryGetValue(NativeObjectModel.PseudoVTableKey(fullName), out var vtSymbol) ||
+                    !_dataSymbols.TryGetValue(fullName, out var keySymbol))
+                {
+                    continue;
+                }
+
+                // type_register(key, vtablePtr)：1 参 → rcx、2 参 → rdx（同一 LirToAssembler 的寄存器 ABI）
+                _a.LeaRip(X64Register.RCX, keySymbol);
+                _a.LeaRip(X64Register.RDX, vtSymbol);
+                _a.CallRip(register);
+            }
+
+            _a.Jmp(_entryLabel);
         }
 
         // ------------------------------------------------------------------
@@ -342,7 +495,14 @@ namespace Cocoa.CodeGen.Native
                     var functionName = item.Slots[i];
                     if (!_nameToLabel.TryGetValue(functionName, out var label))
                     {
-                        throw new Exception($"VTable slot function '{functionName}' was not emitted.");
+                        // S1 拆分形态：运行时默认函数（Object 面等）不在本地 → 尾传转发 thunk（jmp [IAT]），
+                        // 使 vtable 槽持有可调函数地址（调用约定一致，ret 直达上层）。
+                        if (!_splitRuntime)
+                        {
+                            throw new Exception($"VTable slot function '{functionName}' was not emitted.");
+                        }
+
+                        label = RuntimeForwardThunk(functionName);
                     }
 
                     _a.AddDataCodeFixup(baseOffset + 8 + ps * (i + 1), label);

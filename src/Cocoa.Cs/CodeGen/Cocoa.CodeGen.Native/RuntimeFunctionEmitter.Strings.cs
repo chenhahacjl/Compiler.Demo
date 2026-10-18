@@ -117,7 +117,7 @@ namespace Cocoa.CodeGen.Native
             Jcc(LirCond.Equal, fail);
 
             var stringVt = NewPtr();
-            LeaData(stringVt, NativeObjectModel.PseudoVTableKey("System.String"));
+            VtPointer(stringVt, "System.String");
             Store(obj, 0, stringVt, _isX64 ? 8 : 4);
 
             var total = NewReg(4);
@@ -277,7 +277,7 @@ namespace Cocoa.CodeGen.Native
             Jcc(LirCond.Equal, oom);
 
             var stringVt = NewPtr();
-            LeaData(stringVt, NativeObjectModel.PseudoVTableKey("System.String"));
+            VtPointer(stringVt, "System.String");
             Store(obj, 0, stringVt, _isX64 ? 8 : 4);
             Store(obj, NativeObjectModel.StringLengthOffset, count, 4);
 
@@ -330,7 +330,7 @@ namespace Cocoa.CodeGen.Native
             Jcc(LirCond.Equal, oom);
 
             var stringVt = NewPtr();
-            LeaData(stringVt, NativeObjectModel.PseudoVTableKey("System.String"));
+            VtPointer(stringVt, "System.String");
             Store(obj, 0, stringVt, _isX64 ? 8 : 4);
             Store(obj, NativeObjectModel.StringLengthOffset, C(4, 1), 4);
             Store(obj, NativeObjectModel.StringDataOffset, c, 2);
@@ -750,7 +750,7 @@ namespace Cocoa.CodeGen.Native
             Cmp(obj, 0);
             Jcc(LirCond.Equal, oom);
             var stringVt = NewPtr();
-            LeaData(stringVt, NativeObjectModel.PseudoVTableKey("System.String"));
+            VtPointer(stringVt, "System.String");
             Store(obj, 0, stringVt, _isX64 ? 8 : 4);
             var chars = NewReg(4);
             Mov(chars, lenBytes);

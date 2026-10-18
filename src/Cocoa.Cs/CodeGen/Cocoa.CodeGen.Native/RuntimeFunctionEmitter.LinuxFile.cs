@@ -211,7 +211,7 @@ namespace Cocoa.CodeGen.Native
             Cmp(obj, 0);
             Jcc(LirCond.Equal, failLabel);
             var stringVt = NewPtr();
-            LeaData(stringVt, NativeObjectModel.PseudoVTableKey("System.String"));
+            VtPointer(stringVt, "System.String");
             Store(obj, 0, stringVt, _isX64 ? 8 : 4);
             Store(obj, NativeObjectModel.StringLengthOffset, chars, 4);
 
@@ -363,7 +363,7 @@ namespace Cocoa.CodeGen.Native
             Load(total, sb, StatSizeOffset, 4);
 
             var arrayVt = NewPtr();
-            LeaData(arrayVt, NativeObjectModel.PseudoVTableKey("System.Array"));
+            VtPointer(arrayVt, "System.Array");
             var arr = NewPtr();
             CallRuntime(arr, "NewArray", total, C(4, 1), arrayVt);
             Cmp(arr, 0);
@@ -399,7 +399,7 @@ namespace Cocoa.CodeGen.Native
             LinuxSyscall(null, __NR_close, 1, fd);
             Mark(fail);
             var emptyVt = NewPtr();
-            LeaData(emptyVt, NativeObjectModel.PseudoVTableKey("System.Array"));
+            VtPointer(emptyVt, "System.Array");
             CallRuntime(result, "NewArray", C(4, 0), C(4, 1), emptyVt);
             Mark(done);
             StoreRet(result);
@@ -828,7 +828,7 @@ namespace Cocoa.CodeGen.Native
 
             Mark(countDone);
             var arrayVt = NewPtr();
-            LeaData(arrayVt, NativeObjectModel.PseudoVTableKey("System.Array"));
+            VtPointer(arrayVt, "System.Array");
             var arr = NewPtr();
             CallRuntime(arr, "NewArray", count, C(4, 8), arrayVt);
             Cmp(arr, 0);

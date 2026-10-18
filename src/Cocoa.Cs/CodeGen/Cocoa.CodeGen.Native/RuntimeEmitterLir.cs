@@ -17,9 +17,9 @@ namespace Cocoa.CodeGen.Native
     /// </summary>
     internal static partial class RuntimeEmitterLir
     {
-        public static void Append(LirProgram program, TargetPlatform platform)
+        public static void Append(LirProgram program, TargetPlatform platform, bool includeTypeTable = false)
         {
-            var emitter = new RuntimeFunctionEmitter(program, platform);
+            var emitter = new RuntimeFunctionEmitter(program, platform, includeTypeTable);
             emitter.Emit();
         }
     }
