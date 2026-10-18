@@ -22,7 +22,7 @@ namespace Cocoa.CodeGen.Native
     /// S1/S2（native-s1）：`.coa` → native 共享库 DLL（每 coa 一 DLL）。
     /// <paramref name="embedRuntime"/> = true（owner，如 System.Core）：携带运行时原语 + 共享类型表；
     /// false（用户库）：不内嵌原语/类型表/堆，原语与 type_get 经 IAT 导入 <see cref="NativeSymbolMangling.SystemCoreNativeName"/>，
-    /// String/Array vtable 经 <c>cocoa_rt_type_get</c> 取（跨模块唯一身份）。
+    /// String/Array vtable 经 <c>Cocoa_Rt_type_get</c> 取（跨模块唯一身份）。
     /// 与 exe 发射共享 MirToLir → LirToAssembler → PeFileWriter 全链。
     /// </summary>
     public static class EmitNativeLibrary
@@ -47,7 +47,7 @@ namespace Cocoa.CodeGen.Native
             }
             else
             {
-                // S2：用户库共享 owner 运行时——不内嵌原语，经 IAT 导入 cocoa_rt_*/type_get/type_register
+                // S2：用户库共享 owner 运行时——不内嵌原语，经 IAT 导入 Cocoa_Rt_*/type_get/type_register
                 RuntimeSplitter.RegisterImports(ir, platform);
             }
 
@@ -169,7 +169,7 @@ namespace Cocoa.CodeGen.Native
 
         /// <summary>
         /// 全导出：库函数（<c>cocoa_+Sanitize(FnKey)</c>，label→RVA 复用 CollectExports 手法）
-        /// + 运行时原语（<c>cocoa_rt_*</c>）。导出名冲突（如原语与库函数同名）首写胜出，防 IAT/名字表歧义。
+        /// + 运行时原语（<c>Cocoa_Rt_*</c>）。导出名冲突（如原语与库函数同名）首写胜出，防 IAT/名字表歧义。
         /// </summary>
         private static List<PeExportEntry>? CollectExports(
             EmittedSymbolSnapshot symbols,
@@ -206,7 +206,7 @@ namespace Cocoa.CodeGen.Native
                 Add(NativeSymbolMangling.ExportName(CoaFunctionNaming.FnKey(kvp.Key)), kvp.Value.Name);
             }
 
-            // 运行时原语：cocoa_rt_*（与 EmittedPrimitiveNames 同一发射集，label 恒存在）
+            // 运行时原语：Cocoa_Rt_*（与 EmittedPrimitiveNames 同一发射集，label 恒存在）
             var primitives = RuntimePrimitiveCoverage.EmittedPrimitiveNames(platform);
             foreach (var name in primitives)
             {

@@ -55,20 +55,20 @@
 | `.coa` 程序集 | 语义层持久化 + 依赖清单 + 公共符号表，读侧拓扑装载 | ✅（Version=1） |
 | CLR Hosting（Native 路径） | 阶段 9 可选 | 🧭 |
 
-输出：`exe`（Native PE / IL 程序集）✅ · `library`（.NET 托管 dll）✅ · `cocoa`（`.coa`）✅ · 写侧导出 `dll`/`.so`（`EmitNativeLibrary`：全公共导出 `cocoa_+mangle(FnKey)` + 运行时原语 `cocoa_rt_*`，PE `.edata` / ELF `.dynsym`）✅。
+输出：`exe`（Native PE / IL 程序集）✅ · `library`（.NET 托管 dll）✅ · `cocoa`（`.coa`）✅ · 写侧导出 `dll`/`.so`（`EmitNativeLibrary`：全公共导出 `Cocoa_+mangle(FnKey)` + 运行时原语 `Cocoa_Rt_*`，PE `.edata` / ELF `.dynsym`）✅。
 
 ### 4.1 共享系统库（`SharedSystemLibrary`，S0–S6）
 
 native 缺省共享（D7）：运行时原语与 System.Core 库体不再内联进每个 exe，改经 IAT 导入共享模块，系统库只编一次、诸应用共享（对齐 dotnet 共享框架）。三模块布局：
 
 ```
-System.Core.coa ──► System.Core.Native.dll   owner：运行时原语 + 堆 + 共享类型表（cocoa_rt_type_get/register，首登记胜出）+ System.Core 库体
+System.Core.coa ──► System.Core.Native.dll   owner：运行时原语 + 堆 + 共享类型表（Cocoa_Rt_type_get/register，首登记胜出）+ System.Core 库体
 Lib.coa        ──► Lib.Native.dll            用户库（每 coa 一 DLL）：不内嵌运行时，导入 owner
-<App>.exe           应用自身 + IAT 导入（cocoa_rt_* + cocoa_+mangle(FnKey)）
+<App>.exe           应用自身 + IAT 导入（Cocoa_Rt_* + Cocoa_+mangle(FnKey)）
 ```
 
-- **命名契约**：`NativeSymbolMangling`（`cocoa_+Sanitize(FnKey)` / `cocoa_rt_*`；模块名 `X.Native.dll` 带 `.dll` 以适配加载器扩展名语义）。
-- **身份一致**：exe 启动 init stub 先登记本模块 String/Array 记录；owner 原语与用户库建 String/Array 对象一律经 `cocoa_rt_type_get` → 进程唯一 vtable，跨模块 `is`/`GetType`/虚分派一致。
+- **命名契约**：`NativeSymbolMangling`（`Cocoa_+Sanitize(FnKey)` / `Cocoa_Rt_*`；模块名 `X.Native.dll` 带 `.dll` 以适配加载器扩展名语义）。
+- **身份一致**：exe 启动 init stub 先登记本模块 String/Array 记录；owner 原语与用户库建 String/Array 对象一律经 `Cocoa_Rt_type_get` → 进程唯一 vtable，跨模块 `is`/`GetType`/虚分派一致。
 - **部署**：`EnsureNativeDlls`（时间戳自愈）把 `System.Core.Native.dll` 与用户库落 exe 旁；`<SharedSystemLibrary>false</SharedSystemLibrary>` 恢复内联单镜像（差分基线）。
 - **managed**：netcore runtimeconfig 注入 `additionalProbingPaths`（SDK 系统库目录），app 目录优先、探路兜底。
 - **Linux**：`ElfObjectWriter.WriteSharedLibrary`（ET_DYN、entry=0、`.dynsym` STB_GLOBAL 导出 + GLOB_DAT 导入）。

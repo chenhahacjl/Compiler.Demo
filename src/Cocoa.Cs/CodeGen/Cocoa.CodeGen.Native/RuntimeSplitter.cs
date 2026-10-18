@@ -9,7 +9,7 @@ namespace Cocoa.CodeGen.Native
     /// S1（native-s1 Phase A）：exe 拆分形态的运行时原语导入注册。
     /// 拆分形态下运行时原语不内联（<c>RuntimeEmitterLir.Append</c> 跳过），exe 对原语的调用
     /// （<c>LirOpCode.Call</c> + <c>LirOperand.Runtime(name)</c> + 陷阱点 <c>DivByZero/StackOverflow/…</c>）
-    /// 全部经 IAT 导入 <c>System.Core.Native.dll</c> 的 <c>cocoa_rt_*</c>（默认内联形态零改动、字节不变）。
+    /// 全部经 IAT 导入 <c>System.Core.Native.dll</c> 的 <c>Cocoa_Rt_*</c>（默认内联形态零改动、字节不变）。
     /// </summary>
     internal static class RuntimeSplitter
     {

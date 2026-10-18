@@ -72,7 +72,7 @@ function Main(): i32
     if s != ""lib!"" return 22
     if s.GetType().Name != ""String"" return 23
 
-    // 用户库内 is string（库侧经 cocoa_rt_type_get 取身份）
+    // 用户库内 is string（库侧经 Cocoa_Rt_type_get 取身份）
     if MathLib.IsLib(s) != 1 return 24
     return 0
 }

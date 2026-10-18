@@ -70,7 +70,7 @@ namespace Cocoa.CodeGen.Native
             SystemObjectMembers.Equals,
         };
 
-        /// <summary>S1/S2（native-s1）：模块是否走共享类型表（String/Array vtable 经 cocoa_rt_type_get 取，
+        /// <summary>S1/S2（native-s1）：模块是否走共享类型表（String/Array vtable 经 Cocoa_Rt_type_get 取，
         /// 跨模块身份唯一）。exe 用「首登记本模块记录」策略（保持 false）；用户库（embedRuntime=false）置 true。</summary>
         private readonly bool _sharedTypeTable;
 

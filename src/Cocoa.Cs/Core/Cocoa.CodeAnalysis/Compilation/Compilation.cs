@@ -98,6 +98,13 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>
+        /// S3b 加固：native 共享库生产组件（实现程序集）的路径——供部署层把「编译器版本」纳入共享库新鲜度判定，
+        /// 避免仅按 coa 时间戳自愈漏掉编译器升级（如导出名契约改版）导致的陈旧 DLL 残留。
+        /// </summary>
+        public static string? NativeSharedLibraryProducerAssemblyPath =>
+            _nativeLibraryEmitter?.Method?.DeclaringType?.Assembly?.Location;
+
+        /// <summary>
         /// 解释器求值委托（4.1）：由 <c>Cocoa.CodeGen.Interpreter</c> 经 <see cref="RegisterInterpreterEvaluator"/> 注册；
         /// Core 自身不引用后端。args 为 null 表示无参 REPL 求值，否则为 Main(string[]) 形态。幂等。
         /// </summary>

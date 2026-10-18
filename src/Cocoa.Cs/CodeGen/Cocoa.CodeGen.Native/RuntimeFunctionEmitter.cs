@@ -335,7 +335,7 @@ namespace Cocoa.CodeGen.Native
             }
 
             // ------------------------------------------------------------------
-            // S1 Phase B：共享类型表（cocoa_rt_type_get / cocoa_rt_type_register）
+            // S1 Phase B：共享类型表（Cocoa_Rt_type_get / Cocoa_Rt_type_register）
             // ------------------------------------------------------------------
 
             private void EmitTypeTableFunctions()
@@ -346,7 +346,7 @@ namespace Cocoa.CodeGen.Native
                 EmitTypeGet(_currentFunction!, 8);
             }
 
-            /// <summary>cocoa_rt_type_get(key)：线性扫查 (key,vtablePtr) 表，命中返回 vtablePtr，未命中返回 0。</summary>
+            /// <summary>Cocoa_Rt_type_get(key)：线性扫查 (key,vtablePtr) 表，命中返回 vtablePtr，未命中返回 0。</summary>
             private void EmitTypeGet(LirFunction fn, int returnSize)
             {
                 var key = _args[0];
@@ -402,7 +402,7 @@ namespace Cocoa.CodeGen.Native
                 EndFunction(fn, returnSize);
             }
 
-            /// <summary>cocoa_rt_type_register(key, vtablePtr)：未命中则追加（首登记胜出，进程单例）；已存在返回既有值。</summary>
+            /// <summary>Cocoa_Rt_type_register(key, vtablePtr)：未命中则追加（首登记胜出，进程单例）；已存在返回既有值。</summary>
             private void EmitTypeRegister(LirFunction fn, int returnSize)
             {
                 var keyArg = _args[0];
@@ -460,7 +460,7 @@ namespace Cocoa.CodeGen.Native
                 EndFunction(fn, returnSize);
             }
 
-            /// <summary>S1 Phase B：取共享类型 vtable 指针。includeTypeTable（owner 库）→ cocoa_rt_type_get(key)；
+            /// <summary>S1 Phase B：取共享类型 vtable 指针。includeTypeTable（owner 库）→ Cocoa_Rt_type_get(key)；
             /// 否则（内联形态）→ 本地 vtable 数据项（历史行为，字节不变）。</summary>
             private void VtPointer(LirVirtualRegister dst, string fullName)
             {

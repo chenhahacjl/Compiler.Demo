@@ -173,7 +173,7 @@ namespace Cocoa.CodeGen.Native
             return GetRuntimeImportSlotByExport(NativeSymbolMangling.RtExportName(name));
         }
 
-        /// <summary>导出名（cocoa_rt_*/cocoa_rt_type_*）→ IAT 槽；缓存按导出名。</summary>
+        /// <summary>导出名（Cocoa_Rt_*/Cocoa_Rt_type_*）→ IAT 槽；缓存按导出名。</summary>
         private int GetRuntimeImportSlotByExport(string exportName)
         {
             if (_runtimeImportSlots.TryGetValue(exportName, out var slot))

@@ -75,17 +75,19 @@
 
 ## 4. 命名契约（D2 = F）
 
+> ⚠️ 实施修订（2026-10-18）：最终前缀定为 **库函数 `Cocoa_`、运行时原语 `Cocoa_Rt_`**（取代下方历史 `cocoa_`/`cocoa_rt_`；实现见 [native-s1-实施计划.md](native-s1-实施计划.md) 与 `NativeSymbolMangling`）。
+
 单一来源 `NativeSymbolMangling`（`Cocoa.CodeGen.Native`，producer 与 consumer 共用）：
 
 ```
-cocoa_ + Sanitize(FnKey)
+Cocoa_ + Sanitize(FnKey)
 FnKey 样例:  System.Core!System.Math.Abs[-@f64]
 Sanitize:    剔除非 [0-9A-Za-z_.] 的字符；`!`→`_`、`[`/`]`→`_`、`@`→`_`、`-`→`_`，连续 `_` 合并
-→ cocoa_System.Core_System.Math.Abs__f64
+→ Cocoa_System.Core_System.Math.Abs__f64
 ```
 
 - 类静态/实例方法、属性访问器、构造器均含 `ContainingClass.FullName` 前缀防撞；重载经签名段（FnKey 天然含参数类型）保证唯一。
-- 运行时入口统一前缀 `cocoa_rt_`（不与用户符号冲突）。
+- 运行时入口统一前缀 `Cocoa_Rt_`（不与用户符号冲突）。
 - `.coa` v3 的 FnKey 序列化即此契约输入——producer 导出名与 consumer 导入名自动一致（同一 coa 加载后重建同类符号）。
 
 ---

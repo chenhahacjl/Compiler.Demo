@@ -350,7 +350,7 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
 
             // 目录头：Name 字段 = 模块名前缀串（供工具显示），Base=1
             var dllNameOffset = blob.Count;
-            foreach (var ch in "cocoa" + "\0")
+            foreach (var ch in "Cocoa" + "\0")
             {
                 blob.Add((byte)ch);
             }

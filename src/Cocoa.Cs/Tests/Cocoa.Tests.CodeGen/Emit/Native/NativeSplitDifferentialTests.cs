@@ -50,7 +50,7 @@ function Main(): i32
 
         private static (int ExitCode, string Stdout) EmitSplitAndRun(string dir)
         {
-            // 1) 由任一 coa（此处自包含夹具）产出 System.Core.Native.dll（含全部 cocoa_rt_* 原语）
+            // 1) 由任一 coa（此处自包含夹具）产出 System.Core.Native.dll（含全部 Cocoa_Rt_* 原语）
             var libDir = Path.Combine(Path.GetTempPath(), "cocoa-native-split-tests-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(libDir);
             var coaPath = Path.Combine(libDir, "Lib.coa");

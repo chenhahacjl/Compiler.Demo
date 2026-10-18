@@ -748,8 +748,17 @@ namespace Cocoa.Build
                     : name;
                 var nativeDll = Path.Combine(outputDirectory, CoaAssemblyNaming.NativeAssemblyName(coaBase) + ".dll");
 
-                // 时间戳自愈（无 .stamp）：dll 缺失或比 coa 源旧 → 再生
-                if (File.Exists(nativeDll) && File.GetLastWriteTimeUtc(nativeDll) >= File.GetLastWriteTimeUtc(sourcePath))
+                // 时间戳自愈（无 .stamp）：dll 缺失或比 coa 源旧 → 再生。
+                // 编译器指纹：共享库由「coa 源 × 编译器」共同决定——把编译核心与共享库生产组件
+                // （Cocoa.CodeGen.Native）程序集时间戳纳入新鲜度，避免编译器升级（如导出名契约改版）
+                // 仅改代码不改 coa 时陈旧 DLL 残留。
+                var stale = !File.Exists(nativeDll)
+                    || File.GetLastWriteTimeUtc(nativeDll) < File.GetLastWriteTimeUtc(sourcePath)
+                    || File.GetLastWriteTimeUtc(nativeDll) < File.GetLastWriteTimeUtc(typeof(Compilation).Assembly.Location)
+                    || (Compilation.NativeSharedLibraryProducerAssemblyPath is { } producerPath
+                        && File.Exists(producerPath)
+                        && File.GetLastWriteTimeUtc(nativeDll) < File.GetLastWriteTimeUtc(producerPath));
+                if (!stale)
                 {
                     continue;
                 }

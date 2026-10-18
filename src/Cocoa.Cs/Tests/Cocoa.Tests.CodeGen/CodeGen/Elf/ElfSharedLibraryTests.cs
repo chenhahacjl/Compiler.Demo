@@ -41,8 +41,8 @@ namespace Cocoa.Tests.CodeGen.Elf
             // 库函数与运行时原语都应在 .dynsym 定义为 STB_GLOBAL 且指向 .text（st_shndx=1, st_value≠0）
             var defined = syms.Where(s => s.Shndx == 1 && s.Value != 0).ToArray();
             Assert.True(defined.Length > 0, "expected defined (export) symbols in .dynsym");
-            Assert.Contains(defined, s => s.Name.StartsWith("cocoa_Lib_", StringComparison.Ordinal));
-            Assert.Contains(defined, s => s.Name.StartsWith("cocoa_rt_", StringComparison.Ordinal));
+            Assert.Contains(defined, s => s.Name.StartsWith("Cocoa_Lib_", StringComparison.Ordinal));
+            Assert.Contains(defined, s => s.Name.StartsWith("Cocoa_Rt_", StringComparison.Ordinal));
 
             // 无导入（Linux 运行时裸 syscall，零外部依赖）→ 不要求 UNDEF；有则也合法
         }
@@ -52,7 +52,7 @@ namespace Cocoa.Tests.CodeGen.Elf
         {
             var image = EmitFixture();
             var syms = ReadDynSyms(image);
-            var export = syms.First(s => s.Shndx == 1 && s.Value != 0 && s.Name.StartsWith("cocoa_Lib_", StringComparison.Ordinal));
+            var export = syms.First(s => s.Shndx == 1 && s.Value != 0 && s.Name.StartsWith("Cocoa_Lib_", StringComparison.Ordinal));
             // st_value = 镜像内偏移（.text 基址 0x1000 起）
             Assert.True(export.Value >= 0x1000, $"export value {export.Value} should be within .text");
             Assert.True(export.Value < (ulong)(0x1000 + image.Length), "export value out of image range");

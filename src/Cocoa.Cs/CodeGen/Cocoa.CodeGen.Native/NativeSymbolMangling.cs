@@ -7,8 +7,8 @@ namespace Cocoa.CodeGen.Native
     /// Native 共享框架命名契约（[Native共享框架设计.md §4] + [native-s1-实施计划.md S0]）——单一来源，producer 与 consumer 共用。
     /// 契约面：
     ///   模块名：每 `.coa` 一 DLL → <c>X.Native</c>（owner = <c>System.Core.Native</c>；arch 移出契约，仅部署目录区分）。
-    ///   库函数导出：<c>cocoa_ + Sanitize(FnKey)</c>（FnKey 由 <c>CoaRegistry.ComputeFnKey</c> 序列化，同一 coa 加载后重建符号即得同键）。
-    ///   运行时原语导出：<c>cocoa_rt_ + CamelToSnake(原语名)</c>（经 <see cref="RuntimePrimitiveCoverage.AllNames"/> 覆盖一致性锁校验）。
+    ///   库函数导出：<c>Cocoa_ + Sanitize(FnKey)</c>（FnKey 由 <c>CoaRegistry.ComputeFnKey</c> 序列化，同一 coa 加载后重建符号即得同键）。
+    ///   运行时原语导出：<c>Cocoa_Rt_ + CamelToSnake(原语名)</c>（经 <see cref="RuntimePrimitiveCoverage.AllNames"/> 覆盖一致性锁校验）。
     /// 唯一性来源：class 方法/访问器/构造均含 ContainingClass.FullName 前缀；重载由 FnKey 参数段天然唯一。
     /// </summary>
     public static class NativeSymbolMangling
@@ -17,10 +17,10 @@ namespace Cocoa.CodeGen.Native
         public const string NativeSuffix = ".Native";
 
         /// <summary>库函数导出前缀。</summary>
-        public const string ExportPrefix = "cocoa_";
+        public const string ExportPrefix = "Cocoa_";
 
         /// <summary>运行时原语导出前缀。</summary>
-        public const string RuntimeExportPrefix = "cocoa_rt_";
+        public const string RuntimeExportPrefix = "Cocoa_Rt_";
 
         /// <summary>
         /// owner 模块 PE 导入名（运行时 + System.Core 库体 + 类型表合并后的唯一状态持有者，恒被加载）。
@@ -31,14 +31,14 @@ namespace Cocoa.CodeGen.Native
         public const string SystemCoreNativeName = "System.Core.Native.dll";
 
         // 运行时导出的「新增原语」（非 RuntimeFunctionEmitter 原语，S1 由 EmitNativeLibrary 注入）。
-        public const string RtTypeGet = "cocoa_rt_type_get";
-        public const string RtTypeRegister = "cocoa_rt_type_register";
-        public const string RtHeapPtr = "cocoa_rt_heap_ptr";
+        public const string RtTypeGet = "Cocoa_Rt_type_get";
+        public const string RtTypeRegister = "Cocoa_Rt_type_register";
+        public const string RtHeapPtr = "Cocoa_Rt_heap_ptr";
 
         /// <summary>native 库文件基名（模块契约名）：X → X.Native。</summary>
         public static string LibraryModuleName(string coaBaseName) => coaBaseName + NativeSuffix;
 
-        /// <summary>库函数导出名：cocoa_ + Sanitize(FnKey)。</summary>
+        /// <summary>库函数导出名：Cocoa_ + Sanitize(FnKey)。</summary>
         public static string ExportName(string fnKey) => ExportPrefix + Sanitize(fnKey);
 
         /// <summary>
@@ -87,13 +87,13 @@ namespace Cocoa.CodeGen.Native
         /// <summary>映射为 `_` 的分隔字符（`!` 库前缀 / `[]` 参数段 / `-` 参数前缀；`@` 剔除）。</summary>
         private static bool IsSeparator(char c) => c == '!' || c == '[' || c == ']' || c == '-';
 
-        /// <summary>运行时原语导出名特例表（默认 = cocoa_rt_ + CamelToSnake）。</summary>
+        /// <summary>运行时原语导出名特例表（默认 = Cocoa_Rt_ + CamelToSnake）。</summary>
         private static readonly Dictionary<string, string> RuntimeExportOverrides = new()
         {
             ["Sha256Hash"] = "sha256_hash",
         };
 
-        /// <summary>运行时原语导出名：cocoa_rt_ + CamelToSnake(name)。</summary>
+        /// <summary>运行时原语导出名：Cocoa_Rt_ + CamelToSnake(name)。</summary>
         public static string RtExportName(string primitiveName)
         {
             var snake = RuntimeExportOverrides.TryGetValue(primitiveName, out var exportOverride)

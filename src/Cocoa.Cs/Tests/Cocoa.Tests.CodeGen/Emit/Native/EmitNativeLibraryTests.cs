@@ -15,7 +15,7 @@ namespace Cocoa.Tests.CodeGen.Emit.Native
 {
     /// <summary>
     /// S1（native-s1 实施计划）：`EmitNativeLibrary` 管线验收——任 `.coa` → native 共享 DLL（每 coa 一 DLL）。
-    /// PE DLL 形态（entry=0、IMAGE_FILE_DLL）+ 全导出（库函数 cocoa_+mangle(FnKey)、运行时原语 cocoa_rt_*）。
+    /// PE DLL 形态（entry=0、IMAGE_FILE_DLL）+ 全导出（库函数 Cocoa_+mangle(FnKey)、运行时原语 Cocoa_Rt_*）。
     /// 用**自包含夹具 coa**（纯 i32 运算，模块内自洽）驱动全链：MirToLir 库模式 → RuntimeEmitterLir →
     /// LirToAssembler → PeFileWriter（isDll）。
     /// 注：完整 System.Core.coa 含 native 尚未支持的成员（如 decimal 打印），全量编译为 S5 开放项，

@@ -131,7 +131,7 @@ namespace Cocoa.CodeGen.Native
 
         /// <summary>
         /// S2（native-s1）共享类型表 vtable 装载：用户库（sharedTypeTable）取 String/Array 的唯一身份记录 →
-        /// 经 <c>cocoa_rt_type_get</c>（导入）；否则本地 vtable 数据项（exe 内联/登记策略，历史行为不变）。
+        /// 经 <c>Cocoa_Rt_type_get</c>（导入）；否则本地 vtable 数据项（exe 内联/登记策略，历史行为不变）。
         /// </summary>
         private void EmitSharedVt(LirVirtualRegister dst, string fullName)
         {

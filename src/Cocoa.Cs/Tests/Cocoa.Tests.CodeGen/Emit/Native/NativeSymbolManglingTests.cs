@@ -6,7 +6,7 @@ using Xunit;
 namespace Cocoa.Tests.CodeGen.Emit.Native
 {
     /// <summary>
-    /// S0：Native 命名契约验收——库函数导出（cocoa_+Sanitize(FnKey)）、运行时原语导出（cocoa_rt_*）、
+    /// S0：Native 命名契约验收——库函数导出（Cocoa_+Sanitize(FnKey)）、运行时原语导出（Cocoa_Rt_*）、
     /// 模块名（每 coa 一 dll，X.Native；arch 移出契约）。契约与 [native-s1-实施计划.md] S0 一致。
     /// </summary>
     public class NativeSymbolManglingTests
@@ -21,7 +21,7 @@ namespace Cocoa.Tests.CodeGen.Emit.Native
         [Fact]
         public void ExportName_PrefixedWithCocoa()
         {
-            Assert.Equal("cocoa_System.Core_System.Math.Abs__f64", NativeSymbolMangling.ExportName("System.Core!System.Math.Abs[-@f64]"));
+            Assert.Equal("Cocoa_System.Core_System.Math.Abs__f64", NativeSymbolMangling.ExportName("System.Core!System.Math.Abs[-@f64]"));
         }
 
         [Fact]
@@ -56,12 +56,12 @@ namespace Cocoa.Tests.CodeGen.Emit.Native
         [Fact]
         public void RtExportName_DesignContract()
         {
-            // 设计 §5.2：cocoa_rt_alloc / cocoa_rt_new_array / cocoa_rt_stack_overflow
-            Assert.Equal("cocoa_rt_alloc", NativeSymbolMangling.RtExportName("Alloc"));
-            Assert.Equal("cocoa_rt_new_array", NativeSymbolMangling.RtExportName("NewArray"));
-            Assert.Equal("cocoa_rt_stack_overflow", NativeSymbolMangling.RtExportName("StackOverflow"));
-            Assert.Equal("cocoa_rt_div_by_zero", NativeSymbolMangling.RtExportName("DivByZero"));
-            Assert.Equal("cocoa_rt_sha256_hash", NativeSymbolMangling.RtExportName("Sha256Hash"));
+            // 设计 §5.2：Cocoa_Rt_alloc / Cocoa_Rt_new_array / Cocoa_Rt_stack_overflow
+            Assert.Equal("Cocoa_Rt_alloc", NativeSymbolMangling.RtExportName("Alloc"));
+            Assert.Equal("Cocoa_Rt_new_array", NativeSymbolMangling.RtExportName("NewArray"));
+            Assert.Equal("Cocoa_Rt_stack_overflow", NativeSymbolMangling.RtExportName("StackOverflow"));
+            Assert.Equal("Cocoa_Rt_div_by_zero", NativeSymbolMangling.RtExportName("DivByZero"));
+            Assert.Equal("Cocoa_Rt_sha256_hash", NativeSymbolMangling.RtExportName("Sha256Hash"));
         }
 
         [Fact]
@@ -69,7 +69,7 @@ namespace Cocoa.Tests.CodeGen.Emit.Native
         {
             // S1 producer key：同一原语名两次调用同结果（契约稳定，供 producer 导出 / consumer 导入同一串）
             Assert.Equal(NativeSymbolMangling.RtExportName("IntToString"), NativeSymbolMangling.RtExportName("IntToString"));
-            Assert.Equal("cocoa_rt_int_to_string", NativeSymbolMangling.RtExportName("IntToString"));
+            Assert.Equal("Cocoa_Rt_int_to_string", NativeSymbolMangling.RtExportName("IntToString"));
         }
 
         [Fact]
@@ -92,7 +92,7 @@ namespace Cocoa.Tests.CodeGen.Emit.Native
             }
 
             var declared = RuntimePrimitiveCoverage.AllNames;
-            Assert.All(declared.ToArray(), name => Assert.StartsWith("cocoa_rt_", NativeSymbolMangling.RtExportName(name)));
+            Assert.All(declared.ToArray(), name => Assert.StartsWith("Cocoa_Rt_", NativeSymbolMangling.RtExportName(name)));
         }
     }
 }
