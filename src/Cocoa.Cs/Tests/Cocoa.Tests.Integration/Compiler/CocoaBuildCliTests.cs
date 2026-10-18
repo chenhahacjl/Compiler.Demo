@@ -132,6 +132,46 @@ namespace Cocoa.Tests.Integration.Compiler
         }
 
         [Fact]
+        public void Build_Project_Managed_SharedCoreDll_ResolvesViaProbingPath()
+        {
+            var projectPath = CreateProject("managed-shared", "App", "function Main()\n{\n    Console.WriteLine(\"shared-ok\")\n}\n");
+            var (exitCode, stdout, stderr) = Run($"build \"{projectPath}\" -b managed-net --dotnet-runtime net9.0");
+            Assert.True(exitCode == 0, $"build failed: {stderr}");
+
+            var root = Path.GetDirectoryName(projectPath)!;
+            var outDir = Path.Combine(root, "bin", "Debug", "managed", "net9.0");
+            var exePath = Path.Combine(outDir, "App.exe");
+            Assert.True(File.Exists(exePath), "apphost exe missing");
+
+            // S6：runtimeconfig 注入 additionalProbingPaths（SDK 共享目录）
+            var rc = File.ReadAllText(Path.Combine(outDir, "App.runtimeconfig.json"));
+            Assert.Contains("additionalProbingPaths", rc);
+
+            // 模拟 SDK 预编译共享库：把 System.Core.Managed.dll 放入 SDK 系统库目录
+            var coreCoaPath = Cocoa.CodeAnalysis.Serialization.SystemLibrary.TryResolveCoaPath("System.Core");
+            Assert.NotNull(coreCoaPath);
+            var sdkDir = Path.GetDirectoryName(coreCoaPath);
+            Assert.False(string.IsNullOrEmpty(sdkDir));
+            var coreManaged = Path.Combine(outDir, "System.Core.Managed.dll");
+            Assert.True(File.Exists(coreManaged), "copy-local System.Core.Managed.dll missing");
+            File.Copy(coreManaged, Path.Combine(sdkDir!, "System.Core.Managed.dll"), overwrite: true);
+
+            // 删除 app 目录 copy-local → 运行经 additionalProbingPaths 解析共享库
+            File.Delete(coreManaged);
+            var run = RunExe(exePath);
+            Assert.Equal(0, run.ExitCode);
+            Assert.Contains("shared-ok", run.Stdout);
+        }
+
+        private static (int ExitCode, string Stdout) RunExe(string exe)
+        {
+            using var process = Process.Start(new ProcessStartInfo(exe) { RedirectStandardOutput = true, UseShellExecute = false })!;
+            var stdout = process.StandardOutput.ReadToEnd();
+            process.WaitForExit(30000);
+            return (process.ExitCode, stdout);
+        }
+
+        [Fact]
         public void Build_Project_SecondRun_IsUpToDate()
         {
             var projectPath = CreateProject("incremental", "App", "function Main() { Console.WriteLine(1) }");

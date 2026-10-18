@@ -92,19 +92,36 @@ namespace Cocoa.Targeting
             return new IlTarget(Runtime, Version, arch ?? Arch, prefer32Bit ?? Prefer32Bit);
         }
 
-        /// <summary>netcore 运行时用的 runtimeconfig.json（framework-dependent）。netfx 不写。</summary>
-        public string GetRuntimeConfigJson()
+        /// <summary>netcore 运行时用的 runtimeconfig.json（framework-dependent）。netfx 不写。
+        /// <paramref name="probingPaths"/> 非空时注入 additionalProbingPaths（S6 managed 共享：宿主按附加探路
+        /// 解析 SDK 共享目录中的预编译系统库，app 目录优先、探路兜底）。</summary>
+        public string GetRuntimeConfigJson(IReadOnlyList<string>? probingPaths = null)
         {
             var version = $"{Version.Major}.{Version.Minor}.0";
-            return "{\n" +
-                   "  \"runtimeOptions\": {\n" +
-                   $"    \"tfm\": \"{Tfm}\",\n" +
-                   "    \"framework\": {\n" +
-                   "      \"name\": \"Microsoft.NETCore.App\",\n" +
-                   $"      \"version\": \"{version}\"\n" +
-                   "    }\n" +
-                   "  }\n" +
-                   "}\n";
+            var json = "{\n" +
+                       "  \"runtimeOptions\": {\n" +
+                       $"    \"tfm\": \"{Tfm}\",\n" +
+                       "    \"framework\": {\n" +
+                       "      \"name\": \"Microsoft.NETCore.App\",\n" +
+                       $"      \"version\": \"{version}\"\n" +
+                       "    }";
+            if (probingPaths is { Count: > 0 })
+            {
+                json += ",\n    \"additionalProbingPaths\": [\n";
+                for (var i = 0; i < probingPaths.Count; i++)
+                {
+                    json += (i > 0 ? ",\n" : "") + $"      \"{EscapeJson(probingPaths[i])}\"";
+                }
+
+                json += "\n    ]";
+            }
+
+            return json + "\n  }\n}\n";
+        }
+
+        private static string EscapeJson(string value)
+        {
+            return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
         }
     }
 }

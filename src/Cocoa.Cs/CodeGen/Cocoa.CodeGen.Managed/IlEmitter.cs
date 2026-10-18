@@ -8,6 +8,7 @@ using Cocoa.IlMetadata;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Syntax.Nodes;
+using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.CodeAnalysis.Syntax.Green;
 
 using Cocoa.CodeAnalysis;
@@ -417,7 +418,7 @@ namespace Cocoa.CodeGen.Managed
             // 库（dll）不直接运行，不写 runtimeconfig；netcore exe 写。
             if (!emitLibrary && target.Runtime == IlRuntime.NetCore)
             {
-                WriteRuntimeConfig(outputPath, target);
+                WriteRuntimeConfig(outputPath, target, SharedManagedProbingPaths());
             }
 
             return ImmutableArray<Diagnostic>.Empty;
@@ -512,11 +513,27 @@ namespace Cocoa.CodeGen.Managed
             }
         }
 
-        /// <summary>framework-dependent 运行所需的 runtimeconfig.json。</summary>
-        private static void WriteRuntimeConfig(string outputPath, IlTarget target)
+        /// <summary>framework-dependent 运行所需的 runtimeconfig.json（S6：注入 SDK 共享目录探路，宿主按附加探路解析预编译系统库）。</summary>
+        private static void WriteRuntimeConfig(string outputPath, IlTarget target, IReadOnlyList<string>? probingPaths)
         {
             var runtimeConfigPath = Path.ChangeExtension(outputPath, ".runtimeconfig.json");
-            File.WriteAllText(runtimeConfigPath, target.GetRuntimeConfigJson());
+            File.WriteAllText(runtimeConfigPath, target.GetRuntimeConfigJson(probingPaths));
+        }
+
+        /// <summary>
+        /// S6（managed 共享）：netcore 探路注入——SDK 系统库目录（<c>System.Core.Managed.dll</c> 预编译所在）。
+        /// app 目录优先（copy-local 兜底），探路仅作共享解析补充，不改默认行为。
+        /// </summary>
+        private static IReadOnlyList<string>? SharedManagedProbingPaths()
+        {
+            var corePath = SystemLibrary.TryResolveCoaPath("System.Core");
+            if (string.IsNullOrEmpty(corePath))
+            {
+                return null;
+            }
+
+            var dir = System.IO.Path.GetDirectoryName(corePath);
+            return string.IsNullOrEmpty(dir) ? null : new[] { dir };
         }
 
         private void EmitSymbolAttributes(ImmutableArray<AttributeSymbol> attributes, int parentRow, int parentTag)
