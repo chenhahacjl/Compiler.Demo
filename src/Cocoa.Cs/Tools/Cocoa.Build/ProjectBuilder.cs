@@ -508,6 +508,19 @@ namespace Cocoa.Build
                 }
                 else if (!File.Exists(path))
                 {
+                    // 按名框架引用（对齐 .NET FrameworkReference 语气）：`<Reference Include="System.Core" />`
+                    // 等无扩展名名 → 解析到 SDK 发现目录下的 `System.Core.coa`（默认仍自动注入，此为显式写法）。
+                    // 仅尝试非 .dll 引用（.dll 裸路径缺失保持既有报错）。
+                    if (!path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var systemCoa = Cocoa.CodeAnalysis.Serialization.SystemLibrary.TryResolveCoaPath(reference);
+                        if (systemCoa != null)
+                        {
+                            references.Add(systemCoa);
+                            continue;
+                        }
+                    }
+
                     error = $"error: file '{path}' doesn't exist!";
                     return references;
                 }
@@ -588,6 +601,14 @@ namespace Cocoa.Build
                 }
 
                 if (!File.Exists(reference))
+                {
+                    continue;
+                }
+
+                // 系统库 .coa（SDK 自动提供）不复制进输出目录——运行期不加载 .coa（只用 X.Managed.dll），
+                // 且避免 894KB 级系统库污染每个 bin/ 产物。
+                if (extension.Equals(".coa", StringComparison.OrdinalIgnoreCase) &&
+                    Cocoa.CodeAnalysis.Serialization.SystemLibrary.TryResolveCoaPath(Path.GetFileNameWithoutExtension(reference)) != null)
                 {
                     continue;
                 }

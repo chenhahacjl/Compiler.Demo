@@ -136,6 +136,29 @@ namespace Cocoa.CodeAnalysis.Serialization
         }
 
         /// <summary>
+        /// 按名解析系统库 coa 路径（coproj 框架引用写法：`&lt;Reference Include="System.Core" /&gt;`
+        /// 无扩展名 → 发现目录下 `System.Core.coa`；对齐 .NET 隐式框架引用 + 显式 FrameworkReference）。
+        /// 未找到返回 null（构建层报错）。发现目录优先级与 <see cref="Load"/> 一致。
+        /// </summary>
+        public static string? TryResolveCoaPath(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return null;
+            }
+
+            var directory = ResolveStdlibDirectory(Environment.GetEnvironmentVariable("COCOA_STDLIB"));
+            if (directory == null)
+            {
+                return null;
+            }
+
+            var fileName = name.EndsWith(".coa", StringComparison.OrdinalIgnoreCase) ? name : name + ".coa";
+            var candidate = Path.Combine(directory, fileName);
+            return File.Exists(candidate) ? Path.GetFullPath(candidate) : null;
+        }
+
+        /// <summary>
         /// 从 startDirectory 逐级向上探测仓库中央库仓：名为 `libs` 且含 `System.Core.coa`
         /// 的祖先目录。开发期 bins 副本被构建清空/过旧时的兜底发现路径；仓库外部署
         /// （无 libs 祖先）自然回落 exe 旁目录。测试可直接注入起始目录。

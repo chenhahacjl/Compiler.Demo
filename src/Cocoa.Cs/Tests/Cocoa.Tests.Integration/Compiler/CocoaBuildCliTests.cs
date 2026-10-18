@@ -411,6 +411,49 @@ namespace Cocoa.Tests.Integration.Compiler
             Assert.Contains("入口", stdout);
         }
 
+        [Fact]
+        public void Build_NamedSystemFrameworkReference_Resolves()
+        {
+            // 按名框架引用（对齐 .NET FrameworkReference 语气）：`<Reference Include="System.Core" />`
+            // 无扩展名 → 由构建层解析到 SDK 发现目录下的 System.Core.coa。
+            var dir = NewRunDir("named-framework-ref");
+            Directory.CreateDirectory(dir);
+            File.WriteAllText(Path.Combine(dir, "main.co"),
+                "using System\nfunction Main()\n{\n    Console.WriteLine(21 * 2)\n}\n");
+            File.WriteAllText(Path.Combine(dir, "App.coproj"), "<Project Version=\"1\">\n" +
+                "  <PropertyGroup Label=\"Language\">\n    <Language>Cocoa</Language>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>App</AssemblyName>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Output\">\n    <OutputType>Executable</OutputType>\n  </PropertyGroup>\n" +
+                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n    <Reference Include=\"System.Core\" />\n  </ItemGroup>\n" +
+                "</Project>\n");
+
+            var build = Run($"build \"{Path.Combine(dir, "App.coproj")}\" -b managed-net --dotnet-runtime net9.0");
+            Assert.True(build.ExitCode == 0, $"build failed: {build.Stderr}");
+
+            var exe = Path.Combine(dir, "bin", "Debug", "managed", "net9.0", "App.exe");
+            Assert.True(File.Exists(exe), $"exe missing; stdout=[{build.Stdout}]");
+            Assert.Equal(0, RunProcess(exe, "", out var output));
+            Assert.Contains("42", output);
+        }
+
+        [Fact]
+        public void Build_UnknownNamedFrameworkReference_ReportsError()
+        {
+            var dir = NewRunDir("named-framework-unknown");
+            Directory.CreateDirectory(dir);
+            File.WriteAllText(Path.Combine(dir, "main.co"), "function Main() { }\n");
+            File.WriteAllText(Path.Combine(dir, "App.coproj"), "<Project Version=\"1\">\n" +
+                "  <PropertyGroup Label=\"Language\">\n    <Language>Cocoa</Language>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>App</AssemblyName>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Output\">\n    <OutputType>Executable</OutputType>\n  </PropertyGroup>\n" +
+                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n    <Reference Include=\"System.NoSuchLib\" />\n  </ItemGroup>\n" +
+                "</Project>\n");
+
+            var (exitCode, stdout, stderr) = Run($"build \"{Path.Combine(dir, "App.coproj")}\" -b managed-net --dotnet-runtime net9.0");
+            Assert.Equal(1, exitCode);
+            Assert.Contains("doesn't exist", stdout + stderr);
+        }
+
         private static (string LibDir, string AppDir) CreateCoaLibraryAndApp(string run, string backend)
         {
             var root = NewRunDir(run);
