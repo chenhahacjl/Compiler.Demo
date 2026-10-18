@@ -57,6 +57,12 @@ namespace Cocoa.Targeting
         /// <summary>动态导入（N3 glibc 动态链接；null/空 = 零导入静态交付）。</summary>
         public List<DynamicImport>? Imports { get; set; }
 
+        /// <summary>
+        /// S4（linux 共享框架部署）：DT_RUNPATH 字符串（通常 `$ORIGIN`）——ELF 加载器默认不搜 exe 目录，
+        /// 置 `$ORIGIN` 后按 exe/.so 所在目录解析被依赖的共享库（使 .so 随产物自含部署）。
+        /// </summary>
+        public string? RunPath { get; set; }
+
         /// <summary>S4 ELF 共享库导出（STB_GLOBAL 定义；PE 侧由 PeFileWriter 自建 .edata，无需此项）。</summary>
         public List<ObjectExport> Exports { get; } = new();
 

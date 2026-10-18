@@ -71,7 +71,7 @@ Lib.coa        ──► Lib.Native.dll            用户库（每 coa 一 DLL�
 - **身份一致**：exe 启动 init stub 先登记本模块 String/Array 记录；owner 原语与用户库建 String/Array 对象一律经 `Cocoa_Rt_type_get` → 进程唯一 vtable，跨模块 `is`/`GetType`/虚分派一致。
 - **部署**：`EnsureNativeDlls`（时间戳自愈）把 `System.Core.Native.dll` 与用户库落 exe 旁；`<SharedSystemLibrary>false</SharedSystemLibrary>` 恢复内联单镜像（差分基线）。
 - **managed**：netcore runtimeconfig 注入 `additionalProbingPaths`（SDK 系统库目录），app 目录优先、探路兜底。
-- **Linux**：`ElfObjectWriter.WriteSharedLibrary`（ET_DYN、entry=0、`.dynsym` STB_GLOBAL 导出 + GLOB_DAT 导入）。
+- **Linux**：完整 `.so` 分离（S4，真机验证）——`ElfObjectWriter.WriteSharedLibrary`（ET_DYN、entry=0、`.dynsym` STB_GLOBAL 导出，`st_value = imageBase+Rva`）+ 消费侧 GLOB_DAT 导入 + `DT_RUNPATH=$ORIGIN`（.so 随 exe 自含部署）；`Kernel32.CloseHandle` 于 linux 走 `FileCloseHandle` shim（杜绝 kernel32.dll 泄漏）；身份模块本地（类型表待 linux 扩展）。
 - 设计/实施详见 [`native-s1-实施计划.md`](../docs-dev/plan/native-s1-实施计划.md) 与 [`Native共享框架设计.md`](../docs-dev/plan/Native共享框架设计.md)。
 
 ## 五、项目系统

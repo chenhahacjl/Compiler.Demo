@@ -40,6 +40,8 @@ namespace Cocoa.CodeGen.ObjectFormat.Elf
             if (imports != null && imports.Count > 0)
             {
                 options.Imports = new System.Collections.Generic.List<Cocoa.Targeting.DynamicImport>(imports);
+                // S4：共享库随 exe 自含部署——DT_RUNPATH=$ORIGIN，加载器按 exe 目录解析 System.Core.Native.so
+                options.RunPath = "$ORIGIN";
             }
 
             var image = ElfObjectWriter.Instance.Write(options);

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text;
+using Cocoa.Targeting;
 
 namespace Cocoa.CodeGen.Native
 {
@@ -40,6 +41,18 @@ namespace Cocoa.CodeGen.Native
 
         /// <summary>库函数导出名：Cocoa_ + Sanitize(FnKey)。</summary>
         public static string ExportName(string fnKey) => ExportPrefix + Sanitize(fnKey);
+
+        /// <summary>
+        /// S4：owner 模块的平台化文件名（PE `.dll` / ELF `.so`）——导入/部署按目标 OS 取。
+        /// Windows 恒 <see cref="SystemCoreNativeName"/>（带 `.dll` 以适配加载器扩展名语义）；
+        /// Linux 为 <c>System.Core.Native.so</c>（ELF DT_NEEDED SONAME 直用）。
+        /// </summary>
+        public static string SystemCoreNativeModule(TargetPlatform platform)
+        {
+            return platform.OS == TargetOS.Linux
+                ? "System.Core.Native.so"
+                : SystemCoreNativeName;
+        }
 
         /// <summary>
         /// FnKey → 白名单导出段：保留 [0-9A-Za-z_.]；`!`/`[`/`]`/`-` 各映射一个 `_`（不跨字符合并，

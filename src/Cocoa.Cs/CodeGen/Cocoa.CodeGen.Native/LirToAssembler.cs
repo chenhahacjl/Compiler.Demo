@@ -379,8 +379,8 @@ namespace Cocoa.CodeGen.Native
             if (_emitStub == null)
             {
                 // 拆分形态且为可执行（有入口）：先登记本模块 String/Array 记录（首登记胜出）。
-                // 用户库形态（无入口）不注册——身份以 exe 首登记为准，库内 String/Array 引用经 type_get 共享。
-                if (_splitRuntime && _program.EntryFunctionName.Length > 0)
+                // 仅 Windows：linux owner 尚未携带共享类型表，init stub 跳过（身份模块本地，Phase-A 级）。
+                if (_splitRuntime && _program.EntryFunctionName.Length > 0 && _platform.OS == TargetOS.Windows)
                 {
                     EmitSplitTypeInit();
                     return;

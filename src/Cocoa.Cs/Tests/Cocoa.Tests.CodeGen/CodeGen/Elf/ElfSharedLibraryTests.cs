@@ -53,9 +53,9 @@ namespace Cocoa.Tests.CodeGen.Elf
             var image = EmitFixture();
             var syms = ReadDynSyms(image);
             var export = syms.First(s => s.Shndx == 1 && s.Value != 0 && s.Name.StartsWith("Cocoa_Lib_", StringComparison.Ordinal));
-            // st_value = 镜像内偏移（.text 基址 0x1000 起）
-            Assert.True(export.Value >= 0x1000, $"export value {export.Value} should be within .text");
-            Assert.True(export.Value < (ulong)(0x1000 + image.Length), "export value out of image range");
+            // ET_DYN：st_value = imageBase(0x400000) + 镜像内偏移（加载器按 base+st_value 解析，缺基址会脱靶）
+            Assert.True(export.Value >= 0x400000 + 0x1000, $"export value {export.Value} should carry image base");
+            Assert.True(export.Value < 0x400000 + 0x1000 + (ulong)image.Length, "export value out of image range");
         }
 
         private static byte[] EmitFixture()

@@ -37,7 +37,9 @@ namespace Cocoa.CodeGen.Native
             var entryLabel = a.CreateLabel();
 
             var program = BuildLibraryProgram(coa);
-            var emit = MirToLir.GenerateLibrary(program, platform, sharedTypeTable: !embedRuntime);
+            // 共享类型表（String/Array is 判定经 Cocoa_Rt_type_get）仅 Windows 生效：linux owner 尚未携带类型表，
+            // 保持模块本地身份（Phase-A 级）。
+            var emit = MirToLir.GenerateLibrary(program, platform, sharedTypeTable: !embedRuntime && !isLinux);
             var ir = emit.Program;
             if (embedRuntime)
             {
@@ -121,6 +123,8 @@ namespace Cocoa.CodeGen.Native
                 options.Imports = imports
                     .Select(i => new DynamicImport(PlatformDllResolver.ResolveLinuxSoname(i.DllName), i.Name, i.IatOffset))
                     .ToList();
+                // S4：DT_RUNPATH=$ORIGIN——.so 按自身所在目录解析被依赖共享库（与 exe 随旁部署）
+                options.RunPath = "$ORIGIN";
             }
 
             if (exports != null)

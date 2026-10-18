@@ -231,13 +231,21 @@ namespace Cocoa.CodeGen.ObjectFormat.Elf
                 }
             }
 
-            // ---- .dynstr：空名 + 库名 + 符号名（仅存偏移；DT_NEEDED 引用 = dynstr 偏移非 vaddr）----
+            // ---- .dynstr：空名 + 库名 + RUNPATH（$ORIGIN）+ 符号名（仅存偏移；DT_NEEDED 引用 = dynstr 偏移非 vaddr）----
             var dynstr = new List<byte> { 0 };
             var libOffsets = new Dictionary<string, uint>();
             foreach (var lib in libs)
             {
                 libOffsets[lib] = (uint)dynstr.Count;
                 dynstr.AddRange(Encoding.ASCII.GetBytes(lib));
+                dynstr.Add(0);
+            }
+
+            var runPathOffset = 0;
+            if (!string.IsNullOrEmpty(options.RunPath))
+            {
+                runPathOffset = dynstr.Count;
+                dynstr.AddRange(Encoding.ASCII.GetBytes(options.RunPath!));
                 dynstr.Add(0);
             }
 
@@ -292,7 +300,7 @@ namespace Cocoa.CodeGen.ObjectFormat.Elf
             var dynSymSize = (uint)(symCount * 24);
             var hashSeg = Aligninterp(dynSymSeg + dynSymSize, 4);
             var hashSize = (uint)(hashTable.Length * 4);
-            var dynamicSize = (uint)((libs.Count + 5 + (imports.Count > 0 ? 3 : 0) + 1) * 16);
+            var dynamicSize = (uint)((libs.Count + 5 + (imports.Count > 0 ? 3 : 0) + 1 + (runPathOffset != 0 ? 1 : 0)) * 16);
             var dynamicSeg = Aligninterp(hashSeg + hashSize, 8);
             var relaSeg = Aligninterp(dynamicSeg + dynamicSize, 8);
             var relaEntries = new (ulong Vaddr, ulong SymIndex)[imports.Count];
@@ -327,7 +335,7 @@ namespace Cocoa.CodeGen.ObjectFormat.Elf
             var dynamicBytes = BuildDynamic(libs, libOffsets,
                 dynstrBytes.Length,
                 rwVaddr + (dynStrSeg - rwOffset), rwVaddr + (dynSymSeg - rwOffset), rwVaddr + (hashSeg - rwOffset),
-                rwVaddr + (relaSeg - rwOffset), relaSize, relaEntries.Length);
+                rwVaddr + (relaSeg - rwOffset), relaSize, relaEntries.Length, runPathOffset);
 
             // ---- shstrtab（固定前缀 + 附加节名）----
             var shstr = new List<byte>();
@@ -425,7 +433,7 @@ namespace Cocoa.CodeGen.ObjectFormat.Elf
             var rwSections = options.Sections.Where(s => s.Name != ".text").ToList();
             var rwFirst = rwSections[0];
 
-            // ---- .dynstr：空名 + 库名 + 导入名 + 导出名 ----
+            // ---- .dynstr：空名 + 库名 + RUNPATH（$ORIGIN）+ 导入名 + 导出名 ----
             var dynstr = new List<byte> { 0 };
             var libOffsets = new Dictionary<string, uint>();
             var libs = new List<string>();
@@ -438,6 +446,14 @@ namespace Cocoa.CodeGen.ObjectFormat.Elf
                     dynstr.AddRange(Encoding.ASCII.GetBytes(import.Library));
                     dynstr.Add(0);
                 }
+            }
+
+            var runPathOffset = 0;
+            if (!string.IsNullOrEmpty(options.RunPath))
+            {
+                runPathOffset = dynstr.Count;
+                dynstr.AddRange(Encoding.ASCII.GetBytes(options.RunPath!));
+                dynstr.Add(0);
             }
 
             var importSymOffsets = new uint[imports.Count];
@@ -504,7 +520,7 @@ namespace Cocoa.CodeGen.ObjectFormat.Elf
             var dynSymSize = (uint)(symCount * 24);
             var hashSeg = Align(dynSymSeg + dynSymSize, 4);
             var hashSize = (uint)(hashTable.Length * 4);
-            var dynamicSize = (uint)((libs.Count + 5 + (imports.Count > 0 ? 3 : 0) + 1) * 16);
+            var dynamicSize = (uint)((libs.Count + 5 + (imports.Count > 0 ? 3 : 0) + 1 + (runPathOffset != 0 ? 1 : 0)) * 16);
             var dynamicSeg = Align(hashSeg + hashSize, 8);
             var relaSeg = Align(dynamicSeg + dynamicSize, 8);
             var relaEntries = new (ulong Vaddr, ulong SymIndex)[importCount];
@@ -540,7 +556,7 @@ namespace Cocoa.CodeGen.ObjectFormat.Elf
             var dynamicBytes = BuildDynamic(libs, libOffsets,
                 dynstrBytes.Length,
                 rwVaddr + (dynStrSeg - rwOffset), rwVaddr + (dynSymSeg - rwOffset), rwVaddr + (hashSeg - rwOffset),
-                rwVaddr + (relaSeg - rwOffset), relaSize, relaEntries.Length);
+                rwVaddr + (relaSeg - rwOffset), relaSize, relaEntries.Length, runPathOffset);
 
             // ---- shstrtab ----
             var shstr = new List<byte>();
@@ -600,7 +616,7 @@ namespace Cocoa.CodeGen.ObjectFormat.Elf
             }
 
             dynstrBytes.CopyTo(image, (int)dynStrSeg);
-            WriteDynSymFull(image, (int)dynSymSeg, imports, importSymOffsets, exports, exportSymOffsets);
+            WriteDynSymFull(image, (int)dynSymSeg, imports, importSymOffsets, exports, exportSymOffsets, imageBase);
             WriteHash(image, (int)hashSeg, hashTable);
             dynamicBytes.CopyTo(image, (int)dynamicSeg);
             if (relaEntries.Length > 0)
@@ -627,14 +643,16 @@ namespace Cocoa.CodeGen.ObjectFormat.Elf
             return image;
         }
 
-        /// <summary>完整 .dynsym：符号 0 全零；导入 SHN_UNDEF；导出 STB_GLOBAL 定义（st_shndx=.text=1，st_value=镜像内偏移 = 导出 RVA）。</summary>
+        /// <summary>完整 .dynsym：符号 0 全零；导入 SHN_UNDEF；导出 STB_GLOBAL 定义（st_shndx=.text=1，
+        /// st_value = ET_DYN 绝对偏移 = imageBase + Rva——因 PT_LOAD.p_vaddr=imageBase，加载器按 base+st_value 解析）。</summary>
         private static void WriteDynSymFull(
             byte[] image,
             int offset,
             IReadOnlyList<DynamicImport> imports,
             uint[] importSymOffsets,
             IReadOnlyList<ObjectExport> exports,
-            uint[] exportSymOffsets)
+            uint[] exportSymOffsets,
+            ulong imageBase)
         {
             for (var i = 0; i < 24; i++)
             {
@@ -660,7 +678,7 @@ namespace Cocoa.CodeGen.ObjectFormat.Elf
                 image[o + 0x04] = 0x12; // STB_GLOBAL | STT_FUNC
                 image[o + 0x05] = 0;
                 BinaryPrimitives.WriteUInt16LittleEndian(image.AsSpan(o + 0x06), 1); // .text
-                BinaryPrimitives.WriteUInt64LittleEndian(image.AsSpan(o + 0x08), exports[i].Rva);
+                BinaryPrimitives.WriteUInt64LittleEndian(image.AsSpan(o + 0x08), imageBase + exports[i].Rva);
                 BinaryPrimitives.WriteUInt64LittleEndian(image.AsSpan(o + 0x10), 0);
             }
         }
@@ -698,7 +716,8 @@ namespace Cocoa.CodeGen.ObjectFormat.Elf
             ulong hashVaddr,
             ulong relaVaddr,
             uint relaSize,
-            int relaCount)
+            int relaCount,
+            int runPathOffset = 0)
         {
             var b = new List<byte>();
             void PutDyn(long tag, ulong value)
@@ -713,6 +732,12 @@ namespace Cocoa.CodeGen.ObjectFormat.Elf
             foreach (var lib in libs)
             {
                 PutDyn(DtNeeded, libOffsets[lib]);
+            }
+
+            // S4：DT_RUNPATH=$ORIGIN（dynstr 偏移）——ELF 加载器按 exe/.so 同目录解析被依赖共享库
+            if (runPathOffset != 0)
+            {
+                PutDyn(DtRunPath, (ulong)runPathOffset);
             }
 
             PutDyn(DtHash, hashVaddr);
@@ -781,6 +806,7 @@ namespace Cocoa.CodeGen.ObjectFormat.Elf
         private const long DtRelaent = 9;
         private const long DtStrsz = 10;
         private const long DtSymEnt = 11;
+        private const long DtRunPath = 29;
         private const long DtRelacount = 0x6FFFFFF9;
         private const ulong R_X86_64_GLOB_DAT = 6;
 

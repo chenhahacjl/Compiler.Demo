@@ -575,10 +575,11 @@ Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0),
             }
             else if (!_functionMap.TryGetValue(function, out var irFunction))
             {
-                // S2（native-s1）：外部化用户库函数——不合并体，调用点经 IAT 导入 X.Native.dll（cocoa_+mangle(FnKey)），
-                // 栈 ABI（ReserveArgs/StoreArg/FreeArgs）与本地调用一致，跨模块双向同一 LirToAssembler 编译。
+                // S2/S4（native-s1）：外部化用户库函数——不合并体，调用点经 IAT（Windows）/GLOB_DAT（Linux）
+                // 导入 X.Native.{dll,so}（Cocoa_+mangle(FnKey)），栈 ABI（ReserveArgs/StoreArg/FreeArgs）与本地一致。
+                var suffix = _os == TargetOS.Linux ? ".so" : ".dll";
                 var import = new LirImport(
-                    NativeSymbolMangling.LibraryModuleName(function.ContainingLibrary ?? System.String.Empty) + ".dll",
+                    NativeSymbolMangling.LibraryModuleName(function.ContainingLibrary ?? System.String.Empty) + suffix,
                     NativeSymbolMangling.ExportName(Cocoa.CodeAnalysis.Serialization.CoaFunctionNaming.FnKey(function)),
                     Cdecl: false);
                 if (!_irProgram.Imports.Contains(import))

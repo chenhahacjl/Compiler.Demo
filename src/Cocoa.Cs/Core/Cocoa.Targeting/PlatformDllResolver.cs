@@ -37,6 +37,9 @@ namespace Cocoa.Targeting
                 "Sleep" => "Sleep",
                 "Beep" => "Beep",
                 "ExitProcess" => "ExitProcess",
+                // S4（linux .so 分离）：System.Core Handle.Dispose 经 Kernel32.CloseHandle 释放——
+                // linux 落运行时 FileCloseHandle（裸 syscall close），杜绝 kernel32.dll 泄漏进 .so 依赖
+                "CloseHandle" => "FileCloseHandle",
                 _ => null,
             };
         }

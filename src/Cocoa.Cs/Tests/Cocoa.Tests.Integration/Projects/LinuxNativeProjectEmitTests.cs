@@ -67,6 +67,10 @@ namespace Cocoa.Tests.Integration.Projects
 
             var bytes = File.ReadAllBytes(outputPath);
             Assert.Equal(new byte[] { 0x7F, (byte)'E', (byte)'L', (byte)'F' }, new[] { bytes[0], bytes[1], bytes[2], bytes[3] });
+
+            // S4：linux 共享框架默认开启——exe 旁应部署 System.Core.Native.so（owner：运行时 + System.Core 库体）
+            var soPath = Path.Combine(Path.GetDirectoryName(outputPath)!, "System.Core.Native.so");
+            Assert.True(File.Exists(soPath), $"shared owner '{soPath}' not deployed beside exe");
         }
 
         [Fact]

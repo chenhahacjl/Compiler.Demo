@@ -172,11 +172,10 @@ namespace Cocoa.Build
 
             // 动态链接（阶段 A2）：dotnet 后端消费 `.coa` 时以外部 dll 依赖接入（产物不内联库体）；
             // native 后端保持编译期合并（PE 静态链接）；cocoa 库产物自身不涉及
-            // S3（native-s1）：<SharedSystemLibrary>true</SharedSystemLibrary> → native 也动态——System.Core 函数
-            // 与运行时原语改 IAT 导入 System.Core.Native.dll（默认 true 保持共享；false 内联，历史字节不变）。
-            // 仅 Windows：linux 消费侧拆分（GLOB_DAT 导入 .so）尚未接线，linux 维持内联。
+            // S3/S4（native-s1）：<SharedSystemLibrary>true</SharedSystemLibrary> → native 也动态——System.Core 函数
+            // 与运行时原语改 IAT（Windows PE）/GLOB_DAT（Linux ELF）导入 System.Core.Native.{dll,so}
+            //（默认 true 保持共享；false 内联，历史字节不变）。
             var sharedSystemLibrary = backend == CodeBackend.Native && format != ProjectOutputFormat.Cocoa
-                && effectiveTargetOs == TargetOS.Windows
                 && project.SharedSystemLibrary;
             var linkCoaDynamically = (backend.IsManaged() && format != ProjectOutputFormat.Cocoa) || sharedSystemLibrary;
 
@@ -746,7 +745,9 @@ namespace Cocoa.Build
                 var coaBase = name.EndsWith(CoaAssemblyNaming.ManagedSuffix, StringComparison.Ordinal)
                     ? name.Substring(0, name.Length - CoaAssemblyNaming.ManagedSuffix.Length)
                     : name;
-                var nativeDll = Path.Combine(outputDirectory, CoaAssemblyNaming.NativeAssemblyName(coaBase) + ".dll");
+                // S4：平台化扩展名——Windows `X.Native.dll`（PE）、Linux `X.Native.so`（ELF DT_NEEDED）
+                var suffix = platform.OS == TargetOS.Linux ? ".so" : ".dll";
+                var nativeDll = Path.Combine(outputDirectory, CoaAssemblyNaming.NativeAssemblyName(coaBase) + suffix);
 
                 // 时间戳自愈（无 .stamp）：dll 缺失或比 coa 源旧 → 再生。
                 // 编译器指纹：共享库由「coa 源 × 编译器」共同决定——把编译核心与共享库生产组件
