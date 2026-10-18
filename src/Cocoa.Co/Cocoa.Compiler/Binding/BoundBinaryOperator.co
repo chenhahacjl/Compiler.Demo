@@ -22,11 +22,11 @@ namespace Cocoa.CodeAnalysis.Binding
 
         public static function Bind(opKind: i32, leftType: string, rightType: string): BoundBinaryOperator
         {
-            if leftType == "int" && rightType == "int"
+            if leftType == "i32" && rightType == "i32"
             {
                 if opKind == 0 || opKind == 1 || opKind == 2 || opKind == 3 || opKind == 4
                 {
-                    return new BoundBinaryOperator(opKind, leftType, rightType, "int")
+                    return new BoundBinaryOperator(opKind, leftType, rightType, "i32")
                 }
 
                 if opKind == 10 || opKind == 11 || opKind == 12 || opKind == 13 || opKind == 14 || opKind == 15
@@ -40,11 +40,11 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            if leftType == "double" && rightType == "double"
+            if leftType == "f64" && rightType == "f64"
             {
                 if opKind == 0 || opKind == 1 || opKind == 2 || opKind == 3 || opKind == 4
                 {
-                    return new BoundBinaryOperator(opKind, leftType, rightType, "double")
+                    return new BoundBinaryOperator(opKind, leftType, rightType, "f64")
                 }
 
                 if opKind == 10 || opKind == 11 || opKind == 12 || opKind == 13 || opKind == 14 || opKind == 15

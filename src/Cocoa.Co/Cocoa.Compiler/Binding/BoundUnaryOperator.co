@@ -19,19 +19,19 @@ namespace Cocoa.CodeAnalysis.Binding
 
         public static function Bind(opKind: i32, operandType: string): BoundUnaryOperator
         {
-            if operandType == "int"
+            if operandType == "i32"
             {
                 if opKind == 0 || opKind == 1 || opKind == 3
                 {
-                    return new BoundUnaryOperator(opKind, operandType, "int")
+                    return new BoundUnaryOperator(opKind, operandType, "i32")
                 }
             }
 
-            if operandType == "double"
+            if operandType == "f64"
             {
                 if opKind == 0 || opKind == 1
                 {
-                    return new BoundUnaryOperator(opKind, operandType, "double")
+                    return new BoundUnaryOperator(opKind, operandType, "f64")
                 }
             }
 

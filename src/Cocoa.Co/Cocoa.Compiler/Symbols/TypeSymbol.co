@@ -71,10 +71,10 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         public function IsPrimitiveValueType(): bool
         {
-            return _name == "int" || _name == "long" || _name == "double" ||
-                   _name == "bool" || _name == "char" || _name == "sbyte" ||
-                   _name == "short" || _name == "byte" || _name == "ushort" ||
-                   _name == "uint" || _name == "ulong" || _name == "float"
+            return _name == "i32" || _name == "i64" || _name == "f64" ||
+                   _name == "bool" || _name == "char" || _name == "i8" ||
+                   _name == "i16" || _name == "u8" || _name == "u16" ||
+                   _name == "u32" || _name == "u64" || _name == "f32"
         }
 
         public function IsValueType(): bool
@@ -84,14 +84,14 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         public function IsInteger(): bool
         {
-            return _name == "sbyte" || _name == "short" || _name == "int" ||
-                   _name == "long" || _name == "byte" || _name == "ushort" ||
-                   _name == "uint" || _name == "ulong"
+            return _name == "i8" || _name == "i16" || _name == "i32" ||
+                   _name == "i64" || _name == "u8" || _name == "u16" ||
+                   _name == "u32" || _name == "u64"
         }
 
         public function IsFloat(): bool
         {
-            return _name == "float" || _name == "double"
+            return _name == "f32" || _name == "f64"
         }
 
         public function IsNumeric(): bool
