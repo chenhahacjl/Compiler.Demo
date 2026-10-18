@@ -173,8 +173,11 @@ namespace Cocoa.Build
             // 动态链接（阶段 A2）：dotnet 后端消费 `.coa` 时以外部 dll 依赖接入（产物不内联库体）；
             // native 后端保持编译期合并（PE 静态链接）；cocoa 库产物自身不涉及
             // S3（native-s1）：<SharedSystemLibrary>true</SharedSystemLibrary> → native 也动态——System.Core 函数
-            // 与运行时原语改 IAT 导入 System.Core.Native.dll（默认 false 保持内联，历史字节不变）
-            var sharedSystemLibrary = backend == CodeBackend.Native && format != ProjectOutputFormat.Cocoa && project.SharedSystemLibrary;
+            // 与运行时原语改 IAT 导入 System.Core.Native.dll（默认 true 保持共享；false 内联，历史字节不变）。
+            // 仅 Windows：linux 消费侧拆分（GLOB_DAT 导入 .so）尚未接线，linux 维持内联。
+            var sharedSystemLibrary = backend == CodeBackend.Native && format != ProjectOutputFormat.Cocoa
+                && effectiveTargetOs == TargetOS.Windows
+                && project.SharedSystemLibrary;
             var linkCoaDynamically = (backend.IsManaged() && format != ProjectOutputFormat.Cocoa) || sharedSystemLibrary;
 
             // 增量判定（.NET Inputs/Outputs 时间戳模型，无 .cache/.stamp）：输出比所有输入新 → up-to-date。
