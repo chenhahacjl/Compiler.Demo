@@ -10,7 +10,7 @@
 
   <ItemGroup>
     <!-- 内嵌默认应用图标：未配置任何图标文件时兜底（DefaultIcon.GetBytes） -->
-    <EmbeddedResource Include="..\..\..\..\resources\EXE.ico" Link="Resources\DefaultExe.ico" />
+    <EmbeddedResource Include="..\..\Resources\EXE.ico" Link="Resources\DefaultExe.ico" />
   </ItemGroup>
 
   <ItemGroup>

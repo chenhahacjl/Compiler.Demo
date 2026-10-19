@@ -27,7 +27,7 @@ namespace Cocoa.Build
             }
 
             throw new FileNotFoundException(
-                "内嵌默认图标缺失：请在 Cocoa.Build.csproj 以 EmbeddedResource 链接 resources/EXE.ico 为 Resources/DefaultExe.ico。");
+                "内嵌默认图标缺失：请在 Cocoa.Build.csproj 以 EmbeddedResource 链接 src/Cocoa.Cs/Resources/EXE.ico 为 Resources/DefaultExe.ico。");
         }
     }
 }
