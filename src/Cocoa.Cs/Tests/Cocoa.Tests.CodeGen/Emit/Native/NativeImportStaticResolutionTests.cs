@@ -14,9 +14,10 @@ using Xunit;
 namespace Cocoa.Tests.CodeGen.Emit.Native
 {
     /// <summary>
-    /// 阶段 6c-2：Native 导入改 OS 加载器静态解析的 PE 结构验证。
-    /// 关键契约：描述符 FirstThunk 指向 data 区 IAT 槽；槽磁盘初值为 hintname RVA（fake-IAT 惯例），
-    /// loader 启动时将初值替换为解析后的真实函数地址（初值为 0 的槽会被 loader 视为已填充而跳过）。
+    /// 阶段 6c-2（改）：Native 导入改 OS 加载器静态解析的 PE 结构验证。
+    /// 关键契约：导入表自包含于 .idata（descriptors + INT + hint/name + 内嵌 IAT）；描述符 FirstThunk 指向
+    /// .idata 内 IAT 槽；槽磁盘初值为 hintname RVA（镜像 INT），loader 启动时将初值替换为解析后的真实函数地址
+    /// （初值为 0 的槽会被 loader 视为已填充而跳过——实测 .idata/.data 均如此，故保留镜像初值）。
     /// </summary>
     public class NativeImportStaticResolutionTests
     {
@@ -103,9 +104,9 @@ function Main()
 }";
 
         [Fact]
-        public void Import_DescriptorFirstThunk_PointsIntoDataSection()
+        public void Import_DescriptorFirstThunk_PointsIntoIdataSection()
         {
-            var exePath = Compile(ImportTwoDlls, "import-ft-data-x64", X64);
+            var exePath = Compile(ImportTwoDlls, "import-ft-idata-x64", X64);
             var (image, dataStart, dataEnd, idataStart, idataEnd, importDirRva) = Parse(exePath);
             Assert.True(dataStart > 0 && idataStart > 0, "expected .data and .idata sections");
 
@@ -130,7 +131,8 @@ function Main()
             Assert.True(importDirOffset >= 0, "import directory must resolve into a section");
             var descriptor = ImageImportDescriptor.Read(image.AsSpan(importDirOffset, ImageImportDescriptor.SizeOfEntry));
             var firstThunk = (int)descriptor.FirstThunk;
-            Assert.InRange(firstThunk, dataStart, dataEnd - ImageThunkData64.SizeOfEntry);
+            // 自包含 .idata：FirstThunk（加载器回填位）落在 .idata 内 IAT 槽数组
+            Assert.InRange(firstThunk, idataStart, idataEnd - ImageThunkData64.SizeOfEntry);
             Assert.NotEqual(0u, descriptor.OriginalFirstThunk);
         }
 
@@ -169,7 +171,7 @@ function Main()
                 return 0u;
             };
 
-            // 两个 DLL 的描述符都指向 data 区槽
+            // 两个 DLL 的描述符都指向 .idata 内 IAT 槽
             var firstThunkRvas = new System.Collections.Generic.List<uint>();
             var dllNames = new System.Collections.Generic.List<string>();
             var fileOffset = toOffset(importDirRva);
@@ -191,7 +193,7 @@ function Main()
                 }
 
                 dllNames.Add(System.Text.Encoding.ASCII.GetString(image, (int)nameOffset, (int)(nameEnd - nameOffset)));
-                Assert.InRange((int)descriptor.FirstThunk, dataStart, dataEnd - 8);
+                Assert.InRange((int)descriptor.FirstThunk, idataStart, idataEnd - 8);
             }
 
             // 运行时恒定导入（kernel32 + ucrtbase）+ 用户导入（kernel32/user32 去重后）：此处 ≥2 组。

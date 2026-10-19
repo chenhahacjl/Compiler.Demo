@@ -1,7 +1,12 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Reflection.Metadata;
+using System.Reflection.Metadata.Ecma335;
+using System.Reflection.PortableExecutable;
 using Cocoa.CodeAnalysis.Binder;
 using Cocoa.CodeAnalysis.Bound;
 using Cocoa.IlMetadata;
@@ -36,6 +41,9 @@ namespace Cocoa.CodeGen.Managed
 
         /// <summary>4.1：当前方法体发射状态（局部槽/标签/异常保护区/return 出口/闭包局部），经转发访问。</summary>
         private MethodBodyBuilder _bodyBuilder = null!;
+
+        /// <summary>当前方法体语句级序列点捕获（(指令下标, 源行, 源文件)）；EmitStatement 写入，EmitFunctionBody 换算为字节偏移。</summary>
+        private System.Collections.Generic.List<(int InstructionIndex, int Line, string File)>? _currentSequencePoints;
 
         private Dictionary<VariableSymbol, int> _locals => _bodyBuilder.Locals;
         private Dictionary<BoundExpression, int> _temporaryLocalIndices => _bodyBuilder.TemporaryLocalIndices;
@@ -345,6 +353,7 @@ namespace Cocoa.CodeGen.Managed
 
             var bodies = new List<ManagedPEWriter.MethodBodyBlob>();
             var methods = new List<IlMethodDef>();
+            var methodSequencePoints = new Dictionary<IlMethodDef, System.Collections.Generic.List<(int Offset, int Line, string File)>>();
 
             foreach (var function in orderedFunctions)
             {
@@ -358,8 +367,12 @@ namespace Cocoa.CodeGen.Managed
 
                 var method = _methods[function];
                 methods.Add(method);
-                var (code, localSigToken, maxStack, exceptionTable) = EmitFunctionBody(method, function, allFunctions[function], _entryFunction == function && function.ReturnType == TypeSymbol.Void);
+                var (code, localSigToken, maxStack, exceptionTable, sequencePoints) = EmitFunctionBody(method, function, allFunctions[function], _entryFunction == function && function.ReturnType == TypeSymbol.Void);
                 bodies.Add(new ManagedPEWriter.MethodBodyBlob(code, localSigToken, (ushort)maxStack, exceptionTable));
+                if (sequencePoints != null && sequencePoints.Count > 0)
+                {
+                    methodSequencePoints[method] = sequencePoints;
+                }
             }
 
             // 6e-M22 C5-c：环境类 .ctor 方法体（ldarg.0 → Object::.ctor → ret）
@@ -412,9 +425,12 @@ namespace Cocoa.CodeGen.Managed
                 _metadata.AddManifestResource(new Cocoa.IlMetadata.IlManifestResource(embedded.Name, embedded.Data));
             }
 
-            var pe = ManagedPEWriter.Build(_moduleName, methods, bodies, _metadata, entryPointToken, target, win32Resources);
+            var pdbGuid = Cocoa.CodeGen.ObjectFormat.PE.PdbWriter.MakeGuid(_moduleName);
+            var pdbPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(outputPath) ?? ".", _moduleName + ".pdb");
+            var pe = ManagedPEWriter.Build(_moduleName, methods, bodies, _metadata, entryPointToken, target, win32Resources, (pdbGuid, pdbPath));
 
             File.WriteAllBytes(outputPath, pe);
+            EmitPortablePdb(pe, outputPath, orderedFunctions, classes, methodSequencePoints, pdbGuid, pdbPath);
             // 库（dll）不直接运行，不写 runtimeconfig；netcore exe 写。
             if (!emitLibrary && target.Runtime == IlRuntime.NetCore)
             {
@@ -422,6 +438,211 @@ namespace Cocoa.CodeGen.Managed
             }
 
             return ImmutableArray<Diagnostic>.Empty;
+        }
+
+        /// <summary>
+        /// 生成 Portable PDB（ECMA-335）旁置产物：每用户方法一条序列点（IL offset 0 → 声明文件:行）。
+        /// 用 System.Reflection.Metadata.PortablePdbBuilder；MVID 取产物自身，供 dotnet/VS 调试器匹配。
+        /// 行号粒度 = 方法入口；语句级序列点需 IL 发射期逐指令映射，后续。
+        /// </summary>
+        private void EmitPortablePdb(byte[] pe, string outputPath, IReadOnlyList<FunctionSymbol> orderedFunctions, System.Collections.Generic.List<NamedTypeSymbol> classes, IReadOnlyDictionary<IlMethodDef, System.Collections.Generic.List<(int Offset, int Line, string File)>> methodSequencePoints, Guid pdbGuid, string pdbPath)
+        {
+            if (pe == null || pe.Length == 0)
+            {
+                return;
+            }
+
+            using var peReader = new PEReader(new MemoryStream(pe));
+            var reader = peReader.GetMetadataReader();
+            var mvid = reader.GetModuleDefinition().Mvid;
+            var methodDefCount = reader.GetTableRowCount(TableIndex.MethodDef);
+
+            var pdbBuilder = new System.Reflection.Metadata.Ecma335.MetadataBuilder();
+            pdbBuilder.AddModule(0, pdbBuilder.GetOrAddString(_moduleName), mvid, default(GuidHandle), default(GuidHandle));
+
+            var tokenMap = _metadata.BuildTokenMap();
+            var documents = new Dictionary<string, DocumentHandle>(StringComparer.Ordinal);
+            var addedMethodRows = 0;
+
+            foreach (var function in orderedFunctions)
+            {
+                if (function.ContainingClass?.IsFacadeClass == true && !IsNativeIntCarrier(function.ContainingClass)) continue;
+                if (function.ContainingClass != null && !classes.Contains(function.ContainingClass)) continue;
+                if (function.ContainingClass is { TypeKind: TypeKind.Delegate }) continue;
+                if (function.IsExtern || function.IsAbstract || function.BuiltinKind != null) continue;
+                if (!_methods.TryGetValue(function, out var method)) continue;
+
+                var rid = (int)(tokenMap[method] & 0x00FFFFFF);
+                if (rid <= 0 || rid > methodDefCount) continue;
+
+                // 序列点：优先语句级（发射期捕获），否则回落方法声明行（offset 0）。
+                var points = new System.Collections.Generic.List<(int Offset, int Line, string File)>();
+                if (methodSequencePoints.TryGetValue(method, out var stmtPoints) && stmtPoints.Count > 0)
+                {
+                    points.AddRange(stmtPoints);
+                }
+                else
+                {
+                    var declaration = function.Declaration ?? function.Syntax;
+                    if (declaration != null)
+                    {
+                        var location = declaration.Location;
+                        if (!string.IsNullOrEmpty(location.FileName) && location.StartLine + 1 > 0)
+                        {
+                            points.Add((0, location.StartLine + 1, location.FileName));
+                        }
+                    }
+                }
+
+                // 过滤：文件非空、行>0、偏移严格递增。
+                var orderedPoints = points
+                    .Where(p => !string.IsNullOrEmpty(p.File) && p.Line > 0)
+                    .GroupBy(p => p.Offset)
+                    .Select(g => g.Last())
+                    .OrderBy(p => p.Offset)
+                    .ToList();
+                var increasingPoints = new System.Collections.Generic.List<(int Offset, int Line, string File)>();
+                var lastOffset = -1;
+                foreach (var p in orderedPoints)
+                {
+                    if (p.Offset > lastOffset)
+                    {
+                        increasingPoints.Add(p);
+                        lastOffset = p.Offset;
+                    }
+                }
+
+                if (increasingPoints.Count == 0) continue;
+
+                DocumentHandle document = default;
+                foreach (var p in increasingPoints)
+                {
+                    if (!documents.TryGetValue(p.File, out document))
+                    {
+                        var nameBlob = new System.Reflection.Metadata.BlobBuilder();
+                        nameBlob.WriteUTF8(p.File);
+                        document = pdbBuilder.AddDocument(pdbBuilder.GetOrAddBlob(nameBlob), default(GuidHandle), default(BlobHandle), default(GuidHandle));
+                        documents[p.File] = document;
+                    }
+                }
+
+                while (addedMethodRows < rid - 1)
+                {
+                    addedMethodRows++;
+                    pdbBuilder.AddMethodDefinition(System.Reflection.MethodAttributes.Private, System.Reflection.MethodImplAttributes.IL, pdbBuilder.GetOrAddString("__placeholder__"), default(BlobHandle), 0, default(ParameterHandle));
+                }
+
+                addedMethodRows++; // == rid：用户方法行（真实名）
+                pdbBuilder.AddMethodDefinition(System.Reflection.MethodAttributes.Private, System.Reflection.MethodImplAttributes.IL, pdbBuilder.GetOrAddString(function.Name), default(BlobHandle), 0, default(ParameterHandle));
+
+                var sequenceBlob = new System.Reflection.Metadata.BlobBuilder();
+                EncodeSequencePoints(sequenceBlob, increasingPoints, documents);
+                pdbBuilder.AddMethodDebugInformation(document, pdbBuilder.GetOrAddBlob(sequenceBlob));
+            }
+
+            var idProvider = new Func<System.Collections.Generic.IEnumerable<System.Reflection.Metadata.Blob>, BlobContentId>(
+                _ => new BlobContentId(pdbGuid, 0));
+            // PortablePdbBuilder 需要产物各 ECMA 类型系统表的行数（64 项）。
+            var typeSystemRowCounts = System.Collections.Immutable.ImmutableArray.CreateBuilder<int>(64);
+            for (var t = 0; t < 64; t++)
+            {
+                typeSystemRowCounts.Add((int)reader.GetTableRowCount((TableIndex)t));
+            }
+
+            var portablePdb = new System.Reflection.Metadata.Ecma335.PortablePdbBuilder(
+                pdbBuilder, typeSystemRowCounts.MoveToImmutable(), default(System.Reflection.Metadata.MethodDefinitionHandle), idProvider);
+            var pdbStream = new System.Reflection.Metadata.BlobBuilder();
+            portablePdb.Serialize(pdbStream);
+            System.IO.File.WriteAllBytes(pdbPath, pdbStream.ToArray());
+        }
+
+        /// <summary>
+        /// 手编 Portable PDB 序列点 blob（net9.0 SRM 无 SequencePointEncoder），格式对齐
+        /// SequencePointCollection.Enumerator（dotnet/runtime）：
+        ///   header(localSignature) → 首点(绝对IL偏移, deltaLines, deltaColumns, 绝对startLine, 绝对startCol)
+        ///   → 后续点(增量IL偏移, deltaLines, deltaColumns, 增量startLine, 增量startCol)
+        ///   文件变更：在增量IL偏移处发 0x00 + 文档行号；无终止符（读到字节耗尽）。
+        ///   可见点要求 deltaLines/deltaColumns 非全 0（(0,0)=hidden）→ 用 endCol=startCol+1。
+        /// </summary>
+        private static void EncodeSequencePoints(
+            System.Reflection.Metadata.BlobBuilder blob,
+            System.Collections.Generic.List<(int Offset, int Line, string File)> points,
+            Dictionary<string, DocumentHandle> documents)
+        {
+            blob.WriteByte(0); // local signature = 0
+            var prevOffset = -1;
+            var prevLine = 0;
+            var prevColumn = 0;
+            var prevFile = "";
+
+            foreach (var p in points)
+            {
+                if (prevOffset < 0)
+                {
+                    // 首点：绝对 IL 偏移（文档由行 Document 列提供，blob 内不含）
+                    WriteCompressedUnsigned(blob, (uint)p.Offset);
+                    prevOffset = p.Offset;
+                }
+                else
+                {
+                    if (!string.Equals(p.File, prevFile, StringComparison.Ordinal))
+                    {
+                        // 文档变更标记：0x00 + 新文档行号
+                        WriteCompressedUnsigned(blob, 0);
+                        WriteCompressedUnsigned(blob, (uint)System.Reflection.Metadata.Ecma335.MetadataTokens.GetRowNumber(documents[p.File]));
+                        prevFile = p.File;
+                    }
+
+                    WriteCompressedUnsigned(blob, (uint)(p.Offset - prevOffset));
+                    prevOffset = p.Offset;
+                }
+
+                // 可见点：deltaLines=0、deltaColumns=1（endCol = startCol+1，避免 (0,0)=hidden）
+                WriteCompressedUnsigned(blob, 0);
+                WriteCompressedUnsigned(blob, 1);
+
+                if (prevLine == 0 && prevColumn == 0)
+                {
+                    // 首个非隐藏点：startLine/startColumn 绝对（无符号）
+                    WriteCompressedUnsigned(blob, (uint)p.Line);
+                    WriteCompressedUnsigned(blob, 0);
+                }
+                else
+                {
+                    WriteCompressedSigned(blob, p.Line - prevLine);
+                    WriteCompressedSigned(blob, 0 - prevColumn);
+                }
+
+                prevLine = p.Line;
+                prevColumn = 0;
+                prevFile = p.File;
+            }
+        }
+
+        private static void WriteCompressedUnsigned(System.Reflection.Metadata.BlobBuilder blob, uint value)
+        {
+            if (value <= 0x7F)
+            {
+                blob.WriteByte((byte)value);
+            }
+            else if (value <= 0x3FFF)
+            {
+                blob.WriteByte((byte)(0x80 | (value >> 8)));
+                blob.WriteByte((byte)value);
+            }
+            else
+            {
+                blob.WriteByte((byte)(0xC0 | (value >> 24)));
+                blob.WriteByte((byte)(value >> 16));
+                blob.WriteByte((byte)(value >> 8));
+                blob.WriteByte((byte)value);
+            }
+        }
+
+        private static void WriteCompressedSigned(System.Reflection.Metadata.BlobBuilder blob, int value)
+        {
+            var encoded = value < 0 ? ((-value) << 1) | 1 : value << 1;
+            WriteCompressedUnsigned(blob, (uint)encoded);
         }
 
         /// <summary>
@@ -744,7 +965,7 @@ namespace Cocoa.CodeGen.Managed
             }
         }
 
-        private (byte[] Code, uint LocalSigToken, int MaxStack, byte[]? ExceptionTable) EmitFunctionBody(IlMethodDef method, FunctionSymbol function, BoundBlockStatement body, bool entryVoidMain)
+        private (byte[] Code, uint LocalSigToken, int MaxStack, byte[]? ExceptionTable, System.Collections.Generic.List<(int Offset, int Line, string File)>? SequencePoints) EmitFunctionBody(IlMethodDef method, FunctionSymbol function, BoundBlockStatement body, bool entryVoidMain)
         {
             // 4.1：方法体发射状态收进 MethodBodyBuilder（随方法体创建，结束时由调用方丢弃）
             _bodyBuilder = new MethodBodyBuilder
@@ -813,6 +1034,8 @@ namespace Cocoa.CodeGen.Managed
             // 预收集 label 占位（前向引用需要目标指令对象）
             CollectLabels(body);
 
+            _currentSequencePoints = new System.Collections.Generic.List<(int InstructionIndex, int Line, string File)>();
+
             foreach (var statement in body.Statements)
             {
                 EmitStatement(assembler, statement);
@@ -845,6 +1068,26 @@ namespace Cocoa.CodeGen.Managed
             var code = assembler.Assemble();
             var maxStack = assembler.ComputeMaxStack(assembler.Instructions);
 
+            // 语句级序列点：指令下标 → 字节偏移（Assemble 已回填 IlInstruction.Offset）；同偏移取最后（内层语句行）。
+            var sequencePoints = new System.Collections.Generic.List<(int Offset, int Line, string File)>();
+            if (_currentSequencePoints != null)
+            {
+                foreach (var (instructionIndex, line, file) in _currentSequencePoints)
+                {
+                    if (instructionIndex >= 0 && instructionIndex < assembler.Instructions.Count)
+                    {
+                        sequencePoints.Add((assembler.Instructions[instructionIndex].Offset, line, file));
+                    }
+                }
+
+                _currentSequencePoints = null;
+                sequencePoints = sequencePoints
+                    .GroupBy(p => p.Offset)
+                    .Select(g => g.Last())
+                    .OrderBy(p => p.Offset)
+                    .ToList();
+            }
+
             // 注册 #US 字符串（Ldstr fixup 回填前）
             foreach (var value in assembler.StringFixupValues)
             {
@@ -873,7 +1116,7 @@ namespace Cocoa.CodeGen.Managed
                 exceptionTable = BuildExceptionTable(assembler.ExceptionClauses, tokenMap, _framework);
             }
 
-            return (code, localSigToken, maxStack, exceptionTable);
+            return (code, localSigToken, maxStack, exceptionTable, sequencePoints);
         }
 
         /// <summary>由 SEH 子句生成异常表字节（fat 格式 24 字节/子句；子句偏移为方法体代码段相对偏移，即 IlInstruction.Offset）。</summary>

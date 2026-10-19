@@ -132,7 +132,10 @@ namespace Cocoa.Build
             var outputFile = options.OutputFileOverride != null
                 ? Path.GetFullPath(options.OutputFileOverride)
                 : Path.Combine(outputDirectory, project.GetDefaultOutputFileName(effectiveTargetOs, backend));
-            Directory.CreateDirectory(Path.GetDirectoryName(outputFile)!);
+            // 部署目标跟随实际产物目录：`-o` 重定向输出文件时，共享运行库（System.Core.Native）/Content/引用
+            // 一律放产物旁边，避免 exe 与依赖分家（0xC0000135）。
+            var deployDirectory = Path.GetDirectoryName(outputFile)!;
+            Directory.CreateDirectory(deployDirectory);
 
             // 中间件目录（HIR/MIR/LIR 落盘 obj/）
             var objDirectory = BuildOutputLayout.ObjDirectory(project.Directory);
@@ -201,10 +204,10 @@ namespace Cocoa.Build
                 // 动态链接自愈：增量命中也检查被消费库的托管 dll 是否缺失/过期——被误删时现场再生（仅托管后端）
                 if (linkCoaDynamically && backend.IsManaged())
                 {
-                    EnsureManagedDlls(CollectReferencedCoaLibraries(references), outputDirectory, IlTarget.Parse(dotnetRuntime!) ?? IlTarget.Default, messageWriter);
+                    EnsureManagedDlls(CollectReferencedCoaLibraries(references), deployDirectory, IlTarget.Parse(dotnetRuntime!) ?? IlTarget.Default, messageWriter);
                 }
 
-                CopyContentToOutput(project, outputDirectory, warningsAsErrors, messageWriter, ref warningsFailed);
+                CopyContentToOutput(project, deployDirectory, warningsAsErrors, messageWriter, ref warningsFailed);
                 if (warningsFailed)
                 {
                     return new ProjectBuildResult(success: false, upToDate: false);
@@ -267,7 +270,7 @@ namespace Cocoa.Build
                         diagnostics = compilation.EmitNative(project.Name, outputFile, platform, subsystem, resourceOptions, objDirectory, splitRuntime: sharedSystemLibrary);
                         if (sharedSystemLibrary && !diagnostics.HasErrors())
                         {
-                            EnsureNativeDlls(references, platform, outputDirectory, messageWriter);
+                            EnsureNativeDlls(references, platform, deployDirectory, messageWriter);
                         }
                 }
                 else
@@ -343,25 +346,25 @@ namespace Cocoa.Build
                 }
             }
 
-            // CopyLocal：把引用的 `.dll`/`.coa` 条件复制到输出目录（仿 VS 复制引用依赖；
+            // CopyLocal：把引用的 `.dll`/`.coa` 条件复制到产物目录（仿 VS 复制引用依赖；
             // 框架引用集由 IlReferenceResolver 在 Emit 时注入，天然排除）。`cocoa` 产物无运行期依赖，不复制。
             if (format != ProjectOutputFormat.Cocoa)
             {
-                CopyReferencesToOutput(references, outputDirectory);
+                CopyReferencesToOutput(references, deployDirectory);
 
                 // 动态链接（阶段 A）：被消费的 `.coa` 库按需生成托管 dll 并部署——
                 // 含系统库（SystemLibrary 自动发现）。缺失或 stamp（coa sha256）过期 → 现场再生，自愈误删。
                 // 仅托管后端：native 共享（SharedSystemLibrary）走 EnsureNativeDlls，不得向产物目录生成 Managed.dll。
                 if (linkCoaDynamically && backend.IsManaged())
                 {
-                    if (!EnsureManagedDlls(compilation.CoaLibraries, outputDirectory, IlTarget.Parse(dotnetRuntime!) ?? IlTarget.Default, messageWriter))
+                    if (!EnsureManagedDlls(compilation.CoaLibraries, deployDirectory, IlTarget.Parse(dotnetRuntime!) ?? IlTarget.Default, messageWriter))
                     {
                         return new ProjectBuildResult(success: false, upToDate: false);
                     }
                 }
             }
 
-            CopyContentToOutput(project, outputDirectory, warningsAsErrors, messageWriter, ref warningsFailed);
+            CopyContentToOutput(project, deployDirectory, warningsAsErrors, messageWriter, ref warningsFailed);
             if (warningsFailed)
             {
                 return new ProjectBuildResult(success: false, upToDate: false);
@@ -373,7 +376,8 @@ namespace Cocoa.Build
         }
 
         /// <summary>从项目元数据构建 PE 版本信息（native .rsrc / IL Assembly 属性）。
-        /// 缺省值：文件/程序集版本 1.0.0.0、Product = 程序集名、Copyright = "Copyright (c) 年份"。</summary>
+        /// 缺省值：文件/程序集版本 1.0.0.0、FileDescription = 程序集名、Product = 程序集名、
+        /// Copyright = "Copyright (c) 年份"。缺省即非空，保证资源"详细信息"页有内容（降误报观感）。</summary>
         private static PeVersionInfo BuildPeVersionInfo(CocoaProjectFile project)
         {
             var metadata = project.Metadata;
@@ -388,7 +392,7 @@ namespace Cocoa.Build
             return new PeVersionInfo(
                 CompanyName: metadata.Company ?? "",
                 ProductName: metadata.Product ?? project.AssemblyName,
-                FileDescription: metadata.Description ?? "",
+                FileDescription: string.IsNullOrWhiteSpace(metadata.Description) ? project.AssemblyName : metadata.Description,
                 FileVersion: fileVersion,
                 ProductVersion: assemblyVersion,
                 AssemblyVersion: assemblyVersion,
@@ -403,6 +407,13 @@ namespace Cocoa.Build
         private static PeResourceOptions BuildResourceOptions(CocoaProjectFile project, PeVersionInfo versionInfo)
         {
             var iconPath = ResolveIconPath(project);
+
+            // 未找到任何图标文件 → 内嵌默认图标兜底（ResolveIconPath 已限定仅 Executable；无需文件在盘）。
+            byte[]? iconData = null;
+            if (iconPath == null)
+            {
+                iconData = DefaultIcon.GetBytes();
+            }
 
             var extra = new List<PeResourceItem>();
             var nameId = 1u;
@@ -429,12 +440,12 @@ namespace Cocoa.Build
                 }
             }
 
-            if (iconPath == null && extra.Count == 0 && embedded.Count == 0)
+            if (iconPath == null && iconData == null && extra.Count == 0 && embedded.Count == 0)
             {
                 return new PeResourceOptions(versionInfo);
             }
 
-            return new PeResourceOptions(versionInfo, iconPath, extra, embedded);
+            return new PeResourceOptions(versionInfo, iconPath, iconData, extra, embedded);
         }
 
         /// <summary>

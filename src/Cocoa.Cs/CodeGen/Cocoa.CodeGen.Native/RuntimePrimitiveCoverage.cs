@@ -136,8 +136,8 @@ namespace Cocoa.CodeGen.Native
             new("FileReadHandle", "IO", RuntimePrimitivePlatform.All, "kernel32"),
             new("FileWriteHandle", "IO", RuntimePrimitivePlatform.All, "kernel32"),
 
-            // Introspection 分片（RuntimeFunctionEmitter.Introspection.cs）
-            new("SelfIntrospect", "Introspection", RuntimePrimitivePlatform.All, "kernel32"),
+            // Introspection 分片（RuntimeFunctionEmitter.Introspection.cs）——M6 弱化后零导入（读 data 段指针槽）
+            new("SelfIntrospect", "Introspection", RuntimePrimitivePlatform.All, "-"),
 
             // Delegates 分片（RuntimeFunctionEmitter.Delegates.cs）
             new("DelegateCombine", "Delegates", RuntimePrimitivePlatform.All, "-"),

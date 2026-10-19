@@ -317,7 +317,7 @@ namespace Cocoa.CodeGen.Native
                 }
                 case BuiltinKind.SelfIntrospect:
                 {
-                    // M6：运行期内省——GetModuleHandleW(NULL) → 基址 → 内存节表 → .cocoa 魔数校验（运行期 SelfIntrospect）
+                    // M6（弱化）：读 data 段 .cocoa 元数据指针槽判非零（运行期 SelfIntrospect）
                     var result2 = AllocateRegister(4);
                     Add(instructions, new LirInstruction(LirOpCode.Call, result2, LirOperand.Runtime("SelfIntrospect"), LirOperand.Constant(0)));
                     return result2;

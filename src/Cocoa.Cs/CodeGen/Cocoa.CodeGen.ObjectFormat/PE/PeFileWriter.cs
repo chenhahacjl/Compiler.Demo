@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using Cocoa.Targeting;
 using System.Linq;
 using static Cocoa.CodeGen.ObjectFormat.PE.PeBinary;
@@ -31,58 +32,50 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
             return Align(ComputeDataRva(codeLength) + dataLength, SectionAlignment);
         }
 
+        /// <summary>
+        /// 构建自包含 `.idata` 导入表布局（descriptors + INT + hint/name + 内嵌 IAT），blobBaseRva=idataRva。
+        /// 供 NativeCodeEmitter/EmitNativeLibrary 在建 layout 后把各槽偏移交给汇编器 Patch 并传给 PeFileWriter。
+        /// </summary>
+        /// <param name="zeroIatArray">true = IAT 数组写 0（csc 形态）。实测（2026-10-19）：0 槽在 .idata 同样被
+        /// Windows 加载器按 bound-import 跳过回填（26/26 native e2e 崩 0xC0000005），故默认 false = 镜像 INT
+        /// （Borland/老 VS "thunk mirror in .idata" 形态，加载器 verify-then-replace 依赖非零槽、IDA 按常规导入识别）。</param>
+        public static (PeImportTableLayout Layout, int IdataRva) BuildImportLayout(
+            IReadOnlyList<PeFileImport> imports, Architecture architecture, int codeLength, int dataLength, bool zeroIatArray = false)
+        {
+            var pe32 = architecture == Architecture.X86;
+            var idataRva = ComputeIdataRva(codeLength, dataLength);
+            var specs = new List<PeImportSpec>(imports.Count);
+            foreach (var import in imports)
+            {
+                specs.Add(new PeImportSpec(import.DllName, import.Name));
+            }
+
+            var layout = ImportTableBuilder.Build(specs, (uint)idataRva, pe32, externalIatOffsets: null, externalIatRva: 0, zeroIatArray);
+            return (layout, idataRva);
+        }
+
         public static long ImageBaseOf(Architecture architecture)
         {
             return architecture == Architecture.X86 ? 0x400000 : 0x140000000;
         }
 
-        public static void Write(string outputPath, byte[] code, byte[] data, int entryPointRva, IReadOnlyList<PeFileImport> imports, Architecture architecture, IReadOnlyList<int>? dataAbsoluteFixups = null, ushort subsystem = PeSubsystemWindowsCui, byte[]? cocoaMetadata = null, IReadOnlyList<PeExportEntry>? exports = null, ResourceSectionResult? resources = null, bool isDll = false)
+        public static void Write(string outputPath, byte[] code, byte[] data, int entryPointRva, PeImportTableLayout? importLayout, Architecture architecture, IReadOnlyList<int>? dataAbsoluteFixups = null, ushort subsystem = PeSubsystemWindowsCui, byte[]? cocoaMetadata = null, IReadOnlyList<PeExportEntry>? exports = null, ResourceSectionResult? resources = null, bool isDll = false, int cocoaMetadataPtrDataOffset = -1, byte[]? coffSymbolTable = null, int coffSymbolCount = 0, string? pdbPath = null, Guid? pdbGuid = null)
         {
             var pe32 = architecture == Architecture.X86;
 
             var dataRva = ComputeDataRva(code.Length);
             var idataRva = ComputeIdataRva(code.Length, data.Length);
 
-            var specs = new List<PeImportSpec>();
-            foreach (var import in imports)
-            {
-                specs.Add(new PeImportSpec(import.DllName, import.Name));
-            }
-
-            var slotOffsets = imports.Select(i => i.IatOffset).ToList();
-            var importLayout = ImportTableBuilder.Build(specs, (uint)idataRva, pe32, slotOffsets, (uint)dataRva);
-
-            // 6c-2：IAT 槽磁盘初值 = hintname RVA（mingw fake-IAT 惯例）。Windows 加载器对
-            // 初值为 0 的槽视为已填充而跳过（bound-import 语义），只有指向 INT 区间的"伪值"
-            // 才会被替换为解析后的真实函数地址，故槽不能留空。
+            // .data 副本：供 .cocoa 元数据指针槽回填（IAT 已迁入 .idata，不再写 .data）。
             var slotData = new byte[data.Length];
             Array.Copy(data, slotData, data.Length);
-            foreach (var dll in importLayout.Dlls)
-            {
-                for (var e = 0; e < dll.Entries.Count; e++)
-                {
-                    var entry = dll.Entries[e];
-                    var import = imports.First(i =>
-                        string.Equals(i.DllName, entry.Spec.DllName, StringComparison.OrdinalIgnoreCase) &&
-                        string.Equals(i.Name, entry.Spec.FunctionName, StringComparison.OrdinalIgnoreCase));
-                    var hintNameRva = (uint)idataRva + (uint)entry.HintNameOffset;
-                    if (pe32)
-                    {
-                        WriteUInt32(slotData, import.IatOffset, (int)hintNameRva);
-                    }
-                    else
-                    {
-                        WriteUInt64(slotData, import.IatOffset, hintNameRva);
-                    }
-                }
-            }
 
             var directories = new List<(PeDataDirectoryEntry Entry, uint Rva, uint Size)>();
-            if (imports.Count > 0)
+            if (importLayout != null && importLayout.Dlls.Count > 0)
             {
                 var iatEntrySize = pe32 ? ImageThunkData32.SizeOfEntry : ImageThunkData64.SizeOfEntry;
                 var iatSlotCount = importLayout.Dlls.Sum(d => d.Entries.Count);
-                var firstIatRva = (uint)dataRva + (uint)importLayout.Dlls[0].IatOffset;
+                var firstIatRva = (uint)idataRva + (uint)importLayout.Dlls[0].IatOffset;
                 directories.Add((PeDataDirectoryEntry.Import, (uint)idataRva + (uint)importLayout.DescriptorsOffset, (uint)((importLayout.Dlls.Count + 1) * ImageImportDescriptor.SizeOfEntry)));
                 directories.Add((PeDataDirectoryEntry.Iat, firstIatRva, (uint)(iatSlotCount * iatEntrySize)));
             }
@@ -91,63 +84,135 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
             // 被加载器重定位（ASLR/DYNAMIC_BASE）时必须同步修正，否则间接调用跳到旧 VA 崩溃。
             // x64 用 DIR64、x86 用 HIGHLOW；无重定位项时不发节（保持 RelocsStripped 现状）。
             var relocOffsets = dataAbsoluteFixups != null ? dataAbsoluteFixups.Distinct().OrderBy(x => x).ToList() : new List<int>();
+            // M6（弱化）：.cocoa 元数据指针槽位于 .data，绝对 VA 需随镜像重定位（ASLR）。
+            if (cocoaMetadataPtrDataOffset >= 0 && cocoaMetadata != null && cocoaMetadata.Length > 0)
+            {
+                relocOffsets.Add(cocoaMetadataPtrDataOffset);
+                relocOffsets = relocOffsets.Distinct().OrderBy(x => x).ToList();
+            }
+
             byte[] relocBlob;
             var relocRva = 0u;
             uint cocoaRva = 0;
             if (relocOffsets.Count > 0)
             {
-                relocRva = (uint)Align(idataRva + importLayout.Blob.Length, SectionAlignment);
                 relocBlob = BuildRelocBlob(relocOffsets, (uint)dataRva, pe32);
-                directories.Add((PeDataDirectoryEntry.BaseReloc, relocRva, (uint)relocBlob.Length));
             }
             else
             {
                 relocBlob = Array.Empty<byte>();
             }
 
-            // M4：.cocoa 元数据节（native 产物内嵌符号表）——紧随既有节之后布局，与其他节互不重叠。
-            if (cocoaMetadata != null && cocoaMetadata.Length > 0)
+            // 节游标：从 .idata 虚拟末端（对齐）起，按最终节序连续布局；.cocoa 置于末位。
+            uint cursor = (uint)Align(idataRva + (importLayout?.Blob.Length ?? 0), SectionAlignment);
+
+            // ---- .reloc ----
+            if (relocBlob.Length > 0)
             {
-                var afterReloc = relocRva == 0 ? (uint)Align(idataRva + importLayout.Blob.Length, SectionAlignment) : relocRva + (uint)Align(relocBlob.Length, SectionAlignment);
-                cocoaRva = afterReloc;
+                relocRva = cursor;
+                cursor = relocRva + (uint)Align(relocBlob.Length, SectionAlignment);
+                directories.Add((PeDataDirectoryEntry.BaseReloc, relocRva, (uint)relocBlob.Length));
             }
 
-            // C-3：.edata 导出表节（`[Export]` 函数 → 名字表 + 函数地址表），紧随 .cocoa 之后布局。
+            // ---- .edata 导出表（`[Export]` 函数 → 名字表 + 函数地址表）----
             uint edataRva = 0;
             byte[] exportBlob;
             if (exports != null && exports.Count > 0)
             {
-                var afterCocoa = (uint)Align(idataRva + importLayout.Blob.Length, SectionAlignment);
-                if (cocoaMetadata != null && cocoaMetadata.Length > 0)
-                {
-                    afterCocoa = cocoaRva + (uint)Align(cocoaMetadata.Length, SectionAlignment);
-                }
-
-                edataRva = afterCocoa;
+                edataRva = cursor;
                 exportBlob = BuildExportTable(exports, edataRva);
+                cursor = edataRva + (uint)Align(exportBlob.Length, SectionAlignment);
             }
             else
             {
                 exportBlob = Array.Empty<byte>();
             }
 
+            // ---- .rsrc 资源节（版本信息/图标/通用资源）----
+            uint rsrcRva = 0;
+            byte[] resourceBlob = Array.Empty<byte>();
+            if (resources != null && resources.Blob.Length > 0)
+            {
+                rsrcRva = cursor;
+                resourceBlob = (byte[])resources.Blob.Clone();
+                // 每个 DataEntry.OffsetToData：节内偏移 → .rsrc 节 RVA + 数据偏移
+                foreach (var dataEntryOffset in resources.DataEntryOffsets)
+                {
+                    var dataOffsetInBlob = (int)PeBinary.ReadUInt32(resourceBlob, dataEntryOffset);
+                    PeBinary.WriteUInt32(resourceBlob, dataEntryOffset, (int)(rsrcRva + (uint)dataOffsetInBlob));
+                }
+
+                cursor = rsrcRva + (uint)Align(resourceBlob.Length, SectionAlignment);
+                directories.Add((PeDataDirectoryEntry.Resource, rsrcRva, (uint)resourceBlob.Length));
+            }
+
+            // ---- .rdata（Debug 目录 + CodeView RSDS → 真实 .pdb）----
+            // 仅当外部生成了实际 .pdb 时嵌入（避免广告不存在的文件）。
+            int rdataIndex = -1;
+            uint rdataRva = 0;
+            byte[] debugBlob = Array.Empty<byte>();
+            if (pdbPath != null && pdbGuid != null)
+            {
+                rdataRva = cursor;
+                var pdbPathBytes = Encoding.UTF8.GetBytes(pdbPath);
+                var rsds = new PeCodeViewRsds(PeCodeViewRsds.RsdsSignature, pdbGuid.Value, 1, pdbPathBytes);
+                var rsdsBlob = new byte[rsds.Size];
+                rsds.Write(rsdsBlob);
+
+                var debugDir = new ImageDebugDirectory(
+                    Characteristics: 0,
+                    TimeDateStamp: 0,
+                    MajorVersion: 0,
+                    MinorVersion: 0,
+                    Type: PeDebugType.CodeView,
+                    SizeOfData: (uint)rsdsBlob.Length,
+                    AddressOfRawData: rdataRva + (uint)ImageDebugDirectory.SizeOfEntry,
+                    PointerToRawData: 0); // 文件偏移依赖 headersSize，节表定稿后回填
+                var debugDirBlob = new byte[ImageDebugDirectory.SizeOfEntry];
+                debugDir.Write(debugDirBlob);
+
+                debugBlob = new byte[ImageDebugDirectory.SizeOfEntry + rsdsBlob.Length];
+                Array.Copy(debugDirBlob, debugBlob, ImageDebugDirectory.SizeOfEntry);
+                Array.Copy(rsdsBlob, 0, debugBlob, ImageDebugDirectory.SizeOfEntry, rsdsBlob.Length);
+
+                cursor = rdataRva + (uint)Align(debugBlob.Length, SectionAlignment);
+            }
+
+            // ---- .cocoa 元数据节（native 产物内嵌符号表）——置于末位 ----
+            if (cocoaMetadata != null && cocoaMetadata.Length > 0)
+            {
+                cocoaRva = cursor;
+
+                // M6（弱化）：回填 .cocoa 元数据绝对 VA（ASLR 经上面 .reloc 重定位）。
+                if (cocoaMetadataPtrDataOffset >= 0)
+                {
+                    var metadataPtr = (ulong)ImageBaseOf(architecture) + (uint)cocoaRva;
+                    if (pe32)
+                    {
+                        WriteUInt32(slotData, cocoaMetadataPtrDataOffset, (int)metadataPtr);
+                    }
+                    else
+                    {
+                        WriteUInt64(slotData, cocoaMetadataPtrDataOffset, (long)metadataPtr);
+                    }
+                }
+            }
+
             // 各节虚拟末端（对齐后）必须恰好落在下一节起点（Windows 加载器按相邻节连续校验）。
-            // .text 单一节（不做 4KB 分页）：分页会让节表随 code 增长而膨胀（>92 节将溢出固定头区且部分加载器拒载）。
+            // 最终顺序：.text/.data/.idata/.reloc/.edata/.rsrc/.rdata/.cocoa。
             var sections = new List<PeSectionSpec>
             {
                 new(".text", code, TextRva, PeSectionCharacteristics.Text),
+                new(".data", slotData, (uint)dataRva, PeSectionCharacteristics.Data),
             };
+            if (importLayout != null && importLayout.Blob.Length > 0)
+            {
+                sections.Add(new(".idata", importLayout.Blob, (uint)idataRva, PeSectionCharacteristics.Data));
+            }
 
-            sections.Add(new(".data", slotData, (uint)dataRva, PeSectionCharacteristics.Data));
-            sections.Add(new(".idata", importLayout.Blob, (uint)idataRva, PeSectionCharacteristics.Data));
             if (relocBlob.Length > 0)
             {
                 sections.Add(new(".reloc", relocBlob, relocRva, PeSectionCharacteristics.Data | PeSectionCharacteristics.MemDiscardable));
-            }
-
-            if (cocoaMetadata != null && cocoaMetadata.Length > 0)
-            {
-                sections.Add(new(".cocoa", cocoaMetadata, cocoaRva, PeSectionCharacteristics.Data | PeSectionCharacteristics.MemDiscardable));
             }
 
             if (exportBlob.Length > 0)
@@ -156,36 +221,45 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
                 directories.Add((PeDataDirectoryEntry.Export, edataRva, (uint)exportBlob.Length));
             }
 
-            // .rsrc 资源节（版本信息/图标/通用资源）：紧随 .edata 之后布局。资源 blob 内
-            // 各 DataEntry.OffsetToData（节内偏移）须回填为 .rsrc 节 RVA + 数据偏移。
-            uint rsrcRva = 0;
-            if (resources != null && resources.Blob.Length > 0)
+            if (resources != null && resourceBlob.Length > 0)
             {
-                var afterEdata = (uint)Align(idataRva + importLayout.Blob.Length, SectionAlignment);
-                if (exportBlob.Length > 0) afterEdata = edataRva + (uint)Align(exportBlob.Length, SectionAlignment);
-                else if (cocoaMetadata != null && cocoaMetadata.Length > 0) afterEdata = cocoaRva + (uint)Align(cocoaMetadata.Length, SectionAlignment);
-                else if (relocBlob.Length > 0) afterEdata = relocRva + (uint)Align(relocBlob.Length, SectionAlignment);
-
-                rsrcRva = afterEdata;
-                var resourceBlob = (byte[])resources.Blob.Clone();
-                // 每个 DataEntry.OffsetToData：节内偏移 → .rsrc 节 RVA + 数据偏移
-                foreach (var dataEntryOffset in resources.DataEntryOffsets)
-                {
-                    var dataOffsetInBlob = (int)PeBinary.ReadUInt32(resourceBlob, dataEntryOffset);
-                    PeBinary.WriteUInt32(resourceBlob, dataEntryOffset, (int)(rsrcRva + (uint)dataOffsetInBlob));
-                }
-
-                directories.Add((PeDataDirectoryEntry.Resource, rsrcRva, (uint)resourceBlob.Length));
                 sections.Add(new(".rsrc", resourceBlob, rsrcRva, PeSectionCharacteristics.Data));
+            }
+
+            if (pdbPath != null && pdbGuid != null && debugBlob.Length > 0)
+            {
+                rdataIndex = sections.Count;
+                sections.Add(new(".rdata", debugBlob, rdataRva, PeSectionCharacteristics.Data));
+            }
+
+            if (cocoaMetadata != null && cocoaMetadata.Length > 0)
+            {
+                // .cocoa 常驻（去 MemDiscardable），置于末位。
+                sections.Add(new(".cocoa", cocoaMetadata, cocoaRva, PeSectionCharacteristics.Data));
             }
 
             // 原生镜像：.text 按 4KB 页分页成多个节（.text/.textN），节表须容纳全部节头（每节 40 字节）。
             // 固定 0x1000 在 code 跨页多节（>92 节）时越界——按节数动态抬升，仍保证 ≥ 节对齐。
-            var sectionTableOffset = PeConstants.DosHeaderSize + PeImageBuilder.DosStubSize + 4 + ImageFileHeader.Size;
+            // SizeOfHeaders 须覆盖 Rich 头插入后的节表位置（e_lfanew 由 0x80 抬升至 0x100）。
+            var sectionTableOffset = RichHeaderBuilder.ELfanew + 4 + ImageFileHeader.Size;
             var optionalHeaderSize = pe32 ? ImageOptionalHeader32.Size : ImageOptionalHeader64.Size;
             var minHeaders = Align(sectionTableOffset + optionalHeaderSize + sections.Count * ImageSectionHeader.Size, 0x200);
             // SizeOfHeaders 须同时 ≥ 节表、(建议)节对齐倍数，否则加载器可能拒载。
             var headersSize = Math.Max(SizeOfHeaders, Align(minHeaders, SectionAlignment));
+
+            // 回填 Debug 目录 RSDS 的 PointerToRawData（文件偏移 = headersSize + 前序各节对齐后的原始长度，
+            // 至 .rdata 自身为止，与 PeObjectWriter 的 raw 布局算法一致，FileAlignment=0x200）。
+            if (pdbPath != null && pdbGuid != null && debugBlob.Length > 0)
+            {
+                var debugFileOff = (uint)headersSize;
+                for (var i = 0; i < rdataIndex; i++)
+                {
+                    debugFileOff += Align((uint)sections[i].RawData.Length, 0x200);
+                }
+
+                PeBinary.WriteUInt32(debugBlob, 24, (int)(debugFileOff + ImageDebugDirectory.SizeOfEntry));
+                directories.Add((PeDataDirectoryEntry.Debug, rdataRva, (uint)ImageDebugDirectory.SizeOfEntry));
+            }
 
             var dllCharacteristics = pe32
                 ? (ushort)(PeDllCharacteristics.NxChipCompat | PeDllCharacteristics.NoSeh | PeDllCharacteristics.TerminalServerAware)
@@ -217,6 +291,8 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
                 SizeOfHeaders = (uint)headersSize,
                 DllCharacteristics = dllCharacteristics,
                 AdditionalFileCharacteristics = fileCharacteristics,
+                CoffSymbolTable = coffSymbolTable,
+                CoffSymbolCount = coffSymbolCount,
             };
             foreach (var section in sections)
             {

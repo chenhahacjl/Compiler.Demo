@@ -19,7 +19,7 @@ namespace Cocoa.CodeGen.ObjectFormat.Elf
         /// <summary>节/段对齐（4KB 页）。</summary>
         public const int SectionAlignment = 0x1000;
 
-        public static void Write(string outputPath, byte[] code, byte[] data, int entryPointRva, int dataRva, byte[]? cocoaMetadata = null, System.Collections.Generic.IReadOnlyList<Cocoa.Targeting.DynamicImport>? imports = null)
+        public static void Write(string outputPath, byte[] code, byte[] data, int entryPointRva, int dataRva, byte[]? cocoaMetadata = null, System.Collections.Generic.IReadOnlyList<Cocoa.Targeting.DynamicImport>? imports = null, int cocoaMetadataPtrDataOffset = -1)
         {
             var options = new ObjectWriteOptions(
                 TargetOS.Linux, Architecture.X64, (ulong)ImageBase,
@@ -28,7 +28,21 @@ namespace Cocoa.CodeGen.ObjectFormat.Elf
                 SectionAlignment, SectionAlignment);
 
             options.Sections.Add(new SectionSpec(".text", code, (uint)TextRva, 0));
-            options.Sections.Add(new SectionSpec(".data", data, (uint)dataRva, 0));
+
+            // M6（弱化）：回填 .cocoa 元数据绝对 VA（ET_EXEC 固定基址，无需重定位）。
+            var dataBytes = data;
+            if (cocoaMetadataPtrDataOffset >= 0 && cocoaMetadata != null && cocoaMetadata.Length > 0)
+            {
+                dataBytes = (byte[])data.Clone();
+                var cocoaRva = (uint)(dataRva + data.Length);
+                var ptr = (ulong)ImageBase + cocoaRva;
+                for (var b = 0; b < 8; b++)
+                {
+                    dataBytes[cocoaMetadataPtrDataOffset + b] = (byte)(ptr >> (b * 8));
+                }
+            }
+
+            options.Sections.Add(new SectionSpec(".data", dataBytes, (uint)dataRva, 0));
 
             // .cocoa 元数据节（工具链 inspect 用；+8 字节对齐并入 RW 段）
             if (cocoaMetadata != null && cocoaMetadata.Length > 0)

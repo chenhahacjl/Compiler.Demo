@@ -13,13 +13,14 @@ namespace Cocoa.CodeGen.Native
     {
         private const string Prefix = "rt:";
 
+        /// <summary>M6 弱化：.cocoa 元数据指针槽的数据项键——构建期由 PeFileWriter/ElfFileWriter 回填绝对 VA。</summary>
+        internal const string CocoaMetadataPtrKey = Prefix + "CocoaMetadataPtr";
+
         private static readonly string[] Kernel32Imports =
         {
             "GetStdHandle", "WriteFile", "ReadFile", "ExitProcess", "VirtualAlloc", "VirtualFree",
             "GetFileType", "ReadConsoleW", "WriteConsoleW", "GetCommandLineW", "Sleep",
             "ReadConsoleInputW", "GetNumberOfConsoleInputEvents", "Beep",
-            // M6：运行期内存自省——GetModuleHandleW(NULL) 取自身镜像基址
-            "GetModuleHandleW",
             // Y-P0-1：文件 IO / 环境 syscall（G7-部分补齐；文件读写经 Win32 kernel32 低参 API，对标 .NET FileStream 底层）。
             "GetFileAttributesW", "DeleteFileW", "CopyFileW", "GetCurrentDirectoryW",
             "SetCurrentDirectoryW", "GetEnvironmentVariableW", "GetModuleFileNameW",
@@ -57,6 +58,7 @@ namespace Cocoa.CodeGen.Native
 
             // 数据 key
             private string _heapBase = "", _heapPtr = "", _heapEnd = "", _rngState = "", _inputBuffer = "",
+                _cocoaMetadataPtr = "",
                 _fileBuffer = "", _fileBuffer2 = "", _fileBuffer3 = "", _rbMode = "", _wbMode = "", _rwMode = "", _emptyString = "", _spaceString = "", _divZeroMessage = "", _stackOverflowMessage = "", _arrayBoundsMessage = "", _substringMessage = "", _newLine = "",
                 _zeroString = "", _negZeroString = "", _infinityString = "", _negInfinityString = "", _nanString = "",
                 _formatBuffer = "", _fmtBigBuf = "", _formatOne = "", _formatTen = "", _formatTrue = "", _formatFalse = "",
@@ -528,6 +530,10 @@ namespace Cocoa.CodeGen.Native
                     _typeTable = _program.AddData(LirDataItem.ByteArray(Prefix + "TypeTable", new byte[typeTableCapacity * 2 * ps]));
                     _typeTableCount = _program.AddData(LirDataItem.Int32(Prefix + "TypeTableCount", 0));
                 }
+
+                // M6（弱化）：.cocoa 元数据指针槽——构建期由 PeFileWriter/ElfFileWriter 回填绝对 VA，
+                // 运行期 SelfIntrospect 仅读该槽判非零（不再 GetModuleHandleW / 遍历自身镜像节表）。
+                _cocoaMetadataPtr = _program.AddData(LirDataItem.Pointer(CocoaMetadataPtrKey));
 
                 // T3：Linux 运行时零导入（裸 syscall），不挂 kernel32/bcrypt；新增 Linux 专用 scratch 数据项。
                 if (_os == TargetOS.Linux)

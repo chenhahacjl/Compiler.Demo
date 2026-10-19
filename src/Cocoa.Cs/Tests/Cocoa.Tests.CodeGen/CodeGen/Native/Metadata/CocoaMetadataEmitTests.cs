@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -161,8 +162,8 @@ function Main(): i32
         }
 
         /// <summary>
-        /// M6：运行期内存自省冒烟——程序运行期经 SelfIntrospect（GetModuleHandleW → 内存节表 → 魔数校验）
-        /// 探到自身 .cocoa 节 → Main 返回 0；探不到返回 1（挂）。
+        /// M6（弱化）：运行期自省冒烟——SelfIntrospect 读 data 段回填的 .cocoa 元数据指针槽判非零
+        /// （不再 GetModuleHandleW / 遍历自身镜像）→ Main 返回 0；探不到返回 1（挂）。
         /// </summary>
         [Theory]
         [MemberData(nameof(GetPlatforms))]
@@ -184,6 +185,149 @@ function Main(): i32
 
             var run = Run(exePath);
             Assert.Equal(0, run.ExitCode);
+        }
+
+        /// <summary>
+        /// M6 弱化：native 产物导入表不再含 GetModuleHandleW（自省不再读自身镜像）。
+        /// </summary>
+        [Fact]
+        public void NativeImage_No_GetModuleHandleW_Import()
+        {
+            var target = new TargetPlatform(TargetOS.Windows, Architecture.X64);
+            var exePath = EmitNative(@"function Main(): i32
+{
+    return 0
+}", "cocoa-debug-rsds", target);
+
+            var image = File.ReadAllBytes(exePath);
+            var reader = PeImageReader.TryOpen(image);
+            Assert.NotNull(reader);
+
+            var importDir = reader!.GetDirectory(PeDataDirectoryEntry.Import);
+            var imports = ImportTableReader.ReadAt(image, reader.RvaToFileOffset, importDir.VirtualAddress, importDir.Size);
+            Assert.DoesNotContain(imports.SelectMany(i => i.Item2),
+                e => string.Equals(e.Name, "GetModuleHandleW", StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <summary>
+        /// COFF 符号表：文件头 PointerToSymbolTable/NumberOfSymbols 非零，blob 含函数符号名与行号
+        /// （外部工具 IDA/dumpbin 可直接读符号，无需 PDB 文件）。
+        /// </summary>
+        [Fact]
+        public void NativeImage_Has_CoffSymbolTable_With_FunctionNames()
+        {
+            var target = new TargetPlatform(TargetOS.Windows, Architecture.X64);
+            var exePath = EmitNative(@"function Main(): i32
+{
+    return 0
+}", "cocoa-coff", target);
+
+            var image = File.ReadAllBytes(exePath);
+            var peOffset = BitConverter.ToInt32(image, 0x3C);
+            var symbolFileOffset = BitConverter.ToInt32(image, peOffset + 4 + 8);
+            var symbolCount = BitConverter.ToInt32(image, peOffset + 4 + 12);
+            Assert.True(symbolFileOffset > 0 && symbolCount > 0, "COFF 符号表应存在");
+
+            // 字符串表起点 = 符号表之后；解析主符号名，断言含 Main。
+            var stringTableStart = symbolFileOffset + symbolCount * 18;
+            Assert.True(stringTableStart < image.Length, "字符串表越界");
+            var stringTableLength = BitConverter.ToInt32(image, stringTableStart);
+            Assert.True(stringTableLength > 4, "字符串表应含名字");
+
+            var names = new List<string>();
+            for (var i = 0; i < symbolCount; i++)
+            {
+                var offset = symbolFileOffset + i * 18;
+                var name = Encoding.ASCII.GetString(image, offset, 8).TrimEnd('\0');
+                if (BitConverter.ToUInt32(image, offset) == 0)
+                {
+                    var nameOffset = BitConverter.ToInt32(image, offset + 4);
+                    if (nameOffset > 0 && nameOffset < stringTableLength)
+                    {
+                        var start = stringTableStart + nameOffset;
+                        var end = start;
+                        while (end < image.Length && image[end] != 0)
+                        {
+                            end++;
+                        }
+
+                        name = Encoding.ASCII.GetString(image, start, end - start);
+                    }
+                }
+
+                names.Add(name);
+            }
+
+            Assert.Contains("Main", names);
+            Assert.Contains(".text", names);
+        }
+
+        /// <summary>
+        /// 导入表自包含于 .idata：dir1(index 1) / dir12(index 12) / descriptor.FirstThunk 均指向 .idata，
+        /// IAT 与 INT 同区镜像（Borland/老 VS 形态），.cocoa 节置于末位——规避 IDA "imports destroyed"。
+        /// </summary>
+        [Fact]
+        public void NativeImage_ImportSelfContained_InIdata_And_CocoaLast()
+        {
+            var target = new TargetPlatform(TargetOS.Windows, Architecture.X64);
+            var exePath = EmitNative(@"function Main(): i32
+{
+    return 0
+}", "cocoa-idata", target);
+
+            var image = File.ReadAllBytes(exePath);
+            var reader = PeImageReader.TryOpen(image);
+            Assert.NotNull(reader);
+
+            uint SecStart(int idx)
+            {
+                var peOffset = BitConverter.ToInt32(image, 0x3C);
+                var numSections = BitConverter.ToInt16(image, peOffset + 6);
+                var optSize = BitConverter.ToInt16(image, peOffset + 20);
+                var sectionTable = peOffset + 24 + optSize;
+                return BitConverter.ToUInt32(image, sectionTable + idx * 40 + 12);
+            }
+
+            var sectionCount = BitConverter.ToInt16(image, BitConverter.ToInt32(image, 0x3C) + 6);
+            string SectionNameAt(int idx)
+            {
+                var peOffset = BitConverter.ToInt32(image, 0x3C);
+                var optSize = BitConverter.ToInt16(image, peOffset + 20);
+                var sectionTable = peOffset + 24 + optSize;
+                return Encoding.ASCII.GetString(image, sectionTable + idx * 40, 8).TrimEnd('\0');
+            }
+
+            string SectionOf(uint rva)
+            {
+                for (var i = 0; i < sectionCount; i++)
+                {
+                    var va = SecStart(i);
+                    var size = BitConverter.ToUInt32(image, BitConverter.ToInt32(image, 0x3C) + 24 + BitConverter.ToInt16(image, BitConverter.ToInt32(image, 0x3C) + 20) + i * 40 + 8);
+                    if (rva >= va && rva < va + size)
+                    {
+                        return SectionNameAt(i);
+                    }
+                }
+
+                return "?";
+            }
+
+            // dir1(index 1)/dir12(index 12) 均落在 .idata
+            var importDir = reader!.GetDirectory(PeDataDirectoryEntry.Import);
+            var iatDir = reader.GetDirectory(PeDataDirectoryEntry.Iat);
+            Assert.True(importDir.VirtualAddress != 0 && iatDir.VirtualAddress != 0, "Import/IAT 目录缺失");
+            Assert.Equal(".idata", SectionOf(importDir.VirtualAddress));
+            Assert.Equal(".idata", SectionOf(iatDir.VirtualAddress));
+
+            // descriptor.FirstThunk（加载器填充位）也指向 .idata
+            var io = (int)reader.RvaToFileOffset(importDir.VirtualAddress);
+            var firstThunk = BitConverter.ToUInt32(image, io + 16);
+            Assert.Equal(".idata", SectionOf(firstThunk));
+
+            // .cocoa 为末位节（自定义节放最后，前置标准节）
+            var lastSection = SectionNameAt(sectionCount - 1);
+            Assert.Equal(".cocoa", lastSection);
+            Assert.Contains(SectionNameAt(0), new[] { ".text" });
         }
 
         /// <summary>从 PE 头数据目录（index 2 = Resource）取 .rsrc 根 RVA。</summary>

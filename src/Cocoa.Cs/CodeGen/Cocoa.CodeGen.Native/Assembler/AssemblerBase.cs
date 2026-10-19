@@ -18,6 +18,7 @@ namespace Cocoa.CodeGen.Native.Assembler
         protected readonly List<(int DataOffset, int Label)> _dataCodeFixups = new List<(int DataOffset, int Label)>();
         protected readonly List<(int DataOffset, int Symbol)> _dataDataFixups = new List<(int DataOffset, int Symbol)>();
         protected readonly List<int> _dataAbsoluteFixups = new List<int>();
+        protected readonly Dictionary<int, int> _importSlotOffsets = new Dictionary<int, int>();
 
         protected int _nextLabelId;
         protected int _nextSymbolId;
@@ -113,7 +114,16 @@ namespace Cocoa.CodeGen.Native.Assembler
             }
         }
 
-        public abstract void Patch(int dataTextDelta, long imageBase);
+        public void SetImportSlotOffsets(IReadOnlyDictionary<int, int> offsets)
+        {
+            _importSlotOffsets.Clear();
+            foreach (var pair in offsets)
+            {
+                _importSlotOffsets[pair.Key] = pair.Value;
+            }
+        }
+
+        public abstract void Patch(int dataTextDelta, long imageBase, int idataTextDelta = 0);
 
         public void AddDataCodeFixup(int dataOffset, int label)
         {

@@ -29,18 +29,21 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
                 }
             }
 
-            if (!string.IsNullOrEmpty(options.IconPath))
+            if (options.IconData != null && options.IconData.Length > 0)
             {
-                var iconPath = Path.IsPathRooted(options.IconPath)
-                    ? options.IconPath
-                    : options.IconPath;
-                if (File.Exists(iconPath))
+                // 内嵌字节图标（默认图标兜底）优先
+                var icons = IconResourceBuilder.Build(options.IconData);
+                if (icons != null)
                 {
-                    var icons = IconResourceBuilder.Build(File.ReadAllBytes(iconPath));
-                    if (icons != null)
-                    {
-                        items.AddRange(icons);
-                    }
+                    items.AddRange(icons);
+                }
+            }
+            else if (!string.IsNullOrEmpty(options.IconPath) && File.Exists(options.IconPath))
+            {
+                var icons = IconResourceBuilder.Build(File.ReadAllBytes(options.IconPath));
+                if (icons != null)
+                {
+                    items.AddRange(icons);
                 }
             }
 
@@ -55,7 +58,7 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
         /// <summary>仅图标 + 通用资源（不含版本 RT_VERSION；IL 产物版本走 Assembly 属性）。null = 无。</summary>
         public static ResourceSectionResult? BuildWin32Only(PeResourceOptions? options)
         {
-            if (options == null || (string.IsNullOrEmpty(options.IconPath) && options.ExtraResources.Count == 0))
+            if (options == null || (string.IsNullOrEmpty(options.IconPath) && (options.IconData == null || options.IconData.Length == 0) && options.ExtraResources.Count == 0))
             {
                 return null;
             }
@@ -63,7 +66,15 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
             var items = new List<PeResourceData>(
                 options.ExtraResources.Select(r => new PeResourceData(r.Type, r.NameId, r.LanguageId, r.Data)));
 
-            if (!string.IsNullOrEmpty(options.IconPath) && File.Exists(options.IconPath))
+            if (options.IconData != null && options.IconData.Length > 0)
+            {
+                var icons = IconResourceBuilder.Build(options.IconData);
+                if (icons != null)
+                {
+                    items.AddRange(icons);
+                }
+            }
+            else if (!string.IsNullOrEmpty(options.IconPath) && File.Exists(options.IconPath))
             {
                 var icons = IconResourceBuilder.Build(File.ReadAllBytes(options.IconPath));
                 if (icons != null)

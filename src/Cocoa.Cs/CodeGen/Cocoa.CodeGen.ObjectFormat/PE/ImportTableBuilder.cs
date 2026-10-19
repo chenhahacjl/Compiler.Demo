@@ -5,8 +5,8 @@ using System.Text;
 
 namespace Cocoa.CodeGen.ObjectFormat.PE
 {
-    /// <summary>按 DLL 分组的导入表构建器：DLL 名 / INT / HintName / descriptor 组 + 全零终止。
-    /// 6c-2：IAT 槽位于镜像内 data 区（外部），由 OS 加载器按描述符 FirstThunk 启动时填充；blob 内不再生成 IAT 副本。</summary>
+    /// <summary>按 DLL 分组的导入表构建器：DLL 名 / INT / HintName / IAT / descriptor 组 + 全零终止。
+    /// 自包含形态：descriptors + INT + hint/name + 内嵌 IAT 同处一个 blob（.idata 节），dir1/dir12/FirstThunk 均指向 .idata。</summary>
     public static class ImportTableBuilder
     {
         public static PeImportTableLayout Build(
@@ -14,7 +14,8 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
             uint blobBaseRva = 0,
             bool pe32 = false,
             IReadOnlyList<int>? externalIatOffsets = null,
-            uint externalIatRva = 0)
+            uint externalIatRva = 0,
+            bool zeroIatArray = false)
         {
             var dllNames = new List<string>();
             var byDll = new List<List<PeImportSpec>>();
@@ -73,7 +74,16 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
                 {
                     foreach (var entry in entries)
                     {
-                        WriteThunk(parts, entry, blobBaseRva, pe32);
+                        // IAT 内嵌 blob：默认镜像 INT（hint/name RVA，Windows 加载器"verify-then-replace"依赖非零槽）；
+                        // zeroIatArray 时写 0（csc 标准形态，供实验/择优）。
+                        if (zeroIatArray)
+                        {
+                            WriteThunk(parts, null, blobBaseRva, pe32);
+                        }
+                        else
+                        {
+                            WriteThunk(parts, entry, blobBaseRva, pe32);
+                        }
                     }
 
                     WriteThunk(parts, null, blobBaseRva, pe32);
@@ -110,7 +120,22 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
                     : (int)(blobBaseRva + (uint)layout.IatOffset));
             }
 
-            return new PeImportTableLayout(parts.ToArray(), descriptorsOffset, layouts);
+            // 内部 IAT 布局下，导出每个函数的 blob 内 IAT 槽偏移（按输入 specs 顺序；供代码寻址与目录 index 12）。
+            var iatSlotOffsets = new int[specs.Count];
+            if (externalIatOffsets == null)
+            {
+                var thunkSize = pe32 ? 4 : 8;
+                for (var g = 0; g < pending.Count; g++)
+                {
+                    var p = pending[g];
+                    for (var e = 0; e < p.Entries.Count; e++)
+                    {
+                        iatSlotOffsets[firstIndexByDll[g] + e] = p.IatOffset + e * thunkSize;
+                    }
+                }
+            }
+
+            return new PeImportTableLayout(parts.ToArray(), descriptorsOffset, layouts, iatSlotOffsets);
         }
 
         private static void WriteThunk(List<byte> parts, (PeImportSpec Spec, int HintNameOffset)? entry, uint blobBaseRva, bool pe32)

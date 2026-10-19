@@ -74,6 +74,15 @@ namespace Cocoa.Targeting
 
         /// <summary>FileCharacteristicsOverride（PE COFF 头；非零则覆盖默认 ExecutableImage）。</summary>
         public ushort FileCharacteristicsOverride { get; set; }
+
+        /// <summary>
+        /// COFF 符号表 blob（IMAGE_SYMBOL 记录 + 行号 aux + 字符串表；PeObjectWriter 追加到节原始数据之后，
+        /// 回填文件头 PointerToSymbolTable / NumberOfSymbols）。null = 不写符号表。
+        /// </summary>
+        public byte[]? CoffSymbolTable { get; set; }
+
+        /// <summary>COFF 符号表记录总数（主符号 + aux），写入文件头 NumberOfSymbols（字符串表紧随其后）。</summary>
+        public int CoffSymbolCount { get; set; }
     }
 
     /// <summary>

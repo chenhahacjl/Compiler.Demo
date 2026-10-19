@@ -8,6 +8,24 @@
 
 ---
 
+## 未发布（2026-10-19）
+
+### AV/分析器白面：native 产物更像标准编译器输出 + COFF 调试符号 ✅
+- **Rich 头**：DOS stub 后嵌入标准 Rich 头（DanS + checksum + XOR 条目 + Rich + key，自定义产品/构建 ID），`e_lfanew=0x100`——DIE 识别为 "Linker: Microsoft Linker"；仅 PeObjectWriter（native），不碰 PeImageBuilder（自举差分不动）。
+- **导入表自包含 `.idata`**：descriptors + INT + hint/name + 内嵌 IAT 同处 `.idata`；`dir1`/`dir12`/`FirstThunk` 全部落 `.idata`（此前 fake-IAT 槽散布 `.data`，IDA 报 "imports destroyed"）。IAT 保留镜像 INT 初值——实测 Windows 加载器对 0 槽按 bound-import 跳过回填（`.data`/`.idata` 均 26/26 崩 0xC0000005），此为加载器硬性要求。
+- **节序**：`.cocoa` 置于末位（.text/.data/.idata/.reloc/.rsrc/.cocoa）。
+- **SelfIntrospect 弱化**：读 data 段回填的 `.cocoa` 元数据指针判非零，不再 GetModuleHandleW/遍历自身镜像（删 `GetModuleHandleW` 导入 + Linux `/proc/self/exe` 自省）。
+- **默认图标内嵌**：`resources/EXE.ico` 作为 EmbeddedResource 编进 Cocoa.Build.dll——未配置任何图标文件的可执行产物自动内嵌默认图标，无需 `EXE.ico` 在盘。优先级不变：`<ApplicationIcon>` → 工程目录 `EXE.ico` → 仓库 `resources/EXE.ico` → 内嵌默认。
+- **版本元数据缺省值**：未配 `Description` 时 `FileDescription` 回落 `AssemblyName`（右键属性「详细信息」页不再只有版本号）。
+- **共享运行库部署修复**：`-o` 指定输出路径时 `System.Core.Native.dll`/CopyLocal/Content 一律部署到实际产物目录——修复共享形态 exe 与依赖分家导致的 0xC0000135（此前表现为"main 返回值退出码不对"）。
+- **移除 Debug/RSDS**：不再广告不存在的 `<模块>.pdb`（消除工具 "failed to load pdb info" 告警）。
+- **COFF 调试符号表**：native 产物追加 COFF 符号表（函数符号名 → RVA + 源文件/行号，`PointerToSymbolTable`/`NumberOfSymbols` 回填）——IDA/dumpbin/WinDbg 直接读函数符号与行号，**无 PDB 文件依赖**。新增 `CoffSymbolTableBuilder`；COFF 行号为函数入口粒度。
+- **原生 PDB 7.0（native 产物）**：新增 `PdbWriter`——自写 MSF 容器 + DS/TPI/DBI/IPI + CodeView 符号流（`S_OBJNAME`/`S_GPROC32`/`S_END` + **`S_LINES` 行号表**：段内偏移 + 语句行，file id=0 单文件），`<模块>.pdb` 旁置 + exe 重加 Debug/RSDS 指向真实 .pdb（GUID 与 PDB 的 DS 流一致）。IDA/WinDbg 可加载函数符号与行号。
+- **Portable PDB（IL 产物）**：`Compilation.Emit` 经 `System.Reflection.Metadata.PortablePdbBuilder` 旁置便携 `.pdb`（Module MVID 取产物、Document + MethodDebugInformation 表）——dotnet/VS 调试器可加载。**语句级序列点**：发射期在 `EmitStatement` 捕获（语句首个指令下标 + 源文件/行），`Assemble()` 后换算 IL 字节偏移；序列点 blob 手编（net9.0 SRM 无 `SequencePointEncoder`，格式对齐 `SequencePointCollection` 解码器，SRM 读取器回读验证）。
+- 测试：新增 Rich 头反解、`.idata` 自包含结构、内嵌图标（RT_GROUP_ICON）、COFF 符号表回读/产物断言、原生 PDB MSF/符号流回读、Portable PDB 读取器回读、版本元数据缺省值测试；`WindowsBytesInvariant` 黄金值重采集。全量 CodeGen 1076 / Integration 287 / Engine 32 绿。
+
+---
+
 ## 未发布（2026-10-16）
 
 ### 跨平台：import 按目标 OS 区分（对称门禁 + 条件选源）✅

@@ -30,7 +30,10 @@ namespace Cocoa.CodeGen.Native.Assembler
         void WriteDataUtf16(string value);
         void AlignData(int alignment);
 
-        void Patch(int dataTextDelta, long imageBase);
+        /// <summary>设定 import 槽（.idata 内 IAT）符号 → blob 偏移；Patch 按其解析代码中的导入引用。</summary>
+        void SetImportSlotOffsets(System.Collections.Generic.IReadOnlyDictionary<int, int> offsets);
+
+        void Patch(int dataTextDelta, long imageBase, int idataTextDelta = 0);
         byte[] ToArray();
         byte[] GetData();
 

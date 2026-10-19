@@ -74,14 +74,48 @@ namespace Cocoa.CodeGen.Native
                 throw new System.InvalidOperationException("linux 目标当前仅支持 x64（ELF64）。");
             }
 
-            var dataRva = PeFileWriter.ComputeDataRva(a.ToArray().Length);
+            var dataBytes = a.GetData();
+            var codeLength = a.ToArray().Length;
+            var dataRva = PeFileWriter.ComputeDataRva(codeLength);
+            var idataRva = PeFileWriter.ComputeIdataRva(codeLength, dataBytes.Length);
             var imageBase = isLinux ? Cocoa.CodeGen.ObjectFormat.Elf.ElfFileWriter.ImageBase : PeFileWriter.ImageBaseOf(platform.Arch);
-            a.Patch(dataRva - PeFileWriter.TextRva, imageBase);
+
+            // Windows：自包含 .idata 导入表——先把 .idata 槽偏移交给汇编器（代码经 IAT 槽调用），再 Patch。
+            PeImportTableLayout? importLayout = null;
+            if (!isLinux)
+            {
+                var (layout, computedIdata) = PeFileWriter.BuildImportLayout(result.Imports, platform.Arch, codeLength, dataBytes.Length);
+                importLayout = layout;
+                idataRva = computedIdata;
+
+                var slotSymbols = result.ImportSlotSymbols;
+                if (slotSymbols.Count != layout.IatSlotOffsets.Count)
+                {
+                    throw new System.InvalidOperationException("import slot symbol/offset 数量不匹配");
+                }
+
+                var slotOffsets = new Dictionary<int, int>();
+                for (var i = 0; i < slotSymbols.Count; i++)
+                {
+                    slotOffsets[slotSymbols[i]] = layout.IatSlotOffsets[i];
+                }
+
+                a.SetImportSlotOffsets(slotOffsets);
+            }
+
+            a.Patch(dataRva - PeFileWriter.TextRva, imageBase, isLinux ? 0 : (int)idataRva - PeFileWriter.TextRva);
             var code = a.ToArray();
             var entryPointRva = PeFileWriter.TextRva + a.GetLabelOffset(result.StubLabel);
 
             // M4：.cocoa 元数据节默认强制内嵌（设计稿：体积接受；无 strip 选项）
             var cocoaMetadata = new CocoaMetadataBuilder(emit.Symbols).Build();
+
+            // M6（弱化）：.cocoa 元数据指针槽的 data 段偏移——构建期回填绝对 VA，运行期 SelfIntrospect 读判非零。
+            var cocoaMetadataPtrOffset = -1;
+            if (result.DataOffsets.TryGetValue(RuntimeFunctionEmitter.CocoaMetadataPtrKey, out var ptrOffset))
+            {
+                cocoaMetadataPtrOffset = ptrOffset;
+            }
 
             if (isLinux)
             {
@@ -100,13 +134,75 @@ namespace Cocoa.CodeGen.Native
                     }
                 }
 
-                Cocoa.CodeGen.ObjectFormat.Elf.ElfFileWriter.Write(outputPath, code, a.GetData(), entryPointRva, dataRva, cocoaMetadata, dynImports);
+                Cocoa.CodeGen.ObjectFormat.Elf.ElfFileWriter.Write(outputPath, code, a.GetData(), entryPointRva, dataRva, cocoaMetadata, dynImports, cocoaMetadataPtrOffset);
                 return;
             }
 
             // M4a：数据段绝对地址槽 → .reloc（ASLR 下加载器同步修正 vtable 函数/名字指针）
             var resources = Cocoa.CodeGen.ObjectFormat.PE.PeResourceSet.BuildRsrcSection(resourceOptions);
-            PeFileWriter.Write(outputPath, code, a.GetData(), entryPointRva, result.Imports, platform.Arch, a.DataAbsoluteFixups, subsystem, cocoaMetadata, CollectExports(emit.Symbols, result, a), resources);
+
+            // 调试符号：COFF 符号表（内嵌，行号）+ 原生 PDB 7.0（外置 .pdb，IDA/WinDbg 加载）。
+            var functions = GatherFunctions(emit.Symbols, result, a, code.Length);
+            var (coffSymbols, coffSymbolCount) = Cocoa.CodeGen.ObjectFormat.PE.CoffSymbolTableBuilder.Build(
+                functions.Select(f => new Cocoa.CodeGen.ObjectFormat.PE.CoffSymbolTableBuilder.CoffFunctionSymbol(f.Name, f.Rva, f.File, f.Line)).ToArray(),
+                code.Length);
+
+            string? pdbPath = null;
+            Guid? pdbGuid = null;
+            var pdbBytes = Cocoa.CodeGen.ObjectFormat.PE.PdbWriter.Build(
+                moduleName,
+                functions.Select(f => new Cocoa.CodeGen.ObjectFormat.PE.PdbWriter.PdbFunctionSymbol(f.Name, f.Rva, f.Length, f.Line)).ToArray(),
+                code.Length);
+            if (pdbBytes != null)
+            {
+                pdbPath = System.IO.Path.ChangeExtension(outputPath, ".pdb");
+                System.IO.File.WriteAllBytes(pdbPath, pdbBytes);
+                pdbGuid = Cocoa.CodeGen.ObjectFormat.PE.PdbWriter.MakeGuid(moduleName);
+            }
+
+            PeFileWriter.Write(outputPath, code, a.GetData(), entryPointRva, importLayout!, platform.Arch, a.DataAbsoluteFixups, subsystem, cocoaMetadata, CollectExports(emit.Symbols, result, a), resources, isDll: false, cocoaMetadataPtrDataOffset: cocoaMetadataPtrOffset, coffSymbolTable: coffSymbols, coffSymbolCount: coffSymbolCount, pdbPath: pdbPath, pdbGuid: pdbGuid);
+        }
+
+        /// <summary>收集全部发射函数符号：语言名 → RVA + 源文件/行号；按 RVA 排序回填函数长度（调试符号用）。</summary>
+        private static System.Collections.Generic.List<(string Name, uint Rva, string File, int Line, int Length)> GatherFunctions(
+            EmittedSymbolSnapshot symbols,
+            LirEmitResult result,
+            IAssembler a,
+            int codeLength)
+        {
+            var list = new System.Collections.Generic.List<(string Name, uint Rva, string File, int Line, int Length)>();
+            foreach (var kvp in symbols.Functions)
+            {
+                var fn = kvp.Key;
+                if (!result.Labels.TryGetValue(kvp.Value.Name, out var label))
+                {
+                    continue;
+                }
+
+                var rva = (uint)(PeFileWriter.TextRva + a.GetLabelOffset(label));
+                var file = "";
+                var line = 0;
+                var declaration = fn.Declaration ?? fn.Syntax;
+                if (declaration != null)
+                {
+                    var location = declaration.Location;
+                    file = location.FileName;
+                    line = location.StartLine + 1;
+                }
+
+                list.Add((fn.Name, rva, file, line, 0));
+            }
+
+            var ordered = list.OrderBy(x => x.Rva).ToList();
+            for (var i = 0; i < ordered.Count; i++)
+            {
+                var length = i + 1 < ordered.Count
+                    ? (int)(ordered[i + 1].Rva - ordered[i].Rva)
+                    : codeLength - (int)ordered[i].Rva;
+                ordered[i] = (ordered[i].Name, ordered[i].Rva, ordered[i].File, ordered[i].Line, Math.Max(0, length));
+            }
+
+            return ordered;
         }
 
         /// <summary>C-3：收集 `[Export]` 顶层函数 → (导出名, RVA)。RVA = TextRva + 函数入口标签相对 code 偏移。</summary>

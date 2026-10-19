@@ -30,8 +30,14 @@ function Main()
 
         // bf36bb18 基线采集（2026-10-16 本机 gold 哈希；T3.3 改造前）。
         // 2026-10-18 重采集：native 运行时新增 DeleteDirectory（RemoveDirectoryW 导入）→ .text/.data 字节变更。
-        private const string GoldenTextSha256 = "808E6A4F17444B3068F8E27FCD333BDC756FB88786DDECEAF29B4B28C7D34428";
-        private const string GoldenDataSha256 = "15CF3B5CC11592D78EF6D6F9B20BB6C3BC8CBCD001BF424002C8A81DC855C86C";
+        // 2026-10-19 重采集：M6 弱化（SelfIntrospect 改读 data 段 .cocoa 指针槽，删 GetModuleHandleW 导入）
+        // + Debug/RSDS .rdata 节 → .text/.data 字节变更。
+        // 2026-10-19 二次重采集：.idata 导入表自包含（IAT 迁出 .data→.data 缩短、代码经 .idata 槽寻址）
+        // + 节序重排（.cocoa 末位）→ .text/.data 字节变更。
+        // 2026-10-19 三次重采集：移除 Debug/RSDS .rdata 节 → .cocoa RVA 前移 → .data 变更；.text 不变。
+        // 2026-10-19 四次重采集：重加 .rdata（Debug/RSDS 指向真实 .pdb）→ .data 回到含 .rdata 的基线（7202B6DC）。
+        private const string GoldenTextSha256 = "FE10EBC9C8D472DE67CD77AA468FF673B7CB00ECA73B3614BE1E6AB16C6104AF";
+        private const string GoldenDataSha256 = "7202B6DCEDCE84AB433ACB75839BF3B87F2E523C8A5132EE85F9469161FCEB4A";
 
         [Fact]
         public void WindowsX64_TextAndData_ByteInvariant()

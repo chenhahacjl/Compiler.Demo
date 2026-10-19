@@ -71,8 +71,8 @@ namespace Cocoa.CodeAnalysis.Symbols
         // ---- 数组切片（P1-2 .. Range 运算符）----
         CopyRange,
 
-        // ---- .cocoa 运行期内存自省（M6，native-only）----
-        // 运行期 GetModuleHandle(NULL) → 基址 → 内存节表 RVA → 读自身 .cocoa 节并校验魔数。
+        // ---- .cocoa 元数据存在性（M6 弱化，native-only）----
+        // 运行期读 data 段回填的 .cocoa 元数据指针槽判非零（不再 GetModuleHandle/遍历自身镜像）。
         // 仅 native 产物内嵌 .cocoa；Evaluator/IL 无此载体 → 返回 false。
         SelfIntrospect,
 

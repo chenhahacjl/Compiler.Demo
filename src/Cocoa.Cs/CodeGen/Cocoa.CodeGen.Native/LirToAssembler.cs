@@ -13,19 +13,27 @@ using Cocoa.CodeGen.Native.Lir;
 
 namespace Cocoa.CodeGen.Native
 {
-    /// <summary>IR → IAssembler 的发射结果：全部函数/特殊函数 label 与入口 stub label。</summary>
+    /// <summary>IR → IAssembler 的发射结果：全部函数/特殊函数 label、入口 stub label、导入表与数据项偏移表。</summary>
     internal sealed class LirEmitResult
     {
-        public LirEmitResult(Dictionary<string, int> labels, int stubLabel, List<PeFileImport> imports)
+        public LirEmitResult(Dictionary<string, int> labels, int stubLabel, List<PeFileImport> imports, IReadOnlyDictionary<string, int> dataOffsets, IReadOnlyList<int> importSlotSymbols)
         {
             Labels = labels;
             StubLabel = stubLabel;
             Imports = imports;
+            DataOffsets = dataOffsets;
+            ImportSlotSymbols = importSlotSymbols;
         }
 
         public Dictionary<string, int> Labels { get; }
         public int StubLabel { get; }
         public List<PeFileImport> Imports { get; }
+
+        /// <summary>数据项键 → `.data` 段内偏移（供 PeFileWriter/ElfFileWriter 回填 .cocoa 元数据指针等）。</summary>
+        public IReadOnlyDictionary<string, int> DataOffsets { get; }
+
+        /// <summary>IAT 槽符号（与 <see cref="Imports"/> 同序；供调用方把 .idata 槽偏移交给汇编器 Patch）。</summary>
+        public IReadOnlyList<int> ImportSlotSymbols { get; }
     }
 
     /// <summary>
@@ -51,6 +59,7 @@ namespace Cocoa.CodeGen.Native
         private readonly Dictionary<int, int> _asmLabelCache = new();
         private readonly Dictionary<string, int> _dataSymbols = new();
         private readonly Dictionary<LirImport, int> _importSlots = new();
+        private readonly List<int> _importSlotSymbols = new();
         private readonly List<PeFileImport> _imports = new();
         private readonly List<LirVirtualRegister> _sysArgs = new();
 
@@ -138,7 +147,13 @@ namespace Cocoa.CodeGen.Native
         {
             var emitter = new LirToAssembler(a, program, entryLabel, platform, emitStub, splitRuntime);
             emitter.EmitProgram();
-            return new LirEmitResult(emitter._nameToLabel, emitter._stubLabel, emitter._imports);
+            var dataOffsets = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var pair in emitter._dataSymbols)
+            {
+                dataOffsets.Add(pair.Key, a.GetDataOffset(pair.Value));
+            }
+
+            return new LirEmitResult(emitter._nameToLabel, emitter._stubLabel, emitter._imports, dataOffsets, emitter._importSlotSymbols);
         }
 
         private void EmitProgram()
@@ -350,14 +365,23 @@ namespace Cocoa.CodeGen.Native
                                      .SelectMany(g => g)
                                      .ToList();
             var reordered = kernel32Group.Concat(otherGroups).ToList();
+            var windowsImport = _platform.OS == TargetOS.Windows;
 
             foreach (var import in reordered)
             {
                 var symbol = _a.CreateDataSymbol();
-                _a.MarkDataSymbol(symbol);
                 _importSlots.Add(import, symbol);
+                _importSlotSymbols.Add(symbol);
 
-                // IAT 槽（8/4 字节）：磁盘初值 0，OS 加载器启动时按导入描述符填充
+                if (windowsImport)
+                {
+                    // Windows：IAT 槽位于 .idata（自包含导入表）。不再占用 .data——
+                    // 代码经 SetImportSlotOffsets 解析到 imageBase + idataRva + 槽偏移。此处只登记符号。
+                    continue;
+                }
+
+                // Linux（ELF GLOB_DAT）：IAT 槽仍在 .data，加载器按 GLOB_DAT 填充。
+                _a.MarkDataSymbol(symbol);
                 if (_isX64)
                 {
                     _a.WriteDataInt64(0);
@@ -370,7 +394,8 @@ namespace Cocoa.CodeGen.Native
 
             foreach (var import in reordered)
             {
-                _imports.Add(new PeFileImport(import.DllName, import.Name, _a.GetDataOffset(_importSlots[import])));
+                var iatOffset = windowsImport ? 0 : _a.GetDataOffset(_importSlots[import]);
+                _imports.Add(new PeFileImport(import.DllName, import.Name, iatOffset));
             }
         }
 

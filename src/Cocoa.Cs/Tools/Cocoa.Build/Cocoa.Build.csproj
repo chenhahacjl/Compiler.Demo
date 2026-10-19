@@ -9,6 +9,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- 内嵌默认应用图标：未配置任何图标文件时兜底（DefaultIcon.GetBytes） -->
+    <EmbeddedResource Include="..\..\..\..\resources\EXE.ico" Link="Resources\DefaultExe.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\Core\Cocoa.CodeAnalysis\Cocoa.CodeAnalysis.csproj" />
     <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.Managed\Cocoa.CodeGen.Managed.csproj" />
     <ProjectReference Include="..\..\Core\Cocoa.Targeting\Cocoa.Targeting.csproj" />

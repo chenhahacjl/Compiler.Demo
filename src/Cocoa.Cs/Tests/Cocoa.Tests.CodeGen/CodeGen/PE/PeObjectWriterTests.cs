@@ -60,6 +60,49 @@ namespace Cocoa.Tests.CodeGen.PE
         }
 
         [Fact]
+        public void RichHeader_Is_Inserted_And_Decodable()
+        {
+            var image = PeObjectWriter.Instance.Write(BasicOptions(Architecture.X64));
+
+            // e_lfanew 抬升至 0x100（MSVC 常见值），PE 签名随之
+            var eLfanew = BitConverter.ToInt32(image, 0x3C);
+            Assert.Equal(0x100, eLfanew);
+            Assert.Equal(0x20B, BitConverter.ToUInt16(image, eLfanew + 24)); // PE32+ magic
+
+            // 布局：DanS @0x7E → checksum → 3 条目 → "Rich"+key @0xF8/0xFC
+            const int danS = 0x536E6144;
+            const int rich = 0x68636952;
+            const int key = 0x0C0C0C0C;
+            const int product = 0xC0CA;
+            const int build = 0x0001;
+            const int value = (build << 16) | product;
+            const int entryCount = 3;
+
+            Assert.Equal(danS, BitConverter.ToInt32(image, 0x7E));
+            Assert.Equal((value * entryCount) ^ key, BitConverter.ToInt32(image, 0x82));
+            for (var i = 0; i < entryCount; i++)
+            {
+                Assert.Equal(value ^ key, BitConverter.ToInt32(image, 0x86 + i * 4));
+            }
+
+            Assert.Equal(rich, BitConverter.ToInt32(image, eLfanew - 8));
+            Assert.Equal(key, BitConverter.ToInt32(image, eLfanew - 4));
+
+            // 右移后节表仍在头区内、镜像仍可解析
+            var reader = PeImageReader.TryOpen(image);
+            Assert.NotNull(reader);
+            Assert.Equal(0x140000000UL, reader!.ImageBase);
+        }
+
+        [Fact]
+        public void RichHeader_Disabled_Keeps_Original_ELfanew()
+        {
+            var image = new PeObjectWriter { FillRichHeader = false }.Write(BasicOptions(Architecture.X64));
+            Assert.Equal(0x80, BitConverter.ToInt32(image, 0x3C));
+            Assert.Equal(0x20B, BitConverter.ToUInt16(image, 0x80 + 24));
+        }
+
+        [Fact]
         public void Image_Is_Readable_By_PeImageReader()
         {
             var image = PeObjectWriter.Instance.Write(BasicOptions(Architecture.X64));

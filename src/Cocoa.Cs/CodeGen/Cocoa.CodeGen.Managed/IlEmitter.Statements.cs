@@ -23,6 +23,16 @@ namespace Cocoa.CodeGen.Managed
     {
         private void EmitStatement(IlAssembler il, BoundStatement node)
         {
+            // 语句级序列点捕获：记录本语句首个指令在指令表的下标 + 源文件/行（Portable PDB 用）。
+            if (_currentSequencePoints != null && node.Syntax != null)
+            {
+                var location = node.Syntax.Location;
+                if (!string.IsNullOrEmpty(location.FileName))
+                {
+                    _currentSequencePoints.Add((il.Instructions.Count, location.StartLine + 1, location.FileName));
+                }
+            }
+
             switch (node.Kind)
             {
                 case BoundNodeKind.BlockStatement:

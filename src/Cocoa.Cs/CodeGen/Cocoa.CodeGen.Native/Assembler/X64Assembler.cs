@@ -8,7 +8,7 @@ namespace Cocoa.CodeGen.Native.Assembler.X64
 {
     public sealed class X64Assembler : AssemblerBase, IAssembler
     {
-        public override void Patch(int dataTextDelta, long imageBase)
+        public override void Patch(int dataTextDelta, long imageBase, int idataTextDelta = 0)
         {
             foreach (var fixup in _labelFixups)
             {
@@ -22,6 +22,13 @@ namespace Cocoa.CodeGen.Native.Assembler.X64
 
             foreach (var fixup in _dataFixups)
             {
+                // import 槽：.idata 内 IAT（RIP 相对，基址无关）
+                if (_importSlotOffsets.TryGetValue(fixup.Symbol, out var importOffset))
+                {
+                    WriteInt32At(fixup.Offset, idataTextDelta + importOffset - (fixup.Offset + 4));
+                    continue;
+                }
+
                 if (!_dataOffsets.TryGetValue(fixup.Symbol, out var dataOffset))
                 {
                     throw new InvalidOperationException($"Data symbol {fixup.Symbol} was never marked.");
