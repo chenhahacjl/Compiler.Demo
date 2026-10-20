@@ -1,0 +1,19 @@
+using System
+
+namespace Demo
+{
+    class Greeter
+    {
+        public static function Greet(name: string): string
+        {
+            return "Hello, " + name
+        }
+
+        public static function Greet(): string
+        {
+            return "Hello, world"
+        }
+    }
+}
+
+Console.WriteLine(Demo.Greeter.Greet("Cocoa"))

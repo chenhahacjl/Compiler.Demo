@@ -67,6 +67,33 @@ internal static class Program
         var value = engine.DoString("41 + 1");
         Console.WriteLine($"DoString(\"41 + 1\").Value = {value.Value}");
 
+        // Call 类静态方法（点号限定名）+ 重载消解（按实参元数/精确类型）
+        engine.DoString("""
+            class Calc
+            {
+                public static function Describe(x: i32): string { return $"int:{x}" }
+                public static function Describe(s: string): string { return $"string:{s}" }
+            }
+            """);
+        Console.WriteLine($"Call(\"Calc.Describe\", 42) = {engine.Call("Calc.Describe", 42)}");
+        Console.WriteLine($"Call(\"Calc.Describe\", \"hi\") = {engine.Call("Calc.Describe", "hi")}");
+
+        // DoFile：脚本文件执行（Lua luaL_dofile 等价），文件声明的命名空间类静态方法可经 Call 调用
+        var fileResult = engine.DoFile(Path.Combine(AppContext.BaseDirectory, "scripts", "demo.co"));
+        if (fileResult.Diagnostics.HasErrors())
+        {
+            foreach (var d in fileResult.Diagnostics)
+            {
+                Console.Error.WriteLine($"  编译诊断: {d}");
+            }
+
+            return;
+        }
+
+        Console.WriteLine($"DoFile 完成（最后值 = {Show(fileResult.Value)}）");
+        Console.WriteLine($"Call(\"Demo.Greeter.Greet\", \"Host\") = {engine.Call("Demo.Greeter.Greet", "Host")}");
+        Console.WriteLine($"Call(\"Demo.Greeter.Greet\") = {engine.Call("Demo.Greeter.Greet")}");
+
         engine.Reset();
         Console.WriteLine();
         Console.WriteLine("Reset 完成。");

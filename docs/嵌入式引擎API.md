@@ -303,7 +303,7 @@ Co 值 ↔ .NET 对象的映射契约（Interpreter 后端透明；IlEmit 反射
 
 ## 11. 示例
 
-可运行示例见 `samples/Scripting/CsHost/`（独立 C# 控制台工程 + `.co` 脚本，展示 `DoString` / `Call` / `RegisterCallback` / `GetGlobal` / `Output` 全链路）。该工程是 C# 宿主，不纳入 `samples.cosln` 聚合。
+可运行示例见 `samples/Scripting/CsHost/`（独立 C# 控制台工程 + `.co` 脚本，展示 `DoString` / `DoFile` / `Call`（顶层 + 类静态方法 + 重载消解） / `RegisterCallback` / `GetGlobal` / `Output` 全链路）。该工程是 C# 宿主，不纳入 `samples.cosln` 聚合。
 
 ```csharp
 using Cocoa.Engine;
