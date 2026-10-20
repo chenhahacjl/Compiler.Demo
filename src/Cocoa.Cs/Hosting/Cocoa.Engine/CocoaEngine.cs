@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.IO;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
@@ -129,6 +130,20 @@ namespace Cocoa.Engine
             {
                 InterpreterBackend.OutputWriter = previous;
             }
+        }
+
+        /// <summary>
+        /// 从文件执行一段 Co 脚本（Lua <c>luaL_dofile</c> 等价）：读文件内容 → <see cref="DoString"/> 语义。
+        /// 文件层错误（不存在/读取失败）抛宿主异常（<see cref="FileNotFoundException"/>/<see cref="IOException"/>）；
+        /// 脚本内容编译错误照 <see cref="DoString"/> 返回 <see cref="EngineResult.Diagnostics"/>（不改变引擎状态）。
+        /// 与 <see cref="DoString"/> 共享 submission 链：多次 <see cref="DoFile"/>/<see cref="DoString"/> 的函数与
+        /// 顶层变量互相可见。
+        /// </summary>
+        public EngineResult DoFile(string path)
+        {
+            ThrowIfDisposed();
+            var code = File.ReadAllText(path);
+            return DoString(code);
         }
 
         /// <summary>读取脚本已声明的顶层全局变量；未声明名称返回 null。</summary>

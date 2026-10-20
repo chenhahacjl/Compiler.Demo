@@ -21,7 +21,8 @@
 - **`engine.Call("ClassName.method", args)` / `"Namespace.Class.method"`**——查找面从顶层函数扩至类静态方法：Interpreter 走 `Compilation.EvaluateFunction` 链上按类型 `FullName`/裸 `Name` 匹配（`IsStatic` 且非构造器）；IlEmit 走 `IlEmitSession.Call` 反射（顶层 `<CocoaTopLevel>` 优先 → 程序集用户类型 `SafeAssemblyTypes` 兜反射基类加载失败）。
 - **重载消解**：类静态方法多重重载按**实参元数过滤 + 精确 CLR 类型匹配打分**（对齐解释器 `CoerceArgument`「优先精确」语义；IlEmit 同规则经 `ResolveStaticMethod`，顺带消除 `Type.GetMethod(name)` 对重载的 `AmbiguousMatchException`）。
 - 实例方法（非 static）暂不支持：C# 侧按可读提示失败，脚本内经 `new` 驱动（后续增量）。
-- 测试：Engine 新增 11 例（Interpreter 7：限定名/命名空间/裸类名/未知方法/实例方法负例/按类型重载/按元数重载；IlEmit 4：限定名/命名空间/未知方法/按类型重载）。文档 `docs/嵌入式引擎API.md` §6/§12 同步。
+- **`DoFile(path)`**（同批）：读文件走 `DoString` 语义（Lua `luaL_dofile` 等价）；文件层错误抛宿主异常，编译错误照返诊断；与 `DoString` 共享 submission 链。
+- 测试：Engine 新增 14 例（Call 限定名/命名空间/裸类名/未知/实例负例/按类型/按元数重载 × 双后端 + DoFile 文件执行/缺文件异常 × 双后端）。文档 `docs/嵌入式引擎API.md` §1/§4/§6/§12 同步。
 
 ---
 

@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using Cocoa.CodeAnalysis;
 using Cocoa.Engine;
@@ -282,6 +283,36 @@ function Scale(x: i32): i32 { return x * factor }");
 
             Assert.Equal("none", engine.Call("Calc.Format"));
             Assert.Equal("12", engine.Call("Calc.Format", 1, 2));
+        }
+
+        [Fact]
+        public void DoFile_ReadsAndExecutesScriptFile()
+        {
+            using var engine = new CocoaEngine();
+            var path = Path.Combine(Path.GetTempPath(), "cocoa-engine-dofile-" + Guid.NewGuid().ToString("N") + ".co");
+            File.WriteAllText(path, @"function Add(a: i32, b: i32): i32 { return a + b }
+42");
+            try
+            {
+                var result = engine.DoFile(path);
+                Assert.False(result.Diagnostics.HasErrors(), string.Join("\n", result.Diagnostics.Select(d => d.Message)));
+                Assert.Equal(42, result.Value);
+
+                // 与 DoString 共享 submission 链：文件声明的函数可经 Call 调用
+                Assert.Equal(42, engine.Call("Add", 21, 21));
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        [Fact]
+        public void DoFile_MissingFile_Throws()
+        {
+            using var engine = new CocoaEngine();
+            var path = Path.Combine(Path.GetTempPath(), "cocoa-engine-dofile-missing-" + Guid.NewGuid().ToString("N") + ".co");
+            Assert.Throws<FileNotFoundException>(() => engine.DoFile(path));
         }
 
         [Fact]

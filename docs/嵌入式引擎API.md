@@ -14,6 +14,7 @@
 |----------|--------------------|
 | `lua_State`（引擎状态） | `CocoaEngine` 实例（submission 链 + 全局变量字典 + 回调表，实例隔离） |
 | `luaL_dostring` | `DoString(code)` → `EngineResult` |
+| `luaL_dofile` | `DoFile(path)` → `EngineResult` |
 | `lua_getglobal` / `lua_setglobal` | `GetGlobal(name)` / `SetGlobal(name, value)` |
 | `lua_call`（C# 调 Co） | `Call(name, params object?[] args)` |
 | `lua_register`（Co 调 C#） | `RegisterCallback(name, Delegate)`，Co 侧以 `syscall function` 声明 |
@@ -125,18 +126,20 @@ public sealed class EngineError : Exception
 
 ---
 
-## 4. 脚本执行：`DoString`
+## 4. 脚本执行：`DoString` / `DoFile`
 
 ```csharp
 public EngineResult DoString(string code);
+public EngineResult DoFile(string path);
 ```
 
-执行一段 Co 代码。语义对齐 REPL 单次提交：
+执行一段 Co 代码。`DoString` 语义对齐 REPL 单次提交；`DoFile` 读文件后走 `DoString` 语义（Lua `luaL_dofile` 等价）：
 
 - 语法树解析 → `Compilation.CreateScript(previous, references, tree)` → 求值；
-- **submission 链**：连续多次 `DoString` 在同一引擎内共享函数与顶层变量（顶层变量存于引擎级全局变量字典）；
+- **submission 链**：连续多次 `DoString`/`DoFile` 在同一引擎内共享函数与顶层变量（顶层变量存于引擎级全局变量字典）；
 - **返回值**：脚本顶层最后表达式的值；
-- **诊断**：编译错误返回 `Diagnostics`（不改变引擎状态，该提交不持久化）；警告照常返回。
+- **诊断**：编译错误返回 `Diagnostics`（不改变引擎状态，该提交不持久化）；警告照常返回；
+- `DoFile` 文件层错误（不存在/读取失败）抛宿主异常（`FileNotFoundException`/`IOException`）。
 
 ### 4.1 后端行为差异
 

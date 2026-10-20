@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using Cocoa.CodeAnalysis;
 using Cocoa.Engine;
@@ -174,6 +175,28 @@ F(5)");
             engine.DoString(@"function F(): i32 { return 1 }");
             engine.Reset();
             Assert.Throws<ArgumentException>(() => engine.Call("F"));
+        }
+
+        [Fact]
+        public void IlEmit_DoFile_ReadsAndExecutesScriptFile()
+        {
+            using var engine = new CocoaEngine(EngineBackend.IlEmit);
+            var path = Path.Combine(Path.GetTempPath(), "cocoa-engine-dofile-" + Guid.NewGuid().ToString("N") + ".co");
+            File.WriteAllText(path, @"function Add(a: i32, b: i32): i32 { return a + b }
+42");
+            try
+            {
+                var result = engine.DoFile(path);
+                Assert.False(result.Diagnostics.HasErrors(), string.Join("\n", result.Diagnostics.Select(d => d.Message)));
+                Assert.Equal(42, result.Value);
+
+                // IlEmit 后端共享 submission 链：文件声明函数可经反射 Call
+                Assert.Equal(42, engine.Call("Add", 21, 21));
+            }
+            finally
+            {
+                File.Delete(path);
+            }
         }
     }
 }
