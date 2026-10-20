@@ -133,6 +133,31 @@ namespace Cocoa.Tests.Integration.Compiler
         }
 
         [Fact]
+        public void Build_Project_X86_Native_SharedSystemLibrary_Runs()
+        {
+            // x86 拆分重定位修复 e2e 兑现：共享系统库（SharedSystemLibrary=true）在 x86 下构建 →
+            // System.Core.Native.dll 与 exe 同目录部署 → 运行经 IAT 调用真实库原语/System.Core 库体，
+            // 修复前任何 x86 split 产物首调即 0xC0000005。
+            var projectPath = CreateProject(
+                "native-shared-x86",
+                "App",
+                "function Main()\n{\n    var x = Math.Abs(-5.5)\n    Console.WriteLine(x)\n    Console.WriteLine(\"a\" + \"b\")\n}\n",
+                "  <PropertyGroup Label=\"Target\">\n    <Platform>x86</Platform>\n  </PropertyGroup>\n  <PropertyGroup Label=\"Common\">\n    <SharedSystemLibrary>true</SharedSystemLibrary>\n  </PropertyGroup>\n");
+
+            var (exitCode, stdout, stderr) = Run($"build \"{projectPath}\" -b native --platform x86");
+            Assert.True(exitCode == 0, $"build failed: {stderr}");
+
+            var outputFile = stdout.Trim();
+            Assert.Contains("App.exe", outputFile);
+            Assert.True(File.Exists(Path.Combine(Path.GetDirectoryName(outputFile)!, "System.Core.Native.dll")),
+                "System.Core.Native.dll missing beside x86 exe");
+
+            var runOut = NativeEmitTests.Run(outputFile).Replace("\r\n", "\n");
+            Assert.Contains("5.5\n", runOut);
+            Assert.Contains("ab\n", runOut);
+        }
+
+        [Fact]
         public void Build_Project_Managed_SharedCoreDll_ResolvesViaProbingPath()
         {
             var projectPath = CreateProject("managed-shared", "App", "function Main()\n{\n    Console.WriteLine(\"shared-ok\")\n}\n");

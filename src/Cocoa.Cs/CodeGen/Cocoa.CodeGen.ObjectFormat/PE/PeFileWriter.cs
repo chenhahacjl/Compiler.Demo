@@ -59,7 +59,7 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
             return architecture == Architecture.X86 ? 0x400000 : 0x140000000;
         }
 
-        public static void Write(string outputPath, byte[] code, byte[] data, int entryPointRva, PeImportTableLayout? importLayout, Architecture architecture, IReadOnlyList<int>? dataAbsoluteFixups = null, ushort subsystem = PeSubsystemWindowsCui, byte[]? cocoaMetadata = null, IReadOnlyList<PeExportEntry>? exports = null, ResourceSectionResult? resources = null, bool isDll = false, int cocoaMetadataPtrDataOffset = -1, byte[]? coffSymbolTable = null, int coffSymbolCount = 0, string? pdbPath = null, Guid? pdbGuid = null)
+        public static void Write(string outputPath, byte[] code, byte[] data, int entryPointRva, PeImportTableLayout? importLayout, Architecture architecture, IReadOnlyList<int>? dataAbsoluteFixups = null, ushort subsystem = PeSubsystemWindowsCui, byte[]? cocoaMetadata = null, IReadOnlyList<PeExportEntry>? exports = null, ResourceSectionResult? resources = null, bool isDll = false, int cocoaMetadataPtrDataOffset = -1, byte[]? coffSymbolTable = null, int coffSymbolCount = 0, string? pdbPath = null, Guid? pdbGuid = null, IReadOnlyList<int>? codeAbsoluteFixups = null)
         {
             var pe32 = architecture == Architecture.X86;
 
@@ -81,22 +81,42 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
             }
 
             // M4a：基址重定位（.reloc）——数据段内绝对地址槽（vtable 函数/名字指针）在镜像
-            // 被加载器重定位（ASLR/DYNAMIC_BASE）时必须同步修正，否则间接调用跳到旧 VA 崩溃。
+            // 被加载器重定位（ASLR/DYNAMIC_BASE/共享库 base 冲突）时必须同步修正，否则间接调用跳到旧 VA 崩溃。
+            // x86 追加 .text 代码内绝对引用（lea/call*/jmp* disp32 → .data/.idata）——共享库（如 System.Core.Native.dll）
+            // 首选 base 与 exe 冲突被加载器异地加载时，代码内绝对地址必须随 reloc 修正，否则跳旧 base 崩溃；
+            // x64 代码全为 RIP 相对，无需代码侧 reloc（DIR64 仅数据指针槽）。
             // x64 用 DIR64、x86 用 HIGHLOW；无重定位项时不发节（保持 RelocsStripped 现状）。
-            var relocOffsets = dataAbsoluteFixups != null ? dataAbsoluteFixups.Distinct().OrderBy(x => x).ToList() : new List<int>();
+            var relocRvas = new List<int>();
+            if (dataAbsoluteFixups != null)
+            {
+                foreach (var o in dataAbsoluteFixups)
+                {
+                    relocRvas.Add((int)(dataRva + o));
+                }
+            }
+
+            if (pe32 && codeAbsoluteFixups != null)
+            {
+                foreach (var o in codeAbsoluteFixups)
+                {
+                    relocRvas.Add(TextRva + o);
+                }
+            }
+
             // M6（弱化）：.cocoa 元数据指针槽位于 .data，绝对 VA 需随镜像重定位（ASLR）。
             if (cocoaMetadataPtrDataOffset >= 0 && cocoaMetadata != null && cocoaMetadata.Length > 0)
             {
-                relocOffsets.Add(cocoaMetadataPtrDataOffset);
-                relocOffsets = relocOffsets.Distinct().OrderBy(x => x).ToList();
+                relocRvas.Add((int)(dataRva + cocoaMetadataPtrDataOffset));
             }
+
+            var relocOffsets = relocRvas.Distinct().OrderBy(x => x).ToList();
 
             byte[] relocBlob;
             var relocRva = 0u;
             uint cocoaRva = 0;
             if (relocOffsets.Count > 0)
             {
-                relocBlob = BuildRelocBlob(relocOffsets, (uint)dataRva, pe32);
+                relocBlob = BuildRelocBlob(relocOffsets, pe32);
             }
             else
             {
@@ -308,22 +328,22 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
             File.WriteAllBytes(outputPath, image);
         }
 
-        /// <summary>M4a：按 4KB 页分组生成 .reloc blob（块头 PageRva+SizeOfBlock + TypeOffset WORD 数组，奇数项补 ABSOLUTE 对齐到 4 字节）。</summary>
-        private static byte[] BuildRelocBlob(IReadOnlyList<int> offsets, uint dataRva, bool pe32)
+        /// <summary>M4a：按 4KB 页分组生成 .reloc blob（块头 PageRva+SizeOfBlock + TypeOffset WORD 数组，奇数项补 ABSOLUTE 对齐到 4 字节）。
+        /// <paramref name="relocRvas"/> 为**绝对 RVA**（.text/.data 内各重定位站点），页按所在节自然分组。</summary>
+        private static byte[] BuildRelocBlob(IReadOnlyList<int> relocRvas, bool pe32)
         {
             var entryType = pe32 ? PeRelocType.HighLow : PeRelocType.Dir64;
             var blocks = new List<(uint PageRva, List<ushort> Entries)>();
 
-            foreach (var offset in offsets)
+            foreach (var rva in relocRvas)
             {
-                var rva = (uint)(dataRva + offset);
-                var page = rva & ~0xFFFu;
+                var page = (uint)rva & ~0xFFFu;
                 if (blocks.Count == 0 || blocks[^1].PageRva != page)
                 {
                     blocks.Add((page, new List<ushort>()));
                 }
 
-                blocks[^1].Entries.Add((ushort)(((int)entryType << 12) | (int)(rva & 0xFFF)));
+                blocks[^1].Entries.Add((ushort)(((int)entryType << 12) | (int)((uint)rva & 0xFFF)));
             }
 
             var blob = new List<byte>();

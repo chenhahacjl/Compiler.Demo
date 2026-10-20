@@ -149,6 +149,7 @@ namespace Cocoa.CodeGen.Native.Assembler.X86
             EmitByte(opcode);
             EmitModRMByte(0, (int)dst & 7, 5);
             _dataFixups.Add((Position, symbol));
+            _codeAbsoluteFixups.Add(Position);
             EmitInt32(0);
         }
 
@@ -426,6 +427,7 @@ namespace Cocoa.CodeGen.Native.Assembler.X86
             EmitByte(0x8D);
             EmitModRMByte(0, (int)dst & 7, 5);
             _dataFixups.Add((Position, symbol));
+            _codeAbsoluteFixups.Add(Position);
             EmitInt32(0);
         }
 
@@ -497,6 +499,7 @@ namespace Cocoa.CodeGen.Native.Assembler.X86
             EmitByte(0xFF);
             EmitByte(0x15);
             _dataFixups.Add((Position, symbol));
+            _codeAbsoluteFixups.Add(Position);
             EmitInt32(0);
         }
 
@@ -506,6 +509,7 @@ namespace Cocoa.CodeGen.Native.Assembler.X86
             EmitByte(0xFF);
             EmitByte(0x25);
             _dataFixups.Add((Position, symbol));
+            _codeAbsoluteFixups.Add(Position);
             EmitInt32(0);
         }
 
@@ -584,6 +588,7 @@ namespace Cocoa.CodeGen.Native.Assembler.X86
             EmitByte(0x10);
             EmitModRMByte(0, (int)xmmDst & 7, 5);
             _dataFixups.Add((Position, symbol));
+            _codeAbsoluteFixups.Add(Position);
             EmitInt32(0);
         }
 
@@ -604,6 +609,7 @@ namespace Cocoa.CodeGen.Native.Assembler.X86
             EmitByte(0x10);
             EmitModRMByte(0, (int)xmmDst & 7, 5);
             _dataFixups.Add((Position, symbol));
+            _codeAbsoluteFixups.Add(Position);
             EmitInt32(0);
         }
 

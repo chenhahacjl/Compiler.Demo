@@ -47,6 +47,10 @@ namespace Cocoa.CodeGen.Native.Assembler
         /// <summary>数据段内持有绝对地址的槽偏移集合（PE 基址重定位 .reloc 的生成依据）。</summary>
         System.Collections.Generic.IReadOnlyList<int> DataAbsoluteFixups { get; }
 
+        /// <summary>.text 代码内绝对地址引用位置（x86 disp32：lea/call*/jmp* → .data/.idata；x64 为 RIP 相对不含）。
+        /// 共享库被异地重定位时必须同步修正。</summary>
+        System.Collections.Generic.IReadOnlyList<int> CodeAbsoluteFixups { get; }
+
         void Mov(X64Size size, X64Register dst, X64Register src);
         void Mov(X64Size size, X64Register dst, X64MemoryOperand src);
         void Mov(X64Size size, X64MemoryOperand dst, X64Register src);

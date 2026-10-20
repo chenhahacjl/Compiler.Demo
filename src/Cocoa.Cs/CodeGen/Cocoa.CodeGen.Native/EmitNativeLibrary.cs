@@ -142,7 +142,10 @@ namespace Cocoa.CodeGen.Native
                     coffSymbolTable: coffSymbols,
                     coffSymbolCount: coffSymbolCount,
                     pdbPath: pdbPath,
-                    pdbGuid: pdbGuid);
+                    pdbGuid: pdbGuid,
+                    // x86 共享库被加载器异地重定位（首选 base 与 exe 冲突/ASLR）时，代码内绝对引用须随 reloc 修正；
+                    // x64 代码 RIP 相对，PeFileWriter 内部按 pe32 门控忽略。
+                    codeAbsoluteFixups: a.CodeAbsoluteFixups);
             }
 
             return emit.SkippedFunctions;

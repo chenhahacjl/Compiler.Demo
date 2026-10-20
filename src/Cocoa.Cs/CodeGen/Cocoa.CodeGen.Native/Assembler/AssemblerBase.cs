@@ -18,12 +18,17 @@ namespace Cocoa.CodeGen.Native.Assembler
         protected readonly List<(int DataOffset, int Label)> _dataCodeFixups = new List<(int DataOffset, int Label)>();
         protected readonly List<(int DataOffset, int Symbol)> _dataDataFixups = new List<(int DataOffset, int Symbol)>();
         protected readonly List<int> _dataAbsoluteFixups = new List<int>();
+        protected readonly List<int> _codeAbsoluteFixups = new List<int>();
         protected readonly Dictionary<int, int> _importSlotOffsets = new Dictionary<int, int>();
 
         protected int _nextLabelId;
         protected int _nextSymbolId;
 
         public System.Collections.Generic.IReadOnlyList<int> DataAbsoluteFixups => _dataAbsoluteFixups;
+
+        /// <summary>位于 .text 内的绝对地址引用 fixup 位置（x86 仅；x64 为 RIP 相对不需重定位）
+        /// ——共享库（image base 冲突/ASLR）被重定位时必须同步修正，否则跳旧 VA 崩溃。</summary>
+        public System.Collections.Generic.IReadOnlyList<int> CodeAbsoluteFixups => _codeAbsoluteFixups;
 
         /// <summary>rel32 标签 fixup 列表（Offset=当前 Position，Label=目标汇编标签号）——符号化 dump 导出。</summary>
         public System.Collections.Generic.IReadOnlyList<(int Offset, int Label)> LabelFixups => _labelFixups;
