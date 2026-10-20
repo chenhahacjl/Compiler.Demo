@@ -255,6 +255,43 @@ namespace Cocoa.Engine
             }
         }
 
+        /// <summary>
+        /// 按名调用脚本对象的**实例方法**（接收者经 <see cref="GetGlobal"/> 或静态工厂返回值得自脚本）。
+        /// <paramref name="functionName"/> 以点号限定 <c>ClassName.Method</c>（/ <c>Ns.ClassName.Method</c>），
+        /// 接收者绑定方法体 <c>this</c>；多重重载按实参元数 + 精确类型消解（同 <see cref="Call"/>）。
+        /// 实参/返回编组与 <see cref="Call"/> 一致；实例方法体可读写接收者字段。
+        /// </summary>
+        public object? CallInstance(object? receiver, string functionName, params object?[] args)
+        {
+            ThrowIfDisposed();
+
+            if (_backend == EngineBackend.IlEmit)
+            {
+                return _ilSession!.CallInstance(receiver, functionName, args);
+            }
+
+            if (_previous == null)
+            {
+                throw new ArgumentException($"未找到可调用的实例方法 '{functionName}'（引擎尚无任何脚本提交）", nameof(functionName));
+            }
+
+            try
+            {
+                var result = _previous.EvaluateInstanceFunction(functionName, receiver, args, _variables);
+                if (result.Diagnostics.HasErrors())
+                {
+                    throw new EngineError(string.Join("\n", result.Diagnostics.Select(d => d.Message)), result.Diagnostics);
+                }
+
+                return result.Value;
+            }
+            catch (Exception ex) when (ex is not ArgumentException and not EngineError)
+            {
+                Error?.Invoke(this, new EngineError(ex.Message));
+                throw;
+            }
+        }
+
         private VariableSymbol? FindVariable(string name)
         {
             var submission = _previous;

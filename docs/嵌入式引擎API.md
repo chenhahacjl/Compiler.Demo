@@ -73,9 +73,11 @@ public sealed class CocoaEngine : IDisposable
     public CocoaEngine(EngineOptions options);
 
     public EngineResult DoString(string code);
+    public EngineResult DoFile(string path);
     public object? GetGlobal(string name);
     public void SetGlobal(string name, object? value);
     public object? Call(string functionName, params object?[] args);
+    public object? CallInstance(object? receiver, string functionName, params object?[] args);
     public void RegisterCallback(string name, Delegate handler);
     public void UnregisterCallback(string name);
     public void Reset();
@@ -178,20 +180,23 @@ var value = engine.GetGlobal("counter");   // 42
 
 ---
 
-## 6. C# → Co 函数调用：`Call`
+## 6. C# → Co 函数调用：`Call` / `CallInstance`
 
 ```csharp
 public object? Call(string functionName, params object?[] args);
+public object? CallInstance(object? receiver, string functionName, params object?[] args);
 ```
 
-按名调用**顶层函数**（Name）或**类静态方法**（`ClassName.Method` / `Namespace.ClassName.Method`，脚本语义等价 Lua 全局函数）。实参以 `object?[]` 传入，按目标函数签名自动映射（见 [值编组](#8-值编组)）。
+`Call` 按名调用**顶层函数**（Name）或**类静态方法**（`ClassName.Method` / `Namespace.ClassName.Method`）；`CallInstance` 调用**类实例方法**（接收者绑定方法体 `this`）。实参以 `object?[]` 传入，按目标函数签名自动映射（见 [值编组](#8-值编组)）。
 
 - 查找范围：
   - 无点号 `Name` → 顶层函数（`GlobalScope.Functions`）；
-  - 点号限定 `Ns.Class.Method` / `Class.Method` → 类静态方法（沿 submission 链 Latest 优先，按类型 `FullName`/裸 `Name` 匹配，仅 `static` 方法）；类实例方法（非 static）不做 C# 侧直接调用（脚本内经 `new` 驱动），当前返回可读失败；
+  - 点号限定 `Ns.Class.Method` / `Class.Method` → 类静态方法（沿 submission 链 Latest 优先，按类型 `FullName`/裸 `Name` 匹配，仅 `static` 方法）；
+  - `CallInstance`：接收者（`GetGlobal` 或静态工厂返回值得自脚本的对象）非 null，`functionName` 以点号限定类名（`Class.Method`）；实例方法体可读写接收者字段、跨调用保持状态；
+- **重载消解**：多重重载按实参元数过滤 + 精确 CLR 类型匹配打分（同分取首）；
 - 参数校验：实参数量/类型与目标签名不匹配 → 抛 `ArgumentException`；
 - 返回值：Co 函数返回值（`void` 返回 `null`）；
-- 与 `DoString` 共享 submission 链：可在脚本声明函数后经 `Call` 直接调用，也可先 `Call` 再 `DoString`（函数在链上先注册后使用）。
+- 与 `DoString` 共享 submission 链：可在脚本声明函数后经 `Call`/`CallInstance` 直接调用，也可先调用再 `DoString`（函数在链上先注册后使用）。
 
 ```cocoa
 function Add(a: int, b: int): int { return a + b }
@@ -199,11 +204,19 @@ class Calc
 {
     public static function Mul(a: int, b: int): int { return a * b }
 }
+class Point
+{
+    public field x: int = 3
+    public function Scale(k: int): int { return this.x * k }
+}
+var p = new Point()
 ```
 
 ```csharp
-var result = engine.Call("Add", 21, 21);        // 42（顶层函数）
-var mul = engine.Call("Calc.Mul", 6, 7);        // 42（类静态方法）
+var result = engine.Call("Add", 21, 21);           // 42（顶层函数）
+var mul = engine.Call("Calc.Mul", 6, 7);           // 42（类静态方法）
+var p = engine.GetGlobal("p");
+var scaled = engine.CallInstance(p, "Point.Scale", 4);   // 12（类实例方法，this.x=3）
 ```
 
 ---
@@ -319,7 +332,7 @@ engine.Call("Bump", 5);   // 跨提交读全局变量
 
 ## 12. 限制
 
-- `Call` 支持顶层函数与**类静态方法**（点号限定名 `Class.Method` / `Ns.Class.Method`）；多重重载按**实参元数 + 参数类型**消解（同分取首命中）；**类实例方法**暂不支持（非 static 函数 C# 侧直接调用留后续增量，脚本内经 `new` 驱动）；
+- `Call` 支持顶层函数与**类静态方法**（点号限定名 `Class.Method` / `Ns.Class.Method`）；**`CallInstance` 支持类实例方法**（接收者绑定 `this`，`Class.Method` 限定）；多重重载按**实参元数 + 参数类型**消解（同分取首命中）；
 - `SetGlobal` 不自动创建隐式全局（静态语言语义）；
 - `Output` 事件仅 `Interpreter` 后端（IlEmit 反射调用直连 BCL Console）；
 - IlEmit 后端全局变量读写在**单个已发射程序集内**可用（`GetGlobal`/`SetGlobal` 反射读写静态字段）；

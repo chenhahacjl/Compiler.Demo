@@ -83,7 +83,7 @@ namespace Cocoa.Engine
 
             // 顶层函数（<CocoaTopLevel> 静态方法）优先；点号名回落类静态方法（Namespace.Class.Method / Class.Method）。
             var topLevel = _assembly.GetType("<CocoaTopLevel>");
-            var method = topLevel != null ? ResolveStaticMethod(topLevel, functionName, args) : null;
+            var method = topLevel != null ? ResolveMethod(topLevel, functionName, args, BindingFlags.Static) : null;
             if (method == null)
             {
                 method = FindClassStaticMethod(functionName, args);
@@ -95,6 +95,30 @@ namespace Cocoa.Engine
             }
 
             return method.Invoke(null, args);
+        }
+
+        /// <summary>实例方法调用：以接收者实际类型（发射用户类）解析实例方法；点号名取末段方法名（重载按实参元数+精确类型消解）。</summary>
+        public object? CallInstance(object? receiver, string functionName, params object?[] args)
+        {
+            if (_latest == null || _assembly == null)
+            {
+                throw new ArgumentException($"未找到可调用的实例方法 '{functionName}'（引擎尚无任何脚本提交）", nameof(functionName));
+            }
+
+            if (receiver == null)
+            {
+                throw new ArgumentException("实例方法调用需要非 null 接收者（引擎宿主先经 GetGlobal/静态工厂获得脚本对象）", nameof(receiver));
+            }
+
+            var dot = functionName.LastIndexOf('.');
+            var methodName = dot > 0 && dot < functionName.Length - 1 ? functionName.Substring(dot + 1) : functionName;
+            var method = ResolveMethod(receiver.GetType(), methodName, args, BindingFlags.Instance);
+            if (method == null)
+            {
+                throw new ArgumentException($"未找到可调用的实例方法 '{functionName}'（接收者类型 '{receiver.GetType().Name}'）", nameof(functionName));
+            }
+
+            return method.Invoke(receiver, args);
         }
 
         /// <summary>点号名 → 程序集内用户类型（按 FullName 或裸 Name 匹配）的静态方法（重载按实参元数+精确类型消解）。</summary>
@@ -116,7 +140,7 @@ namespace Cocoa.Engine
                     continue;
                 }
 
-                var method = ResolveStaticMethod(type, methodName, args);
+                var method = ResolveMethod(type, methodName, args, BindingFlags.Static);
                 if (method != null)
                 {
                     return method;
@@ -126,12 +150,12 @@ namespace Cocoa.Engine
             return null;
         }
 
-        /// <summary>静态方法重载消解：按实参元数过滤，按参数类型精确命中打分（同分取首）。返回 null = 未命中。</summary>
-        private static MethodInfo? ResolveStaticMethod(Type type, string name, object?[] args)
+        /// <summary>静态/实例方法重载消解：按实参元数过滤，按参数类型精确命中打分（同分取首）。返回 null = 未命中。</summary>
+        private static MethodInfo? ResolveMethod(Type type, string name, object?[] args, BindingFlags bindingFlags)
         {
             MethodInfo? best = null;
             var bestScore = -1;
-            foreach (var method in type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
+            foreach (var method in type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | bindingFlags))
             {
                 if (method.Name != name)
                 {

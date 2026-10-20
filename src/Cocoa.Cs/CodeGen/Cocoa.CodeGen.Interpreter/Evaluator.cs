@@ -195,10 +195,11 @@ namespace Cocoa.CodeGen.Interpreter
         }
 
         /// <summary>
-        /// 嵌入式引擎 Call 入口：按名求值指定顶层函数（带实参）。复用 InvokeFunction 的
-        /// 入 locals / 求值 / 出栈骨架（无 this、无 closure 环境——顶层函数一般无捕获，防御性支持）。
+        /// 嵌入式引擎 Call/CallInstance 入口：按名求值指定函数（带实参与可选接收者）。复用 InvokeFunction 的
+        /// 入 locals / 求值 / 出栈骨架；<paramref name="thisReceiver"/> 非 null 时绑定方法体 <c>this</c>
+        /// （实例方法调用），顶层/静态为 null。
         /// </summary>
-        public object? EvaluateFunction(FunctionSymbol function, object?[] rawArgs)
+        public object? EvaluateFunction(FunctionSymbol function, object? thisReceiver, object?[] rawArgs)
         {
             if (!_functions.TryGetValue(function, out var body))
             {
@@ -232,6 +233,11 @@ namespace Cocoa.CodeGen.Interpreter
                 _closureEnvironments.Push(CreateEnvironment(function, argumentValues));
             }
 
+            if (thisReceiver != null)
+            {
+                _thisStack.Push(thisReceiver);
+            }
+
             try
             {
                 _frames.Push(new DebugFrame(function, locals));
@@ -248,6 +254,11 @@ namespace Cocoa.CodeGen.Interpreter
             }
             finally
             {
+                if (thisReceiver != null)
+                {
+                    _thisStack.Pop();
+                }
+
                 if (usesEnvironment)
                 {
                     _closureEnvironments.Pop();

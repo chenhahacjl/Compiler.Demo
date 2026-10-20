@@ -116,6 +116,41 @@ namespace Cocoa.Tests.Engine
         }
 
         [Fact]
+        public void IlEmit_CallInstance_InvokesMethod_WithReceiver()
+        {
+            using var engine = new CocoaEngine(EngineBackend.IlEmit);
+            var declared = engine.DoString(@"class Point
+{
+    public field x: i32 = 3
+    public function Scale(k: i32): i32 { return this.x * k }
+}
+var p = new Point()");
+            Assert.True(declared.Diagnostics.IsEmpty, string.Join("\n", declared.Diagnostics.Select(d => d.Message)));
+
+            var receiver = engine.GetGlobal("p");
+            Assert.NotNull(receiver);
+
+            // 接收者为反射实例，Invoke 绑定 this；实例字段跨调用保持状态
+            Assert.Equal(12, engine.CallInstance(receiver, "Point.Scale", 4));
+            Assert.Equal(21, engine.CallInstance(receiver, "Point.Scale", 7));
+        }
+
+        [Fact]
+        public void IlEmit_CallInstance_NullReceiver_Throws()
+        {
+            using var engine = new CocoaEngine(EngineBackend.IlEmit);
+            engine.DoString(@"class Point
+{
+    public field x: i32 = 3
+    public function Scale(k: i32): i32 { return this.x * k }
+}
+var p = new Point()");
+
+            var ex = Assert.Throws<ArgumentException>(() => engine.CallInstance(null, "Point.Scale", 4));
+            Assert.Contains("接收者", ex.Message);
+        }
+
+        [Fact]
         public void IlEmit_GlobalVariables_ReflectionReadWrite()
         {
             using var engine = new CocoaEngine(EngineBackend.IlEmit);

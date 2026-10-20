@@ -61,10 +61,10 @@ namespace Cocoa.CodeGen.Interpreter
             return args == null ? evaluator.Evaluate() : evaluator.Evaluate(args);
         }
 
-        private static object? EvaluateFunction(BoundProgram program, Cocoa.CodeAnalysis.Symbols.FunctionSymbol function, object?[] args, Dictionary<VariableSymbol, object> variables)
+        private static object? EvaluateFunction(BoundProgram program, Cocoa.CodeAnalysis.Symbols.FunctionSymbol function, object? thisReceiver, object?[] args, Dictionary<VariableSymbol, object> variables)
         {
             var evaluator = new Evaluator(program, variables);
-            return evaluator.EvaluateFunction(function, args);
+            return evaluator.EvaluateFunction(function, thisReceiver, args);
         }
     }
 }

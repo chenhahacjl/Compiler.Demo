@@ -117,13 +117,14 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>
-        /// 解释器「按名调用顶层函数」委托（嵌入式引擎 Call 路径）：由 <c>Cocoa.CodeGen.Interpreter</c>
+        /// 解释器「按名调用函数」委托（嵌入式引擎 Call/CallInstance 路径）：由 <c>Cocoa.CodeGen.Interpreter</c>
         /// 经 <see cref="RegisterInterpreterFunctionEvaluator"/> 注册。Core 自身不引用后端。幂等。
+        /// 形参 <c>thisReceiver</c>：实例方法调用时非 null（绑定为方法体 <c>this</c>）；顶层/静态为 null。
         /// </summary>
-        private static volatile Func<BoundProgram, FunctionSymbol, object?[], Dictionary<VariableSymbol, object>, object?>? _interpreterFunctionEvaluator;
+        private static volatile Func<BoundProgram, FunctionSymbol, object?, object?[], Dictionary<VariableSymbol, object>, object?>? _interpreterFunctionEvaluator;
 
-        /// <summary>注册解释器「按名调用顶层函数」实现（后端/宿主启动时调用；Core 自身不引用后端）。幂等。</summary>
-        public static void RegisterInterpreterFunctionEvaluator(Func<BoundProgram, FunctionSymbol, object?[], Dictionary<VariableSymbol, object>, object?> evaluator)
+        /// <summary>注册解释器「按名调用函数」实现（后端/宿主启动时调用；Core 自身不引用后端）。幂等。</summary>
+        public static void RegisterInterpreterFunctionEvaluator(Func<BoundProgram, FunctionSymbol, object?, object?[], Dictionary<VariableSymbol, object>, object?> evaluator)
         {
             Interlocked.CompareExchange(ref _interpreterFunctionEvaluator, evaluator, null);
         }
@@ -356,6 +357,24 @@ namespace Cocoa.CodeAnalysis
         /// 未找到抛 <see cref="ArgumentException"/>；运行期异常原样上抛（引擎宿主可订阅 Error 事件）。
         /// </summary>
         public EvaluationResult EvaluateFunction(string name, object?[] args, Dictionary<VariableSymbol, object> variables)
+            => EvaluateFunctionCore(name, receiver: null, args, variables);
+
+        /// <summary>
+        /// 嵌入式引擎 CallInstance 路径：按点号名解析类**实例方法** <c>ClassName.Method</c>，以
+        /// <c>receiver</c> 绑定方法体 <c>this</c> 求值。接收者须非 null（引擎宿主经 <see cref="GetGlobal"/>/
+        /// 静态工厂返回值取得脚本对象）；实例方法多重重载同静态路径按元数 + 精确类型消解。
+        /// </summary>
+        public EvaluationResult EvaluateInstanceFunction(string name, object? receiver, object?[] args, Dictionary<VariableSymbol, object> variables)
+        {
+            if (receiver == null)
+            {
+                throw new ArgumentException("实例方法调用需要非 null 接收者（引擎宿主先经 GetGlobal/静态工厂获得脚本对象）", nameof(receiver));
+            }
+
+            return EvaluateFunctionCore(name, receiver, args, variables);
+        }
+
+        private EvaluationResult EvaluateFunctionCore(string name, object? receiver, object?[] args, Dictionary<VariableSymbol, object> variables)
         {
             if (GlobalScope.Diagnostics.HasErrors())
             {
@@ -369,7 +388,7 @@ namespace Cocoa.CodeAnalysis
                 return new EvaluationResult(program.Diagnostics, null);
             }
 
-            var (function, message) = FindCallable(name, args);
+            var (function, message) = receiver == null ? FindCallable(name, args) : FindInstanceCallable(name, args);
             if (function == null)
             {
                 throw new ArgumentException(message ?? $"未找到可调用的顶层函数 '{name}'", nameof(name));
@@ -381,7 +400,7 @@ namespace Cocoa.CodeAnalysis
                 return new EvaluationResult(ImmutableArray.Create(Diagnostic.Error(ZeroLocation, "解释器按名调用后端未注册（Cocoa.CodeGen.Interpreter 未初始化）")), null);
             }
 
-            var value = evaluator(program, function, args, variables);
+            var value = evaluator(program, function, receiver, args, variables);
 
             return new EvaluationResult(program.Diagnostics, value);
         }
@@ -419,10 +438,22 @@ namespace Cocoa.CodeAnalysis
                 return (topLevel, null);
             }
 
+            return FindClassMethod(name, args, wantInstance: false);
+        }
+
+        /// <summary>嵌入式引擎 CallInstance 路径：按点号名解析类**实例方法**（非 static 且非构造器），
+        /// 重载消解同 <see cref="FindCallable"/>。</summary>
+        private (FunctionSymbol? Function, string? Message) FindInstanceCallable(string name, object?[] args)
+            => FindClassMethod(name, args, wantInstance: true);
+
+        /// <summary>类方法查找公共逻辑：<c>ClassName.Method</c>（FullName/裸 Name 匹配）沿 submission 链 Latest
+        /// 优先；<paramref name="wantInstance"/> = false 取静态方法、true 取实例方法；按元数过滤 + 精确类型打分。</summary>
+        private (FunctionSymbol? Function, string? Message) FindClassMethod(string name, object?[] args, bool wantInstance)
+        {
             var dot = name.LastIndexOf('.');
             if (dot <= 0 || dot == name.Length - 1)
             {
-                return (null, null);
+                return (null, wantInstance ? $"未找到可调用的实例方法 '{name}'（实例方法须以 ClassName.Method 限定）" : null);
             }
 
             var typeName = name.Substring(0, dot);
@@ -442,7 +473,10 @@ namespace Cocoa.CodeAnalysis
 
                     foreach (var method in type.GetMethods(methodName))
                     {
-                        if (!method.IsStatic || method.IsConstructor || method.ContainingClass == null)
+                        var isDesiredKind = wantInstance
+                            ? !method.IsStatic && !method.IsConstructor && method.ContainingClass != null
+                            : method.IsStatic && !method.IsConstructor && method.ContainingClass != null;
+                        if (!isDesiredKind)
                         {
                             continue;
                         }
@@ -476,7 +510,8 @@ namespace Cocoa.CodeAnalysis
 
             if (candidates.Count == 0)
             {
-                return (null, $"未找到可调用的类型 '{typeName}' 的静态方法 '{methodName}'（检查类型名/方法名、是否声明为 static、实参元数是否匹配）");
+                var kind = wantInstance ? "实例" : "静态";
+                return (null, $"未找到可调用的类型 '{typeName}' 的{kind}方法 '{methodName}'（检查类型名/方法名、是否声明为 {kind}、实参元数是否匹配）");
             }
 
             candidates.Sort((a, b) => b.Score.CompareTo(a.Score));
