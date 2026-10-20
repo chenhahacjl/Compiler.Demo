@@ -94,6 +94,21 @@ internal static class Program
         Console.WriteLine($"Call(\"Demo.Greeter.Greet\", \"Host\") = {engine.Call("Demo.Greeter.Greet", "Host")}");
         Console.WriteLine($"Call(\"Demo.Greeter.Greet\") = {engine.Call("Demo.Greeter.Greet")}");
 
+        // CallInstance：类实例方法调用（接收者绑定 this；实例字段跨调用保持状态）
+        engine.DoString("""
+            class Point
+            {
+                public field x: i32 = 3
+                public function Scale(k: i32): i32 { return this.x * k }
+                public function Move(dx: i32): void { this.x = this.x + dx }
+            }
+            var p = new Point()
+            """);
+        var point = engine.GetGlobal("p");
+        Console.WriteLine($"CallInstance(\"Point.Scale\", 4) = {engine.CallInstance(point, "Point.Scale", 4)}");
+        engine.CallInstance(point, "Point.Move", 2);
+        Console.WriteLine($"Move(2) 后 CallInstance(\"Point.Scale\", 4) = {engine.CallInstance(point, "Point.Scale", 4)}");
+
         engine.Reset();
         Console.WriteLine();
         Console.WriteLine("Reset 完成。");
