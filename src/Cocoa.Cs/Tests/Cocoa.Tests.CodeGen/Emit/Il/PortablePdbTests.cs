@@ -72,6 +72,11 @@ namespace Cocoa.Tests.CodeGen.Emit.Il
                         Assert.True(offsets[i] > offsets[i - 1], "序列点 IL 偏移应严格递增");
                     }
 
+                    // 文档路径必须指向真实 .co 源文件——VS 靠它自动打开源码并跳到断点行
+                    var docNameBlob = md.GetBlobBytes(md.GetDocument(info.Document).Name);
+                    var docName = System.Text.Encoding.UTF8.GetString(docNameBlob, 1, docNameBlob.Length - 1).TrimEnd('\0'); // 跳路径格式码 + 尾 NUL
+                    Assert.True(string.Equals(coPath, docName, StringComparison.OrdinalIgnoreCase),
+                        $"Document 应为源 .co 路径：{coPath} != {docName}");
                     break;
                 }
 

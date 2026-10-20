@@ -517,13 +517,16 @@ namespace Cocoa.CodeGen.Managed
                 DocumentHandle document = default;
                 foreach (var p in increasingPoints)
                 {
-                    if (!documents.TryGetValue(p.File, out document))
-                    {
-                        var nameBlob = new System.Reflection.Metadata.BlobBuilder();
-                        nameBlob.WriteUTF8(p.File);
-                        document = pdbBuilder.AddDocument(pdbBuilder.GetOrAddBlob(nameBlob), default(GuidHandle), default(BlobHandle), default(GuidHandle));
-                        documents[p.File] = document;
-                    }
+                if (!documents.TryGetValue(p.File, out document))
+                {
+                    // ECMA-335 II.22.29：Document.Name blob = <路径格式码:byte><UTF8 名>（NUL 结尾，GetDocumentName 按 NUL 终止读）
+                    var nameBlob = new System.Reflection.Metadata.BlobBuilder();
+                    nameBlob.WriteByte(p.File.Contains('/') && !p.File.Contains('\\') ? (byte)2 : (byte)1);
+                    nameBlob.WriteUTF8(p.File);
+                    nameBlob.WriteByte(0);
+                    document = pdbBuilder.AddDocument(pdbBuilder.GetOrAddBlob(nameBlob), default(GuidHandle), default(BlobHandle), default(GuidHandle));
+                    documents[p.File] = document;
+                }
                 }
 
                 while (addedMethodRows < rid - 1)
