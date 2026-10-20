@@ -19,7 +19,7 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
             uint importRva = 0;
             uint importSize = 0;
             var headers = ImageNtHeaders64.Read(image.Slice(0, ImageNtHeaders64.Size));
-            if (headers.Signature != PeConstants.NtSignature || headers.OptionalHeader.Magic != PeOptionalMagic.Pe32Plus)
+            if (headers.Signature != PeConstants.NtSignature)
             {
                 return result;
             }
@@ -40,6 +40,10 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
             {
                 return result;
             }
+
+            // PE32（x86）thunk 项 4 字节、PE32+（x64）8 字节——按镜像 magic 自适应。
+            var pe32 = IsPe32(image);
+            var thunkSize = pe32 ? ImageThunkData32.SizeOfEntry : ImageThunkData64.SizeOfEntry;
 
             var baseOffset = rvaToOffset(importRva);
 
@@ -63,26 +67,47 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
                 var entries = new List<(bool, ushort, string)>();
                 for (uint i = 0; ; i++)
                 {
-                    var thunkOffset = rvaToOffset(thunkRva + i * (uint)ImageThunkData64.SizeOfEntry);
-                    if (thunkOffset + ImageThunkData64.SizeOfEntry > (uint)image.Length)
+                    var thunkOffset = rvaToOffset(thunkRva + i * (uint)thunkSize);
+                    if (thunkOffset + (uint)thunkSize > (uint)image.Length)
                     {
                         break;
                     }
 
-                    var thunk = ImageThunkData64.Read(image.Slice((int)thunkOffset, ImageThunkData64.SizeOfEntry));
-                    if (thunk.IsNull)
+                    if (pe32)
                     {
-                        break;
-                    }
+                        var thunk = ImageThunkData32.Read(image.Slice((int)thunkOffset, ImageThunkData32.SizeOfEntry));
+                        if (thunk.IsNull)
+                        {
+                            break;
+                        }
 
-                    if (thunk.IsOrdinal)
-                    {
-                        entries.Add((false, thunk.OrdinalNumber, string.Empty));
+                        if (thunk.IsOrdinal)
+                        {
+                            entries.Add((false, thunk.OrdinalNumber, string.Empty));
+                        }
+                        else
+                        {
+                            var byName = ImageImportByName.Read(image.Slice((int)rvaToOffset(thunk.AddressOfDataRva)));
+                            entries.Add((true, byName.Hint, byName.NameString));
+                        }
                     }
                     else
                     {
-                        var byName = ImageImportByName.Read(image.Slice((int)rvaToOffset(thunk.AddressOfDataRva)));
-                        entries.Add((true, byName.Hint, byName.NameString));
+                        var thunk = ImageThunkData64.Read(image.Slice((int)thunkOffset, ImageThunkData64.SizeOfEntry));
+                        if (thunk.IsNull)
+                        {
+                            break;
+                        }
+
+                        if (thunk.IsOrdinal)
+                        {
+                            entries.Add((false, thunk.OrdinalNumber, string.Empty));
+                        }
+                        else
+                        {
+                            var byName = ImageImportByName.Read(image.Slice((int)rvaToOffset(thunk.AddressOfDataRva)));
+                            entries.Add((true, byName.Hint, byName.NameString));
+                        }
                     }
                 }
 
@@ -90,6 +115,28 @@ namespace Cocoa.CodeGen.ObjectFormat.PE
             }
 
             return result;
+        }
+
+        /// <summary>镜像 OptionalHeader magic 判定：PE32（0x10B，x86）为 true；PE32+（0x20B，x64）为 false。</summary>
+        private static bool IsPe32(ReadOnlySpan<byte> image)
+        {
+            if (image.Length < 0x40)
+            {
+                return false;
+            }
+
+            var lfanew = BinaryPrimitives.ReadInt32LittleEndian(image.Slice(0x3C, 4));
+            if (lfanew < 0 || (uint)(lfanew + 24 + 2) > (uint)image.Length)
+            {
+                return false;
+            }
+
+            if (BinaryPrimitives.ReadInt32LittleEndian(image.Slice(lfanew, 4)) != PeConstants.NtSignature)
+            {
+                return false;
+            }
+
+            return BinaryPrimitives.ReadUInt16LittleEndian(image.Slice(lfanew + 24, 2)) == (ushort)PeOptionalMagic.Pe32;
         }
 
         private static string ReadAscii(ReadOnlySpan<byte> image, uint offset)

@@ -21,8 +21,6 @@ namespace Cocoa.Tests.CodeGen.Emit.Native
     /// </summary>
     public class NativeLibraryCrossCallTests
     {
-        private static readonly TargetPlatform Platform = new(TargetOS.Windows, Architecture.X64);
-
         private const string HostSource = @"
 namespace Host {
     public function Marker(): i32
@@ -78,9 +76,12 @@ function Main(): i32
 }
 ";
 
-        [Fact]
-        public void UserLibrary_CrossModule_Calls()
+        [Theory]
+        [InlineData(Architecture.X64)]
+        [InlineData(Architecture.X86)]
+        public void UserLibrary_CrossModule_Calls(Architecture arch)
         {
+            var platform = new TargetPlatform(TargetOS.Windows, arch);
             var directory = Path.Combine(Path.GetTempPath(), "cocoa-native-s2-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(directory);
 
@@ -89,15 +90,15 @@ function Main(): i32
             EmitCoa(MathLibSource, "MathLib", Path.Combine(directory, "MathLib.coa"));
 
             // host = System.Core.Native.dll（承载运行时原语 + 共享类型表）
-            EmitNativeLibrary.Emit(CoaSerializer.Load(Path.Combine(directory, "Host.coa"), external), Path.Combine(directory, "System.Core.Native.dll"), Platform);
+            EmitNativeLibrary.Emit(CoaSerializer.Load(Path.Combine(directory, "Host.coa"), external), Path.Combine(directory, "System.Core.Native.dll"), platform);
             // 用户库 = MathLib.Native.dll（全公共导出；不内嵌原语/类型表，共享 host 运行时）
-            EmitNativeLibrary.Emit(CoaSerializer.Load(Path.Combine(directory, "MathLib.coa"), external), Path.Combine(directory, "MathLib.Native.dll"), Platform, embedRuntime: false);
+            EmitNativeLibrary.Emit(CoaSerializer.Load(Path.Combine(directory, "MathLib.coa"), external), Path.Combine(directory, "MathLib.Native.dll"), platform, embedRuntime: false);
 
             var syntaxTree = SyntaxTree.Parse(AppSource);
             var compilation = Compilation.Create(new[] { Path.Combine(directory, "MathLib.coa") }, syntaxTree);
             compilation.ExternalNativeLibraries = ImmutableHashSet.Create("MathLib");
-            var exePath = Path.Combine(directory, "app.exe");
-            var diagnostics = compilation.EmitNative("app", exePath, Platform, splitRuntime: true);
+            var exePath = Path.Combine(directory, "app-" + arch + ".exe");
+            var diagnostics = compilation.EmitNative("app", exePath, platform, splitRuntime: true);
             Assert.True(!diagnostics.HasErrors(), "diags: " + string.Join(" | ", diagnostics.Select(d => d.Message)));
             Assert.True(File.Exists(exePath));
 
