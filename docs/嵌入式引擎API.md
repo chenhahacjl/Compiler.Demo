@@ -181,19 +181,26 @@ var value = engine.GetGlobal("counter");   // 42
 public object? Call(string functionName, params object?[] args);
 ```
 
-按名调用**顶层函数**（脚本语义等价 Lua 全局函数）。实参以 `object?[]` 传入，按目标函数签名自动映射（见 [值编组](#8-值编组)）。
+按名调用**顶层函数**（Name）或**类静态方法**（`ClassName.Method` / `Namespace.ClassName.Method`，脚本语义等价 Lua 全局函数）。实参以 `object?[]` 传入，按目标函数签名自动映射（见 [值编组](#8-值编组)）。
 
-- 查找范围：顶层函数（`GlobalScope.Functions`）；类静态方法（如 `MyLib.Foo`）暂不支持，列后续增量；
+- 查找范围：
+  - 无点号 `Name` → 顶层函数（`GlobalScope.Functions`）；
+  - 点号限定 `Ns.Class.Method` / `Class.Method` → 类静态方法（沿 submission 链 Latest 优先，按类型 `FullName`/裸 `Name` 匹配，仅 `static` 方法）；类实例方法（非 static）不做 C# 侧直接调用（脚本内经 `new` 驱动），当前返回可读失败；
 - 参数校验：实参数量/类型与目标签名不匹配 → 抛 `ArgumentException`；
 - 返回值：Co 函数返回值（`void` 返回 `null`）；
 - 与 `DoString` 共享 submission 链：可在脚本声明函数后经 `Call` 直接调用，也可先 `Call` 再 `DoString`（函数在链上先注册后使用）。
 
 ```cocoa
 function Add(a: int, b: int): int { return a + b }
+class Calc
+{
+    public static function Mul(a: int, b: int): int { return a * b }
+}
 ```
 
 ```csharp
-var result = engine.Call("Add", 21, 21);    // 42
+var result = engine.Call("Add", 21, 21);        // 42（顶层函数）
+var mul = engine.Call("Calc.Mul", 6, 7);        // 42（类静态方法）
 ```
 
 ---
@@ -309,7 +316,7 @@ engine.Call("Bump", 5);   // 跨提交读全局变量
 
 ## 12. 限制
 
-- `Call` 暂不支持类静态方法 / 实例方法调用（后续增量）；
+- `Call` 支持顶层函数与**类静态方法**（点号限定名 `Class.Method` / `Ns.Class.Method`）；多重重载按**实参元数 + 参数类型**消解（同分取首命中）；**类实例方法**暂不支持（非 static 函数 C# 侧直接调用留后续增量，脚本内经 `new` 驱动）；
 - `SetGlobal` 不自动创建隐式全局（静态语言语义）；
 - `Output` 事件仅 `Interpreter` 后端（IlEmit 反射调用直连 BCL Console）；
 - IlEmit 后端全局变量读写在**单个已发射程序集内**可用（`GetGlobal`/`SetGlobal` 反射读写静态字段）；

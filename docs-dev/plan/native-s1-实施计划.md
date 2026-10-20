@@ -28,7 +28,7 @@
 | native 共享默认开启（D7：`<SharedSystemLibrary>` 缺省 true，`false` 显式 opt-out 内联），Integration 零波及 | ✅ S3c 已完成 |
 | Linux `.so` 导出侧：`ElfObjectWriter.WriteSharedLibrary`（ET_DYN、entry=0、无 PT_INTERP、`.dynsym` STB_GLOBAL 导出 + SHT_DYNSYM/HASH + GLOB_DAT 导入）+ `EmitNativeLibrary` Linux 分支 + 字节级验收 | ✅ S4 已完成 |
 | 收口：文档（`项目格式规范.md` §2.3 / `编译手册.md` / `ARCHITECTURE.md` §4.1）+ 体积门禁（shared exe &lt; inline 集成断言） | ✅ S5 已完成 |
-| 陷阱错误径 ABI 对齐（分除/栈溢出） | ⏳ 加固 |
+| 陷阱错误径 ABI 对齐（分除/栈溢出） | ✅ 已完成（2026-10-20）——新增 `TrapPathSplitTests`（除零 i32/i64/u64、取余、栈溢出 × x64/x86，内联 vs 全拆分行为一致门禁）。**过程中发现并修复 x86 拆分真实缺陷**：x86 共享库首选 base（0x400000）与 exe 冲突被加载器异地加载，而 `.reloc` 仅覆盖 `.data` 指针槽 → 代码内绝对引用（`lea`/`call*`/`jmp*` disp32）跳旧 base 即 0xC0000005。修复：x86 汇编器登记 `.text` 内绝对引用为 `CodeAbsoluteFixups`，`PeFileWriter` 对 pe32 产物补发代码侧 HIGHLOW reloc（`IsDll` 路径，exe 不启用、x64 门控忽略——RIP 相对无重定位需求）。回归：CodeGen 1086 / Integration 287 / CodeAnalysis 2007 / Engine 40 绿。 |
 
 后置（本轮未做）：S2 用户库 provenance 定向导出 · S3 默认拆分 + `EnsureNativeDlls` · S4 Linux `.so` · S6 managed 共享。
 

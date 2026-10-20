@@ -8,6 +8,23 @@
 
 ---
 
+## 未发布（2026-10-20）
+
+### native-s1 加固：陷阱错误径 ABI 对齐 + x86 拆分 .reloc 修复 ✅
+- **陷阱路径行为等价门禁**：新增 `TrapPathSplitTests`（10 例）——除零（i32/i64/u64）、取余、栈溢出在「内联 vs 全拆分（System.Core.Native.dll）」双形态 × x64/x86 下退出码与输出全等（此前 `NativeSplitDifferentialTests` 源码未真实触发陷阱点）。
+- **发现并修复 x86 拆分真实缺陷**（拆分工作此前仅 x64 验证）：x86 共享库 `System.Core.Native.dll` 首选基址 0x400000 与 exe 冲突 → 加载器异地加载，而 `.reloc` 仅含 `.data` 指针槽 → 代码内绝对引用（`lea`/`call*`/`jmp*` disp32）跳旧 base → 任何 x86 split 产物首调即 0xC0000005。
+- **修复**：x86 汇编器把 `.text` 内绝对引用登记为 `CodeAbsoluteFixups`（MovRip/LeaRip/CallRip/JmpRip/MovssRip/MovsdRip 6 站点）；`PeFileWriter` 对 pe32 产物补发代码侧 HIGHLOW reloc（`BuildRelocBlob` 改收绝对 RVA、按 4K 页跨节分组）；exe 路径不启用（非 ASLR 固定基址，黄金字节不变）、x64 门控忽略（RIP 相对无重定位需求）。
+- **回归门禁扩展**：TrapPathSplitTests 新增真实 System.Core 全拆分（linkCoaDynamically+splitRuntime）x86 除零门禁（真实库 `Cocoa_Rt_div_by_zero` 落入）；`CocoaBuildCliTests` 新增 `Build_Project_X86_Native_SharedSystemLibrary_Runs`（SharedSystemLibrary=true + `--platform x86` CLI e2e：exe 变小、`System.Core.Native.dll` 部署、运行 5.5/ab 输出）——x86 拆分重定位修复的端到端兑现。
+- 回归：CodeGen 1086 / Integration 287 / CodeAnalysis 2007 / Engine 40 全绿；全解决方案构建 0 警告 0 错误；`WindowsBytesInvariant` x64 exe golden 不动。
+
+### CocoaEngine：`Call` 支持类静态方法 ✅
+- **`engine.Call("ClassName.method", args)` / `"Namespace.Class.method"`**——查找面从顶层函数扩至类静态方法：Interpreter 走 `Compilation.EvaluateFunction` 链上按类型 `FullName`/裸 `Name` 匹配（`IsStatic` 且非构造器）；IlEmit 走 `IlEmitSession.Call` 反射（顶层 `<CocoaTopLevel>` 优先 → 程序集用户类型 `SafeAssemblyTypes` 兜反射基类加载失败）。
+- **重载消解**：类静态方法多重重载按**实参元数过滤 + 精确 CLR 类型匹配打分**（对齐解释器 `CoerceArgument`「优先精确」语义；IlEmit 同规则经 `ResolveStaticMethod`，顺带消除 `Type.GetMethod(name)` 对重载的 `AmbiguousMatchException`）。
+- 实例方法（非 static）暂不支持：C# 侧按可读提示失败，脚本内经 `new` 驱动（后续增量）。
+- 测试：Engine 新增 11 例（Interpreter 7：限定名/命名空间/裸类名/未知方法/实例方法负例/按类型重载/按元数重载；IlEmit 4：限定名/命名空间/未知方法/按类型重载）。文档 `docs/嵌入式引擎API.md` §6/§12 同步。
+
+---
+
 ## 未发布（2026-10-19）
 
 ### AV/分析器白面：native 产物更像标准编译器输出 + COFF 调试符号 ✅
