@@ -70,6 +70,51 @@ namespace Cocoa.Tests.Engine
         }
 
         [Fact]
+        public void IlEmit_Call_ClassStaticMethod_ByQualifiedName()
+        {
+            using var engine = new CocoaEngine(EngineBackend.IlEmit);
+            engine.DoString(@"class Calc
+{
+    public static function Add(a: i32, b: i32): i32 { return a + b }
+}");
+
+            Assert.Equal(42, engine.Call("Calc.Add", 21, 21));
+        }
+
+        [Fact]
+        public void IlEmit_Call_ClassStaticMethod_NamespaceQualified()
+        {
+            using var engine = new CocoaEngine(EngineBackend.IlEmit);
+            engine.DoString(@"namespace MathLib { class Calc { public static function Add(a: i32, b: i32): i32 { return a + b } } }");
+
+            Assert.Equal(42, engine.Call("MathLib.Calc.Add", 21, 21));
+        }
+
+        [Fact]
+        public void IlEmit_Call_ClassStaticMethod_UnknownMethod_Throws()
+        {
+            using var engine = new CocoaEngine(EngineBackend.IlEmit);
+            engine.DoString(@"class Calc { public static function Add(a: i32, b: i32): i32 { return a + b } }");
+
+            var ex = Assert.Throws<ArgumentException>(() => engine.Call("Calc.Sub", 1, 2));
+            Assert.Contains("Sub", ex.Message);
+        }
+
+        [Fact]
+        public void IlEmit_Call_ClassStaticMethod_Overloads_ResolveByArgumentType()
+        {
+            using var engine = new CocoaEngine(EngineBackend.IlEmit);
+            engine.DoString(@"class Calc
+{
+    public static function Describe(x: i32): string { return ""int"" }
+    public static function Describe(s: string): string { return ""string"" }
+}");
+
+            Assert.Equal("int", engine.Call("Calc.Describe", 42));
+            Assert.Equal("string", engine.Call("Calc.Describe", "hello"));
+        }
+
+        [Fact]
         public void IlEmit_GlobalVariables_ReflectionReadWrite()
         {
             using var engine = new CocoaEngine(EngineBackend.IlEmit);

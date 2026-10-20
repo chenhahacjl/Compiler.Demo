@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Linq;
 using System.Collections.Immutable;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Syntax;
@@ -80,19 +81,101 @@ namespace Cocoa.Engine
                 throw new ArgumentException($"未找到可调用的顶层函数 '{functionName}'（引擎尚无任何脚本提交）", nameof(functionName));
             }
 
+            // 顶层函数（<CocoaTopLevel> 静态方法）优先；点号名回落类静态方法（Namespace.Class.Method / Class.Method）。
             var topLevel = _assembly.GetType("<CocoaTopLevel>");
-            if (topLevel == null)
-            {
-                throw new ArgumentException($"未找到可调用的顶层函数 '{functionName}'（产物无顶层类型）", nameof(functionName));
-            }
-
-            var method = topLevel.GetMethod(functionName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+            var method = topLevel != null ? ResolveStaticMethod(topLevel, functionName, args) : null;
             if (method == null)
             {
-                throw new ArgumentException($"未找到可调用的顶层函数 '{functionName}'", nameof(functionName));
+                method = FindClassStaticMethod(functionName, args);
+            }
+
+            if (method == null)
+            {
+                throw new ArgumentException($"未找到可调用的顶层函数/类静态方法 '{functionName}'", nameof(functionName));
             }
 
             return method.Invoke(null, args);
+        }
+
+        /// <summary>点号名 → 程序集内用户类型（按 FullName 或裸 Name 匹配）的静态方法（重载按实参元数+精确类型消解）。</summary>
+        private MethodInfo? FindClassStaticMethod(string name, object?[] args)
+        {
+            var dot = name.LastIndexOf('.');
+            if (dot <= 0 || dot == name.Length - 1)
+            {
+                return null;
+            }
+
+            var typeName = name.Substring(0, dot);
+            var methodName = name.Substring(dot + 1);
+            foreach (var type in SafeAssemblyTypes(_assembly!))
+            {
+                if (!string.Equals(type.FullName, typeName, StringComparison.Ordinal)
+                    && !string.Equals(type.Name, typeName, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                var method = ResolveStaticMethod(type, methodName, args);
+                if (method != null)
+                {
+                    return method;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>静态方法重载消解：按实参元数过滤，按参数类型精确命中打分（同分取首）。返回 null = 未命中。</summary>
+        private static MethodInfo? ResolveStaticMethod(Type type, string name, object?[] args)
+        {
+            MethodInfo? best = null;
+            var bestScore = -1;
+            foreach (var method in type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
+            {
+                if (method.Name != name)
+                {
+                    continue;
+                }
+
+                var parameters = method.GetParameters();
+                if (parameters.Length != args.Length)
+                {
+                    continue;
+                }
+
+                var score = 0;
+                for (var i = 0; i < args.Length; i++)
+                {
+                    var arg = args[i];
+                    if (arg != null && parameters[i].ParameterType == arg.GetType())
+                    {
+                        score++;
+                    }
+                }
+
+                if (score > bestScore)
+                {
+                    best = method;
+                    bestScore = score;
+                }
+            }
+
+            return best;
+        }
+
+        /// <summary>安全枚举程序集类型：反射加载部分类型（BCL facade 基类等）失败时捞取可加载者，避免
+        /// <see cref="ReflectionTypeLoadException"/> 中断用户类型并以裸 Name 匹配。</summary>
+        private static IEnumerable<Type> SafeAssemblyTypes(Assembly assembly)
+        {
+            try
+            {
+                return assembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                return ex.Types.Where(t => t != null)!;
+            }
         }
 
         /// <summary>按名读 script 顶层变量（IlEmit：反射读 &lt;CocoaTopLevel&gt; 静态字段）；未声明返回 null。</summary>

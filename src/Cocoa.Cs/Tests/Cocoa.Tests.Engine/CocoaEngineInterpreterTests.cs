@@ -202,6 +202,89 @@ function Scale(x: i32): i32 { return x * factor }");
         }
 
         [Fact]
+        public void Call_ClassStaticMethod_ByQualifiedName()
+        {
+            using var engine = new CocoaEngine();
+            engine.DoString(@"class Calc
+{
+    public static function Add(a: i32, b: i32): i32 { return a + b }
+    public static function Twice(x: i32): i32 { return x * 2 }
+}");
+
+            Assert.Equal(42, engine.Call("Calc.Add", 21, 21));
+            Assert.Equal(10, engine.Call("Calc.Twice", 5));
+        }
+
+        [Fact]
+        public void Call_ClassStaticMethod_NamespaceQualified()
+        {
+            using var engine = new CocoaEngine();
+            engine.DoString(@"namespace MathLib { class Calc { public static function Add(a: i32, b: i32): i32 { return a + b } } }");
+
+            Assert.Equal(42, engine.Call("MathLib.Calc.Add", 21, 21));
+        }
+
+        [Fact]
+        public void Call_ClassStaticMethod_UnqualifiedClassName_AlsoResolves()
+        {
+            using var engine = new CocoaEngine();
+            engine.DoString(@"namespace MathLib { class Calc { public static function Add(a: i32, b: i32): i32 { return a + b } } }");
+
+            Assert.Equal(42, engine.Call("Calc.Add", 21, 21));
+        }
+
+        [Fact]
+        public void Call_ClassStaticMethod_UnknownMethod_Throws()
+        {
+            using var engine = new CocoaEngine();
+            engine.DoString(@"class Calc { public static function Add(a: i32, b: i32): i32 { return a + b } }");
+
+            var ex = Assert.Throws<ArgumentException>(() => engine.Call("Calc.Sub", 1, 2));
+            Assert.Contains("未找到可调用的类型", ex.Message);
+        }
+
+        [Fact]
+        public void Call_ClassInstanceMethod_NotResolved()
+        {
+            using var engine = new CocoaEngine();
+            engine.DoString(@"class Calc { public function Add(a: i32, b: i32): i32 { return a + b } }");
+
+            // 实例方法（非 static）不做解析：脚本内经 new 驱动；C# 侧按静态限定名报告可读错误
+            var ex = Assert.Throws<ArgumentException>(() => engine.Call("Calc.Add", 1, 2));
+            Assert.Contains("未找到可调用的类型", ex.Message);
+        }
+
+        [Fact]
+        public void Call_ClassStaticMethod_Overloads_ResolveByArgumentType()
+        {
+            using var engine = new CocoaEngine();
+            engine.DoString(@"class Calc
+{
+    public static function Describe(x: i32): string { return ""int"" }
+    public static function Describe(s: string): string { return ""string"" }
+    public static function Describe(d: f64): string { return ""double"" }
+}");
+
+            Assert.Equal("int", engine.Call("Calc.Describe", 42));
+            Assert.Equal("string", engine.Call("Calc.Describe", "hello"));
+            Assert.Equal("double", engine.Call("Calc.Describe", 3.5));
+        }
+
+        [Fact]
+        public void Call_ClassStaticMethod_Overloads_ResolveByArgumentCount()
+        {
+            using var engine = new CocoaEngine();
+            engine.DoString(@"class Calc
+{
+    public static function Format(): string { return ""none"" }
+    public static function Format(a: i32, b: i32): string { return string(a) + string(b) }
+}");
+
+            Assert.Equal("none", engine.Call("Calc.Format"));
+            Assert.Equal("12", engine.Call("Calc.Format", 1, 2));
+        }
+
+        [Fact]
         public void RegisterCallback_CoCallsCSharp()
         {
             using var engine = new CocoaEngine();

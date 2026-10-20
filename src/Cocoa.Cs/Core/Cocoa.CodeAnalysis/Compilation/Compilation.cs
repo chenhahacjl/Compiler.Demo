@@ -369,10 +369,10 @@ namespace Cocoa.CodeAnalysis
                 return new EvaluationResult(program.Diagnostics, null);
             }
 
-            var function = FindFunction(name);
+            var (function, message) = FindCallable(name, args);
             if (function == null)
             {
-                throw new ArgumentException($"未找到可调用的顶层函数 '{name}'", nameof(name));
+                throw new ArgumentException(message ?? $"未找到可调用的顶层函数 '{name}'", nameof(name));
             }
 
             var evaluator = _interpreterFunctionEvaluator;
@@ -402,6 +402,100 @@ namespace Cocoa.CodeAnalysis
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// 查可调用目标（嵌入式引擎 Call 路径）：顶层函数 → 类静态方法 <c>ClassName.Method</c>（命名空间类以
+        /// <c>Ns.ClassName.Method</c>，或裸类名）。沿 submission 链 Latest 优先；同类名多段 partial 合并后为同一符号。
+        /// 仅静态方法（<see cref="FunctionSymbol.IsStatic"/> 且非构造器）；实例方法/命名空间含类名写法的歧义首命中。
+        /// 类静态方法多重重载：按实参元数过滤 + 精确 CLR 类型匹配得分（对齐解释器 CoerceArgument「优先精确」语义），
+        /// 同分取首命中。
+        /// </summary>
+        private (FunctionSymbol? Function, string? Message) FindCallable(string name, object?[] args)
+        {
+            var topLevel = FindFunction(name);
+            if (topLevel != null)
+            {
+                return (topLevel, null);
+            }
+
+            var dot = name.LastIndexOf('.');
+            if (dot <= 0 || dot == name.Length - 1)
+            {
+                return (null, null);
+            }
+
+            var typeName = name.Substring(0, dot);
+            var methodName = name.Substring(dot + 1);
+            var candidates = new List<(FunctionSymbol Method, int Score)>();
+            var current = this;
+            while (current != null)
+            {
+                foreach (var type in current.GlobalScope.Classes)
+                {
+                    var matchType = string.Equals(type.FullName, typeName, StringComparison.Ordinal)
+                        || string.Equals(type.Name, typeName, StringComparison.Ordinal);
+                    if (!matchType)
+                    {
+                        continue;
+                    }
+
+                    foreach (var method in type.GetMethods(methodName))
+                    {
+                        if (!method.IsStatic || method.IsConstructor || method.ContainingClass == null)
+                        {
+                            continue;
+                        }
+
+                        // 实参元数必须与形参一致（解释器按位数校验 + 逐参编组）。
+                        if (method.Parameters.Length != args.Length)
+                        {
+                            continue;
+                        }
+
+                        var score = 0;
+                        for (var i = 0; i < args.Length; i++)
+                        {
+                            if (IsExactClrMatch(args[i], method.Parameters[i].Type.Name))
+                            {
+                                score++;
+                            }
+                        }
+
+                        candidates.Add((method, score));
+                    }
+                }
+
+                if (candidates.Count > 0)
+                {
+                    break;
+                }
+
+                current = current.Previous;
+            }
+
+            if (candidates.Count == 0)
+            {
+                return (null, $"未找到可调用的类型 '{typeName}' 的静态方法 '{methodName}'（检查类型名/方法名、是否声明为 static、实参元数是否匹配）");
+            }
+
+            candidates.Sort((a, b) => b.Score.CompareTo(a.Score));
+            return (candidates[0].Method, null);
+        }
+
+        /// <summary>实参与 Co 形参的精确 CLR 类型匹配（解释器 CoerceArgument 的「零转换」行：6 种可编组值类型）。</summary>
+        private static bool IsExactClrMatch(object? arg, string typeName)
+        {
+            return typeName switch
+            {
+                "i32" => arg is int,
+                "f64" => arg is double,
+                "bool" => arg is bool,
+                "char" => arg is char,
+                "u8" => arg is byte,
+                "string" => arg is string,
+                _ => false,
+            };
         }
 
 
