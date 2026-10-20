@@ -137,12 +137,14 @@ namespace Cocoa.CodeAnalysis.Binder
         }
 
         /// <summary>形参符号构造（6e-M23 R2）：携带 out/ref 修饰符；普通形参可赋值（对齐 C#），this 保持只读。
+        /// `in` 修饰符（2026-10-20）：只读传值参数——值拷贝 ABI 零发射改动，绑定期禁止赋值/作 out-ref 实参。
         /// 可选参数（语言后置件）：形参默认值 `x: i32 = 10` 求值为常量存入 ParameterSymbol。</summary>
         private ParameterSymbol CreateParameterSymbol(string name, TypeSymbol type, ParameterSyntax syntax, int ordinal)
         {
             var isOut = syntax.Modifier?.Kind == CoreSyntax.SyntaxKind.OutKeyword;
             var isRef = syntax.Modifier?.Kind == CoreSyntax.SyntaxKind.RefKeyword;
             var isParams = syntax.Modifier?.Kind == CoreSyntax.SyntaxKind.ParamsKeyword;
+            var isIn = syntax.Modifier?.Kind == CoreSyntax.SyntaxKind.InKeyword;
 
             object? defaultValue = null;
             var hasDefault = false;
@@ -156,7 +158,7 @@ namespace Cocoa.CodeAnalysis.Binder
                 }
             }
 
-            return new ParameterSymbol(name, type, ordinal, isOut, isRef, defaultValue: defaultValue, hasDefault: hasDefault, isParams: isParams);
+            return new ParameterSymbol(name, type, ordinal, isOut, isRef, defaultValue: defaultValue, hasDefault: hasDefault, isParams: isParams, isReadOnly: isIn);
         }
 
         /// <summary>可选参数（语言后置件）：必需形参个数 = 末尾可选形参之前的数量；调用实参数不得少于该值。</summary>

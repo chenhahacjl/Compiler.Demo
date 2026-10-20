@@ -1526,7 +1526,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         private ParameterSyntax ParseParameter()
         {
             SyntaxToken? modifier = null;
-            if (Current.Kind == SyntaxKind.OutKeyword || Current.Kind == SyntaxKind.RefKeyword || Current.Kind == SyntaxKind.ParamsKeyword || Current.Kind == SyntaxKind.ThisKeyword)
+            if (Current.Kind == SyntaxKind.OutKeyword || Current.Kind == SyntaxKind.RefKeyword || Current.Kind == SyntaxKind.ParamsKeyword || Current.Kind == SyntaxKind.ThisKeyword || Current.Kind == SyntaxKind.InKeyword)
             {
                 modifier = MatchToken(Current.Kind);
             }

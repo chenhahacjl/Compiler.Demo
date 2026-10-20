@@ -10,6 +10,22 @@
 
 ## 未发布（2026-10-20）
 
+### 语言特性：`in` 参数（C# 7.2，只读传值）+ `ParameterSymbol` this/只读解耦 ✅
+- **`in a: i32` 只读传值参数**：`ParseParameter` 识别 `InKeyword` → `ParameterSymbol.IsReadOnly` 注入——值拷贝 ABI 零发射改动；绑定期禁止对 in 参数赋值（COC1006 只读）、禁止作 out/ref 实参（byref 绑定检查）；调用位零改动。
+- **`ParameterSymbol.IsThisParameter` 与 `IsReadOnly` 解耦**（此前 `IsThisParameter ⇒ IsReadOnly` 别名）：this 恒只读但 in 参数不误判 this（facade 实例判定/方法 arity/`.coa` 序列化不再错乱）。
+- **`.coa` 序列化 `in:` 往返**：参数修饰符字段加 `in:`（写/读双侧），消费库 in 参数保持只读。
+- 测试：`InParamThreeBackendTests` 8 例（Evaluator / IL(net9.0) / Native x64+x86 e2e + 赋值负例 + out/ref 实参负例 + `.coa` round-trip 只读保持）。
+- 文档：语法手册关键字表 + §30.4；对照表 #20c ✅；未完成盘点 in 项 ✅。
+
+---
+
+### 语言特性：`in` 只读传值参数（C# 7.2）✅
+- **`in a: i32`**（参数修饰符在名前，同 out/ref）：只读传值——方法体可读不可写，赋值/作 out-ref 实参绑定期报只读诊断（复用 `VariableSymbol.IsReadOnly`）；调用位零改动（普通传值），ABI 零发射改动。
+- **`ParameterSymbol.IsThisParameter` 与 `IsReadOnly` 解耦**（ef46e649）：this 恒只读但独立 `_isThis` 字段；非 this 只读参数（in）不再误判为 this——facade 实例判定/方法 arity/`.coa` 序列化语义保持。
+- **`.coa` 往返**：参数修饰符字段扩展 `in:`（写侧/读侧），in 参数跨库保持只读。
+- 测试：`InParamThreeBackendTests` 8 例（Evaluator/IL/native x64+x86 e2e 输出 3 + 赋值负例 + out/ref 实参负例 ×2 + `.coa` round-trip 只读/非 this 断言）。
+- 文档：语法手册关键字表 + §30.4 in 语义行；对照表 #20c ⬜→✅；未完成盘点后置语言件翻转。
+
 ### native-s1 加固：陷阱错误径 ABI 对齐 + x86 拆分 .reloc 修复 ✅
 - **陷阱路径行为等价门禁**：新增 `TrapPathSplitTests`（10 例）——除零（i32/i64/u64）、取余、栈溢出在「内联 vs 全拆分（System.Core.Native.dll）」双形态 × x64/x86 下退出码与输出全等（此前 `NativeSplitDifferentialTests` 源码未真实触发陷阱点）。
 - **发现并修复 x86 拆分真实缺陷**（拆分工作此前仅 x64 验证）：x86 共享库 `System.Core.Native.dll` 首选基址 0x400000 与 exe 冲突 → 加载器异地加载，而 `.reloc` 仅含 `.data` 指针槽 → 代码内绝对引用（`lea`/`call*`/`jmp*` disp32）跳旧 base → 任何 x86 split 产物首调即 0xC0000005。

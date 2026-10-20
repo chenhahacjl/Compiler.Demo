@@ -723,14 +723,17 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                 var ordinal = _tokens.ExpectInt();
 
                 // 6e-M23 R8：第 5 个 token = out:/ref:/-（兼容旧文件裸 out/ref 与缺省 "-"）。
+                // 2026-10-20：+ in:（只读传值参数，值语义；this 参数仍 "-"，其只读由 this 标记承载）。
                 var isOut = false;
                 var isRef = false;
+                var isIn = false;
                 var modifierText = _tokens.PeekRaw();
-                if (modifierText is "out:" or "ref:" or "out" or "ref" or "-")
+                if (modifierText is "out:" or "ref:" or "in:" or "out" or "ref" or "-")
                 {
                     _tokens.ExpectString();
                     isOut = modifierText is "out:" or "out";
                     isRef = modifierText is "ref:" or "ref";
+                    isIn = modifierText is "in:";
                 }
 
                 var isThis = false;
@@ -741,7 +744,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                     isThis = thisText == "this";
                 }
 
-                var parameter = new ParameterSymbol(pName, pType, ordinal, isOut, isRef, isThis);
+                var parameter = new ParameterSymbol(pName, pType, ordinal, isOut, isRef, isThis, isReadOnly: isIn);
                 parameters.Add(parameter);
                 _context.VariablesByKey[pKey] = parameter;
                 _tokens.End();

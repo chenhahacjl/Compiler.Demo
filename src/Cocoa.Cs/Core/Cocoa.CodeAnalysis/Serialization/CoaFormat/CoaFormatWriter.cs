@@ -751,7 +751,7 @@ namespace Cocoa.CodeAnalysis.Serialization.CoaFormat
                 _output.Field(CoaText.Str(p.Name));
                 _output.Field(CoaTypeCodec.TypeRef(p.Type));
                 _output.Field(p.Ordinal);
-                _output.Field(p.IsOut ? "out:" : p.IsRef ? "ref:" : "-");
+                _output.Field(p.IsOut ? "out:" : p.IsRef ? "ref:" : p.IsReadOnly && !p.IsThisParameter ? "in:" : "-");
                 _output.Field(p.IsThisParameter ? "this" : "-");
                 _output.End();
             }
