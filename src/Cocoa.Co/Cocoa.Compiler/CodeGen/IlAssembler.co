@@ -187,7 +187,7 @@ namespace Cocoa.CodeGen
                     sb = sb + HexCodec.HexByte(v)
                 }
 
-                sb = EmitOperand(sb, i, _names[i], offsets)
+                sb = AppendOperand(sb, i, _names[i], offsets)
                 i = i + 1
             }
 
@@ -213,7 +213,9 @@ namespace Cocoa.CodeGen
             return 4
         }
 
-        private function EmitOperand(sb: string, index: i32, name: string, offsets: i32[]): string
+        /// <summary>编码版操作数写出（与收集版 EmitOperand 同名会因 .co 轨不支持成员重载而被
+        /// 绑定器误解析到收集版——Assemble 的 EmitOperand(sb,i,name,offsets) 实参类型错配），独立命名。</summary>
+        private function AppendOperand(sb: string, index: i32, name: string, offsets: i32[]): string
         {
             let t = IlOpCodeTable.OpCodeOperandType(name)
             let v = IlOpCodeTable.OpCodeValue(name)
