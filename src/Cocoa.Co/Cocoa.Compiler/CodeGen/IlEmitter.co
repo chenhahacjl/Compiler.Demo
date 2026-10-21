@@ -44,6 +44,9 @@ private field _pendingCount: i32
         private field _classMethodTypeKeys: string[]
         private field _classMethodTypeVals: string[]
         private field _classMethodTypeCount: i32
+        private field _staticMethodTypeKeys: string[]
+        private field _staticMethodTypeVals: string[]
+        private field _staticMethodTypeCount: i32
         private field _curClassKeys: string[]
         private field _curClassTokens: i32[]
         private field _curClassInstance: bool[]
@@ -488,6 +491,31 @@ private field _pendingCount: i32
             _classMethodTypeCount = count
         }
 
+        /// <summary>类静态方法返回类型表（IlDriver staticTypeVals；key = "类名.方法名"）——
+        /// ExprTypeOf 对 `HexCodec.HexByte(..)` 需知道返回 string，否则字符串拼接 `+` 退化为数值 add。</summary>
+        public function SetClassStaticMethodTypes(keys: string[], vals: string[], count: i32): void
+        {
+            _staticMethodTypeKeys = keys
+            _staticMethodTypeVals = vals
+            _staticMethodTypeCount = count
+        }
+
+        private function ClassStaticMethodType(key: string): string
+        {
+            var i = 0
+            while i < _staticMethodTypeCount
+            {
+                if _staticMethodTypeKeys[i] == key
+                {
+                    return _staticMethodTypeVals[i]
+                }
+
+                i = i + 1
+            }
+
+            return ""
+        }
+
         /// <summary>当前类实例方法的返回类型（f(...) 接收者类型解析用）。</summary>
         private function CurClassReturnType(name: string): string
         {
@@ -725,6 +753,20 @@ private field _pendingCount: i32
                     return topT
                 }
 
+                // 类静态方法（HexCodec.HexByte）：返回类型表 key = "类名.方法名"（IlDriver typeKeys）。
+                // 上溯只留方法名会查不到 → 返回类型空 → IsStringBinary 把 `+` 当数值 add（ilverify ExpectedNumericType）。
+                // MemberAccess 左子树为类名标识符时以完整 key 再查；实例方法（node.Kind）左子树为变量，
+                // 拼出的 "变量.方法名" 不匹配任何类方法 key，无害。
+                if expr.Child(0).Kind() == "MemberAccessExpression" && expr.Child(0).ChildCount() > 2
+                {
+                    let fullKey = expr.Child(0).Child(0).Text() + "." + fn
+                    let fullT = ClassMethodType(fullKey)
+                    if fullT.Length > 0
+                    {
+                        return fullT
+                    }
+                }
+
                 return ClassMethodType(fn)
             }
 
@@ -747,6 +789,38 @@ private field _pendingCount: i32
                     if mt.Length > 0
                     {
                         return mt
+                    }
+                }
+
+                // 类静态方法（HexCodec.HexByte / Math.Abs）：receiver 为类名标识符，ExprTypeOf(类名) 返回空，
+                // 须以完整 "类名.方法名" 查静态方法返回类型表（IlDriver staticTypeVals）。缺此分支时 IsStringBinary
+                // 对 `HexByte(..) + HexByte(..)` 判定失败 → `+` 发射数值 add → ilverify ExpectedNumericType。
+                // 实例方法（node.Kind()）receiver 为变量，"node.Kind" 不匹配任何类方法 key，无害。
+                // 自举 Parser 的 MemberCallExpression 子节点布局（receiver/member 索引）随版本变动——
+                // 此处对 receiver 文本与 member 索引的多种组合盲试，命中任一即返回。
+                if expr.ChildCount() > 1
+                {
+                    let m1 = expr.Child(1).Text()
+                    let m2 = expr.ChildCount() > 2 ? expr.Child(2).Text() : ""
+                    let r0 = expr.Child(0).Text()
+                    let r0sub = expr.Child(0).ChildCount() > 0 ? expr.Child(0).Child(0).Text() : ""
+
+                    var t = ClassStaticMethodType(r0 + "." + m2)
+                    if t.Length == 0 { t = ClassStaticMethodType(r0 + "." + m1) }
+                    if t.Length == 0 && r0sub.Length > 0 { t = ClassStaticMethodType(r0sub + "." + m2) }
+                    if t.Length == 0 && r0sub.Length > 0 { t = ClassStaticMethodType(r0sub + "." + m1) }
+                    if t.Length > 0
+                    {
+                        return t
+                    }
+
+                    var u = ClassMethodType(r0 + "." + m2)
+                    if u.Length == 0 { u = ClassMethodType(r0 + "." + m1) }
+                    if u.Length == 0 && r0sub.Length > 0 { u = ClassMethodType(r0sub + "." + m2) }
+                    if u.Length == 0 && r0sub.Length > 0 { u = ClassMethodType(r0sub + "." + m1) }
+                    if u.Length > 0
+                    {
+                        return u
                     }
                 }
 

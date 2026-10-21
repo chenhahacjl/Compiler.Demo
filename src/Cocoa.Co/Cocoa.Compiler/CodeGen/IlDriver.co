@@ -93,7 +93,7 @@ namespace Cocoa.CodeGen
             i = 0
             while i < fnCount
             {
-                CollectNodes(binder.GetFunctionBody(i), bclKeys, bclTokens, bclParents, bclSigs, bclNames, bclCount,
+                CollectNodes(binder, binder.GetFunctionBody(i), bclKeys, bclTokens, bclParents, bclSigs, bclNames, bclCount,
                     usTexts, usTokens, usCount, usBytes)
                 i = i + 1
             }
@@ -245,6 +245,7 @@ namespace Cocoa.CodeGen
             var classTokens = new i32[totalClassMethods]
             var staticKeys = new string[totalClassMethods]
             var staticTokens = new i32[totalClassMethods]
+            var staticTypeVals = new string[totalClassMethods]
             var classReturns = new bool[totalClassMethods]
             var typeKeys = new string[totalClassMethods]
             var typeVals = new string[totalClassMethods]
@@ -297,6 +298,7 @@ namespace Cocoa.CodeGen
                         {
                             staticKeys[sc] = className + "." + binder.GetClassMethodName(ci, mi)
                             staticTokens[sc] = 0x06000000 + classStartRow[ci] + ClassMethodRowOffset(binder, ci, mi) + 1
+                            staticTypeVals[sc] = binder.GetFunctionReturnType(fidx)
                             sc = sc + 1
                         }
                         else
@@ -412,6 +414,7 @@ namespace Cocoa.CodeGen
             {
                 emitter.SetClassMethods(classKeys, classTokens, classReturns, totalClassMethods)
                 emitter.SetClassMethodTypes(typeKeys, typeVals, totalClassMethods)
+                emitter.SetClassStaticMethodTypes(staticKeys, staticTypeVals, sc)
             }
 
             if sc > 0
@@ -1036,6 +1039,7 @@ namespace Cocoa.CodeGen
 
         /// <summary>递归收集：BCL 静态调用（Console.WriteLine(i32|string) + 字符串运算 ==/!=/+）+ 字符串字面量（去重）。</summary>
         private static function CollectNodes(
+            binder: Binder,
             node: Node,
             bclKeys: string[], bclTokens: i32[], bclParents: i32[], bclSigs: string[], bclNames: string[], bclCount: i32[],
             usTexts: string[], usTokens: i32[], usCount: i32[], usBytes: i32[]): void
@@ -1114,7 +1118,7 @@ namespace Cocoa.CodeGen
                 let op = node.Child(0).Text()
                 if op == "==" || op == "!=" || op == "+"
                 {
-                    if IsStringish(node.Child(1)) || IsStringish(node.Child(2))
+                    if IsStringish(binder, node.Child(1)) || IsStringish(binder, node.Child(2))
                     {
                         let stringParams = new string[2]
                         stringParams[0] = "string"
@@ -1200,7 +1204,7 @@ namespace Cocoa.CodeGen
             {
                 if !node.Child(c).IsToken()
                 {
-                    CollectNodes(node.Child(c), bclKeys, bclTokens, bclParents, bclSigs, bclNames, bclCount,
+                    CollectNodes(binder, node.Child(c), bclKeys, bclTokens, bclParents, bclSigs, bclNames, bclCount,
                         usTexts, usTokens, usCount, usBytes)
                 }
 
@@ -1454,7 +1458,7 @@ namespace Cocoa.CodeGen
                     if arg.Kind() == "BinaryExpression"
                     {
                         let op = arg.Child(0).Text()
-                        if op == "+" && (IsStringish(arg.Child(1)) || IsStringish(arg.Child(2)))
+                        if op == "+" && (IsStringishLegacy(arg.Child(1)) || IsStringishLegacy(arg.Child(2)))
                         {
                             return "string"
                         }
@@ -1500,8 +1504,9 @@ namespace Cocoa.CodeGen
             return "i32"
         }
 
-        /// <summary>表达式是否字符串系（字面量/嵌套拼接/string() 转换）。</summary>
-        private static function IsStringish(expr: Node): bool
+        /// <summary>表达式是否字符串系（字面量/嵌套拼接/string() 转换）。旧版无 binder（FirstArgType 用，
+        /// 不识别类静态方法返回 string——.co 轨不支持同名重载，故独立命名）。</summary>
+        private static function IsStringishLegacy(expr: Node): bool
         {
             if expr.Kind() == "LiteralExpression"
             {
@@ -1513,13 +1518,104 @@ namespace Cocoa.CodeGen
                 let op = expr.Child(0).Text()
                 if op == "+"
                 {
-                    return IsStringish(expr.Child(1)) || IsStringish(expr.Child(2))
+                    return IsStringishLegacy(expr.Child(1)) || IsStringishLegacy(expr.Child(2))
                 }
             }
 
             if expr.Kind() == "CallExpression"
             {
                 return expr.ChildCount() > 0 && expr.Child(0).Text() == "string"
+            }
+
+            return false
+        }
+
+        /// <summary>binder 版（CollectNodes 收集 String.Concat 用）：旧逻辑 + 类静态方法返回 string 识别
+        /// （HexCodec.HexByte(..)，经 IsClassMethodString 按 "类名.方法名" 查 binder 返回类型）。</summary>
+        private static function IsStringish(binder: Binder, expr: Node): bool
+        {
+            if expr.Kind() == "LiteralExpression"
+            {
+                return expr.Child(0).Kind() == "StringToken"
+            }
+
+            if expr.Kind() == "BinaryExpression"
+            {
+                let op = expr.Child(0).Text()
+                if op == "+"
+                {
+                    return IsStringish(binder, expr.Child(1)) || IsStringish(binder, expr.Child(2))
+                }
+            }
+
+            if expr.Kind() == "CallExpression"
+            {
+                return expr.ChildCount() > 0 && expr.Child(0).Text() == "string"
+            }
+
+            if expr.Kind() == "MemberCallExpression"
+            {
+                if expr.ChildCount() > 1
+                {
+                    let m1 = expr.Child(1).Text()
+                    let m2 = expr.ChildCount() > 2 ? expr.Child(2).Text() : ""
+                    let r0 = expr.Child(0).Text()
+                    let r0sub = expr.Child(0).ChildCount() > 0 ? expr.Child(0).Child(0).Text() : ""
+                    if IsClassMethodString(binder, r0, m2)
+                    {
+                        return true
+                    }
+
+                    if IsClassMethodString(binder, r0, m1)
+                    {
+                        return true
+                    }
+
+                    if r0sub.Length > 0 && IsClassMethodString(binder, r0sub, m2)
+                    {
+                        return true
+                    }
+
+                    if r0sub.Length > 0 && IsClassMethodString(binder, r0sub, m1)
+                    {
+                        return true
+                    }
+                }
+            }
+
+            return false
+        }
+
+        /// <summary>类（含静态类）中是否存在「指定方法名 → 返回 string」的方法声明。</summary>
+        private static function IsClassMethodString(binder: Binder, className: string, methodName: string): bool
+        {
+            if className.Length == 0 || methodName.Length == 0
+            {
+                return false
+            }
+
+            var ci = 0
+            while ci < binder.GetClassCount()
+            {
+                if binder.GetClassName(ci) == className
+                {
+                    var mi = 0
+                    while mi < binder.GetClassMethodCount(ci)
+                    {
+                        if binder.GetClassMethodName(ci, mi) == methodName
+                        {
+                            let fidx = binder.GetClassMethodIndex(ci, mi)
+                            if binder.GetFunctionReturnType(fidx) == "string"
+                            {
+                                return true
+                            }
+                        }
+
+                        mi = mi + 1
+                    }
+                }
+
+                ci = ci + 1
             }
 
             return false
