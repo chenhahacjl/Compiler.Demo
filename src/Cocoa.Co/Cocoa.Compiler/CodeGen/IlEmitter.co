@@ -1961,9 +1961,21 @@ private field _pendingCount: i32
                 }
                 else
                 {
-                    EmitExpression(expr.Child(1))
-                    _assembler.EmitOperand("Dup", 0, 0, -1)
-                    _assembler.EmitOperand("Stloc", 12, LocalIndex(expr.Child(0).Text()), -1)
+                    // 目标可为 字段（Stfld）↑ / 参数（Starg，重绑定）/ 局部（Stloc）。参数名在
+                    // LocalIndex 查不到（-1 → 0xFF 越界 UnrecognizedLocalNumber），须发 Starg。
+                    let tgtPidx2 = tgtName2.Length > 0 ? ParamIndex(tgtName2) : -1
+                    if tgtPidx2 >= 0
+                    {
+                        EmitExpression(expr.Child(1))
+                        _assembler.EmitOperand("Dup", 0, 0, -1)
+                        _assembler.EmitOperand("Starg", 12, tgtPidx2, -1)
+                    }
+                    else
+                    {
+                        EmitExpression(expr.Child(1))
+                        _assembler.EmitOperand("Dup", 0, 0, -1)
+                        _assembler.EmitOperand("Stloc", 12, LocalIndex(expr.Child(0).Text()), -1)
+                    }
                 }
             }
             else if k == "ConditionalExpression"

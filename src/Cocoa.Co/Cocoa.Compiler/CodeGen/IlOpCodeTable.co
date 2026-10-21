@@ -145,9 +145,11 @@ namespace Cocoa.CodeGen
             if name == "Ldstr" { return 0x72 }
             if name == "Ldarg" { return 0xFE09 }
             if name == "Ldarga" { return 0xFE0A }
+            if name == "Starg" { return 0xFE0B }
             if name == "Ldloc" { return 0xFE0C }
             if name == "Ldloca" { return 0xFE0D }
             if name == "Stloc" { return 0xFE0E }
+            if name == "Starg_S" { return 0x10 }
             return -1
         }
 
@@ -193,8 +195,8 @@ namespace Cocoa.CodeGen
                name == "Unbox_Any" || name == "Initobj" || name == "Constrained" || name == "Ldelema" { return 8 }
             if name == "Ldsfld" || name == "Ldfld" || name == "Stsfld" || name == "Stfld" ||
                name == "Ldsflda" || name == "Ldflda" { return 9 }
-            if name == "Ldarg" || name == "Ldarga" || name == "Ldloc" || name == "Ldloca" || name == "Stloc" { return 12 }
-            if name == "Ldarg_S" || name == "Ldloc_S" || name == "Stloc_S" { return 13 }
+            if name == "Ldarg" || name == "Ldarga" || name == "Ldloc" || name == "Ldloca" || name == "Stloc" || name == "Starg" { return 12 }
+            if name == "Ldarg_S" || name == "Ldloc_S" || name == "Stloc_S" || name == "Starg_S" { return 13 }
             if name == "Br" || name == "Brfalse" || name == "Brtrue" || name == "Leave" { return 14 }
             if name == "Br_S" || name == "Brfalse_S" || name == "Brtrue_S" || name == "Leave_S" { return 15 }
             if name == "Switch" { return 16 }
